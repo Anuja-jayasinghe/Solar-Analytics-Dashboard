@@ -1,0 +1,84 @@
+:root {
+  --accent: #ff7a00;
+
+  --bg-dark: #0d0d0d;
+  --text-dark: #ffffff;
+
+  --bg-light: #ffffff;
+  --text-light: #000000;
+}
+
+/* Dark theme by default */
+body {
+  background: var(--bg-dark);
+  color: var(--text-dark);
+}
+
+.light-theme {
+  background: var(--bg-light);
+  color: var(--text-light);
+}
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0d0d0d; /* dark default */
+  color: #ffffff;
+}
+
+.app-container {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 200px;
+  background: #1a1a1a;
+  padding: 20px;
+}
+
+.sidebar .logo {
+  color: #ff7a00;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar li {
+  margin: 15px 0;
+}
+
+.sidebar a {
+  text-decoration: none;
+  color: white;
+}
+
+.sidebar a:hover {
+  color: #ff7a00;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.navbar {
+  background: #111;
+  padding: 15px;
+  color: #ff7a00;
+}
+
+.page-container {
+  padding: 20px;
+}
+
+.settings-group {
+  margin-bottom: 15px;
+}
+
+.settings-group label {
+  display: block;
+  margin-bottom: 5px;
+}
