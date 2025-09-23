@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
+import { ThemeContext } from "../components/ThemeContext";
 
 function Settings() {
   const [currency, setCurrency] = useState("LKR");
   const [unitType, setUnitType] = useState("kWh");
   const [rate, setRate] = useState(37);
-  const [theme, setTheme] = useState("dark");
+  const { theme, setTheme } = useContext(ThemeContext);
 
   return (
     <div>
