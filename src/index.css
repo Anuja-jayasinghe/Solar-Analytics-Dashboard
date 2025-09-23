@@ -1,28 +1,27 @@
 :root {
   --accent: #ff7a00;
 
-  --bg-dark: #0d0d0d;
-  --text-dark: #ffffff;
-
-  --bg-light: #ffffff;
-  --text-light: #000000;
+  /* Default Dark Mode */
+  --bg-color: #0d0d0d;
+  --text-color: #ffffff;
+  --sidebar-bg: #1a1a1a;
+  --navbar-bg: #111;
 }
 
-/* Dark theme by default */
-body {
-  background: var(--bg-dark);
-  color: var(--text-dark);
+/* Light Mode overrides */
+body.light {
+  --bg-color: #ffffff;
+  --text-color: #000000;
+  --sidebar-bg: #f2f2f2;
+  --navbar-bg: #eaeaea;
 }
 
-.light-theme {
-  background: var(--bg-light);
-  color: var(--text-light);
-}
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: #0d0d0d; /* dark default */
-  color: #ffffff;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  transition: background 0.3s, color 0.3s;
 }
 
 .app-container {
@@ -30,14 +29,15 @@ body {
   height: 100vh;
 }
 
+/* Sidebar */
 .sidebar {
   width: 200px;
-  background: #1a1a1a;
+  background: var(--sidebar-bg);
   padding: 20px;
 }
 
 .sidebar .logo {
-  color: #ff7a00;
+  color: var(--accent);
 }
 
 .sidebar ul {
@@ -51,34 +51,35 @@ body {
 
 .sidebar a {
   text-decoration: none;
-  color: white;
+  color: var(--text-color);
 }
 
 .sidebar a:hover {
-  color: #ff7a00;
+  color: var(--accent);
 }
 
+/* Main Content */
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
+/* Navbar */
 .navbar {
-  background: #111;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 15px;
-  color: #ff7a00;
+  background: var(--navbar-bg);
+  color: var(--text-color);
+}
+
+.navbar h1 {
+  margin: 0;
+  color: var(--accent); /* Title always accent */
 }
 
 .page-container {
   padding: 20px;
-}
-
-.settings-group {
-  margin-bottom: 15px;
-}
-
-.settings-group label {
-  display: block;
-  margin-bottom: 5px;
 }
