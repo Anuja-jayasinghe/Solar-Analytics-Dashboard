@@ -1,15 +1,15 @@
 :root {
   --accent: #ff7a00;
 
-  /* Default Dark Mode */
+  /* Dark theme defaults */
   --bg-color: #0d0d0d;
   --text-color: #ffffff;
   --sidebar-bg: #1a1a1a;
   --navbar-bg: #111;
 }
 
-/* Light Mode overrides */
-body.light {
+/* Light Theme overrides */
+body.light-theme {
   --bg-color: #ffffff;
   --text-color: #000000;
   --sidebar-bg: #f2f2f2;
@@ -77,9 +77,77 @@ body {
 
 .navbar h1 {
   margin: 0;
-  color: var(--accent); /* Title always accent */
+  color: var(--accent); /* Accent title always */
 }
 
+/* Dashboard cards */
+.cards-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.card {
+  flex: 1;
+  background: var(--sidebar-bg);
+  padding: 1rem;
+  border-radius: 8px;
+  color: var(--text-color);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  transition: background 0.3s, color 0.3s;
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--accent);
+}
+
+.card p {
+  font-size: 1.4rem;
+  margin: 0.5rem 0 0;
+  font-weight: bold;
+}
+
+/* Page Container */
 .page-container {
+  flex: 1;
   padding: 20px;
+  overflow-y: auto;
+}
+
+/* Dashboard specific styles */
+.dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.chart-container {
+  background: var(--sidebar-bg);
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  transition: background 0.3s, color 0.3s;
+}
+
+.chart-container h2 {
+  margin: 0 0 1rem 0;
+  color: var(--text-color);
+  font-size: 1.2rem;
+}
+
+/* Button styling */
+button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: opacity 0.3s;
+}
+
+button:hover {
+  opacity: 0.8;
 }
