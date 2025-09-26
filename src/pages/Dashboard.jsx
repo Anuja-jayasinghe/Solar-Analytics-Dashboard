@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -12,45 +12,47 @@ import {
   Legend,
 } from "recharts";
 
+import { getMonthlyData, getYearlyData } from "../lib/dataService";
+
 function Dashboard() {
   const [view, setView] = useState("monthly"); // default monthly
+  const [monthlyData, setMonthlyData] = useState([]);
+  const [yearlyData, setYearlyData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // Datasets
-  const dailyData = [
-    { day: "Mon", ceb: 12, inverter: 14 },
-    { day: "Tue", ceb: 18, inverter: 20 },
-    { day: "Wed", ceb: 15, inverter: 16 },
-    { day: "Thu", ceb: 22, inverter: 25 },
-    { day: "Fri", ceb: 17, inverter: 18 },
-    { day: "Sat", ceb: 25, inverter: 28 },
-    { day: "Sun", ceb: 20, inverter: 23 },
-  ];
+  useEffect(() => {
+    let isMounted = true;
+    async function load() {
+      setLoading(true);
+      setError("");
+      try {
+        const [m, y] = await Promise.all([
+          getMonthlyData(),
+          getYearlyData(),
+        ]);
+        if (!isMounted) return;
+        setMonthlyData(m);
+        setYearlyData(y);
+      } catch (e) {
+        if (!isMounted) return;
+        setError(e.message || "Failed to load data");
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-  const monthlyData = [
-    { month: "Jan", ceb: 450, inverter: 470 },
-    { month: "Feb", ceb: 380, inverter: 400 },
-    { month: "Mar", ceb: 500, inverter: 520 },
-    { month: "Apr", ceb: 520, inverter: 540 },
-    { month: "May", ceb: 600, inverter: 620 },
-  ];
-
-  const yearlyData = [
-    { year: "2021", ceb: 5200, inverter: 5300 },
-    { year: "2022", ceb: 6100, inverter: 6250 },
-    { year: "2023", ceb: 6800, inverter: 6950 },
-    { year: "2024", ceb: 7200, inverter: 7400 },
-  ];
-
-  // Pick dataset
-  const chartData =
-    view === "daily" ? dailyData : view === "monthly" ? monthlyData : yearlyData;
-
-  // X axis key
-  const xKey = view === "daily" ? "day" : view === "monthly" ? "month" : "year";
+  const chartData = view === "monthly" ? monthlyData : yearlyData;
+  const xKey = view === "monthly" ? "month" : "year";
 
   return (
     <div>
-      {/* Cards row */}
+      {/* Cards Row */}
       <div className="cards-row">
         <div className="card">
           <h3>CEB Units</h3>
@@ -70,7 +72,19 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Chart container */}
+      {/* Loading / Error */}
+      {loading && (
+        <div className="chart-container">
+          <h2>Loading data…</h2>
+        </div>
+      )}
+      {!loading && error && (
+        <div className="chart-container">
+          <h2 style={{ color: "#ff7a00" }}>Error: {error}</h2>
+        </div>
+      )}
+
+      {/* Chart Container - Bar Chart */}
       <div className="chart-container">
         <div
           style={{
@@ -80,22 +94,43 @@ function Dashboard() {
           }}
         >
           <h2>
-            {view === "daily"
-              ? "Daily Comparison (kWh)"
-              : view === "monthly"
+            {view === "monthly"
               ? "Monthly Comparison (kWh)"
               : "Yearly Comparison (kWh)"}
           </h2>
 
-          {/* Toggle buttons */}
+          {/* Toggle Buttons */}
           <div>
-            <button onClick={() => setView("daily")}>Daily</button>
-            <button onClick={() => setView("monthly")}>Monthly</button>
-            <button onClick={() => setView("yearly")}>Yearly</button>
+            <button
+              onClick={() => setView("monthly")}
+              style={{
+                marginRight: "0.5rem",
+                background: view === "monthly" ? "#ff7a00" : "#333",
+                color: "#fff",
+                padding: "0.3rem 0.8rem",
+                borderRadius: "5px",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setView("yearly")}
+              style={{
+                background: view === "yearly" ? "#00c2a8" : "#333",
+                color: "#fff",
+                padding: "0.3rem 0.8rem",
+                borderRadius: "5px",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              Yearly
+            </button>
           </div>
         </div>
 
-        {/* Bar Chart */}
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#444" />
@@ -104,7 +139,7 @@ function Dashboard() {
             <Tooltip />
             <Legend />
             <Bar dataKey="ceb" fill="#ff7a00" name="CEB Generation" />
-            <Bar dataKey="inverter" fill="#00e0a1" name="Inverter Generation" />
+            <Bar dataKey="inverter" fill="#00c2a8" name="Inverter Generation" />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -129,7 +164,7 @@ function Dashboard() {
             <Line
               type="monotone"
               dataKey="inverter"
-              stroke="#00e0a1"
+              stroke="#00c2a8"
               strokeWidth={2}
               name="Inverter Generation"
             />
