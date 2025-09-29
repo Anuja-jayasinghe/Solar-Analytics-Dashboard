@@ -50,25 +50,32 @@ function Dashboard() {
   const chartData = view === "monthly" ? monthlyData : yearlyData;
   const xKey = view === "monthly" ? "month" : "year";
 
+  // Calculate latest month’s summary for cards
+  const latestMonth = monthlyData[monthlyData.length - 1] || {};
+  const cebUnits = latestMonth.ceb || 0;
+  const cebEarnings = (latestMonth.cebEarnings ?? (cebUnits * 50));
+  const inverterGen = latestMonth.inverter || 0;
+  const inverterEarnings = (latestMonth.inverterEarnings ?? (inverterGen * 50));
+
   return (
     <div>
       {/* Cards Row */}
       <div className="cards-row">
         <div className="card">
           <h3>CEB Units</h3>
-          <p>150</p>
+          <p>{cebUnits}</p>
         </div>
         <div className="card">
           <h3>CEB Earnings (LKR)</h3>
-          <p>5,550</p>
+          <p>{Math.round(cebEarnings).toLocaleString()}</p>
         </div>
         <div className="card">
           <h3>Inverter Generation</h3>
-          <p>160 kWh</p>
+          <p>{inverterGen} kWh</p>
         </div>
         <div className="card">
           <h3>Estimated Earnings</h3>
-          <p>5,920 LKR</p>
+          <p>{Math.round(inverterEarnings).toLocaleString()} LKR</p>
         </div>
       </div>
 
@@ -100,31 +107,16 @@ function Dashboard() {
           </h2>
 
           {/* Toggle Buttons */}
-          <div>
+          <div className="chart-toggle">
             <button
               onClick={() => setView("monthly")}
-              style={{
-                marginRight: "0.5rem",
-                background: view === "monthly" ? "#ff7a00" : "#333",
-                color: "#fff",
-                padding: "0.3rem 0.8rem",
-                borderRadius: "5px",
-                border: "none",
-                cursor: "pointer",
-              }}
+              className={view === "monthly" ? "active" : ""}
             >
               Monthly
             </button>
             <button
               onClick={() => setView("yearly")}
-              style={{
-                background: view === "yearly" ? "#00c2a8" : "#333",
-                color: "#fff",
-                padding: "0.3rem 0.8rem",
-                borderRadius: "5px",
-                border: "none",
-                cursor: "pointer",
-              }}
+              className={view === "yearly" ? "active" : ""}
             >
               Yearly
             </button>
@@ -133,13 +125,19 @@ function Dashboard() {
 
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--text-color)" opacity={0.3} />
             <XAxis dataKey={xKey} stroke="var(--text-color)" />
             <YAxis stroke="var(--text-color)" />
-            <Tooltip />
+            <Tooltip 
+              contentStyle={{
+                backgroundColor: 'var(--sidebar-bg)',
+                border: '1px solid var(--text-color)',
+                color: 'var(--text-color)'
+              }}
+            />
             <Legend />
-            <Bar dataKey="ceb" fill="#ff7a00" name="CEB Generation" />
-            <Bar dataKey="inverter" fill="#00c2a8" name="Inverter Generation" />
+            <Bar dataKey="ceb" fill="var(--accent)" name="CEB Generation" />
+            <Bar dataKey="inverter" fill="var(--accent-secondary)" name="Inverter Generation" />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -149,22 +147,28 @@ function Dashboard() {
         <h2>Trend Overview</h2>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--text-color)" opacity={0.3} />
             <XAxis dataKey={xKey} stroke="var(--text-color)" />
             <YAxis stroke="var(--text-color)" />
-            <Tooltip />
+            <Tooltip 
+              contentStyle={{
+                backgroundColor: 'var(--sidebar-bg)',
+                border: '1px solid var(--text-color)',
+                color: 'var(--text-color)'
+              }}
+            />
             <Legend />
             <Line
               type="monotone"
               dataKey="ceb"
-              stroke="#ff7a00"
+              stroke="var(--accent)"
               strokeWidth={2}
               name="CEB Generation"
             />
             <Line
               type="monotone"
               dataKey="inverter"
-              stroke="#00c2a8"
+              stroke="var(--accent-secondary)"
               strokeWidth={2}
               name="Inverter Generation"
             />
