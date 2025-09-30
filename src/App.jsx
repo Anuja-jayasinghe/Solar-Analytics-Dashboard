@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminSetup from "./pages/AdminSetup";
 import CrudAdmin from "./pages/crudadmin";
 import "./index.css";
 import { verifySupabaseConnection } from "./lib/verifySupabaseConnection";
@@ -27,6 +28,7 @@ function AppContent() {
       {/* Admin routes - standalone layout */}
       <Route path="/admin" element={<AdminLogin />} />
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
+      <Route path="/admin/setup" element={<AdminSetup />} />
       <Route path="/crudadmin" element={<CrudAdmin />} />
       
       {/* Main app routes - with sidebar and navbar */}
