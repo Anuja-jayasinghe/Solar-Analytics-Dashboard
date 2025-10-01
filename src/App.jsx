@@ -2,18 +2,18 @@ import { useContext, useEffect } from "react";
 import { ThemeProvider, ThemeContext } from "./components/ThemeContext";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { AuthContext } from "./contexts/AuthContext";
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import AdminLogin from "./pages/AdminLogin";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminSetup from "./pages/AdminSetup";
-import CrudAdmin from "./pages/crudadmin";
+import AdminTest from "./pages/AdminTest";
 import "./index.css";
 import { verifySupabaseConnection } from "./lib/verifySupabaseConnection";
 
 function AppContent() {
+  const { isAdmin, loading, session } = useContext(AuthContext);
   useEffect(() => {
     verifySupabaseConnection().then((result) => {
       if (result.ok) {
@@ -23,13 +23,25 @@ function AppContent() {
       }
     });
   }, []);
+
+  function RequireAdmin({ children }) {
+    if (loading) return <p>Loading...</p>;
+    if (!session) return <p>Not authenticated. Please log in at /admin.</p>;
+    if (!isAdmin) return <p>Access denied. Your account is not an admin.</p>;
+    return children;
+  }
   return (
     <Routes>
       {/* Admin routes - standalone layout */}
       <Route path="/admin" element={<AdminLogin />} />
-      <Route path="/admin/dashboard" element={<AdminDashboard />} />
-      <Route path="/admin/setup" element={<AdminSetup />} />
-      <Route path="/crudadmin" element={<CrudAdmin />} />
+      <Route
+        path="/admin/test"
+        element={
+          <RequireAdmin>
+            <AdminTest />
+          </RequireAdmin>
+        }
+      />
       
       {/* Main app routes - with sidebar and navbar */}
       <Route path="/*" element={

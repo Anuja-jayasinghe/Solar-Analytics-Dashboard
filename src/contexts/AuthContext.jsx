@@ -11,41 +11,75 @@ export function AuthProvider({ children }) {
 
   // helper: check admin_users table for user.email
   async function checkAdmin(email) {
-    if (!email) return false;
+    if (!email) {
+      console.log("🔍 Admin check: No email provided");
+      return false;
+    }
+    console.log("🔍 Admin check: Checking email:", email);
+    console.log("🔍 Admin check: Starting database query...");
+    
     try {
-      const { data, error } = await supabase
+      const startTime = Date.now();
+      
+      // Add timeout to prevent hanging
+      const queryPromise = supabase
         .from("admin_users")
-        .select("username")
-        .eq("username", email)
+        .select("email")
+        .eq("email", email)
         .limit(1)
         .maybeSingle();
       
-      // If table doesn't exist or error, allow all authenticated users as admin for now
-      if (error) {
-        console.log("Admin table check failed, allowing user as admin:", error.message);
-        return true;
-      }
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000)
+      );
       
-      return !!data;
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+      
+      const endTime = Date.now();
+      console.log("🔍 Admin check: Query completed in", endTime - startTime, "ms");
+
+      if (error) {
+        console.log("❌ Admin table check failed:", error);
+        console.log("❌ Error details:", {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        return false; // strict deny on error
+      }
+
+      const isAdmin = !!data;
+      console.log("✅ Admin check result:", isAdmin, "Data:", data);
+      return isAdmin; // true if a matching admin email exists
     } catch (error) {
-      console.log("Admin check error, allowing user as admin:", error.message);
-      return true;
+      console.log("❌ Admin check error:", error);
+      console.log("❌ Error stack:", error.stack);
+      return false; // strict deny on error
     }
   }
 
   useEffect(() => {
     // load initial session (supabase persists it automatically)
     const init = async () => {
+      console.log("🔄 AuthContext: Initializing...");
+      console.log("🔧 Supabase URL:", import.meta.env.VITE_SUPABASE_URL);
+      console.log("🔧 Supabase Key exists:", !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+      
       const {
         data: { session: currentSession },
       } = await supabase.auth.getSession();
+      console.log("🔐 AuthContext: Current session:", currentSession?.user?.email || "No session");
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       if (currentSession?.user?.email) {
+        console.log("🔍 AuthContext: Starting admin check for:", currentSession.user.email);
         const admin = await checkAdmin(currentSession.user.email);
         setIsAdmin(admin);
+        console.log("👤 AuthContext: Admin status set to:", admin);
       }
       setLoading(false);
+      console.log("✅ AuthContext: Initialization complete");
     };
     init();
 
