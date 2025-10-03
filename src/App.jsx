@@ -8,7 +8,7 @@ import Navbar from "./components/Navbar";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import AdminLogin from "./pages/AdminLogin";
-import AdminTest from "./pages/AdminTest";
+import AdminDashboard from "./pages/AdminDashboard";
 import "./index.css";
 import { verifySupabaseConnection } from "./lib/verifySupabaseConnection";
 
@@ -35,10 +35,10 @@ function AppContent() {
       {/* Admin routes - standalone layout */}
       <Route path="/admin" element={<AdminLogin />} />
       <Route
-        path="/admin/test"
+        path="/admin/dashboard"
         element={
           <RequireAdmin>
-            <AdminTest />
+            <AdminDashboard  />
           </RequireAdmin>
         }
       />
