@@ -15,9 +15,10 @@ function AdminDashboard() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  // Fetch data
+  // --- Fetch data ---
   const fetchData = async () => {
     setLoading(true);
+    setMessage("");
     try {
       if (tab === "ceb") {
         const { data, error } = await supabase
@@ -42,19 +43,23 @@ function AdminDashboard() {
         setAdmins(data || []);
       }
     } catch (err) {
+      console.error("fetchData error:", err);
       setMessage(`❌ Error: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
-  // Add records
+  // --- Add record ---
   const addRecord = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setMessage("");
     try {
       const table = tab === "ceb" ? "ceb_data" : "inverter_data";
       const { error } = await supabase.from(table).insert([
@@ -68,69 +73,96 @@ function AdminDashboard() {
       setForm({ date: "", generation_kwh: "" });
       fetchData();
     } catch (err) {
+      console.error("addRecord error:", err);
       setMessage(`❌ Error: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  // Add admin
+  // --- Add admin ---
   const addAdmin = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setMessage("");
     try {
-      const { error } = await supabase
+      const normalized = adminEmail.trim().toLowerCase();
+      const { data, error } = await supabase
         .from("admin_users")
-        .insert([{ email: adminEmail.trim().toLowerCase() }]);
+        .insert([{ email: normalized }])
+        .select();
       if (error) throw error;
-      setMessage("✅ Admin added");
+      setMessage(`✅ Admin added: ${normalized}`);
       setAdminEmail("");
       fetchData();
     } catch (err) {
-      setMessage(`❌ Error: ${err.message}`);
+      console.error("addAdmin error:", err);
+      // detect unique violation code if present
+      if (err?.code === "23505" || (err?.message && err.message.includes("duplicate"))) {
+        setMessage("⚠️ This email is already an admin");
+      } else {
+        setMessage(`❌ Error: ${err.message}`);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  // Ask for delete confirmation
+  // --- Setup delete confirmation ---
+  // identifier: { type: "id" | "email", value: any }
   const requestDelete = (table, identifier) => {
-    // identifier: { type: "id" | "email", value: any }
     setDeleteTarget({ table, identifier });
     setConfirmOpen(true);
   };
 
-  // Confirm delete
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     setLoading(true);
+    setMessage("");
     try {
-      let query = supabase.from(deleteTarget.table).delete();
+      console.log("Attempting delete:", deleteTarget);
 
-      if (deleteTarget.identifier.type === "email") {
-        query = query.eq("email", deleteTarget.identifier.value);
+      const identifier =
+        deleteTarget.identifier.type === "email"
+          ? { ...deleteTarget.identifier, value: String(deleteTarget.identifier.value).trim().toLowerCase() }
+          : deleteTarget.identifier;
+
+      let query = supabase.from(deleteTarget.table).delete().select("*");
+
+      // 👇 Case-insensitive match for email deletes
+      if (identifier.type === "email") {
+        query = query.ilike("email", identifier.value);
       } else {
-        query = query.eq("id", deleteTarget.identifier.value);
+        query = query.eq("id", identifier.value);
       }
 
-      const { error } = await query;
-      if (error) throw error;
+      const { data, error } = await query;
+      console.log("Delete response:", { data, error });
 
-      setMessage("✅ Deleted successfully");
-      fetchData();
+      if (error) {
+        setMessage(`❌ Delete failed: ${error.message}`);
+      } else if (!data || data.length === 0) {
+        setMessage("⚠️ No matching rows found — check email casing or RLS policies.");
+      } else {
+        setMessage("✅ Admin deleted successfully");
+        fetchData();
+      }
     } catch (err) {
       setMessage(`❌ Error: ${err.message}`);
+    } finally {
+      setConfirmOpen(false);
+      setDeleteTarget(null);
+      setLoading(false);
     }
-    setConfirmOpen(false);
-    setDeleteTarget(null);
-    setLoading(false);
   };
 
-  // Cancel delete
   const cancelDelete = () => {
     setConfirmOpen(false);
     setDeleteTarget(null);
+    setMessage("");
   };
 
-  // Reusable Table Renderer
+  // --- Table renderer ---
   const renderTable = (rows, type) => (
     <table
       style={{
@@ -398,7 +430,7 @@ function AdminDashboard() {
             </h2>
             <p style={{ marginBottom: "1.5rem" }}>
               {deleteTarget.identifier.type === "email"
-                ? `Are you sure you want to delete admin: ${deleteTarget.identifier.value}?`
+                ? `Are you sure you want to delete admin: ${String(deleteTarget.identifier.value).trim().toLowerCase()}?`
                 : "Are you sure you want to delete this record?"}
               <br />
               This action cannot be undone.

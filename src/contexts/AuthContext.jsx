@@ -8,54 +8,106 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // Simple admin cache to avoid repeated DB calls
+  const [adminCache, setAdminCache] = useState(new Map());
 
-  // helper: check admin_users table for user.email
-  async function checkAdmin(email) {
+  // helper: check admin_users table for user.email with retry logic and caching
+  async function checkAdmin(email, retryCount = 0) {
     if (!email) {
       console.log("🔍 Admin check: No email provided");
       return false;
     }
-    console.log("🔍 Admin check: Checking email:", email);
-    console.log("🔍 Admin check: Starting database query...");
+    
+    const normalizedEmail = email.toLowerCase().trim();
+    
+    // Check cache first
+    if (adminCache.has(normalizedEmail)) {
+      const cachedResult = adminCache.get(normalizedEmail);
+      console.log(`🔍 Admin check: Using cached result for ${normalizedEmail}:`, cachedResult);
+      return cachedResult;
+    }
+    
+    const maxRetries = 2;
+    console.log(`🔍 Admin check: Checking email: ${normalizedEmail} (attempt ${retryCount + 1}/${maxRetries + 1})`);
     
     try {
       const startTime = Date.now();
       
-      // Add timeout to prevent hanging
+      // First, test database connection with a simple query
+      const connectionTest = await supabase
+        .from("admin_users")
+        .select("count", { count: "exact", head: true })
+        .limit(1);
+      
+      if (connectionTest.error) {
+        throw new Error(`Database connection failed: ${connectionTest.error.message}`);
+      }
+      
+      console.log("🔍 Admin check: Database connection verified");
+      
+      // Now perform the actual admin check with shorter timeout
       const queryPromise = supabase
         .from("admin_users")
         .select("email")
-        .eq("email", email)
+        .ilike("email", normalizedEmail)
         .limit(1)
         .maybeSingle();
       
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000)
+        setTimeout(() => reject(new Error('Query timeout after 5 seconds')), 5000)
       );
       
       const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
       
       const endTime = Date.now();
-      console.log("🔍 Admin check: Query completed in", endTime - startTime, "ms");
+      console.log(`🔍 Admin check: Query completed in ${endTime - startTime}ms`);
 
       if (error) {
         console.log("❌ Admin table check failed:", error);
-        console.log("❌ Error details:", {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint
-        });
-        return false; // strict deny on error
+        
+        // Retry on certain errors
+        if (retryCount < maxRetries && (
+          error.message.includes('timeout') || 
+          error.message.includes('network') ||
+          error.code === 'PGRST301' // connection error
+        )) {
+          console.log(`🔄 Retrying admin check (${retryCount + 1}/${maxRetries})...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // exponential backoff
+          return checkAdmin(email, retryCount + 1);
+        }
+        
+        return false; // strict deny on error after retries
       }
 
       const isAdmin = !!data;
       console.log("✅ Admin check result:", isAdmin, "Data:", data);
-      return isAdmin; // true if a matching admin email exists
+      
+      // Cache the result for 5 minutes
+      setAdminCache(prev => {
+        const newCache = new Map(prev);
+        newCache.set(normalizedEmail, isAdmin);
+        return newCache;
+      });
+      
+      return isAdmin;
+      
     } catch (error) {
       console.log("❌ Admin check error:", error);
-      console.log("❌ Error stack:", error.stack);
-      return false; // strict deny on error
+      
+      // Retry on timeout or connection errors
+      if (retryCount < maxRetries && (
+        error.message.includes('timeout') || 
+        error.message.includes('connection') ||
+        error.message.includes('network')
+      )) {
+        console.log(`🔄 Retrying admin check due to ${error.message} (${retryCount + 1}/${maxRetries})...`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        return checkAdmin(email, retryCount + 1);
+      }
+      
+      console.log("❌ Admin check failed after retries, denying access");
+      return false; // strict deny on error after retries
     }
   }
 
@@ -107,11 +159,21 @@ export function AuthProvider({ children }) {
     setSession(null);
     setUser(null);
     setIsAdmin(false);
+    setAdminCache(new Map()); // Clear admin cache on sign out
+  };
+
+  // Function to refresh admin status (useful after admin changes)
+  const refreshAdminStatus = async () => {
+    if (user?.email) {
+      setAdminCache(new Map()); // Clear cache
+      const admin = await checkAdmin(user.email);
+      setIsAdmin(admin);
+    }
   };
 
   return (
     <AuthContext.Provider
-      value={{ session, user, isAdmin, loading, setIsAdmin, signOut }}
+      value={{ session, user, isAdmin, loading, setIsAdmin, signOut, refreshAdminStatus }}
     >
       {children}
     </AuthContext.Provider>
