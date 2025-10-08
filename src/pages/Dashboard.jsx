@@ -50,12 +50,13 @@ function Dashboard() {
   const chartData = view === "monthly" ? monthlyData : yearlyData;
   const xKey = view === "monthly" ? "month" : "year";
 
-  // Calculate latest month’s summary for cards
+  // Calculate latest month's summary for cards
   const latestMonth = monthlyData[monthlyData.length - 1] || {};
   const cebUnits = latestMonth.ceb || 0;
   const cebEarnings = (latestMonth.cebEarnings ?? (cebUnits * 50));
   const inverterGen = latestMonth.inverter || 0;
   const inverterEarnings = (latestMonth.inverterEarnings ?? (inverterGen * 50));
+
 
   return (
     <div>
@@ -78,6 +79,7 @@ function Dashboard() {
           <p>{Math.round(inverterEarnings).toLocaleString()} LKR</p>
         </div>
       </div>
+
 
       {/* Loading / Error */}
       {loading && (
@@ -175,6 +177,7 @@ function Dashboard() {
           </LineChart>
         </ResponsiveContainer>
       </div>
+
     </div>
   );
 }

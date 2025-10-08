@@ -34,19 +34,29 @@ export function AuthProvider({ children }) {
     try {
       const startTime = Date.now();
       
+      console.log("🔍 Admin check: Starting connection test...");
+      
       // First, test database connection with a simple query
-      const connectionTest = await supabase
+      const connectionTestPromise = supabase
         .from("admin_users")
         .select("count", { count: "exact", head: true })
         .limit(1);
       
+      const connectionTimeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection test timeout after 3 seconds')), 3000)
+      );
+      
+      const connectionTest = await Promise.race([connectionTestPromise, connectionTimeoutPromise]);
+      
       if (connectionTest.error) {
+        console.log("❌ Connection test failed:", connectionTest.error);
         throw new Error(`Database connection failed: ${connectionTest.error.message}`);
       }
       
       console.log("🔍 Admin check: Database connection verified");
       
       // Now perform the actual admin check with shorter timeout
+      console.log("🔍 Admin check: Starting admin query...");
       const queryPromise = supabase
         .from("admin_users")
         .select("email")
@@ -94,12 +104,19 @@ export function AuthProvider({ children }) {
       
     } catch (error) {
       console.log("❌ Admin check error:", error);
+      console.log("❌ Error details:", {
+        message: error.message,
+        stack: error.stack,
+        retryCount,
+        maxRetries
+      });
       
       // Retry on timeout or connection errors
       if (retryCount < maxRetries && (
         error.message.includes('timeout') || 
         error.message.includes('connection') ||
-        error.message.includes('network')
+        error.message.includes('network') ||
+        error.message.includes('fetch')
       )) {
         console.log(`🔄 Retrying admin check due to ${error.message} (${retryCount + 1}/${maxRetries})...`);
         await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
@@ -117,6 +134,19 @@ export function AuthProvider({ children }) {
       console.log("🔄 AuthContext: Initializing...");
       console.log("🔧 Supabase URL:", import.meta.env.VITE_SUPABASE_URL);
       console.log("🔧 Supabase Key exists:", !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+      
+      // Test basic Supabase connection first
+      try {
+        console.log("🔍 Testing basic Supabase connection...");
+        const { data, error } = await supabase.from("admin_users").select("count", { count: "exact", head: true }).limit(1);
+        if (error) {
+          console.log("❌ Basic Supabase test failed:", error);
+        } else {
+          console.log("✅ Basic Supabase connection successful");
+        }
+      } catch (testError) {
+        console.log("❌ Supabase connection test error:", testError);
+      }
       
       const {
         data: { session: currentSession },
