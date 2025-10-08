@@ -20,7 +20,7 @@ export default function AdminLogin() {
         setUser(session.user);
         // Only auto-redirect if user is admin, otherwise let them see the login page
         if (isAdmin) {
-          navigate("/admin/test");
+          navigate("/admin/dashboard");
         }
       }
       setLoading(false);
@@ -35,7 +35,7 @@ export default function AdminLogin() {
         setUser(session.user);
         // Only auto-redirect if user is admin
         if (isAdmin) {
-          navigate("/admin/test");
+          navigate("/admin/dashboard");
         }
       } else {
         setUser(null);
@@ -51,7 +51,7 @@ export default function AdminLogin() {
     const origin = window.location.origin;
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${origin}/admin/test` },
+      options: { redirectTo: `${origin}/admin/dashboard` },
     });
   }
 

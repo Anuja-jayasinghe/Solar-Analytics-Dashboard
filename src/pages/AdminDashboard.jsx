@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { AuthContext } from "../contexts/AuthContext";
 
 function AdminDashboard() {
+  const { user } = useContext(AuthContext);
   const [tab, setTab] = useState("ceb");
   const [cebData, setCebData] = useState([]);
   const [inverterData, setInverterData] = useState([]);
@@ -162,6 +164,12 @@ function AdminDashboard() {
     setMessage("");
   };
 
+
+  // Handle going to normal dashboard
+  const handleGoToDashboard = () => {
+    window.location.href = '/dashboard';
+  };
+
   // --- Table renderer ---
   const renderTable = (rows, type) => (
     <table
@@ -257,7 +265,59 @@ function AdminDashboard() {
 
   return (
     <div style={{ padding: "2rem", maxWidth: "1000px", margin: "0 auto" }}>
-      <h1 style={{ color: "var(--accent)", marginBottom: "1rem" }}>⚡ Admin Dashboard</h1>
+      {/* Header with title and logout button */}
+      <div style={{ 
+        display: "flex", 
+        justifyContent: "space-between", 
+        alignItems: "center", 
+        marginBottom: "1rem",
+        flexWrap: "wrap",
+        gap: "1rem"
+      }}>
+        <h1 style={{ color: "var(--accent)", margin: 0 }}>⚡ Admin Dashboard</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+          {user && (
+            <span style={{ 
+              color: "var(--text-color)", 
+              fontSize: "0.9rem",
+              opacity: 0.8 
+            }}>
+              👤 {user.email}
+            </span>
+          )}
+          <button
+            onClick={handleGoToDashboard}
+            style={{
+              background: "linear-gradient(45deg, var(--accent), #00d4aa)",
+              color: "#fff",
+              border: "none",
+              padding: "8px 16px",
+              borderRadius: "20px",
+              cursor: "pointer",
+              fontSize: "0.9rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              transition: "all 0.3s ease",
+              boxShadow: "0 4px 15px rgba(0, 212, 170, 0.3)",
+              fontWeight: "bold",
+              textShadow: "0 1px 2px rgba(0,0,0,0.3)"
+            }}
+            onMouseOver={(e) => {
+              e.target.style.transform = "scale(1.05)";
+              e.target.style.boxShadow = "0 6px 20px rgba(0, 212, 170, 0.4)";
+              e.target.style.background = "linear-gradient(45deg, #00d4aa, var(--accent))";
+            }}
+            onMouseOut={(e) => {
+              e.target.style.transform = "scale(1)";
+              e.target.style.boxShadow = "0 4px 15px rgba(0, 212, 170, 0.3)";
+              e.target.style.background = "linear-gradient(45deg, var(--accent), #00d4aa)";
+            }}
+          >
+            🚀 Go to Dashboard
+          </button>
+        </div>
+      </div>
 
       {/* Tabs */}
       <div style={{ marginBottom: "1rem" }}>
