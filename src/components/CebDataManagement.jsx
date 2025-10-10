@@ -41,8 +41,10 @@ const CebDataManagement = () => {
 
     if (error) {
       setMessage(`❌ Error loading data: ${error.message}`);
+      console.error("CEB data fetch error:", error);
     } else {
-      setData(data);
+      setData(data || []);
+      console.log("CEB data loaded:", data);
     }
     setLoading(false);
   };
@@ -59,30 +61,25 @@ const CebDataManagement = () => {
     setMessage("");
 
     try {
+      const recordData = {
+        bill_date: form.bill_date,
+        meter_reading: parseFloat(form.meter_reading) || 0,
+        units_exported: parseFloat(form.units_exported) || 0,
+        earnings: parseFloat(form.earnings) || 0,
+      };
+
       if (editingId) {
         // update
         const { error } = await supabase
           .from("ceb_data")
-          .update({
-            bill_date: form.bill_date,
-            meter_reading: parseFloat(form.meter_reading),
-            units_exported: parseFloat(form.units_exported),
-            earnings: parseFloat(form.earnings),
-          })
+          .update(recordData)
           .eq("id", editingId);
 
         if (error) throw error;
         setMessage("✅ Record updated successfully.");
       } else {
         // insert new
-        const { error } = await supabase.from("ceb_data").insert([
-          {
-            bill_date: form.bill_date,
-            meter_reading: parseFloat(form.meter_reading),
-            units_exported: parseFloat(form.units_exported),
-            earnings: parseFloat(form.earnings),
-          },
-        ]);
+        const { error } = await supabase.from("ceb_data").insert([recordData]);
         if (error) throw error;
         setMessage("✅ Record added successfully.");
       }
@@ -92,6 +89,7 @@ const CebDataManagement = () => {
       fetchData();
     } catch (err) {
       setMessage(`❌ ${err.message}`);
+      console.error("Submit error:", err);
     } finally {
       setLoading(false);
     }
@@ -201,7 +199,13 @@ const CebDataManagement = () => {
 
       {/* Data Table */}
       {loading ? (
-        <p>Loading...</p>
+        <div style={{ textAlign: "center", padding: "2rem", color: "#aaa" }}>
+          <p>🔄 Loading CEB data...</p>
+        </div>
+      ) : data.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "2rem", color: "#aaa" }}>
+          <p>📊 No CEB data found. Add your first record above!</p>
+        </div>
       ) : (
         <table style={tableStyle}>
           <thead style={{ background: "rgba(255,122,0,0.2)" }}>
@@ -217,9 +221,9 @@ const CebDataManagement = () => {
             {data.map((row) => (
               <tr key={row.id}>
                 <td>{row.bill_date}</td>
-                <td>{row.meter_reading}</td>
-                <td>{row.units_exported}</td>
-                <td>{row.earnings}</td>
+                <td>{row.meter_reading || 0}</td>
+                <td>{row.units_exported || 0}</td>
+                <td>{row.earnings ? `LKR ${row.earnings.toLocaleString()}` : 'LKR 0'}</td>
                 <td>
                   <button style={editBtn} onClick={() => startEdit(row)}>
                     Edit

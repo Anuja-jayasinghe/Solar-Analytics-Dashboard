@@ -1,11 +1,13 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import CebDataManagement from "../components/CebDataManagement"; // ✅ new modular component
-// (Later you’ll add:)
+// (Later you'll add:)
  // import InverterDataManagement from "../components/InverterDataManagement";
  // import AdminManagement from "../components/AdminManagement";
 
 function AdminDashboard() {
   const [tab, setTab] = useState("ceb");
+  const navigate = useNavigate();
 
   const renderContent = () => {
     switch (tab) {
@@ -45,7 +47,37 @@ function AdminDashboard() {
         color: "var(--text-color)",
       }}
     >
-      <h1 style={{ color: "var(--accent)", marginBottom: "1rem" }}>⚡ Admin Dashboard</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+        <h1 style={{ color: "var(--accent)", margin: 0 }}>⚡ Admin Dashboard</h1>
+        
+        <button
+          onClick={() => navigate("/")}
+          style={{
+            background: "var(--accent)",
+            color: "#000",
+            border: "none",
+            padding: "10px 20px",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontWeight: "bold",
+            fontSize: "14px",
+            transition: "all 0.2s ease",
+            boxShadow: "0 2px 8px rgba(255, 122, 0, 0.3)"
+          }}
+          onMouseOver={(e) => {
+            e.target.style.background = "#ff8c00";
+            e.target.style.transform = "translateY(-2px)";
+            e.target.style.boxShadow = "0 4px 12px rgba(255, 122, 0, 0.4)";
+          }}
+          onMouseOut={(e) => {
+            e.target.style.background = "var(--accent)";
+            e.target.style.transform = "translateY(0)";
+            e.target.style.boxShadow = "0 2px 8px rgba(255, 122, 0, 0.3)";
+          }}
+        >
+          🏠 Return to Dashboard
+        </button>
+      </div>
 
       {/* Tab Navigation */}
       <div

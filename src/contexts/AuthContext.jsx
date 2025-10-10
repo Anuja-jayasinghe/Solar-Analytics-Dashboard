@@ -87,7 +87,17 @@ export function AuthProvider({ children }) {
           return checkAdmin(email, retryCount + 1);
         }
         
-        return false; // strict deny on error after retries
+        // IMPROVED: Don't deny access on database errors, use cached result if available
+        console.log("⚠️ Database error, checking for cached admin status...");
+        if (adminCache.has(normalizedEmail)) {
+          const cachedResult = adminCache.get(normalizedEmail);
+          console.log(`🔍 Using cached result due to database error: ${cachedResult}`);
+          return cachedResult;
+        }
+        
+        // If no cache and database is down, assume non-admin (safer default)
+        console.log("⚠️ No cached result available, defaulting to non-admin due to database error");
+        return false;
       }
 
       const isAdmin = !!data;
@@ -123,8 +133,17 @@ export function AuthProvider({ children }) {
         return checkAdmin(email, retryCount + 1);
       }
       
-      console.log("❌ Admin check failed after retries, denying access");
-      return false; // strict deny on error after retries
+      // IMPROVED: Don't deny access on network errors, use cached result if available
+      console.log("⚠️ Network error, checking for cached admin status...");
+      if (adminCache.has(normalizedEmail)) {
+        const cachedResult = adminCache.get(normalizedEmail);
+        console.log(`🔍 Using cached result due to network error: ${cachedResult}`);
+        return cachedResult;
+      }
+      
+      // If no cache and network is down, assume non-admin (safer default)
+      console.log("⚠️ No cached result available, defaulting to non-admin due to network error");
+      return false;
     }
   }
 
@@ -179,10 +198,24 @@ export function AuthProvider({ children }) {
       }
     );
 
-    return () => {
-      listener.subscription.unsubscribe();
+    // Handle tab visibility changes to refresh auth state when user returns
+    const handleVisibilityChange = async () => {
+      if (!document.hidden && session?.user?.email) {
+        console.log("🔄 Tab became visible, refreshing admin status...");
+        const admin = await checkAdmin(session.user.email);
+        setIsAdmin(admin);
+      }
     };
-  }, []);
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      if (listener?.subscription) {
+        listener.subscription.unsubscribe();
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [session?.user?.email]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
