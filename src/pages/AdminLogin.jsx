@@ -11,41 +11,18 @@ export default function AdminLogin() {
   const { isAdmin, session } = useContext(AuthContext);
 
   useEffect(() => {
-    async function checkSession() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (session?.user) {
-        setUser(session.user);
-        // Only auto-redirect if user is admin, otherwise let them see the login page
-        if (isAdmin) {
-          navigate("/admin/dashboard");
-        }
+    // Use the session and isAdmin from AuthContext instead of managing our own state
+    if (session?.user) {
+      setUser(session.user);
+      // Only auto-redirect if user is admin, otherwise let them see the login page
+      if (isAdmin) {
+        navigate("/admin/dashboard");
       }
-      setLoading(false);
+    } else {
+      setUser(null);
     }
-
-    checkSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        // Only auto-redirect if user is admin
-        if (isAdmin) {
-          navigate("/admin/dashboard");
-        }
-      } else {
-        setUser(null);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
+    setLoading(false);
+  }, [session, isAdmin, navigate]);
 
   async function signInWithGoogle() {
     const origin = window.location.origin;

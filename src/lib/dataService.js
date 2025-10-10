@@ -15,12 +15,11 @@ function monthKeyFromDateString(dateStr) {
 function aggregateMonthly(cebRows, inverterRows) {
   const map = new Map()
   for (const r of cebRows) {
-    const key = monthKeyFromDateString(r.date)
+    const key = monthKeyFromDateString(r.bill_date)
     const existing = map.get(key) || { month: key, ceb: 0, inverter: 0, cebEarnings: 0, inverterEarnings: 0 }
-    existing.ceb += Number(r.generation_kwh || 0)
-    const computedEarningsCeb = Number(r.generation_kwh || 0) * Number(r.rate_per_kwh || 0)
-    const earningsCeb = r.earnings ?? computedEarningsCeb
-    existing.cebEarnings += Number(earningsCeb || 0)
+    existing.ceb += Number(r.units_exported || 0)
+    // Use earnings directly from the table
+    existing.cebEarnings += Number(r.earnings || 0)
     map.set(key, existing)
   }
   for (const r of inverterRows) {
@@ -47,12 +46,11 @@ function aggregateMonthly(cebRows, inverterRows) {
 function aggregateYearly(cebRows, inverterRows) {
   const map = new Map()
   for (const r of cebRows) {
-    const y = new Date(r.date).getFullYear()
+    const y = new Date(r.bill_date).getFullYear()
     const existing = map.get(y) || { year: String(y), ceb: 0, inverter: 0, cebEarnings: 0, inverterEarnings: 0 }
-    existing.ceb += Number(r.generation_kwh || 0)
-    const computedEarningsCebY = Number(r.generation_kwh || 0) * Number(r.rate_per_kwh || 0)
-    const earningsCebY = r.earnings ?? computedEarningsCebY
-    existing.cebEarnings += Number(earningsCebY || 0)
+    existing.ceb += Number(r.units_exported || 0)
+    // Use earnings directly from the table
+    existing.cebEarnings += Number(r.earnings || 0)
     map.set(y, existing)
   }
   for (const r of inverterRows) {
@@ -71,7 +69,7 @@ function aggregateYearly(cebRows, inverterRows) {
 
 export async function getMonthlyData() {
   const [{ data: ceb, error: cebError }, { data: inv, error: invError }] = await Promise.all([
-    supabase.schema(schema).from(cebTable).select('date,generation_kwh,earnings,rate_per_kwh'),
+    supabase.schema(schema).from(cebTable).select('bill_date,units_exported,earnings'),
     supabase.schema(schema).from(inverterTable).select('date,generation_kwh,earnings,rate_per_kwh'),
   ])
   if (cebError) throw new Error(`Fetch ${schema}.${cebTable} failed: ${cebError.message}`)
@@ -81,7 +79,7 @@ export async function getMonthlyData() {
 
 export async function getYearlyData() {
   const [{ data: ceb, error: cebError }, { data: inv, error: invError }] = await Promise.all([
-    supabase.schema(schema).from(cebTable).select('date,generation_kwh,earnings,rate_per_kwh'),
+    supabase.schema(schema).from(cebTable).select('bill_date,units_exported,earnings'),
     supabase.schema(schema).from(inverterTable).select('date,generation_kwh,earnings,rate_per_kwh'),
   ])
   if (cebError) throw new Error(`Fetch ${schema}.${cebTable} failed: ${cebError.message}`)
