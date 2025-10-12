@@ -24,25 +24,29 @@ export async function buildSolisHeaders(apiPath, body) {
       getEnv('SOLIS_API_SECRET') || getEnv('VITE_SOLIS_API_SECRET');
   
     if (!apiId || !apiSecret) {
-      throw new Error('❌ Missing Solis API credentials in environment variables.');
+      throw new Error('❌ Missing Solis API credentials.');
     }
   
-    // Ensure apiPath starts with a single slash
     const path = `/${apiPath.replace(/^\/+/, '')}`;
-  
     const bodyString = JSON.stringify(body);
-    const md5Hash = CryptoJS.MD5(bodyString);
+    const md5Hash = CryptoJS.MD5(CryptoJS.enc.Utf8.parse(bodyString)); // ensure UTF-8
     const contentMd5 = CryptoJS.enc.Base64.stringify(md5Hash);
     const contentType = 'application/json;charset=UTF-8';
     const date = new Date().toUTCString();
   
-    // ✅ Canonical format (exact order, newline separated)
-    const canonical = `POST\n${contentMd5}\n${contentType}\n${date}\n${path}`;
+    // ✅ Ensure there is no leading space or trailing newline
+    const canonical = [
+      'POST',
+      contentMd5,
+      contentType,
+      date,
+      path
+    ].join('\n');
   
-    const signature = CryptoJS.HmacSHA1(canonical, apiSecret);
+    const signature = CryptoJS.HmacSHA1(CryptoJS.enc.Utf8.parse(canonical), apiSecret);
     const base64Sign = CryptoJS.enc.Base64.stringify(signature);
   
-    console.log('🧾 Canonical String:\n', canonical);
+    console.log('🧾 Canonical String:\n' + canonical);
     console.log('🔏 Generated Signature:', base64Sign);
   
     return {
@@ -53,7 +57,6 @@ export async function buildSolisHeaders(apiPath, body) {
     };
   }
   
-
 /**
  * Execute signed POST request to SolisCloud API
  * @param {string} apiPath - API endpoint path (e.g. '/v1/api/inverterList')
