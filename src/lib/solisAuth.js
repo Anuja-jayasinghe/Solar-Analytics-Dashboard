@@ -71,11 +71,17 @@ export async function solisFetch(apiPath, body) {
 
   console.log('🌍 Solis API Endpoint:', `${apiUrl}${apiPath}`);
 
-  const res = await fetch(`${apiUrl}${apiPath}`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-  });
+// ✅ Ensure no double slashes in URL
+const endpoint = `${apiUrl.replace(/\/+$/, '')}/${apiPath.replace(/^\/+/, '')}`;
+
+console.log('🌍 Solis API Endpoint (clean):', endpoint);
+
+const res = await fetch(endpoint, {
+  method: 'POST',
+  headers,
+  body: JSON.stringify(body),
+});
+
 
   if (!res.ok) {
     const errText = await res.text();
