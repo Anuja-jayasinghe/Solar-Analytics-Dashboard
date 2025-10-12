@@ -1,5 +1,16 @@
 import CryptoJS from 'crypto-js';
 
+// ✅ Helper to read environment variables safely
+function getEnv(key) {
+  if (typeof process !== 'undefined' && process.env[key]) {
+    return process.env[key];
+  }
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
+    return import.meta.env[key];
+  }
+  return undefined;
+}
+
 /**
  * Build SolisCloud authentication headers
  * @param {string} apiPath - API endpoint path (e.g. '/v1/api/inverterList')
@@ -7,9 +18,20 @@ import CryptoJS from 'crypto-js';
  * @returns {object} Headers with MD5, Date, and HMAC signature
  */
 export async function buildSolisHeaders(apiPath, body) {
-  const apiId = import.meta.env.VITE_SOLIS_API_ID;
-  const apiSecret = import.meta.env.VITE_SOLIS_API_SECRET;
-  const apiUrl = import.meta.env.VITE_SOLIS_API_URL || 'https://www.soliscloud.com:13333';
+  const apiId =
+    getEnv('SOLIS_API_ID') || getEnv('VITE_SOLIS_API_ID');
+  const apiSecret =
+    getEnv('SOLIS_API_SECRET') || getEnv('VITE_SOLIS_API_SECRET');
+  const apiUrl =
+    getEnv('SOLIS_API_URL') || getEnv('VITE_SOLIS_API_URL') || 'https://www.soliscloud.com:13333';
+
+  if (!apiId || !apiSecret) {
+    throw new Error('❌ Missing Solis API credentials in environment variables.');
+  }
+
+  // Debug
+  console.log('🔐 Using API URL:', apiUrl);
+  console.log('🆔 Using API ID:', apiId ? 'Loaded ✅' : 'Missing ❌');
 
   // 1️⃣ Convert body to string
   const bodyString = JSON.stringify(body);
@@ -18,10 +40,10 @@ export async function buildSolisHeaders(apiPath, body) {
   const md5Hash = CryptoJS.MD5(bodyString);
   const contentMd5 = CryptoJS.enc.Base64.stringify(md5Hash);
 
-  // 3️⃣ Get current GMT date (format: EEE, d MMM yyyy HH:mm:ss GMT)
+  // 3️⃣ Get current GMT date
   const date = new Date().toUTCString();
 
-  // 4️⃣ Build Canonicalized string for signing
+  // 4️⃣ Build canonical string for signing
   const canonical = `POST\n${contentMd5}\napplication/json;charset=UTF-8\n${date}\n${apiPath}`;
 
   // 5️⃣ Compute HMAC-SHA1 signature → Base64
@@ -43,8 +65,11 @@ export async function buildSolisHeaders(apiPath, body) {
  * @param {object} body - Request body
  */
 export async function solisFetch(apiPath, body) {
-  const apiUrl = import.meta.env.VITE_SOLIS_API_URL || 'https://www.soliscloud.com:13333';
+  const apiUrl =
+    getEnv('SOLIS_API_URL') || getEnv('VITE_SOLIS_API_URL') || 'https://www.soliscloud.com:13333';
   const headers = await buildSolisHeaders(apiPath, body);
+
+  console.log('🌍 Solis API Endpoint:', `${apiUrl}${apiPath}`);
 
   const res = await fetch(`${apiUrl}${apiPath}`, {
     method: 'POST',
@@ -53,9 +78,12 @@ export async function solisFetch(apiPath, body) {
   });
 
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    const errText = await res.text();
+    console.error('❌ Solis API Response Error:', errText);
+    throw new Error(`HTTP ${res.status}: ${errText}`);
   }
 
   const data = await res.json();
+  console.log('✅ Solis API Response:', data);
   return data;
 }
