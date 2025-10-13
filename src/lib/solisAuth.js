@@ -1,93 +1,60 @@
-import CryptoJS from 'crypto-js';
+// ./src/lib/solisAuth.js
+import crypto from 'crypto';
+import fetch from 'node-fetch';
+import dotenv from 'dotenv';
 
-// ✅ Helper to read environment variables safely
-function getEnv(key) {
-  if (typeof process !== 'undefined' && process.env[key]) {
-    return process.env[key];
-  }
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
-    return import.meta.env[key];
-  }
-  return undefined;
+dotenv.config();
+
+const SOLIS_API_ID = process.env.SOLIS_API_ID;
+const SOLIS_API_SECRET = process.env.SOLIS_API_SECRET;
+const SOLIS_BASE_URL = 'https://www.soliscloud.com:13333';
+
+if (!SOLIS_API_ID || !SOLIS_API_SECRET) {
+  throw new Error('Missing SOLIS_API_ID or SOLIS_API_SECRET environment variable.');
 }
 
 /**
- * Build SolisCloud authentication headers
- * @param {string} apiPath - API endpoint path (e.g. '/v1/api/inverterList')
- * @param {object} body - Request body
- * @returns {object} Headers with MD5, Date, and HMAC signature
+ * Builds the correct SolisCloud authentication headers.
  */
-export async function buildSolisHeaders(apiPath, body) {
-    const apiId =
-      getEnv('SOLIS_API_ID') || getEnv('VITE_SOLIS_API_ID');
-    const apiSecret =
-      getEnv('SOLIS_API_SECRET') || getEnv('VITE_SOLIS_API_SECRET');
-  
-    if (!apiId || !apiSecret) {
-      throw new Error('❌ Missing Solis API credentials.');
-    }
-  
-    const path = `/${apiPath.replace(/^\/+/, '')}`;
-    const bodyString = JSON.stringify(body);
-    const md5Hash = CryptoJS.MD5(CryptoJS.enc.Utf8.parse(bodyString)); // ensure UTF-8
-    const contentMd5 = CryptoJS.enc.Base64.stringify(md5Hash);
-    const contentType = 'application/json;charset=UTF-8';
-    const date = new Date().toUTCString();
-  
-    // ✅ Ensure there is no leading space or trailing newline
-    const canonical = [
-      'POST',
-      contentMd5,
-      contentType,
-      date,
-      path
-    ].join('\n');
-  
-    const signature = CryptoJS.HmacSHA1(CryptoJS.enc.Utf8.parse(canonical), apiSecret);
-    const base64Sign = CryptoJS.enc.Base64.stringify(signature);
-  
-    console.log('🧾 Canonical String:\n' + canonical);
-    console.log('🔏 Generated Signature:', base64Sign);
-  
-    return {
-      'Content-MD5': contentMd5,
-      'Content-Type': contentType,
-      Date: date,
-      Authorization: `API ${apiId}:${base64Sign}`,
-    };
-  }
-  
+function buildSolisHeaders(method, path, body = '') {
+  const contentType = 'application/json';
+  const contentMd5 = body ? crypto.createHash('md5').update(body).digest('base64') : '';
+  const date = new Date().toUTCString();
+
+  // Canonical string to sign
+  const canonicalString = [method, contentMd5, contentType, date, path].join('\n');
+
+  // Sign with HMAC-SHA1 using API secret
+  const signature = crypto.createHmac('sha1', SOLIS_API_SECRET).update(canonicalString).digest('base64');
+  const authorization = `API ${SOLIS_API_ID}:${signature}`;
+
+  return {
+    'Content-MD5': contentMd5,
+    'Content-Type': contentType,
+    'Date': date,
+    'Authorization': authorization,
+  };
+}
+
 /**
- * Execute signed POST request to SolisCloud API
- * @param {string} apiPath - API endpoint path (e.g. '/v1/api/inverterList')
- * @param {object} body - Request body
+ * Wrapper around fetch with SolisCloud signing.
  */
-export async function solisFetch(apiPath, body) {
-  const apiUrl =
-    getEnv('SOLIS_API_URL') || getEnv('VITE_SOLIS_API_URL') || 'https://www.soliscloud.com:13333';
-  const headers = await buildSolisHeaders(apiPath, body);
+export async function solisFetch(endpoint, bodyData = {}, method = 'POST') {
+  const path = `/v1/api${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
+  const body = method === 'GET' ? '' : JSON.stringify(bodyData);
+  const headers = buildSolisHeaders(method, path, body);
 
-  console.log('🌍 Solis API Endpoint:', `${apiUrl}${apiPath}`);
+  const response = await fetch(`${SOLIS_BASE_URL}${path}`, {
+    method,
+    headers,
+    body: method === 'GET' ? undefined : body,
+  });
 
-// ✅ Ensure no double slashes in URL
-const endpoint = `${apiUrl.replace(/\/+$/, '')}/${apiPath.replace(/^\/+/, '')}`;
-
-console.log('🌍 Solis API Endpoint (clean):', endpoint);
-
-const res = await fetch(endpoint, {
-  method: 'POST',
-  headers,
-  body: JSON.stringify(body),
-});
-
-
-  if (!res.ok) {
-    const errText = await res.text();
-    console.error('❌ Solis API Response Error:', errText);
-    throw new Error(`HTTP ${res.status}: ${errText}`);
+  const json = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    console.error('❌ Solis API Error:', json);
+    throw new Error(`Solis API request failed with status ${response.status}`);
   }
 
-  const data = await res.json();
-  console.log('✅ Solis API Response:', data);
-  return data;
+  return json;
 }
