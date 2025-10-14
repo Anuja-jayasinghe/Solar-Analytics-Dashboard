@@ -1,4 +1,4 @@
-# .github/workflows/fetch-solis-data.yml
+# .github/workflows/fetch_solis_data.yml
 name: ☀️ Fetch SolisCloud Inverter Data
 
 on:
@@ -40,4 +40,4 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           SOLIS_API_ID: ${{ secrets.SOLIS_API_ID }}
           SOLIS_API_SECRET: ${{ secrets.SOLIS_API_SECRET }}
-        run: node ./functions/fetch-inverter-data/index.js
+        run: node ./functions/fetch_inverter_data/index.js

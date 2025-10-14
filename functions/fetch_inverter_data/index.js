@@ -1,4 +1,4 @@
-// ./functions/fetch-inverter-data/index.js
+// ./functions/fetch_inverter_data/index.js
 
 import { createClient } from '@supabase/supabase-js';
 import { solisFetch } from '../../src/lib/solisAuth.js';
