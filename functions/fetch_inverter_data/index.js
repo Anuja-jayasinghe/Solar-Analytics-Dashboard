@@ -1,28 +1,26 @@
 // ./functions/fetch-inverter-data/index.js
 
 import { createClient } from '@supabase/supabase-js';
-import { solisFetch } from '../../src/lib/solisAuth.js'; // Adjust path if needed
-import 'dotenv/config'; // Used for local testing
+import { solisFetch } from '../../src/lib/solisAuth.js';
+import 'dotenv/config';
 
 // --- Configuration ---
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const RETENTION_DAYS = 30; // Data older than this will be pruned from the live table
+const RETENTION_DAYS = 30; // Clean up after 30 days
 
-// --- Supabase Client Initialization ---
+// --- Supabase Client ---
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-  console.error('❌ Missing Supabase environment variables. Ensure they are set in GitHub Secrets.');
+  console.error('❌ Missing Supabase environment variables.');
   process.exit(1);
 }
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-// --- Main Handler ---
+// --- Main Job Handler ---
 async function handler() {
-  console.log(`🚀 Starting SolisCloud sync job at ${new Date().toISOString()}`);
-
-  // Determine if this is a nightly summary run based on UTC time
+  console.log(`🚀 SolisCloud Sync Job started at ${new Date().toISOString()}`);
   const currentUTCHour = new Date().getUTCHours();
-  const isNightlyRun = currentUTCHour === 18; // 18:00 UTC is 11:30 PM in Sri Lanka
+  const isNightlyRun = currentUTCHour === 18; // 18:00 UTC = 11:30 PM LK
 
   try {
     const inverters = await getInverterList();
@@ -31,119 +29,113 @@ async function handler() {
     await fetchAndStoreLiveData(inverters);
 
     if (isNightlyRun) {
-      console.log('🌙 Running nightly summary and prune tasks...');
+      console.log('🌙 Running nightly summary + cleanup...');
       await summarizeDailyData(inverters);
       await pruneOldLiveData();
     }
 
-    console.log('✅ Job finished successfully.');
+    console.log('✅ Sync completed successfully.');
   } catch (err) {
-    console.error('💥 A fatal error occurred:', err.message);
+    console.error('💥 Fatal error in handler:', err.message);
     await logError('handler_fatal_error', err.message);
   }
 }
 
-// --- Core Logic Functions ---
-
+// --- Fetch inverter list from SolisCloud ---
 async function getInverterList() {
   console.log('➡️ Fetching inverter list...');
   const response = await solisFetch('/v1/api/inverterList', { pageNo: 1, pageSize: 50 });
 
   if (!response?.success || response?.code !== '0' || !response?.data?.page?.records) {
-    throw new Error(`Failed to fetch inverter list: ${response?.msg || 'Invalid response structure'}`);
+    throw new Error(`Failed to fetch inverter list: ${response?.msg || 'Invalid response'}`);
   }
-  
+
   const inverters = response.data.page.records;
-  console.log(`Found ${inverters.length} inverter(s).`);
+  console.log(`📡 Found ${inverters.length} inverter(s).`);
   return inverters;
 }
 
+// --- Store live data into Supabase ---
 async function fetchAndStoreLiveData(inverters) {
-  console.log('🔄 Fetching and storing live data...');
-  const liveDataRows = [];
+  console.log('🔄 Fetching live inverter data...');
+  const liveDataRows = inverters.map((inv) => ({
+    inverter_sn: inv.sn,
+    data_timestamp: new Date(Number(inv.dataTimestamp)),
+    power_ac: inv.pac,
+    generation_today: inv.etoday,
+    inverter_temp: inv.inverterTemperature,
+    status: inv.state,
+    raw_data: inv,
+  }));
 
-  for (const inverter of inverters) {
-    // We get all necessary data from the inverterList endpoint, no need for a second call.
-    liveDataRows.push({
-      inverter_sn: inverter.sn,
-      data_timestamp: new Date(Number(inverter.dataTimestamp)),
-      power_ac: inverter.pac,
-      generation_today: inverter.etoday,
-      inverter_temp: inverter.inverterTemperature,
-      status: inverter.state,
-      raw_data: inverter, // Storing the full payload as requested
-    });
-  }
+  const { error } = await supabase
+    .from('inverter_data_live')
+    .upsert(liveDataRows, { onConflict: 'inverter_sn,data_timestamp' });
 
-  if (liveDataRows.length > 0) {
-    const { error } = await supabase.from('inverter_data_live').upsert(liveDataRows, {
-      onConflict: 'inverter_sn,data_timestamp',
-    });
-    if (error) throw new Error(`Supabase live data upsert failed: ${error.message}`);
-    console.log(`Upserted ${liveDataRows.length} live data records.`);
-  }
+  if (error) throw new Error(`Supabase upsert failed: ${error.message}`);
+  console.log(`✅ Upserted ${liveDataRows.length} live records.`);
 }
 
+// --- Create daily summary for each inverter ---
 async function summarizeDailyData(inverters) {
   const today = new Date();
-  today.setUTCHours(0, 0, 0, 0); // Start of today in UTC
+  today.setUTCHours(0, 0, 0, 0);
 
   for (const inverter of inverters) {
-    const { data: dailyRecords, error } = await supabase
+    const { data: records, error } = await supabase
       .from('inverter_data_live')
-      .select('power_ac, generation_today, inverter_temp, status')
+      .select('power_ac, generation_today')
       .eq('inverter_sn', inverter.sn)
       .gte('data_timestamp', today.toISOString());
 
     if (error) {
-      console.error(`Could not fetch records for daily summary of ${inverter.sn}: ${error.message}`);
+      console.error(`⚠️ Could not fetch records for ${inverter.sn}: ${error.message}`);
       continue;
     }
 
-    if (dailyRecords.length === 0) {
-      console.warn(`No records found for today to summarize for inverter ${inverter.sn}.`);
+    if (!records.length) {
+      console.warn(`⚠️ No records found for inverter ${inverter.sn}.`);
       continue;
     }
 
-    // Calculate summaries
-    const totalGeneration = Math.max(...dailyRecords.map(r => r.generation_today));
-    const peakPower = Math.max(...dailyRecords.map(r => r.power_ac));
-    const avgTemp = dailyRecords.reduce((sum, r) => sum + r.inverter_temp, 0) / dailyRecords.length;
-    const uptimeMinutes = dailyRecords.filter(r => r.status === 1).length * 5; // Assuming 5-min intervals
+    const totalGeneration = Math.max(...records.map((r) => r.generation_today));
+    const peakPower = Math.max(...records.map((r) => r.power_ac));
 
     const summaryRow = {
       inverter_sn: inverter.sn,
       summary_date: today.toISOString().split('T')[0],
       total_generation_kwh: totalGeneration,
       peak_power_kw: peakPower,
-      avg_temperature: parseFloat(avgTemp.toFixed(2)),
-      uptime_minutes: uptimeMinutes,
     };
 
-    const { error: summaryError } = await supabase.from('inverter_data_daily_summary').upsert(summaryRow, {
-        onConflict: 'inverter_sn,summary_date',
-    });
-    if (summaryError) throw new Error(`Supabase summary upsert failed for ${inverter.sn}: ${summaryError.message}`);
-    console.log(`✅ Daily summary created for inverter ${inverter.sn}.`);
+    const { error: upsertError } = await supabase
+      .from('inverter_data_daily_summary')
+      .upsert(summaryRow, { onConflict: 'inverter_sn,summary_date' });
+
+    if (upsertError) {
+      console.error(`💥 Summary upsert failed for ${inverter.sn}: ${upsertError.message}`);
+    } else {
+      console.log(`✅ Summary stored for inverter ${inverter.sn}.`);
+    }
   }
 }
 
+// --- Prune old live data ---
 async function pruneOldLiveData() {
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - RETENTION_DAYS);
-
-  console.log(`🗑️ Pruning live data older than ${thirtyDaysAgo.toISOString()}...`);
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - RETENTION_DAYS);
+  console.log(`🗑️ Cleaning records older than ${cutoff.toISOString()}...`);
 
   const { error } = await supabase
     .from('inverter_data_live')
     .delete()
-    .lt('data_timestamp', thirtyDaysAgo.toISOString());
+    .lt('data_timestamp', cutoff.toISOString());
 
-  if (error) throw new Error(`Failed to prune old live data: ${error.message}`);
-  console.log('✅ Pruning complete.');
+  if (error) throw new Error(`Failed to prune data: ${error.message}`);
+  console.log('✅ Old data pruned.');
 }
 
-// --- Helper for Logging ---
+// --- Error logging helper ---
 async function logError(endpoint, message) {
   try {
     await supabase.from('api_logs').insert({ endpoint, success: false, message });
@@ -152,8 +144,7 @@ async function logError(endpoint, message) {
   }
 }
 
-// --- Entry Point for Direct Execution ---
-// This allows running the script locally with `node index.js`
+// --- Local Execution ---
 if (import.meta.url === `file://${process.argv[1]}`) {
   handler();
 }
