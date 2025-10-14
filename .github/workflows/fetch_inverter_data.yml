@@ -1,40 +1,43 @@
 # .github/workflows/fetch-solis-data.yml
-
-name: Fetch SolisCloud Inverter Data
+name: ☀️ Fetch SolisCloud Inverter Data
 
 on:
-  # Allows you to run this workflow manually from the Actions tab for testing
   workflow_dispatch:
 
   schedule:
-    # Runs every 5 minutes from 00:30 to 14:30 UTC (6:00 AM to 8:00 PM Sri Lanka Time)
+    # Fetch live data every 5 minutes (06:00 AM – 08:00 PM LK)
     - cron: '*/5 0-14 * * *'
-
-    # Runs once at 18:00 UTC (11:30 PM Sri Lanka Time) for daily summary and cleanup
+    # Nightly summary + cleanup at 11:30 PM LK (18:00 UTC)
     - cron: '0 18 * * *'
 
 jobs:
-  fetch-and-store-data:
+  fetch-and-store:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
+      - name: 🧩 Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: 🧰 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Using a long-term support version of Node.js
+          node-version: 20
 
-      - name: Install dependencies
-        # This assumes your script and its dependencies are listed in package.json
-        run: npm install
+      - name: 📦 Install dependencies
+        run: npm ci
 
-      - name: Run Data Fetch Script
-        # This is the crucial step that securely provides your secrets to the Node.js script
+      - name: 🔑 Load environment variables
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           SOLIS_API_ID: ${{ secrets.SOLIS_API_ID }}
           SOLIS_API_SECRET: ${{ secrets.SOLIS_API_SECRET }}
-        # Ensure the path to your script is correct
-        run: node ./functions/fetch_inverter_data/index.js
+        run: echo "✅ Environment ready"
+
+      - name: 🚀 Run SolisCloud Fetch Script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SOLIS_API_ID: ${{ secrets.SOLIS_API_ID }}
+          SOLIS_API_SECRET: ${{ secrets.SOLIS_API_SECRET }}
+        run: node ./functions/fetch-inverter-data/index.js
