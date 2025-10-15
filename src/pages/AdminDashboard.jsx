@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import CebDataManagement from "../components/CebDataManagement"; // ✅ new modular component
+import CebDataManagement from "../components/CebDataManagement"; 
+import AdminManagement from "../components/AdminManagement";
 // (Later you'll add:)
  // import InverterDataManagement from "../components/InverterDataManagement";
- // import AdminManagement from "../components/AdminManagement";
+ 
 
 function AdminDashboard() {
   const [tab, setTab] = useState("ceb");
@@ -14,15 +15,7 @@ function AdminDashboard() {
       case "ceb":
         return <CebDataManagement />;
       case "admins":
-        return (
-          <div style={contentStyle}>
-            <h2 style={{ color: "var(--accent)" }}>🧑‍💼 Admin Management</h2>
-            <p style={{ color: "#aaa" }}>
-              Manage authorized admin accounts here — add, remove, and view admin users.
-            </p>
-            <p>⚙️ Coming soon...</p>
-          </div>
-        );
+        return <AdminManagement />;
       default:
         return null;
     }
