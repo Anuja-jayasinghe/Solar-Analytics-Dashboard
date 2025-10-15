@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import CebDataManagement from "../components/CebDataManagement"; 
-import AdminManagement from "../components/AdminManagement";
+import CebDataManagement from "../components/admin/CebDataManagement"; 
+import AdminManagement from "../components/admin/AdminManagement";
 // (Later you'll add:)
  // import InverterDataManagement from "../components/InverterDataManagement";
  
