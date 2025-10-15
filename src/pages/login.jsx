@@ -12,7 +12,7 @@ function Login() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: "http://localhost:3000/admin", // update in prod
+        redirectTo: "http://localhost:5173/admin/dashboard", // update in prod
       },
     });
     if (error) setError(error.message);
@@ -27,7 +27,7 @@ function Login() {
     if (error) {
       setError(error.message);
     } else {
-      navigate("/admin");
+      navigate("/admin/dashboard");
     }
   };
 
