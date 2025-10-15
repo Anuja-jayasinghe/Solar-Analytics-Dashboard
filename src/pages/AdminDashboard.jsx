@@ -13,16 +13,6 @@ function AdminDashboard() {
     switch (tab) {
       case "ceb":
         return <CebDataManagement />;
-      case "inverter":
-        return (
-          <div style={contentStyle}>
-            <h2 style={{ color: "var(--accent)" }}>🔋 Inverter Data Management</h2>
-            <p style={{ color: "#aaa" }}>
-              This section will allow admins to add, edit, and compare inverter generation data.
-            </p>
-            <p>⚙️ Coming soon...</p>
-          </div>
-        );
       case "admins":
         return (
           <div style={contentStyle}>
@@ -94,7 +84,6 @@ function AdminDashboard() {
       >
         {[
           { id: "ceb", label: "CEB Data" },
-          { id: "inverter", label: "Inverter Data" },
           { id: "admins", label: "Admin Management" },
         ].map((item) => (
           <button
