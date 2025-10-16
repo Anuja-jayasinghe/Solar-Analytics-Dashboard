@@ -18,7 +18,7 @@ function Navbar() {
   return (
     <>
       <nav className="navbar">
-        <h1>⚡ Solar Dashboard</h1>
+        <h1 style={{ color: "var(--accent)" }}>SolarDash</h1>
         <button
           onClick={handleAdminAccess}
           style={{
