@@ -1,8 +1,8 @@
-import { useContext, useEffect } from "react";
-import { ThemeProvider, ThemeContext } from "./components/ThemeContext";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
-import { AuthContext } from "./contexts/AuthContext";
+// App.js
+import { useState, useEffect, useContext } from "react";
+import { BrowserRouter as Router, Routes, Route, NavLink } from "react-router-dom";
+import { ThemeProvider } from "./components/ThemeContext";
+import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
 import Dashboard from "./pages/Dashboard";
@@ -14,6 +14,8 @@ import { verifySupabaseConnection } from "./lib/verifySupabaseConnection";
 
 function AppContent() {
   const { isAdmin, loading, session } = useContext(AuthContext);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   useEffect(() => {
     verifySupabaseConnection().then((result) => {
       if (result.ok) {
@@ -30,6 +32,7 @@ function AppContent() {
     if (!isAdmin) return <p>Access denied. Your account is not an admin.</p>;
     return children;
   }
+
   return (
     <Routes>
       {/* Admin routes - standalone layout */}
@@ -38,27 +41,37 @@ function AppContent() {
         path="/admin/dashboard"
         element={
           <RequireAdmin>
-            <AdminDashboard  />
+            <AdminDashboard />
           </RequireAdmin>
         }
       />
-      
+
       {/* Main app routes - with sidebar and navbar */}
-      <Route path="/*" element={
-        <div className="app-container">
-          <Sidebar />
-          <div className="main-content">
-            <Navbar />
-            <div className="page-container">
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/settings" element={<Settings />} />
-              </Routes>
+      <Route
+        path="/*"
+        element={
+          <div className="app-container" style={{ display: "flex" }}>
+            <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
+            <div
+              className="main-content"
+              style={{
+                marginLeft: isCollapsed ? "80px" : "260px",
+                flexGrow: 1,
+                transition: "margin-left 0.3s ease",
+              }}
+            >
+              <Navbar />
+              <div className="page-container">
+                <Routes>
+                  <Route index element={<Dashboard />} />
+                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route path="settings" element={<Settings />} />
+                </Routes>
+              </div>
             </div>
           </div>
-        </div>
-      } />
+        }
+      />
     </Routes>
   );
 }
