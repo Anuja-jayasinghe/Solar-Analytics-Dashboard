@@ -106,8 +106,9 @@ const SolarTracker = () => {
           <svg viewBox="0 0 240 240" style={styles.svg}>
             <defs>
               <linearGradient id="liquidGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(25, 100%, 60%)" />
-                <stop offset="100%" stopColor="hsl(25, 100%, 50%)" />
+              <stop offset="100%" stopColor="hsl(35, 100%, 70%)" />   {/* top: bright amber */}
+              <stop offset="100%" stopColor="hsl(32, 100.00%, 50.00%)" />  {/* middle: soft orange */}
+              <stop offset="100%" stopColor="hsl(28, 100%, 50%)" /> {/* bottom: deeper orange */}
               </linearGradient>
               <radialGradient id="bubbleShine" cx="35%" cy="35%">
                 <stop offset="0%" stopColor="rgba(255,255,255,0.4)" />
@@ -208,11 +209,11 @@ const SolarTracker = () => {
             </text>
             <text
               x="120"
-              y="135"
+              y="120"
               textAnchor="middle"
               style={styles.labelText}
             >
-              of Target
+
             </text>
           </svg>
         </div>
@@ -238,6 +239,8 @@ const SolarTracker = () => {
             style={{
               ...styles.progressBarInner,
               width: `${Math.min(displayPercent, 100)}%`,
+                background: "linear-gradient(90deg, hsl(35, 100%, 65%), hsl(28, 100%, 50%))",
+                boxShadow: "0 0 18px rgba(255, 165, 0, 0.6)",
             }}
           />
         </div>
@@ -300,7 +303,7 @@ const styles = {
   percentText: {
     fontSize: "48px",
     fontWeight: 700,
-    fill: "hsl(25, 100%, 50%)",
+    fill: "hsl(25, 100%, 100%)",
     filter: "drop-shadow(0 0 12px rgba(255, 122, 0, 0.6))",
   },
   labelText: {
