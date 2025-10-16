@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 
-// In a real application, you would import your configured Supabase client
-// import { supabase } from '../lib/supabaseClient';
+// Initialize Supabase client (safe: uses your public anon key)
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 const CurrentPower = () => {
   const [power, setPower] = useState(0);
@@ -9,18 +13,28 @@ const CurrentPower = () => {
   
   const maxPower = 40; // kW
 
-  // Mock fetch for demo
-  const mockFetchLivePower = () => {
-    setLoading(true);
-    setTimeout(() => {
-      const simulatedPower = Math.random() * maxPower * 0.85;
-      setPower(simulatedPower);
+  // --- Fetch live data securely through Supabase Edge Function ---
+  const fetchLivePower = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.functions.invoke("get-live-power");
+      if (error) throw error;
+
+      const livePower = data?.currentPower ?? 0;
+      setPower(livePower);
+    } catch (err) {
+      console.error("Error fetching live power:", err.message);
+      // fallback mock if API unavailable
+      setPower(Math.random() * maxPower * 0.85);
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   useEffect(() => {
-    mockFetchLivePower();
+    fetchLivePower();                    // initial load
+    const interval = setInterval(fetchLivePower, 300000); // every 5 mins
+    return () => clearInterval(interval);
   }, []);
 
   // --- SVG Calculation Logic ---
@@ -44,7 +58,6 @@ const CurrentPower = () => {
     return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`;
   };
 
-  // While loading, use power = 0 so gauge still renders
   const displayPower = loading ? 0 : power;
   const displayPercentage = Math.min(displayPower / maxPower, 1);
   const displayNeedleRotation = startAngle + displayPercentage * totalAngle;
@@ -63,7 +76,8 @@ const CurrentPower = () => {
           backdrop-filter: blur(12px);
           border: 1px solid rgba(255, 255, 255, 0.1);
           box-shadow: 0 8px 32px rgba(0, 255, 255, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.05);
-          max-width: 500%;
+          width: 38%;
+          height: 300px;
           margin: 0 auto;
           overflow: hidden;
           position: relative;
@@ -76,11 +90,11 @@ const CurrentPower = () => {
           pointer-events: none;
         }
         .dial-title {
-          color: var(--accent, #ff7a00);
+          color: var(--accent, #00eaff);
           margin-bottom: 0.5rem;
           font-weight: bold;
           font-size: 1.25rem;
-          text-shadow: 0 0 10px var(--accent, #ff7a00);
+          text-shadow: 0 0 10px var(--accent, #00eaff);
         }
         .dial-svg {
           width: 100%;
@@ -116,7 +130,7 @@ const CurrentPower = () => {
         }
       `}</style>
 
-      <div className="current-power-dial w-[250%] h-[300px]">
+      <div className="current-power-dial">
         <h2 className="dial-title">⚙️ REAL-TIME POWER</h2>
         {loading && <span className="loading-hint">Loading...</span>}
 

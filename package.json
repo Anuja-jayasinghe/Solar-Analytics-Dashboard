@@ -18,7 +18,6 @@
     "lucide-react": "^0.545.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-gauge-chart": "^0.3.0",
     "react-is": "^19.2.0",
     "react-liquid-gauge": "^1.2.4",
     "react-router-dom": "^7.9.1",
