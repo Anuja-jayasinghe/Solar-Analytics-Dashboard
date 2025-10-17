@@ -1,4 +1,4 @@
-// scripts/generate-monthly-summaries.js
+// ./functions/generate_monthly_summaries/index.js
 
 import { createClient } from '@supabase/supabase-js';
 import 'dotenv/config';
