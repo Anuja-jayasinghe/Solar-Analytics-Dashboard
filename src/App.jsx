@@ -55,7 +55,7 @@ function AppContent() {
             <div
               className="main-content"
               style={{
-                marginLeft: isCollapsed ? "80px" : "260px",
+                marginLeft: "60px",
                 flexGrow: 1,
                 transition: "margin-left 0.3s ease",
               }}
