@@ -17,7 +17,7 @@ const CurrentPower = () => {
   const fetchLivePower = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.functions.invoke("get-live-power");
+      const { data, error } = await supabase.functions.invoke("live-data-fetch");
       if (error) throw error;
 
       const livePower = data?.currentPower ?? 0;
@@ -25,7 +25,7 @@ const CurrentPower = () => {
     } catch (err) {
       console.error("Error fetching live power:", err.message);
       // fallback mock if API unavailable
-      setPower(Math.random() * maxPower * 0.85);
+      // setPower(Math.random() * maxPower * 0.85);
     } finally {
       setLoading(false);
     }
