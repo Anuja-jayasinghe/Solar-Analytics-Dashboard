@@ -1,7 +1,5 @@
-// ./scripts/update_etotal.js
-
+// ./functions/update_total_generation/index.js
 import { createClient } from '@supabase/supabase-js';
-import { solisFetch } from '../../src/lib/solisAuth.js';
 import 'dotenv/config';
 
 // --- Configuration ---
