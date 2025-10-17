@@ -10,16 +10,22 @@ const MonthlyGenerationCard = () => {
     const fetchMonthly = async () => {
       setLoading(true);
       const now = new Date();
-      const startOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+      const startOfMonth = `${now.getFullYear()}-${String(
+        now.getMonth() + 1
+      ).padStart(2, "0")}-01`;
 
       const { data, error } = await supabase
         .from("inverter_data_daily_summary")
         .select("total_generation_kwh")
         .gte("summary_date", startOfMonth);
 
-      if (error) console.error("⚠️ Error fetching monthly generation:", error);
-      else {
-        const totalKwh = data.reduce((sum, r) => sum + Number(r.total_generation_kwh || 0), 0);
+      if (error) {
+        console.error("⚠️ Error fetching monthly generation:", error);
+      } else {
+        const totalKwh = data.reduce(
+          (sum, r) => sum + Number(r.total_generation_kwh || 0),
+          0
+        );
         setTotal(totalKwh);
       }
       setLoading(false);
@@ -28,10 +34,29 @@ const MonthlyGenerationCard = () => {
     fetchMonthly();
   }, []);
 
+  // ✅ Convert only if >= 1000 kWh — keep exact precision
+  let displayValue = total;
+  let unit = "kWh";
+
+  if (total >= 1000) {
+    displayValue = total / 1000; // convert to MWh
+    unit = "MWh";
+  }
+
+  // Optional: format with commas for readability
+  const formattedValue = displayValue.toLocaleString(undefined, {
+    maximumFractionDigits: 3, // show up to 3 decimals but don’t force rounding
+  });
+
   return (
-    <div style={{ ...cardStyle, background: "linear-gradient(135deg, #0d1b2a, #1b263b)" }}>
+    <div
+      style={{
+        ...cardStyle,
+        background: "linear-gradient(135deg, #0d1b2a, #1b263b)",
+      }}
+    >
       <h3 style={labelStyle}>📆 This Month’s Generation</h3>
-      <p style={valueStyle}>{loading ? "..." : `${total.toFixed(2)} kWh`}</p>
+      <p style={valueStyle}>{loading ? "..." : `${formattedValue} ${unit}`}</p>
     </div>
   );
 };

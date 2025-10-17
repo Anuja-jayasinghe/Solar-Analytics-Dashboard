@@ -148,7 +148,7 @@ function Sidebar({ isCollapsed, setIsCollapsed }) {
       <div className={`sidebar ${isCollapsed ? "collapsed" : ""}`}>
         <Link to="/" className="sidebar-logo">
           <span className="logo-icon">⚡</span>
-          <h2 className="logo-text">SolarDash</h2>
+          <h2 className="logo-text">SolarEdge</h2>
         </Link>
         <nav className="sidebar-nav">
           <ul>
