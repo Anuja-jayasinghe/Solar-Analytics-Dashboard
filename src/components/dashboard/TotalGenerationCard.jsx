@@ -8,30 +8,31 @@ const TotalGenerationCard = () => {
 
   useEffect(() => {
     const fetchTotal = async () => {
-      const { data, error } = await supabase
-        .from("inverter_data_daily_summary")
-        .select("total_generation_kwh");
+      try {
+        const { data, error } = await supabase
+          .from("system_metrics")
+          .select("metric_value")
+          .eq("metric_name", "total_generation")
+          .single(); // get single row
 
-      if (error) {
-        console.error("⚠️ Error fetching total generation:", error);
-      } else {
-        const totalKwh = data.reduce(
-          (sum, r) => sum + Number(r.total_generation_kwh || 0),
-          0
-        );
-        setTotal(totalKwh);
+        if (error) {
+          console.error("⚠️ Error fetching total generation:", error);
+        } else {
+          setTotal(Number(data.metric_value) || 0);
+        }
+      } catch (err) {
+        console.error("⚠️ Unexpected error:", err.message);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     fetchTotal();
   }, []);
 
-  // ✅ Automatically adjust units
-  const displayValue =
-    total >= 1000 ? (total / 1000).toFixed(2) : total.toFixed(2);
-  const unit = total >= 1000 ? "MWh" : "kWh";
+  // Automatically adjust units
+  const displayValue = total >= 1000 ? (total / 1000).toFixed(2) : total.toFixed(2);
+  const unit = "MWh";
 
   return (
     <div

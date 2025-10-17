@@ -49,7 +49,7 @@ const pageStyle = {
   padding: "2rem",
   color: "#fff",
   maxWidth: "1300px",
-  margin: "0 auto",
+  margin: "auto",
   fontFamily: "Inter, sans-serif",
 };
 

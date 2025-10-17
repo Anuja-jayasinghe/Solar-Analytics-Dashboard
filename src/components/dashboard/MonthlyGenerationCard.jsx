@@ -50,11 +50,11 @@ const MonthlyGenerationCard = () => {
 
   return (
     <div
-      style={{
-        ...cardStyle,
-        background: "linear-gradient(135deg, #0d1b2a, #1b263b)",
-      }}
-    >
+    style={{
+      ...cardStyle,
+      background: "linear-gradient(135deg, #1a1a1a, #332800)",
+    }}
+  >
       <h3 style={labelStyle}>📆 This Month’s Generation</h3>
       <p style={valueStyle}>{loading ? "..." : `${formattedValue} ${unit}`}</p>
     </div>
