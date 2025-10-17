@@ -7,6 +7,7 @@ import TotalGenerationCard from "../components/dashboard/TotalGenerationCard";
 import TotalEarningsCard from "../components/dashboard/TotalEarningsCard";
 import EnergyCharts from "../components/dashboard/EnergyCharts";
 import EarningsBreakdown from "../components/dashboard/EarningsBreakdown";
+import EnvironmentalImpact from "../components/dashboard/EnvironmentalImpact";
 import SystemTrends from "../components/dashboard/SystemTrends";
 
 function Dashboard() {
@@ -38,6 +39,7 @@ function Dashboard() {
       {/* --- Secondary Section --- */}
       <div style={gridStyle}>
         <EarningsBreakdown />
+        <EnvironmentalImpact/>
         <SystemTrends />
       </div>
     </div>
@@ -93,9 +95,10 @@ const mainCharts = {
 
 const gridStyle = {
   display: "grid",
-  gridTemplateColumns: "1fr 1fr",
+  gridTemplateColumns: "1fr 1fr 1fr",
   gap: "2rem",
   marginTop: "2rem",
+  alignItems: "stretch",
 };
 
 export default Dashboard;

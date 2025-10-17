@@ -25,38 +25,30 @@ const TotalEarningsCard = () => {
     <div
       style={{
         ...cardStyle,
-        background: "linear-gradient(135deg, #1a1a1a, #332800)",
+        background: "linear-gradient(145deg, rgba(20,20,22,0.9), rgba(14,14,16,0.95))",
+        border: "1px solid rgba(255,122,0,0.25)",
+        boxShadow: "0 8px 28px rgba(255,122,0,0.12), inset 0 1px 1px rgba(255,255,255,0.06)",
       }}
     >
-      <h3 style={labelStyle}>💰 Total Earnings (CEB)</h3>
-      <p style={valueStyle}>{loading ? "..." : `LKR ${total.toLocaleString()}`}</p>
+      <h3 style={{ ...labelStyle, color: "#ff7a00" }}>💰 Total Earnings (CEB)</h3>
+      <p style={{ ...valueStyle, color: "#ff7a00" }}>{loading ? "..." : `LKR ${total.toLocaleString()}`}</p>
     </div>
   );
 };
 
 const cardStyle = {
-    flex: 1,
-    padding: "1.2rem",
-    borderRadius: "14px",
-    color: "#fff",
-    backdropFilter: "blur(10px)",
-    boxShadow: "0 0 20px rgba(255,215,0,0.15)",
-    textAlign: "center",
-    border: "1px solid rgba(255,215,0,0.2)",
-    transition: "transform 0.3s ease, boxShadow 0.3s ease",
-  };
+  flex: 1,
+  padding: "1.2rem",
+  borderRadius: "14px",
+  color: "#fff",
+  backdropFilter: "blur(12px)",
+  textAlign: "center",
+  transition: "transform 0.3s ease, boxShadow 0.3s ease",
+};
   
-  const labelStyle = {
-    fontSize: "0.9rem",
-    opacity: 0.8,
-    marginBottom: "0.5rem",
-  };
+  const labelStyle = { fontSize: "0.9rem", opacity: 0.95, marginBottom: "0.5rem" };
   
-  const valueStyle = {
-    fontSize: "1.6rem",
-    fontWeight: "bold",
-    color: "#ffd700",
-  };
+  const valueStyle = { fontSize: "1.6rem", fontWeight: "800" };
   
 
 export default TotalEarningsCard;
