@@ -22,7 +22,7 @@ function Sidebar() {
     <>
       <style>{`
         .sidebar {
-          width: 38px;
+          width: 60px;
           height: 100vh;
           background-color: var(--sidebar-bg);
           display: flex;

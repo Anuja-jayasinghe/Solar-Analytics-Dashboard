@@ -37,9 +37,10 @@ body {
 
 /* Sidebar */
 .sidebar {
-  width: 200px;
+  width: 60px;
   background: var(--sidebar-bg);
-  padding: 20px;
+  padding: 12px 0; /* avoid horizontal padding so width stays 60px */
+  box-sizing: border-box;
 }
 
 .sidebar .logo {
