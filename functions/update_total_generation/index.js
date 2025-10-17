@@ -1,9 +1,9 @@
 // ./functions/update_total_generation/index.js
 import { createClient } from '@supabase/supabase-js';
-import { solisFetch } from '../../src/lib/solisAuth.js';
+import { solisFetch } from '../src/lib/solisAuth.js'; // fixed path
 import 'dotenv/config';
 
-// --- Configuration ---
+// --- Supabase Configuration ---
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
@@ -14,7 +14,14 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-// --- Main Job Handler ---
+// --- Solis Credentials Check ---
+const { SOLIS_API_ID, SOLIS_API_SECRET } = process.env;
+if (!SOLIS_API_ID || !SOLIS_API_SECRET) {
+  console.error('❌ Missing Solis API credentials.');
+  process.exit(1);
+}
+
+// --- Main Handler ---
 async function handler() {
   console.log(`🚀 ETotal Update Job started at ${new Date().toISOString()}`);
 
@@ -26,7 +33,6 @@ async function handler() {
     }
 
     await updateDatabase(total);
-
     console.log(`✅ Successfully updated total_generation = ${total} kWh`);
   } catch (err) {
     console.error('💥 Fatal error in update_etotal:', err.message);
@@ -44,12 +50,11 @@ async function fetchEtTotal() {
     throw new Error(`Failed to fetch inverter list: ${response?.msg || 'Invalid response'}`);
   }
 
-  const inverters = response.data.page.records;
+  // Take the latest etotal from first inverter (or adjust if multiple inverters exist)
+  const inverter = response.data.page.records[0];
+  const total = Number(inverter.etotal || 0);
 
-  // Sum all inverter etotal values for overall system generation
-  const total = inverters.reduce((sum, inv) => sum + Number(inv.etotal || 0), 0);
-
-  console.log(`📊 Combined etotal for ${inverters.length} inverter(s): ${total} kWh`);
+  console.log(`📊 Latest etotal from SolisCloud: ${total} kWh`);
   return total;
 }
 
@@ -70,7 +75,7 @@ async function updateDatabase(total) {
   console.log('✅ Supabase system_metrics updated successfully.');
 }
 
-// --- Error Logging Helper ---
+// --- Error Logging ---
 async function logError(endpoint, message) {
   try {
     await supabase.from('api_logs').insert({ endpoint, success: false, message });

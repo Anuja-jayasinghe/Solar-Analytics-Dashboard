@@ -1,15 +1,13 @@
-name: ⚡ Update ETotal (Total Generation)
+name: ⏱️ Update Total Generation
 
 on:
   workflow_dispatch:
   schedule:
-    # Runs every hour
-    - cron: '0 * * * *'
+    - cron: '0 * * * *' # every hour
 
 jobs:
-  update-etotal:
+  update-total-generation:
     runs-on: ubuntu-latest
-
     steps:
       - name: 🧩 Checkout repository
         uses: actions/checkout@v4
@@ -26,4 +24,6 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SOLIS_API_ID: ${{ secrets.SOLIS_API_ID }}
+          SOLIS_API_SECRET: ${{ secrets.SOLIS_API_SECRET }}
         run: node ./functions/update_total_generation/index.js
