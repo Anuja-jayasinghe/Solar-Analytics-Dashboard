@@ -70,7 +70,7 @@ const CurrentPower = () => {
   const arcPath = describeArc(100, 100, 80, -135, 135);
   const filledArcPath = describeArc(100, 100, 80, -135, displayNeedleRotation);
 
-  const statusColor = status === "Online" ? "#00eaff" : "#ff2e2e";
+  const statusColor = status === "Online" ? "#00ff00" : "#ff2e2e";
 
   return (
     <div className="current-power-dial">

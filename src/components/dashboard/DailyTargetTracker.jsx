@@ -8,7 +8,7 @@ const supabase = createClient(
 
 const DailyTargetTracker = () => {
   const [todayGen, setTodayGen] = useState(0);
-  const [target, setTarget] = useState(30);
+  const [target, setTarget] = useState(0);
   const [loading, setLoading] = useState(true);
   const [phase, setPhase] = useState(0); // wave phase for smooth motion
   const [time, setTime] = useState(0);   // global time for subtle bobbing

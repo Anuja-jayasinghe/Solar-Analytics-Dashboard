@@ -30,7 +30,19 @@ const EnergyCharts = () => {
           ceb: cebMonth?.units_exported || 0,
         };
       });
-      setData(merged);
+      
+      // Sort data by year and month in ascending order
+      const sortedData = merged.sort((a, b) => {
+        const [yearA, monthA] = a.month.split('-').map(Number);
+        const [yearB, monthB] = b.month.split('-').map(Number);
+        
+        if (yearA !== yearB) {
+          return yearA - yearB;
+        }
+        return monthA - monthB;
+      });
+      
+      setData(sortedData);
     }
     load();
   }, []);

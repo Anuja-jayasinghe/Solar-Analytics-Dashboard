@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client
+// Initialize Supabase client (from your original file)
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL || 'https://example.supabase.co',
   import.meta.env.VITE_SUPABASE_ANON_KEY || 'example-key'
@@ -43,35 +43,42 @@ const EarningsDifference = () => {
     load();
   }, []);
 
-  // --- Calculations now include the descriptive text ---
-  const { difference, needleRotation, differenceText } = useMemo(() => {
+  const { difference, needleRotation, differenceText, status } = useMemo(() => {
     if (loading || (inverterValue === 0 && cebEarnings === 0)) {
-      return { difference: 0, needleRotation: 0, differenceText: '' };
+      return {
+        difference: 0,
+        needleRotation: 0,
+        differenceText: '',
+        status: 'neutral',
+      };
     }
 
     const diff = inverterValue - cebEarnings;
-    const maxRange = Math.max(inverterValue, cebEarnings) * 0.1 || 1;
+    const maxRange = Math.max(inverterValue, cebEarnings) * 0.15 || 1;
     const clampedDiff = Math.max(-maxRange, Math.min(maxRange, diff));
     const rotation = (clampedDiff / maxRange) * 90;
 
-    // --- NEW: Generate the descriptive text ---
     let text = '';
+    let status = 'neutral';
     const absDiffFormatted = Math.abs(diff).toLocaleString(undefined, {
       maximumFractionDigits: 2,
     });
 
-    if (diff > 0) {
-      text = `Inverter value is LKR ${absDiffFormatted} higher.`;
-    } else if (diff < 0) {
-      text = `CEB earnings are LKR ${absDiffFormatted} higher.`;
+    if (diff > 50) { // Using a small threshold to avoid showing for tiny differences
+      text = `Inverter earning is LKR ${absDiffFormatted} higher`;
+      status = 'higher';
+    } else if (diff < -50) {
+      text = `CEB earning is LKR ${absDiffFormatted} higher`;
+      status = 'lower';
     } else {
-      text = 'The values from both sources match.';
+      text = '✓ Earnings from both sources match';
+      status = 'match';
     }
 
-    return { difference: diff, needleRotation: rotation, differenceText: text };
+    return { difference: diff, needleRotation: rotation, differenceText: text, status };
   }, [inverterValue, cebEarnings, loading]);
 
-  const differenceColor = difference >= 0 ? '#48bb78' : '#f56565';
+  const differenceColor = status === 'higher' ? '#00eaff' : status === 'lower' ? '#ff2e2e' : '#a0aec0';
 
   return (
     <div style={styles.container}>
@@ -83,80 +90,82 @@ const EarningsDifference = () => {
         <>
           <div style={styles.valuesContainer}>
             <div style={styles.valueItem}>
-              <p style={styles.valueLabel}>Inverter Value</p>
-              <p style={{ ...styles.valueText, color: COLORS[0] }}>
+              <p style={styles.valueLabel}>Inverter</p>
+              <p style={{ ...styles.valueText, color: '#00eaff' }}>
                 {`LKR ${inverterValue.toLocaleString()}`}
               </p>
             </div>
-            <div style={styles.valueDivider} />
             <div style={styles.valueItem}>
-              <p style={styles.valueLabel}>CEB Earnings</p>
-              <p style={{ ...styles.valueText, color: COLORS[1] }}>
+              <p style={styles.valueLabel}>CEB</p>
+              <p style={{ ...styles.valueText, color: '#ffcc00' }}>
                 {`LKR ${cebEarnings.toLocaleString()}`}
               </p>
             </div>
           </div>
 
           <div style={styles.gaugeContainer}>
-            <svg
-              viewBox="0 0 200 110"
-              style={{ width: '100%', height: '100%' }}
-            >
+            <svg viewBox="0 0 200 110" style={{ width: '100%', height: '100%', maxHeight: '90px' }}>
               <defs>
                 <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#f56565" />
+                  <stop offset="0%" stopColor="#ff2e2e" />
                   <stop offset="50%" stopColor="#a0aec0" />
-                  <stop offset="100%" stopColor="#48bb78" />
+                  <stop offset="100%" stopColor="#00eaff" />
                 </linearGradient>
+                <filter id="glow">
+                  <feGaussianBlur stdDeviation="1.5" result="coloredBlur" />
+                  <feMerge>
+                    <feMergeNode in="coloredBlur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
               </defs>
               <path
-                d="M 10 90 A 80 80 0 0 1 190 90"
+                d="M 15 90 A 75 75 0 0 1 185 90"
                 fill="none"
-                stroke="rgba(255,255,255,0.1)"
-                strokeWidth="10"
+                stroke="rgba(148, 163, 184, 0.1)"
+                strokeWidth="7"
                 strokeLinecap="round"
               />
               <path
-                d="M 10 90 A 80 80 0 0 1 190 90"
+                d="M 15 90 A 75 75 0 0 1 185 90"
                 fill="none"
                 stroke="url(#gaugeGradient)"
-                strokeWidth="10"
+                strokeWidth="7"
                 strokeLinecap="round"
+                filter="url(#glow)"
               />
-              <g
-                style={{
-                  transform: `rotate(${needleRotation}deg)`,
-                  transformOrigin: 'center 90px',
-                  transition: 'transform 0.7s ease-out',
-                }}
-              >
+              <g style={{ transform: `rotate(${needleRotation}deg)`, transformOrigin: '100px 90px', transition: 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
                 <path
-                  d="M 100 20 L 97 90 L 103 90 Z"
-                  fill="#fff"
-                  style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}
+                  d="M 100 30 L 97 90 L 103 90 Z"
+                  fill="#f1f5f9"
+                  style={{ filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8))' }}
                 />
                 <circle
                   cx="100"
                   cy="90"
                   r="5"
-                  fill="#a0aec0"
-                  stroke="#1a1a1a"
-                  strokeWidth="2"
+                  fill="#94a3b8"
+                  stroke="#0f172a"
+                  strokeWidth="1.5"
                 />
               </g>
+              <text x="100" y="55" fontSize="16" fontWeight="700" fill={differenceColor} textAnchor="middle" style={{ textShadow: `0 0 8px ${differenceColor}60` }}>
+                {Math.abs(difference).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </text>
+              <text x="100" y="70" fontSize="9" fill="#a0aec0" textAnchor="middle" opacity="0.7">
+                LKR
+              </text>
+              <text x="15" y="105" fontSize="9" fill="#a0aec0" opacity="0.7" fontWeight="500">
+                CEB ↓
+              </text>
+              <text x="185" y="105" fontSize="9" fill="#a0aec0" opacity="0.7" textAnchor="end" fontWeight="500">
+                ↑ Inverter
+              </text>
             </svg>
           </div>
 
           <div style={styles.summaryContainer}>
-            <p style={styles.summaryLabel}>Balance</p>
-            <p style={{ ...styles.summaryValue, color: differenceColor }}>
-              {difference >= 0 ? '+' : '-'} LKR{' '}
-              {Math.abs(difference).toLocaleString(undefined, {
-                maximumFractionDigits: 2,
-              })}
-            </p>
-            {/* --- NEW: Descriptive text added here --- */}
-            <p style={styles.summaryDescription}>{differenceText}</p>
+             <p style={styles.summaryDescription}>{differenceText}</p>
           </div>
         </>
       )}
@@ -165,93 +174,84 @@ const EarningsDifference = () => {
 };
 
 // --- STYLES ---
-const COLORS = ['#ffcc00', '#00eaff'];
 const styles = {
   container: {
-    background:
-      'linear-gradient(145deg, rgba(20,20,22,0.8), rgba(12,12,14,0.85))',
+    background: 'linear-gradient(145deg, rgba(20,20,22,0.8), rgba(12,12,14,0.85))',
     borderRadius: '24px',
-    padding: '1.5rem',
-    backdropFilter: 'blur(12px)',
+    padding: '24px',
     border: '1px solid rgba(255,255,255,0.1)',
-    boxShadow:
-      '0 8px 32px rgba(7, 9, 9, 0.1), inset 0 1px 1px rgba(255,255,255,0.05)',
+    boxShadow: '0 8px 32px rgba(7, 7, 7, 0.1), inset 0 1px 1px rgba(255,255,255,0.05)',
     height: '260px',
     flex: 1,
     position: 'relative',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
+    fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
+    backdropFilter: 'blur(12px)',
   },
   title: {
-    color: 'var(--accent,rgb(250, 240, 240))',
+    color: '#ff7a00',
     fontWeight: 'bold',
-    fontSize: '1.25rem',
-    textShadow: '0 0 10px var(--accent,rgb(238, 230, 230))',
+    fontSize: '1.1rem',
     textAlign: 'center',
-    margin: '0 0 1rem 0',
+    margin: 0,
+    width: '100%',
   },
   loadingText: {
     color: '#a0aec0',
     textAlign: 'center',
     margin: 'auto',
+    fontSize: '14px',
   },
   valuesContainer: {
     display: 'flex',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: '0.75rem',
-    borderBottom: '1px solid rgba(255,255,255,0.1)',
+    gap: '10px',
+    marginBottom: '10px',
   },
   valueItem: {
+    flex: 1,
     textAlign: 'center',
+    background: 'rgba(20,20,22,0.6)',
+    padding: '10px 8px',
+    borderRadius: '10px',
+    border: '1px solid rgba(255,255,255,0.1)',
   },
   valueLabel: {
     color: '#a0aec0',
-    fontSize: '0.75rem',
+    fontSize: '10px',
     textTransform: 'uppercase',
-    margin: '0 0 0.25rem 0',
+    margin: '0 0 4px 0',
+    fontWeight: '600',
+    letterSpacing: '0.2px',
   },
   valueText: {
-    fontSize: '1.125rem',
-    fontWeight: 'bold',
+    fontSize: '15px',
+    fontWeight: '700',
     margin: 0,
-  },
-  valueDivider: {
-    width: '1px',
-    height: '2.5rem',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   gaugeContainer: {
     width: '100%',
-    flexGrow: 1,
+    flex: '1 1 auto',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 15,
+    minHeight: '80px',
+    maxHeight: '100px',
   },
   summaryContainer: {
     textAlign: 'center',
     marginTop: 'auto',
+    paddingTop: '12px'
   },
-  summaryLabel: {
-    color: '#a0aec0',
-    fontSize: '0.8rem',
-    textTransform: 'uppercase',
-    margin: 0,
-  },
-  summaryValue: {
-    fontSize: '1.75rem',
-    fontWeight: 'bold',
-    margin: '0.25rem 0 0 0',
-    textShadow: '0 0 10px currentColor',
-  },
-  // --- NEW: Style for the descriptive text ---
   summaryDescription: {
     color: '#a0aec0',
-    fontSize: '0.75rem',
-    margin: '0.25rem 0 0 0',
-    height: '1.5em', // Prevents layout shift when text appears
+    fontSize: '12px',
+    margin: '0',
+    fontWeight: '500',
+    height: '1.5em', // Prevents layout shift
   },
 };
 
