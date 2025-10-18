@@ -127,6 +127,12 @@ const DailyTargetTracker = () => {
       {/* Glow overlay is now part of the main container's box-shadow */}
       
       <h2 style={styles.title}>☀️ Daily Generation</h2>
+      <p style={styles.dateText}>{new Date().toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      })}</p>
 
       <div style={styles.gaugeContainer}>
         <svg viewBox="0 0 240 240" style={{ width: '100%', height: '100%' }}>
@@ -209,6 +215,14 @@ const styles = {
     fontSize: '1.25rem',
     textShadow: '0 0 10px var(--accent, #00eaff)',
     margin: 0,
+  },
+  dateText: {
+    color: '#a0aec0',
+    fontSize: '0.75rem',
+    fontWeight: '500',
+    margin: '0.25rem 0 0 0',
+    opacity: 0.8,
+    letterSpacing: '0.025em',
   },
   gaugeContainer: {
     position: 'relative',
