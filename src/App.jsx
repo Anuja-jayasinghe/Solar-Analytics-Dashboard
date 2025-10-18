@@ -3,6 +3,7 @@ import { useState, useEffect, useContext } from "react";
 import { BrowserRouter as Router, Routes, Route, NavLink } from "react-router-dom";
 import { ThemeProvider } from "./components/ThemeContext";
 import { AuthProvider, AuthContext } from "./contexts/AuthContext";
+import { DataProvider } from "./contexts/DataContext";
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
 import Dashboard from "./pages/Dashboard";
@@ -82,9 +83,11 @@ function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <Router>
-          <AppContent />
-        </Router>
+        <DataProvider>
+          <Router>
+            <AppContent />
+          </Router>
+        </DataProvider>
       </ThemeProvider>
     </AuthProvider>
   );

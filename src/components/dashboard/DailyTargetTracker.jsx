@@ -1,61 +1,41 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL || "https://example.supabase.co",
-  import.meta.env.VITE_SUPABASE_ANON_KEY || "example-key"
-);
+import { useData } from "../../contexts/DataContext";
+import { supabase } from "../../lib/supabaseClient";
 
 const DailyTargetTracker = () => {
-  const [todayGen, setTodayGen] = useState(0);
+  const { livePowerData, loading, errors, refreshData } = useData();
   const [target, setTarget] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [phase, setPhase] = useState(0); // wave phase for smooth motion
   const [time, setTime] = useState(0);   // global time for subtle bobbing
   const [smoothPercent, setSmoothPercent] = useState(0); // eased fill percent
   const rafRef = useRef(null);
 
-  // --- Core Data Fetching Logic (Unchanged) ---
-  const fetchLiveGeneration = useCallback(async () => {
-    try {
-      const { data: invokeResponse, error } = await supabase.functions.invoke("solis-live-data");
-      if (error) throw error;
-      const liveGeneration = invokeResponse?.dailyGeneration?.value ?? 0;
-      setTodayGen(liveGeneration);
-      localStorage.setItem('solisDailyGen', JSON.stringify({ value: liveGeneration, timestamp: Date.now() }));
-    } catch (err) {
-      console.error("Error fetching live generation:", err);
-    } finally {
-      setLoading((prevLoading) => (prevLoading ? false : prevLoading));
-    }
-  }, []);
+  // Extract data from context
+  const todayGen = livePowerData?.dailyGeneration || 0;
+  const isLoading = loading.live;
 
+  // Fetch daily target from settings
   useEffect(() => {
-    const initialize = async () => {
-      setLoading(true);
+    const fetchTarget = async () => {
       try {
-        const { data: setting } = await supabase.from("system_settings").select("setting_value").eq("setting_name", "daily_generation_target").single();
+        const { data: setting } = await supabase
+          .from("system_settings")
+          .select("setting_value")
+          .eq("setting_name", "daily_generation_target")
+          .single();
         if (setting) setTarget(parseFloat(setting.setting_value));
       } catch (err) {
         console.error("Error fetching daily target:", err);
       }
-      const cached = localStorage.getItem('solisDailyGen');
-      if (cached) {
-        const { value, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < 300000) setTodayGen(value);
-      }
-      await fetchLiveGeneration();
     };
-    initialize();
-    const interval = setInterval(fetchLiveGeneration, 300000);
-    return () => clearInterval(interval);
-  }, [fetchLiveGeneration]);
+    fetchTarget();
+  }, []);
 
   // --- Calculations (Unchanged) ---
   const percent = target > 0 ? (todayGen / target) * 100 : 0;
-  const targetPercent = loading && todayGen === 0 ? 0 : percent;
+  const targetPercent = isLoading && todayGen === 0 ? 0 : percent;
   const displayPercent = smoothPercent;
-  const displayTodayGen = loading && todayGen === 0 ? 0 : todayGen;
+  const displayTodayGen = isLoading && todayGen === 0 ? 0 : todayGen;
 
   // --- Helper Functions (Unchanged) ---
   const generateWavePath = useCallback((pct, amplitude, wavelength, phaseOffset, noiseAmount = 0) => {
@@ -126,7 +106,18 @@ const DailyTargetTracker = () => {
       <style>{keyframesCSS}</style>
       {/* Glow overlay is now part of the main container's box-shadow */}
       
-      <h2 style={styles.title}>☀️ Daily Generation</h2>
+      <h2 style={styles.title}>
+        ☀️ Daily Generation
+        {errors.live && (
+          <button 
+            onClick={() => refreshData('live')} 
+            style={styles.retryButton}
+            title="Retry loading data"
+          >
+            ⚠️
+          </button>
+        )}
+      </h2>
       <p style={styles.dateText}>{new Date().toLocaleDateString('en-US', { 
         weekday: 'long', 
         year: 'numeric', 
@@ -280,6 +271,17 @@ const styles = {
     backgroundImage: 'linear-gradient(to right, hsl(35, 100%, 65%), hsl(28, 100%, 50%))',
     boxShadow: '0 0 18px rgba(255, 165, 0, 0.6)',
     transition: 'width 600ms ease-out',
+  },
+  retryButton: {
+    background: 'var(--accent)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    padding: '0.2rem 0.4rem',
+    fontSize: '0.7rem',
+    cursor: 'pointer',
+    marginLeft: '0.5rem',
+    transition: 'all 0.2s ease',
   },
 };
 

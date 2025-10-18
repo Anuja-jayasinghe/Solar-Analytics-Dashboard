@@ -1,55 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-// --- Supabase client ---
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { useData } from "../../contexts/DataContext";
 
 const CurrentPower = () => {
-  const [power, setPower] = useState(0);
-  const [status, setStatus] = useState("Offline"); // State for online/offline status
-  const [loading, setLoading] = useState(true);
-
+  const { livePowerData, loading, errors, refreshData } = useData();
   const maxPower = 40; // Max inverter power in kW
 
-  // --- Fetch live data from Supabase Edge Function ---
-  const fetchLivePower = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke("solis-live-data");
-      if (error) throw error;
-
-      // Cache the new data and timestamp in localStorage
-      localStorage.setItem('solisLiveData', JSON.stringify({ data, timestamp: Date.now() }));
-
-      // Update state from the API response
-      setPower(data?.currentPower?.value ?? 0);
-      setStatus(data?.status ?? "Offline");
-
-    } catch (err) {
-      console.error("Error fetching live power:", err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    (async () => {
-      const cached = localStorage.getItem('solisLiveData');
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < 300000) { // Use cache if < 5 min old
-          setPower(data?.currentPower?.value ?? 0);
-          setStatus(data?.status ?? "Offline");
-        }
-      }
-      await fetchLivePower();
-    })();
-
-    const interval = setInterval(fetchLivePower, 300000);
-    return () => clearInterval(interval);
-  }, []);
+  // Extract data from context
+  const power = livePowerData?.currentPower || 0;
+  const status = livePowerData?.status || "Offline";
+  const isLoading = loading.live;
 
   // --- Visual and Dial Calculations ---
   const displayPower = power;
@@ -72,6 +31,18 @@ const CurrentPower = () => {
 
   const statusColor = status === "Online" ? "#00ff00" : "#ff2e2e";
 
+  const retryButton = {
+    background: "var(--accent)",
+    color: "white",
+    border: "none",
+    borderRadius: "4px",
+    padding: "0.2rem 0.4rem",
+    fontSize: "0.7rem",
+    cursor: "pointer",
+    marginLeft: "0.5rem",
+    transition: "all 0.2s ease",
+  };
+
   return (
     <div className="current-power-dial">
       <h2 className="dial-title">
@@ -82,8 +53,17 @@ const CurrentPower = () => {
           data-tooltip={status}
         />
         ⚡ Live Power
+        {errors.live && (
+          <button 
+            onClick={() => refreshData('live')} 
+            style={retryButton}
+            title="Retry loading data"
+          >
+            ⚠️
+          </button>
+        )}
       </h2>
-      {loading && status === "Offline" && <span className="loading-hint">Connecting...</span>}
+      {isLoading && status === "Offline" && <span className="loading-hint">Connecting...</span>}
 
       <svg viewBox="0 0 200 160" className="dial-svg">
         <defs>
@@ -172,6 +152,12 @@ const CurrentPower = () => {
         .dial-unit-text { font-size: 1rem; fill: var(--text-secondary); }
         .dial-footer-text { color: var(--text-secondary); font-size: 0.9rem; margin-top: -1rem; }
         .loading-hint { position: absolute; top: 0; right: 0; font-size: 0.75rem; color: var(--text-muted); padding: 0.5rem; }
+        .retry-button { 
+          background: var(--accent); color: white; border: none; border-radius: 4px; 
+          padding: 0.2rem 0.4rem; font-size: 0.7rem; cursor: pointer; margin-left: 0.5rem;
+          transition: all 0.2s ease;
+        }
+        .retry-button:hover { background: var(--accent-hover, #e55a00); }
       `}</style>
     </div>
   );
