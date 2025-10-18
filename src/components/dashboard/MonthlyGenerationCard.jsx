@@ -1,38 +1,14 @@
 // src/components/MonthlyGenerationCard.jsx
 import React, { useEffect, useState } from "react";
+import { useData } from "../../contexts/DataContext";
 import { supabase } from "../../lib/supabaseClient";
 
 const MonthlyGenerationCard = () => {
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const { monthlyGenerationData, loading, errors, refreshData } = useData();
 
-  useEffect(() => {
-    const fetchMonthly = async () => {
-      setLoading(true);
-      const now = new Date();
-      const startOfMonth = `${now.getFullYear()}-${String(
-        now.getMonth() + 1
-      ).padStart(2, "0")}-01`;
-
-      const { data, error } = await supabase
-        .from("inverter_data_daily_summary")
-        .select("total_generation_kwh")
-        .gte("summary_date", startOfMonth);
-
-      if (error) {
-        console.error("⚠️ Error fetching monthly generation:", error);
-      } else {
-        const totalKwh = data.reduce(
-          (sum, r) => sum + Number(r.total_generation_kwh || 0),
-          0
-        );
-        setTotal(totalKwh);
-      }
-      setLoading(false);
-    };
-
-    fetchMonthly();
-  }, []);
+  // Extract data from context
+  const total = monthlyGenerationData?.total || 0;
+  const isLoading = loading.monthlyGen;
 
   // ✅ Convert only if >= 1000 kWh — keep exact precision
   let displayValue = total;
@@ -57,8 +33,21 @@ const MonthlyGenerationCard = () => {
         boxShadow: "0 8px 28px var(--card-shadow), inset 0 1px 1px var(--glass-border)",
       }}
     >
-      <h3 style={{ ...labelStyle, color: "var(--accent)" }}>📆 This Month's Generation</h3>
-      <p style={{ ...valueStyle, color: "var(--accent)" }}>{loading ? "..." : `${formattedValue} ${unit}`}</p>
+      <h3 style={{ ...labelStyle, color: "var(--accent)" }}>
+        📆 This Month's Generation
+        {errors.monthlyGen && (
+          <button 
+            onClick={() => refreshData('monthlyGen')} 
+            style={retryButton}
+            title="Retry loading data"
+          >
+            ⚠️
+          </button>
+        )}
+      </h3>
+      <p style={{ ...valueStyle, color: "var(--accent)" }}>
+        {isLoading ? "..." : `${formattedValue} ${unit}`}
+      </p>
     </div>
   );
 };
@@ -75,5 +64,17 @@ const cardStyle = {
 
 const labelStyle = { fontSize: "0.9rem", opacity: 0.95, marginBottom: "0.5rem" };
 const valueStyle = { fontSize: "1.6rem", fontWeight: "800" };
+
+const retryButton = {
+  background: "var(--accent)",
+  color: "white",
+  border: "none",
+  borderRadius: "4px",
+  padding: "0.2rem 0.4rem",
+  fontSize: "0.7rem",
+  cursor: "pointer",
+  marginLeft: "0.5rem",
+  transition: "all 0.2s ease",
+};
 
 export default MonthlyGenerationCard;

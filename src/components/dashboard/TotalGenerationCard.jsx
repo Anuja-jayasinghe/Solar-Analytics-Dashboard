@@ -1,34 +1,14 @@
 // src/components/TotalGenerationCard.jsx
 import React, { useEffect, useState } from "react";
+import { useData } from "../../contexts/DataContext";
 import { supabase } from "../../lib/supabaseClient";
 
 const TotalGenerationCard = () => {
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const { totalGenerationData, loading, errors, refreshData } = useData();
 
-  useEffect(() => {
-    const fetchTotal = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("system_metrics")
-          .select("metric_value")
-          .eq("metric_name", "total_generation")
-          .single(); // get single row
-
-        if (error) {
-          console.error("⚠️ Error fetching total generation:", error);
-        } else {
-          setTotal(Number(data.metric_value) || 0);
-        }
-      } catch (err) {
-        console.error("⚠️ Unexpected error:", err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTotal();
-  }, []);
+  // Extract data from context
+  const total = totalGenerationData?.total || 0;
+  const isLoading = loading.totalGen;
 
   // Automatically adjust units
   const displayValue = total >= 1000 ? (total / 1000).toFixed(2) : total.toFixed(2);
@@ -43,8 +23,21 @@ const TotalGenerationCard = () => {
         boxShadow: "0 8px 28px var(--card-shadow), inset 0 1px 1px var(--glass-border)",
       }}
     >
-      <h3 style={{ ...labelStyle, color: "var(--accent)" }}>⚡ Total Lifetime Generation</h3>
-      <p style={{ ...valueStyle, color: "var(--accent)" }}>{loading ? "..." : `${displayValue} ${unit}`}</p>
+      <h3 style={{ ...labelStyle, color: "var(--accent)" }}>
+        ⚡ Total Lifetime Generation
+        {errors.totalGen && (
+          <button 
+            onClick={() => refreshData('totalGen')} 
+            style={retryButton}
+            title="Retry loading data"
+          >
+            ⚠️
+          </button>
+        )}
+      </h3>
+      <p style={{ ...valueStyle, color: "var(--accent)" }}>
+        {isLoading ? "..." : `${displayValue} ${unit}`}
+      </p>
     </div>
   );
 };
@@ -63,5 +56,17 @@ const cardStyle = {
 const labelStyle = { fontSize: "0.9rem", opacity: 0.95, marginBottom: "0.5rem" };
 
 const valueStyle = { fontSize: "1.6rem", fontWeight: "800" };
+
+const retryButton = {
+  background: "var(--accent)",
+  color: "white",
+  border: "none",
+  borderRadius: "4px",
+  padding: "0.2rem 0.4rem",
+  fontSize: "0.7rem",
+  cursor: "pointer",
+  marginLeft: "0.5rem",
+  transition: "all 0.2s ease",
+};
 
 export default TotalGenerationCard;

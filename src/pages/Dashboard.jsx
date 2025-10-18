@@ -9,11 +9,12 @@ import EnergyCharts from "../components/dashboard/EnergyCharts";
 import EarningsBreakdown from "../components/dashboard/EarningsBreakdown";
 import EnvironmentalImpact from "../components/dashboard/EnvironmentalImpact";
 import SystemTrends from "../components/dashboard/SystemTrends";
+import CacheStatusIndicator from "../components/CacheStatusIndicator";
 
 function Dashboard() {
   return (
     <div style={pageStyle}>
-      
+      <CacheStatusIndicator />
 
       {/* --- Upper Highlight Section --- */}
       <div style={highlightSection}>

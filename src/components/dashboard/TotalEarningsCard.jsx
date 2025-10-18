@@ -1,25 +1,14 @@
 // src/components/TotalEarningsCard.jsx
 import React, { useEffect, useState } from "react";
+import { useData } from "../../contexts/DataContext";
 import { supabase } from "../../lib/supabaseClient";
 
 const TotalEarningsCard = () => {
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const { totalEarningsData, loading, errors, refreshData } = useData();
 
-  useEffect(() => {
-    const fetchEarnings = async () => {
-      const { data, error } = await supabase.from("ceb_data").select("earnings");
-
-      if (error) console.error("⚠️ Error fetching earnings:", error);
-      else {
-        const totalEarn = data.reduce((sum, r) => sum + Number(r.earnings || 0), 0);
-        setTotal(totalEarn);
-      }
-      setLoading(false);
-    };
-
-    fetchEarnings();
-  }, []);
+  // Extract data from context
+  const total = totalEarningsData?.total || 0;
+  const isLoading = loading.totalEarnings;
 
   return (
     <div
@@ -30,8 +19,21 @@ const TotalEarningsCard = () => {
         boxShadow: "0 8px 28px var(--card-shadow), inset 0 1px 1px var(--glass-border)",
       }}
     >
-      <h3 style={{ ...labelStyle, color: "var(--accent)" }}>💰 Total Earnings (CEB)</h3>
-      <p style={{ ...valueStyle, color: "var(--accent)" }}>{loading ? "..." : `LKR ${total.toLocaleString()}`}</p>
+      <h3 style={{ ...labelStyle, color: "var(--accent)" }}>
+        💰 Total Earnings (CEB)
+        {errors.totalEarnings && (
+          <button 
+            onClick={() => refreshData('totalEarnings')} 
+            style={retryButton}
+            title="Retry loading data"
+          >
+            ⚠️
+          </button>
+        )}
+      </h3>
+      <p style={{ ...valueStyle, color: "var(--accent)" }}>
+        {isLoading ? "..." : `LKR ${total.toLocaleString()}`}
+      </p>
     </div>
   );
 };
@@ -46,9 +48,20 @@ const cardStyle = {
   transition: "transform 0.3s ease, boxShadow 0.3s ease",
 };
   
-  const labelStyle = { fontSize: "0.9rem", opacity: 0.95, marginBottom: "0.5rem" };
+const labelStyle = { fontSize: "0.9rem", opacity: 0.95, marginBottom: "0.5rem" };
   
-  const valueStyle = { fontSize: "1.6rem", fontWeight: "800" };
-  
+const valueStyle = { fontSize: "1.6rem", fontWeight: "800" };
+
+const retryButton = {
+  background: "var(--accent)",
+  color: "white",
+  border: "none",
+  borderRadius: "4px",
+  padding: "0.2rem 0.4rem",
+  fontSize: "0.7rem",
+  cursor: "pointer",
+  marginLeft: "0.5rem",
+  transition: "all 0.2s ease",
+};
 
 export default TotalEarningsCard;
