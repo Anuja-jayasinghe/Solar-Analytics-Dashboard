@@ -194,13 +194,13 @@ const DailyTargetTracker = () => {
 // --- STYLES (Matched with CurrentPower.jsx) ---
 const styles = {
   container: {
-    background: 'linear-gradient(145deg, rgba(20,20,22,0.8), rgba(12,12,14,0.85))',
+    background: 'var(--glass-bg)',
     borderRadius: '24px',
     padding: '1.5rem',
     textAlign: 'center',
     backdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    boxShadow: '0 8px 32px rgba(0,255,255,0.1), inset 0 1px 1px rgba(255,255,255,0.05)',
+    border: '1px solid var(--glass-border)',
+    boxShadow: '0 8px 32px var(--card-shadow), inset 0 1px 1px var(--glass-border)',
     width: '38%',
     height: '300px',
     margin: '0 auto',
@@ -210,14 +210,14 @@ const styles = {
     justifyContent: 'space-around',
   },
   title: {
-    color: 'var(--accent, #00eaff)',
+    color: 'var(--accent)',
     fontWeight: 'bold',
     fontSize: '1.25rem',
-    textShadow: '0 0 10px var(--accent, #00eaff)',
+    textShadow: '0 0 10px var(--accent)',
     margin: 0,
   },
   dateText: {
-    color: '#a0aec0',
+    color: 'var(--text-secondary)',
     fontSize: '0.75rem',
     fontWeight: '500',
     margin: '0.25rem 0 0 0',
@@ -233,8 +233,8 @@ const styles = {
   percentText: {
     fontSize: '2.25rem',
     fontWeight: '700',
-    fill: '#ffffff',
-    textShadow: '0 0 15px rgba(255,255,255,0.5)',
+    fill: 'var(--text-color)',
+    textShadow: '0 0 15px var(--text-color)',
   },
   stats: {
     display: 'flex',
@@ -247,7 +247,7 @@ const styles = {
     flex: '1',
   },
   statLabel: {
-    color: 'var(--accent, #00eaff)', // Matched color
+    color: 'var(--accent)',
     fontSize: '0.75rem',
     textTransform: 'uppercase',
     opacity: 0.8,
@@ -255,24 +255,24 @@ const styles = {
     letterSpacing: '0.05em',
   },
   statValue: {
-    color: '#ffffff', // Matched color
+    color: 'var(--text-color)',
     fontSize: '1.125rem',
     fontWeight: '700',
   },
   unit: {
     fontSize: '0.875rem',
-    color: '#a0aec0', // Matched color
+    color: 'var(--text-secondary)',
   },
   divider: {
     width: '1px',
     height: '2rem',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'var(--glass-border)',
   },
   progressBarOuter: {
     width: '100%',
     height: '0.375rem',
     borderRadius: '9999px',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'var(--glass-border)',
     overflow: 'hidden',
   },
   progressBarInner: {

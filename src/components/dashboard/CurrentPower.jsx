@@ -101,12 +101,12 @@ const CurrentPower = () => {
           </filter>
         </defs>
 
-        <path d={arcPath} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="12" strokeLinecap="round" />
+        <path d={arcPath} fill="none" stroke="var(--chart-grid)" strokeWidth="12" strokeLinecap="round" />
         <path d={filledArcPath} fill="none" stroke="url(#arcGradient)" strokeWidth="12" strokeLinecap="round" style={{ filter: "url(#glow)" }} />
         
         <g className="dial-needle" style={{ transform: `rotate(${displayNeedleRotation}deg)` }}>
-          <path d="M 100 20 L 97 100 L 103 100 Z" fill="#fff" />
-          <circle cx="100" cy="100" r="5" fill="#888" stroke="#333" strokeWidth="2" />
+          <path d="M 100 20 L 97 100 L 103 100 Z" fill="var(--text-color)" />
+          <circle cx="100" cy="100" r="5" fill="var(--text-secondary)" stroke="var(--border-color)" strokeWidth="2" />
         </g>
         
         <text x="100" y="110" textAnchor="middle" className="dial-value-text">{displayPower.toFixed(1)}</text>
@@ -118,15 +118,15 @@ const CurrentPower = () => {
       {/* --- STYLES --- */}
       <style>{`
         .current-power-dial {
-          background: linear-gradient(145deg, rgba(20,20,22,0.8), rgba(12,12,14,0.85));
+          background: var(--glass-bg);
           border-radius: 24px; padding: 1.5rem; text-align: center;
-          backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1);
-          box-shadow: 0 8px 32px rgba(0,255,255,0.1), inset 0 1px 1px rgba(255,255,255,0.05);
+          backdrop-filter: blur(12px); border: 1px solid var(--glass-border);
+          box-shadow: 0 8px 32px var(--card-shadow), inset 0 1px 1px var(--glass-border);
           width: 38%; height: 300px; margin: 0 auto; position: relative;
         }
         .dial-title { 
-          color: var(--accent, #00eaff); margin-bottom: 0.5rem; font-weight: bold; font-size: 1.25rem;
-          text-shadow: 0 0 10px var(--accent, #00eaff); display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+          color: var(--accent); margin-bottom: 0.5rem; font-weight: bold; font-size: 1.25rem;
+          text-shadow: 0 0 10px var(--accent); display: flex; align-items: center; justify-content: center; gap: 0.5rem;
         }
         .status-indicator {
           width: 12px; height: 12px; border-radius: 50%;
@@ -142,15 +142,16 @@ const CurrentPower = () => {
           left: 50%;
           transform: translateX(-50%);
           
-          background: rgba(10, 10, 12, 0.85);
-          color: #fff;
+          background: var(--chart-tooltip-bg);
+          color: var(--text-color);
           padding: 0.3rem 0.6rem;
           border-radius: 6px;
           font-size: 0.8rem;
           white-space: nowrap;
           
           backdrop-filter: blur(5px);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          border: 1px solid var(--chart-tooltip-border);
+          box-shadow: 0 4px 12px var(--card-shadow);
           
           /* Hide by default */
           opacity: 0;
@@ -167,10 +168,10 @@ const CurrentPower = () => {
         @keyframes pulse { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
         .dial-svg { width: 100%; height: auto; max-height: 200px; }
         .dial-needle { transition: transform 0.7s cubic-bezier(0.68,-0.55,0.27,1.55); transform-origin: center; }
-        .dial-value-text { font-size: 2.5rem; font-weight: bold; fill: #fff; text-shadow: 0 0 15px rgba(255,255,255,0.5); }
-        .dial-unit-text { font-size: 1rem; fill: #a0aec0; }
-        .dial-footer-text { color: #a0aec0; font-size: 0.9rem; margin-top: -1rem; }
-        .loading-hint { position: absolute; top: 0; right: 0; font-size: 0.75rem; color: #888; padding: 0.5rem; }
+        .dial-value-text { font-size: 2.5rem; font-weight: bold; fill: var(--text-color); text-shadow: 0 0 15px var(--text-color); }
+        .dial-unit-text { font-size: 1rem; fill: var(--text-secondary); }
+        .dial-footer-text { color: var(--text-secondary); font-size: 0.9rem; margin-top: -1rem; }
+        .loading-hint { position: absolute; top: 0; right: 0; font-size: 0.75rem; color: var(--text-muted); padding: 0.5rem; }
       `}</style>
     </div>
   );

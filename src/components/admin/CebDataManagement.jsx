@@ -137,11 +137,11 @@ const CebDataManagement = () => {
   };
 
   return (
-    <div style={{ padding: "2rem", maxWidth: "1000px", margin: "0 auto", color: "#fff" }}>
+    <div style={{ padding: "2rem", maxWidth: "1000px", margin: "0 auto", color: "var(--text-color)" }}>
       <h1 style={{ color: "var(--accent)", marginBottom: "1rem" }}>⚙️ CEB Data Management</h1>
 
       {/* Info */}
-      <p style={{ color: "#aaa", marginBottom: "1.5rem" }}>
+      <p style={{ color: "var(--text-secondary)", marginBottom: "1.5rem" }}>
         Manage your monthly CEB export readings and earnings.  
         Current Tariff: <span style={{ color: "#ff7a00", fontWeight: "bold" }}>{rate ? `LKR ${rate}/kWh` : "Not set"}</span>
       </p>
@@ -154,11 +154,11 @@ const CebDataManagement = () => {
           gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
           gap: "10px",
           marginBottom: "2rem",
-          background: "rgba(20,20,20,0.6)",
+          background: "var(--card-bg)",
           padding: "1rem",
           borderRadius: "12px",
           backdropFilter: "blur(12px)",
-          boxShadow: "0 0 20px rgba(255,122,0,0.1)",
+          boxShadow: "0 0 20px var(--card-shadow)",
         }}
       >
         <input
@@ -199,16 +199,16 @@ const CebDataManagement = () => {
 
       {/* Data Table */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: "2rem", color: "#aaa" }}>
+        <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-secondary)" }}>
           <p>🔄 Loading CEB data...</p>
         </div>
       ) : data.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "2rem", color: "#aaa" }}>
+        <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-secondary)" }}>
           <p>📊 No CEB data found. Add your first record above!</p>
         </div>
       ) : (
         <table style={tableStyle}>
-          <thead style={{ background: "rgba(255,122,0,0.2)" }}>
+          <thead style={{ background: "var(--card-border)" }}>
             <tr>
               <th>Date</th>
               <th>Meter Reading</th>
@@ -242,7 +242,7 @@ const CebDataManagement = () => {
       {confirmOpen && (
         <div style={overlayStyle}>
           <div style={modalStyle}>
-            <h2 style={{ color: "#ff7a00" }}>Confirm Deletion</h2>
+            <h2 style={{ color: "var(--accent)" }}>Confirm Deletion</h2>
             <p>This action cannot be undone. Are you sure?</p>
             <div style={{ display: "flex", justifyContent: "center", gap: "1rem" }}>
               <button onClick={cancelDelete} style={cancelBtn}>
@@ -269,9 +269,9 @@ const CebDataManagement = () => {
 const inputStyle = {
   padding: "10px",
   borderRadius: "6px",
-  border: "1px solid #333",
-  background: "rgba(30,30,30,0.8)",
-  color: "#fff",
+  border: "1px solid var(--border-color)",
+  background: "var(--card-bg-solid)",
+  color: "var(--text-color)",
 };
 
 const buttonStyle = {
@@ -286,15 +286,15 @@ const buttonStyle = {
 const tableStyle = {
   width: "100%",
   borderCollapse: "collapse",
-  background: "rgba(20,20,20,0.6)",
+  background: "var(--card-bg)",
   borderRadius: "10px",
   overflow: "hidden",
   textAlign: "left",
-  boxShadow: "0 0 20px rgba(0,0,0,0.3)",
+  boxShadow: "0 0 20px var(--card-shadow)",
 };
 
 const editBtn = {
-  background: "#00c2a8",
+  background: "var(--accent-secondary)",
   color: "#fff",
   border: "none",
   padding: "6px 10px",
@@ -304,7 +304,7 @@ const editBtn = {
 };
 
 const deleteBtn = {
-  background: "#dc3545",
+  background: "var(--error-color)",
   color: "#fff",
   border: "none",
   padding: "6px 10px",
@@ -313,8 +313,8 @@ const deleteBtn = {
 };
 
 const cancelBtn = {
-  background: "#444",
-  color: "#fff",
+  background: "var(--hover-bg)",
+  color: "var(--text-color)",
   border: "none",
   padding: "6px 10px",
   borderRadius: "6px",
@@ -335,12 +335,12 @@ const overlayStyle = {
 };
 
 const modalStyle = {
-  background: "rgba(20,20,20,0.85)",
+  background: "var(--card-bg-solid)",
   backdropFilter: "blur(10px)",
   padding: "2rem",
   borderRadius: "12px",
   textAlign: "center",
-  boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+  boxShadow: "0 4px 20px var(--card-shadow)",
   maxWidth: "400px",
 };
 

@@ -86,11 +86,11 @@ const statsRow = {
 
 const mainCharts = {
   marginTop: "1rem",
-  background: "rgba(20,20,20,0.6)",
+  background: "var(--card-bg)",
   borderRadius: "12px",
   backdropFilter: "blur(10px)",
   padding: "1rem",
-  boxShadow: "0 0 25px rgba(255,122,0,0.1)",
+  boxShadow: "0 0 25px var(--card-shadow)",
 };
 
 const gridStyle = {

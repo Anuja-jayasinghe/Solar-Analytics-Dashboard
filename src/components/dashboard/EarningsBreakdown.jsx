@@ -78,7 +78,7 @@ const EarningsDifference = () => {
     return { difference: diff, needleRotation: rotation, differenceText: text, status };
   }, [inverterValue, cebEarnings, loading]);
 
-  const differenceColor = status === 'higher' ? '#00eaff' : status === 'lower' ? '#ff2e2e' : '#a0aec0';
+  const differenceColor = status === 'higher' ? 'var(--accent-secondary)' : status === 'lower' ? 'var(--error-color)' : 'var(--text-secondary)';
 
   return (
     <div style={styles.container}>
@@ -91,13 +91,13 @@ const EarningsDifference = () => {
           <div style={styles.valuesContainer}>
             <div style={styles.valueItem}>
               <p style={styles.valueLabel}>Inverter</p>
-              <p style={{ ...styles.valueText, color: '#00eaff' }}>
+              <p style={{ ...styles.valueText, color: 'var(--accent-secondary)' }}>
                 {`LKR ${inverterValue.toLocaleString()}`}
               </p>
             </div>
             <div style={styles.valueItem}>
               <p style={styles.valueLabel}>CEB</p>
-              <p style={{ ...styles.valueText, color: '#ffcc00' }}>
+              <p style={{ ...styles.valueText, color: 'var(--accent)' }}>
                 {`LKR ${cebEarnings.toLocaleString()}`}
               </p>
             </div>
@@ -107,9 +107,9 @@ const EarningsDifference = () => {
             <svg viewBox="0 0 200 110" style={{ width: '100%', height: '100%', maxHeight: '90px' }}>
               <defs>
                 <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#ff2e2e" />
-                  <stop offset="50%" stopColor="#a0aec0" />
-                  <stop offset="100%" stopColor="#00eaff" />
+                  <stop offset="0%" stopColor="var(--error-color)" />
+                  <stop offset="50%" stopColor="var(--text-secondary)" />
+                  <stop offset="100%" stopColor="var(--accent-secondary)" />
                 </linearGradient>
                 <filter id="glow">
                   <feGaussianBlur stdDeviation="1.5" result="coloredBlur" />
@@ -137,28 +137,28 @@ const EarningsDifference = () => {
               <g style={{ transform: `rotate(${needleRotation}deg)`, transformOrigin: '100px 90px', transition: 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
                 <path
                   d="M 100 30 L 97 90 L 103 90 Z"
-                  fill="#f1f5f9"
+                  fill="var(--text-color)"
                   style={{ filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8))' }}
                 />
                 <circle
                   cx="100"
                   cy="90"
                   r="5"
-                  fill="#94a3b8"
-                  stroke="#0f172a"
+                  fill="var(--text-secondary)"
+                  stroke="var(--bg-color)"
                   strokeWidth="1.5"
                 />
               </g>
               <text x="100" y="55" fontSize="16" fontWeight="700" fill={differenceColor} textAnchor="middle" style={{ textShadow: `0 0 8px ${differenceColor}60` }}>
                 {Math.abs(difference).toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </text>
-              <text x="100" y="70" fontSize="9" fill="#a0aec0" textAnchor="middle" opacity="0.7">
+              <text x="100" y="70" fontSize="9" fill="var(--text-secondary)" textAnchor="middle" opacity="0.7">
                 LKR
               </text>
-              <text x="15" y="105" fontSize="9" fill="#a0aec0" opacity="0.7" fontWeight="500">
+              <text x="15" y="105" fontSize="9" fill="var(--text-secondary)" opacity="0.7" fontWeight="500">
                 CEB ↓
               </text>
-              <text x="185" y="105" fontSize="9" fill="#a0aec0" opacity="0.7" textAnchor="end" fontWeight="500">
+              <text x="185" y="105" fontSize="9" fill="var(--text-secondary)" opacity="0.7" textAnchor="end" fontWeight="500">
                 ↑ Inverter
               </text>
             </svg>
@@ -176,10 +176,10 @@ const EarningsDifference = () => {
 // --- STYLES ---
 const styles = {
   container: {
-    background: 'rgba(15,15,15,0.6)',
+    background: 'var(--card-bg)',
     borderRadius: '10px',
     padding: '1.5rem',
-    boxShadow: '0 0 20px rgba(0,0,0,0.3)',
+    boxShadow: '0 0 20px var(--card-shadow)',
     height: '260px',
     width: '90%',
     position: 'relative',
@@ -189,7 +189,7 @@ const styles = {
     fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
   },
   title: {
-    color: '#ff7a00',
+    color: 'var(--accent)',
     fontWeight: 'bold',
     fontSize: '1.1rem',
     textAlign: 'center',
@@ -197,7 +197,7 @@ const styles = {
     width: '100%',
   },
   loadingText: {
-    color: '#a0aec0',
+    color: 'var(--text-secondary)',
     textAlign: 'center',
     margin: 'auto',
     fontSize: '14px',
@@ -212,13 +212,13 @@ const styles = {
   valueItem: {
     flex: 1,
     textAlign: 'center',
-    background: 'rgba(20,20,22,0.6)',
+    background: 'var(--card-bg-solid)',
     padding: '10px 8px',
     borderRadius: '10px',
-    border: '1px solid rgba(255,255,255,0.1)',
+    border: '1px solid var(--glass-border)',
   },
   valueLabel: {
-    color: '#a0aec0',
+    color: 'var(--text-secondary)',
     fontSize: '10px',
     textTransform: 'uppercase',
     margin: '0 0 4px 0',
@@ -245,7 +245,7 @@ const styles = {
     paddingTop: '12px'
   },
   summaryDescription: {
-    color: '#a0aec0',
+    color: 'var(--text-secondary)',
     fontSize: '12px',
     margin: '0',
     fontWeight: '500',
