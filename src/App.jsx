@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import GoToTopButton from "./components/GoToTopButton";
 import "./index.css";
 import { verifySupabaseConnection } from "./lib/verifySupabaseConnection";
 
@@ -69,6 +70,7 @@ function AppContent() {
                 </Routes>
               </div>
             </div>
+            <GoToTopButton />
           </div>
         }
       />
