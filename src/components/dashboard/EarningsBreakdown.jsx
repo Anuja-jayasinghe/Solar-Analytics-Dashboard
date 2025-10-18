@@ -176,19 +176,17 @@ const EarningsDifference = () => {
 // --- STYLES ---
 const styles = {
   container: {
-    background: 'linear-gradient(145deg, rgba(20,20,22,0.8), rgba(12,12,14,0.85))',
-    borderRadius: '24px',
-    padding: '24px',
-    border: '1px solid rgba(255,255,255,0.1)',
-    boxShadow: '0 8px 32px rgba(7, 7, 7, 0.1), inset 0 1px 1px rgba(255,255,255,0.05)',
+    background: 'rgba(15,15,15,0.6)',
+    borderRadius: '10px',
+    padding: '1.5rem',
+    boxShadow: '0 0 20px rgba(0,0,0,0.3)',
     height: '260px',
-    flex: 1,
+    width: '90%',
     position: 'relative',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
     fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
-    backdropFilter: 'blur(12px)',
   },
   title: {
     color: '#ff7a00',

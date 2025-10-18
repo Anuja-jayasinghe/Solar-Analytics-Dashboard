@@ -118,7 +118,7 @@ const styles = {
     borderRadius: '10px',
     padding: '1.5rem',
     boxShadow: '0 0 20px rgba(0,0,0,0.3)',
-    width: '100%',
+    width: '90%',
     margin: 0,
     height: '260px',
     display: 'flex', overflow: 'hidden',

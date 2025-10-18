@@ -95,10 +95,11 @@ const mainCharts = {
 
 const gridStyle = {
   display: "grid",
-  gridTemplateColumns: "1fr 1fr 1fr",
-  gap: "2rem",
+  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+  gap: "1rem",
   marginTop: "2rem",
   alignItems: "stretch",
+  width: "100%",
 };
 
 export default Dashboard;
