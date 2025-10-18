@@ -7,7 +7,7 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY || "example-key"
 );
 
-const CO2_PER_KWH = 0.709; // kg
+const CO2_PER_KWH = 0.984; // kg
 const CO2_ABSORBED_BY_TREE_10_YEARS = 220; // kg
 
 const EnvironmentalImpact = () => {
@@ -85,7 +85,7 @@ const styles = {
     padding: '1.5rem',
     boxShadow: '0 0 20px rgba(0,0,0,0.3)',
     height: '260px',
-    width: '100%',
+    width: '90%',
     position: 'relative',
     display: 'flex', overflow: 'hidden',
     flexDirection: 'column',
@@ -102,7 +102,7 @@ const styles = {
   },
   loadingText: { color: '#a0aec0', textAlign: 'center', margin: 'auto' },
   iconContainer: { flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  iconSvg: { width: '72px', height: '72px', animation: 'heartbeat 2.5s ease-in-out infinite' },
+  iconSvg: { width: '72px', height: '72px', animation: 'heartbeat 5s ease-in-out infinite' },
   statsContainer: {
     width: '100%', display: 'flex', justifyContent: 'space-around', alignItems: 'center',
     paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.1)',
@@ -116,6 +116,23 @@ const styles = {
   divider: { width: '1px', height: '2.5rem', backgroundColor: 'rgba(255, 255, 255, 0.1)' },
 };
 
-const keyframesCSS = `@keyframes heartbeat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }`;
+const keyframesCSS = `@keyframes heartbeat { 
+  0%, 100% { 
+    transform: scale(1); 
+    filter: brightness(1);
+  } 
+  25% { 
+    transform: scale(1.1); 
+    filter: brightness(1.2);
+  }
+  50% { 
+    transform: scale(1.15); 
+    filter: brightness(1.3);
+  }
+  75% { 
+    transform: scale(1.05); 
+    filter: brightness(1.1);
+  }
+}`;
 
 export default EnvironmentalImpact;
