@@ -10,16 +10,52 @@
   --navbar-bg: #111;
   --border-color: #444;
   --hover-bg: #333;
+  
+  /* Additional dark theme colors */
+  --card-bg: rgba(20,20,20,0.6);
+  --card-bg-solid: rgba(20,20,20,0.9);
+  --card-border: rgba(255,122,0,0.2);
+  --card-shadow: rgba(0,0,0,0.3);
+  --text-secondary: #a0aec0;
+  --text-muted: #888;
+  --success-color: #22c55e;
+  --warning-color: #f59e0b;
+  --info-color: #3b82f6;
+  --glass-bg: rgba(20,20,22,0.8);
+  --glass-border: rgba(255,255,255,0.1);
+  --chart-grid: rgba(255,255,255,0.1);
+  --chart-text: #aaa;
+  --chart-hover-bg: rgba(255,255,255,0.05);
+  --chart-tooltip-bg: rgba(20,20,20,0.95);
+  --chart-tooltip-border: rgba(255,122,0,0.3);
 }
 
 /* Light Theme overrides */
 body.light-theme {
   --bg-color: #ffffff;
-  --text-color: #000000;
-  --sidebar-bg: #f2f2f2;
-  --navbar-bg: #eaeaea;
-  --border-color: #ccc;
-  --hover-bg: #e0e0e0;
+  --text-color: #1a1a1a;
+  --sidebar-bg: #f8f9fa;
+  --navbar-bg: #ffffff;
+  --border-color: #e5e7eb;
+  --hover-bg: #f3f4f6;
+  
+  /* Light theme specific colors */
+  --card-bg: rgba(255,255,255,0.8);
+  --card-bg-solid: rgba(248,249,250,0.95);
+  --card-border: rgba(255,122,0,0.3);
+  --card-shadow: rgba(0,0,0,0.1);
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --info-color: #3b82f6;
+  --glass-bg: rgba(255,255,255,0.9);
+  --glass-border: rgba(0,0,0,0.1);
+  --chart-grid: rgba(0,0,0,0.1);
+  --chart-text: #6b7280;
+  --chart-hover-bg: rgba(0,0,0,0.05);
+  --chart-tooltip-bg: rgba(255,255,255,0.95);
+  --chart-tooltip-border: rgba(255,122,0,0.3);
 }
 
 body {
@@ -298,6 +334,66 @@ input:focus, select:focus, textarea:focus {
 
 .chart-toggle button:not(.active):hover {
   background: var(--border-color);
+}
+
+/* Chart hover effects */
+.recharts-bar:hover {
+  filter: brightness(1.2) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+  transition: all 0.2s ease;
+}
+
+/* Dark theme specific bar hover effects */
+body:not(.light-theme) .recharts-bar:hover {
+  filter: brightness(1.3) drop-shadow(0 4px 12px rgba(255, 122, 0, 0.4));
+  transition: all 0.2s ease;
+}
+
+/* Light theme bar hover effects */
+body.light-theme .recharts-bar:hover {
+  filter: brightness(1.1) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+  transition: all 0.2s ease;
+}
+
+.recharts-line:hover {
+  filter: brightness(1.1);
+  transition: all 0.2s ease;
+}
+
+.recharts-tooltip-wrapper {
+  z-index: 1000;
+}
+
+.recharts-legend-item:hover {
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+/* Enhanced chart container hover effects */
+.chart-container:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px var(--card-shadow);
+  transition: all 0.3s ease;
+}
+
+/* Override Recharts default hover styles for dark theme */
+body:not(.light-theme) .recharts-bar-rectangle {
+  transition: all 0.2s ease;
+}
+
+body:not(.light-theme) .recharts-bar-rectangle:hover {
+  filter: brightness(1.4) saturate(1.2);
+  stroke: var(--accent);
+  stroke-width: 2px;
+}
+
+/* Ensure bars have proper dark theme styling */
+body:not(.light-theme) .recharts-bar {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+/* Light theme bar styling */
+body.light-theme .recharts-bar {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
 /* ===== ADMIN PAGES STYLING ===== */

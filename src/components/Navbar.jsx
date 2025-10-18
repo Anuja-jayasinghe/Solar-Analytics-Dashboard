@@ -2,12 +2,18 @@ import { useContext, useState } from "react";
 import { ThemeContext } from "./ThemeContext";
 
 function Navbar() {
-  const { theme } = useContext(ThemeContext);
+  const { theme, setTheme } = useContext(ThemeContext);
   const [showAdminPopup, setShowAdminPopup] = useState(false);
 
   // Handle admin access button click
   const handleAdminAccess = () => {
     setShowAdminPopup(true);
+  };
+
+  // Toggle theme
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
   };
 
   // Close popup
@@ -19,7 +25,35 @@ function Navbar() {
     <>
       <nav className="navbar">
         <h1 style={{ color: "var(--accent)" }}>SolarEdge</h1>
-        <button
+        <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+          <button
+            onClick={toggleTheme}
+            style={{
+              background: "var(--hover-bg)",
+              color: "var(--text-color)",
+              border: "1px solid var(--border-color)",
+              padding: "8px 12px",
+              borderRadius: "20px",
+              cursor: "pointer",
+              fontSize: "0.9rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              transition: "all 0.3s ease",
+              fontWeight: "bold"
+            }}
+            onMouseOver={(e) => {
+              e.target.style.background = "var(--accent)";
+              e.target.style.color = "#000";
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = "var(--hover-bg)";
+              e.target.style.color = "var(--text-color)";
+            }}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'} {theme === 'dark' ? 'Light' : 'Dark'}
+          </button>
+          <button
           onClick={handleAdminAccess}
           style={{
             background: "linear-gradient(45deg, #ff6b35, #f7931e)",
@@ -47,9 +81,10 @@ function Navbar() {
             e.target.style.boxShadow = "0 4px 15px rgba(255, 107, 53, 0.3)";
             e.target.style.background = "linear-gradient(45deg, #ff6b35, #f7931e)";
           }}
-        >
-          🔐 Admin Access
-        </button>
+          >
+            🔐 Admin Access
+          </button>
+        </div>
       </nav>
 
       {/* Fun Admin Access Popup */}

@@ -58,8 +58,8 @@ const SystemTrends = () => {
     if (active && payload && payload.length) {
       return (
         <div style={styles.tooltip}>
-          <p style={{ margin: 0, padding: 0, color: '#a0aec0' }}>Date: {label}</p>
-          <p style={{ margin: '4px 0 0', padding: 0, color: '#ff7a00' }}>
+          <p style={{ margin: 0, padding: 0, color: 'var(--text-secondary)' }}>Date: {label}</p>
+          <p style={{ margin: '4px 0 0', padding: 0, color: 'var(--accent)' }}>
             {`Total: ${payload[0].value.toFixed(2)} kWh`}
           </p>
         </div>
@@ -69,25 +69,25 @@ const SystemTrends = () => {
   };
 
   return (
-    <div style={styles.container}>
+    <div className="chart-container" style={styles.container}>
       <h2 style={styles.title}>Recent Trends</h2>
       <div style={styles.chartContainer}>
         {loading && <p style={styles.loadingText}>Loading Trends...</p>}
         {!loading && chartData.length > 0 && (
           <ResponsiveContainer width="100%" height={150}>
             <LineChart data={chartData} margin={{ top: 0, right: 12, left: -6, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
-              <XAxis dataKey="date" stroke="#a0aec0" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="#ff7a00" fontSize={12} tickLine={false} axisLine={false} />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+              <XAxis dataKey="date" stroke="var(--chart-text)" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis stroke="var(--accent)" fontSize={12} tickLine={false} axisLine={false} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--glass-border)' }} />
               {/* Legend removed to preserve space within fixed height */}
               <Line 
                 type="monotone" 
                 dataKey="total_generation_kwh" 
                 name="Total Generation (kWh)"
-                stroke="#ff7a00" 
+                stroke="var(--accent)" 
                 strokeWidth={2}
-                dot={{ r: 4, fill: '#ff7a00' }}
+                dot={{ r: 4, fill: 'var(--accent)' }}
                 activeDot={{ r: 8, stroke: 'rgba(255, 122, 0, 0.3)', strokeWidth: 8 }}
               />
             </LineChart>
@@ -114,10 +114,10 @@ const SystemTrends = () => {
 // --- STYLES (Matched with other dashboard components) ---
 const styles = {
   container: {
-    background: 'rgba(15,15,15,0.6)',
+    background: 'var(--card-bg)',
     borderRadius: '10px',
     padding: '1.5rem',
-    boxShadow: '0 0 20px rgba(0,0,0,0.3)',
+    boxShadow: '0 0 20px var(--card-shadow)',
     width: '90%',
     margin: 0,
     height: '260px',
@@ -125,7 +125,7 @@ const styles = {
     flexDirection: 'column',
   },
   title: {
-    color: '#ff7a00',
+    color: 'var(--accent)',
     fontWeight: 'bold',
     fontSize: '1.25rem',
     textAlign: 'center',
@@ -136,17 +136,18 @@ const styles = {
     width: '100%',
   },
   loadingText: {
-    color: '#a0aec0',
+    color: 'var(--text-secondary)',
     textAlign: 'center',
     margin: 'auto',
   },
   tooltip: {
-    background: 'rgba(10, 10, 12, 0.85)',
-    backdropFilter: 'blur(5px)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-    borderRadius: '6px',
+    background: 'var(--chart-tooltip-bg)',
+    backdropFilter: 'blur(10px)',
+    border: '1px solid var(--chart-tooltip-border)',
+    borderRadius: '8px',
     padding: '0.5rem 0.75rem',
     fontSize: '0.9rem',
+    boxShadow: '0 4px 12px var(--card-shadow)',
   },
   statsContainer: {
     display: 'flex',
@@ -154,19 +155,19 @@ const styles = {
     alignItems: 'center',
     marginTop: '1.5rem',
     paddingTop: '0.5rem',
-    borderTop: '1px solid rgba(255,255,255,0.1)',
+    borderTop: '1px solid var(--glass-border)',
   },
   statItem: {
     textAlign: 'center',
   },
   statLabel: {
-    color: '#a0aec0',
+    color: 'var(--text-secondary)',
     fontSize: '0.75rem',
     textTransform: 'uppercase',
     marginBottom: '0.25rem',
   },
   statValue: {
-    color: '#ff7a00',
+    color: 'var(--accent)',
     fontSize: '1.25rem',
     fontWeight: 'bold',
   },
@@ -177,7 +178,7 @@ const styles = {
   divider: {
     width: '1px',
     height: '2rem',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'var(--glass-border)',
   }
 };
 

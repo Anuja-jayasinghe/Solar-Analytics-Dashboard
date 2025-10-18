@@ -80,10 +80,10 @@ const EnvironmentalImpact = () => {
 // --- STYLES ---
 const styles = {
   container: {
-    background: 'rgba(15,15,15,0.6)',
+    background: 'var(--card-bg)',
     borderRadius: '10px',
     padding: '1.5rem',
-    boxShadow: '0 0 20px rgba(0,0,0,0.3)',
+    boxShadow: '0 0 20px var(--card-shadow)',
     height: '260px',
     width: '90%',
     position: 'relative',
@@ -93,27 +93,27 @@ const styles = {
     alignItems: 'center',
   },
   title: {
-    color: '#ff7a00',
+    color: 'var(--accent)',
     fontWeight: 'bold',
     fontSize: '1.1rem',
     textAlign: 'center',
     margin: 0,
     width: '100%',
   },
-  loadingText: { color: '#a0aec0', textAlign: 'center', margin: 'auto' },
+  loadingText: { color: 'var(--text-secondary)', textAlign: 'center', margin: 'auto' },
   iconContainer: { flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' },
   iconSvg: { width: '72px', height: '72px', animation: 'heartbeat 5s ease-in-out infinite' },
   statsContainer: {
     width: '100%', display: 'flex', justifyContent: 'space-around', alignItems: 'center',
-    paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.1)',
+    paddingTop: '0.5rem', borderTop: '1px solid var(--glass-border)',
   },
   statItem: { textAlign: 'center' },
   statValue: {
-    color: '#ff7a00', fontSize: '1.25rem', fontWeight: 'bold', margin: 0,
+    color: 'var(--accent)', fontSize: '1.25rem', fontWeight: 'bold', margin: 0,
   },
   unit: { fontSize: '1rem', opacity: 0.8, marginLeft: '0.25rem' },
-  statLabel: { color: '#a0aec0', fontSize: '0.75rem', textTransform: 'uppercase', marginTop: '0.25rem' },
-  divider: { width: '1px', height: '2.5rem', backgroundColor: 'rgba(255, 255, 255, 0.1)' },
+  statLabel: { color: 'var(--text-secondary)', fontSize: '0.75rem', textTransform: 'uppercase', marginTop: '0.25rem' },
+  divider: { width: '1px', height: '2.5rem', backgroundColor: 'var(--glass-border)' },
 };
 
 const keyframesCSS = `@keyframes heartbeat { 

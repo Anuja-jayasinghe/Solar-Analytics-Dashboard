@@ -25,13 +25,13 @@ const TotalEarningsCard = () => {
     <div
       style={{
         ...cardStyle,
-        background: "linear-gradient(145deg, rgba(20,20,22,0.9), rgba(14,14,16,0.95))",
-        border: "1px solid rgba(255,122,0,0.25)",
-        boxShadow: "0 8px 28px rgba(255,122,0,0.12), inset 0 1px 1px rgba(255,255,255,0.06)",
+        background: "var(--card-bg-solid)",
+        border: "1px solid var(--card-border)",
+        boxShadow: "0 8px 28px var(--card-shadow), inset 0 1px 1px var(--glass-border)",
       }}
     >
-      <h3 style={{ ...labelStyle, color: "#ff7a00" }}>💰 Total Earnings (CEB)</h3>
-      <p style={{ ...valueStyle, color: "#ff7a00" }}>{loading ? "..." : `LKR ${total.toLocaleString()}`}</p>
+      <h3 style={{ ...labelStyle, color: "var(--accent)" }}>💰 Total Earnings (CEB)</h3>
+      <p style={{ ...valueStyle, color: "var(--accent)" }}>{loading ? "..." : `LKR ${total.toLocaleString()}`}</p>
     </div>
   );
 };

@@ -63,7 +63,15 @@ const Settings = () => {
     } else {
       setMessage(`✅ ${setting.setting_name} updated successfully`);
       // apply theme immediately if changed
-      if (setting.setting_name === 'theme') setTheme(setting_value);
+      if (setting.setting_name === 'theme') {
+        setTheme(setting_value);
+        // Also update the ThemeContext
+        if (setting_value === 'light') {
+          document.body.classList.add('light-theme');
+        } else {
+          document.body.classList.remove('light-theme');
+        }
+      }
       // Clear message after 3 seconds
       setTimeout(() => setMessage(''), 3000);
     }
@@ -145,11 +153,11 @@ const Settings = () => {
             key={setting.id}
             style={{
               padding: "1.5rem",
-              background: "rgba(20,20,20,0.6)",
+              background: "var(--card-bg)",
               borderRadius: "12px",
               backdropFilter: "blur(10px)",
-              boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
-              border: "1px solid rgba(255,122,0,0.2)"
+              boxShadow: `0 4px 20px var(--card-shadow)`,
+              border: `1px solid var(--card-border)`
             }}
           >
             <label style={{ 
@@ -170,9 +178,9 @@ const Settings = () => {
                   width: "100%",
                   padding: "10px",
                   borderRadius: "6px",
-                  background: "rgba(30,30,30,0.8)",
-                  color: "#fff",
-                  border: "1px solid #333",
+                  background: "var(--card-bg-solid)",
+                  color: "var(--text-color)",
+                  border: "1px solid var(--border-color)",
                   marginBottom: "0.5rem"
                 }}
               >
@@ -188,9 +196,9 @@ const Settings = () => {
                   width: "100%",
                   padding: "10px",
                   borderRadius: "6px",
-                  background: "rgba(30,30,30,0.8)",
-                  color: "#fff",
-                  border: "1px solid #333",
+                  background: "var(--card-bg-solid)",
+                  color: "var(--text-color)",
+                  border: "1px solid var(--border-color)",
                   marginBottom: "0.5rem"
                 }}
                 min="0"
@@ -206,9 +214,9 @@ const Settings = () => {
                   width: "100%",
                   padding: "10px",
                   borderRadius: "6px",
-                  background: "rgba(30,30,30,0.8)",
-                  color: "#fff",
-                  border: "1px solid #333",
+                  background: "var(--card-bg-solid)",
+                  color: "var(--text-color)",
+                  border: "1px solid var(--border-color)",
                   marginBottom: "0.5rem"
                 }}
               />
@@ -217,7 +225,7 @@ const Settings = () => {
             {setting.description && (
               <p style={{ 
                 fontSize: "0.9rem", 
-                color: "#aaa", 
+                color: "var(--text-secondary)", 
                 marginBottom: "1rem",
                 fontStyle: "italic"
               }}>
@@ -250,15 +258,15 @@ const Settings = () => {
         <div style={{ 
           textAlign: "center", 
           padding: "2rem", 
-          color: "#aaa",
-          background: "rgba(20,20,20,0.6)",
+          color: "var(--text-secondary)",
+          background: "var(--card-bg)",
           borderRadius: "12px",
-          border: "1px solid rgba(255,122,0,0.2)"
+          border: "1px solid var(--card-border)"
         }}>
           <p style={{ marginBottom: "1rem", fontSize: "1.1rem" }}>
             📊 No settings found in database
           </p>
-          <p style={{ marginBottom: "1.5rem", color: "#888" }}>
+          <p style={{ marginBottom: "1.5rem", color: "var(--text-muted)" }}>
             You need to add some initial settings to your database.
           </p>
           <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
@@ -279,8 +287,8 @@ const Settings = () => {
             <button
               onClick={fetchSettings}
               style={{
-                background: "#444",
-                color: "#fff",
+                background: "var(--hover-bg)",
+                color: "var(--text-color)",
                 border: "none",
                 padding: "10px 20px",
                 borderRadius: "6px",
