@@ -1,18 +1,21 @@
 // App.js
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route, NavLink } from "react-router-dom";
 import { ThemeProvider } from "./components/ThemeContext";
 import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 import { DataProvider } from "./contexts/DataContext";
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
-import Dashboard from "./pages/Dashboard";
-import Settings from "./pages/Settings";
-import AdminLogin from "./pages/AdminLogin";
-import AdminDashboard from "./pages/AdminDashboard";
 import GoToTopButton from "./components/GoToTopButton";
 import "./index.css";
 import { verifySupabaseConnection } from "./lib/verifySupabaseConnection";
+
+// Lazy load pages for better code splitting
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Settings = lazy(() => import("./pages/Settings"));
+const AdminLogin = lazy(() => import("./pages/AdminLogin"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 function AppContent() {
   const { isAdmin, loading, session } = useContext(AuthContext);
@@ -36,46 +39,52 @@ function AppContent() {
   }
 
   return (
-    <Routes>
-      {/* Admin routes - standalone layout */}
-      <Route path="/admin" element={<AdminLogin />} />
-      <Route
-        path="/admin/dashboard"
-        element={
-          <RequireAdmin>
-            <AdminDashboard />
-          </RequireAdmin>
-        }
-      />
+    <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'var(--accent)' }}>Loading...</div>}>
+      <Routes>
+        {/* Admin routes - standalone layout */}
+        <Route path="/admin" element={<AdminLogin />} />
+        <Route
+          path="/admin/dashboard"
+          element={
+            <RequireAdmin>
+              <AdminDashboard />
+            </RequireAdmin>
+          }
+        />
+        <Route path="/admin/*" element={<NotFound />} />
 
-      {/* Main app routes - with sidebar and navbar */}
-      <Route
-        path="/*"
-        element={
-          <div className="app-container" style={{ display: "flex" }}>
-            <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
-            <div
-              className="main-content"
-              style={{
-                marginLeft: "60px",
-                flexGrow: 1,
-                transition: "margin-left 0.3s ease",
-              }}
-            >
-              <Navbar />
-              <div className="page-container">
-                <Routes>
-                  <Route index element={<Dashboard />} />
-                  <Route path="dashboard" element={<Dashboard />} />
-                  <Route path="settings" element={<Settings />} />
-                </Routes>
+        {/* Main app routes - with sidebar and navbar */}
+        <Route
+          path="/*"
+          element={
+            <div className="app-container" style={{ display: "flex" }}>
+              <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
+              <div
+                className="main-content"
+                style={{
+                  marginLeft: "60px",
+                  flexGrow: 1,
+                  transition: "margin-left 0.3s ease",
+                }}
+              >
+                <Navbar />
+                <div className="page-container">
+                  <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh', color: 'var(--accent)' }}>Loading page...</div>}>
+                    <Routes>
+                      <Route index element={<Dashboard />} />
+                      <Route path="dashboard" element={<Dashboard />} />
+                      <Route path="settings" element={<Settings />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
+                </div>
               </div>
+              <GoToTopButton />
             </div>
-            <GoToTopButton />
-          </div>
-        }
-      />
-    </Routes>
+          }
+        />
+      </Routes>
+    </Suspense>
   );
 }
 

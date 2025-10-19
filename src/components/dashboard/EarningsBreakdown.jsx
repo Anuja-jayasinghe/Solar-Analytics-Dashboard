@@ -10,12 +10,25 @@ const supabase = createClient(
 const EarningsDifference = () => {
   const [inverterValue, setInverterValue] = useState(0);
   const [cebEarnings, setCebEarnings] = useState(0);
+  const [ratePerKwh, setRatePerKwh] = useState(50); // Default fallback
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
       try {
+        // Fetch the rate per kWh from settings
+        const { data: rateData } = await supabase
+          .from('system_settings')
+          .select('setting_value')
+          .eq('setting_name', 'rate_per_kwh')
+          .single();
+
+        if (rateData?.setting_value) {
+          setRatePerKwh(parseFloat(rateData.setting_value));
+        }
+
+        // Fetch CEB and inverter data
         const { data: cebData } = await supabase
           .from('ceb_data')
           .select('earnings');
@@ -27,8 +40,11 @@ const EarningsDifference = () => {
           (sum, row) => sum + (row.earnings || 0),
           0
         );
+        
+        // Use the rate from settings instead of hardcoded value
+        const currentRate = rateData?.setting_value ? parseFloat(rateData.setting_value) : 50;
         const totalInverter = invData.reduce(
-          (sum, row) => sum + (row.total_generation_kwh || 0) * 50,
+          (sum, row) => sum + (row.total_generation_kwh || 0) * currentRate,
           0
         );
 
@@ -93,6 +109,9 @@ const EarningsDifference = () => {
               <p style={styles.valueLabel}>Inverter</p>
               <p style={{ ...styles.valueText, color: 'var(--accent-secondary)' }}>
                 {`LKR ${inverterValue.toLocaleString()}`}
+              </p>
+              <p style={{ ...styles.rateLabel, color: 'var(--text-muted)' }}>
+                @ {ratePerKwh} LKR/kWh
               </p>
             </div>
             <div style={styles.valueItem}>
@@ -229,6 +248,12 @@ const styles = {
     fontSize: '15px',
     fontWeight: '700',
     margin: 0,
+  },
+  rateLabel: {
+    fontSize: '9px',
+    fontWeight: '500',
+    margin: '2px 0 0 0',
+    opacity: 0.8,
   },
   gaugeContainer: {
     width: '100%',

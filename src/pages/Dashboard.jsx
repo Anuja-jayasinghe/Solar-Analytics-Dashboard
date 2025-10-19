@@ -1,15 +1,17 @@
 // src/pages/Dashboard.jsx
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import DailyTargetTracker from "../components/dashboard/DailyTargetTracker";
 import PeakPowerDial from "../components/dashboard/CurrentPower";
 import MonthlyGenerationCard from "../components/dashboard/MonthlyGenerationCard";
 import TotalGenerationCard from "../components/dashboard/TotalGenerationCard";
 import TotalEarningsCard from "../components/dashboard/TotalEarningsCard";
-import EnergyCharts from "../components/dashboard/EnergyCharts";
-import EarningsBreakdown from "../components/dashboard/EarningsBreakdown";
-import EnvironmentalImpact from "../components/dashboard/EnvironmentalImpact";
-import SystemTrends from "../components/dashboard/SystemTrends";
 import CacheStatusIndicator from "../components/CacheStatusIndicator";
+
+// Lazy load heavy chart components
+const EnergyCharts = lazy(() => import("../components/dashboard/EnergyCharts"));
+const EarningsBreakdown = lazy(() => import("../components/dashboard/EarningsBreakdown"));
+const EnvironmentalImpact = lazy(() => import("../components/dashboard/EnvironmentalImpact"));
+const SystemTrends = lazy(() => import("../components/dashboard/SystemTrends"));
 
 function Dashboard() {
   return (
@@ -34,14 +36,22 @@ function Dashboard() {
 
       {/* --- Main Energy Analytics --- */}
       <div style={mainCharts}>
-        <EnergyCharts />
+        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px', color: 'var(--accent)' }}>Loading charts...</div>}>
+          <EnergyCharts />
+        </Suspense>
       </div>
 
       {/* --- Secondary Section --- */}
       <div style={gridStyle}>
-        <EarningsBreakdown />
-        <EnvironmentalImpact/>
-        <SystemTrends />
+        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px', color: 'var(--accent)' }}>Loading...</div>}>
+          <EarningsBreakdown />
+        </Suspense>
+        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px', color: 'var(--accent)' }}>Loading...</div>}>
+          <EnvironmentalImpact/>
+        </Suspense>
+        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px', color: 'var(--accent)' }}>Loading...</div>}>
+          <SystemTrends />
+        </Suspense>
       </div>
     </div>
   );
