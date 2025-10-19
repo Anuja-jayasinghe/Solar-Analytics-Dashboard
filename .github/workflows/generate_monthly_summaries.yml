@@ -1,3 +1,4 @@
+# .github/workflows/generate_monthly_summaries.yml
 name: 📅 Generate Monthly Summaries
 
 on:
@@ -9,20 +10,34 @@ on:
 jobs:
   monthly-summary:
     runs-on: ubuntu-latest
+
+    # Define environment variables once for the entire job
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
     steps:
       - name: 🧩 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🧰 Setup Node.js
+      # --- START OF FIX ---
+
+      - name: 🧰 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8 # Or your preferred version
+
+      - name: 🧰 Setup Node.js and cache dependencies
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'pnpm' # Cache pnpm dependencies for faster runs
+
+      # --- END OF FIX ---
 
       - name: 📦 Install dependencies
-        run: pnpm install
+        run: pnpm install # This will now work
 
       - name: 🚀 Run Monthly Summary Script
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        # Environment variables are inherited from the job level
         run: node ./functions/generate_monthly_summaries/index.js
