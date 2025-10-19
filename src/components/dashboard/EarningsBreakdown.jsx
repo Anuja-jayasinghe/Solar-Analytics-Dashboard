@@ -206,6 +206,12 @@ const styles = {
     flexDirection: 'column',
     overflow: 'hidden',
     fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
+    '@media (max-width: 768px)': {
+      padding: '1rem',
+      height: 'auto',
+      minHeight: '220px',
+      width: '100%',
+    },
   },
   title: {
     color: 'var(--accent)',
