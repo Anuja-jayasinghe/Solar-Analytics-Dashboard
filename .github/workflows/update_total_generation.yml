@@ -1,3 +1,4 @@
+# .github/workflows/update_total_generation.yml
 name: ⏱️ Update Total Generation
 
 on:
@@ -8,22 +9,36 @@ on:
 jobs:
   update-total-generation:
     runs-on: ubuntu-latest
+
+    # Define environment variables once for the entire job
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      SOLIS_API_ID: ${{ secrets.SOLIS_API_ID }}
+      SOLIS_API_SECRET: ${{ secrets.SOLIS_API_SECRET }}
+
     steps:
       - name: 🧩 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🧰 Setup Node.js
+      # --- START OF FIX ---
+
+      - name: 🧰 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8 # Or your preferred version
+
+      - name: 🧰 Setup Node.js and cache dependencies
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'pnpm' # Cache pnpm dependencies for faster runs
+
+      # --- END OF FIX ---
 
       - name: 📦 Install dependencies
-        run: pnpm install
+        run: pnpm install # This will now work
 
       - name: 🚀 Run ETotal Update Script
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          SOLIS_API_ID: ${{ secrets.SOLIS_API_ID }}
-          SOLIS_API_SECRET: ${{ secrets.SOLIS_API_SECRET }}
+        # Environment variables are inherited from the job level
         run: node ./functions/update_total_generation/index.js
