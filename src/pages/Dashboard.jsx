@@ -93,6 +93,10 @@ const statsRow = {
   gap: "1.5rem",
   justifyContent: "space-between",
   flexWrap: "wrap",
+  "@media (max-width: 768px)": {
+    flexDirection: "column",
+    gap: "1rem",
+  },
 };
 
 const mainCharts = {
@@ -111,6 +115,14 @@ const gridStyle = {
   marginTop: "2rem",
   alignItems: "stretch",
   width: "100%",
+  "@media (max-width: 768px)": {
+    gridTemplateColumns: "1fr",
+    gap: "1rem",
+    marginTop: "1.5rem",
+  },
+  "@media (min-width: 769px) and (max-width: 1024px)": {
+    gridTemplateColumns: "repeat(2, 1fr)",
+  },
 };
 
 export default Dashboard;
