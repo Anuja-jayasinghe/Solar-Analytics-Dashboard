@@ -26,10 +26,23 @@ export default function AdminLogin() {
 
   async function signInWithGoogle() {
     const origin = window.location.origin;
-    await supabase.auth.signInWithOAuth({
+    console.log('🔐 Admin Login: Attempting Google OAuth with redirect:', `${origin}/admin/dashboard`);
+    
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${origin}/admin/dashboard` },
+      options: { 
+        redirectTo: `${origin}/admin/dashboard`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        }
+      },
     });
+    
+    if (error) {
+      console.error('❌ OAuth Error:', error);
+      alert(`Login failed: ${error.message}`);
+    }
   }
 
   if (loading) return <p>Loading...</p>;

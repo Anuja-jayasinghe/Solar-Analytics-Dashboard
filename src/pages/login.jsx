@@ -9,10 +9,11 @@ function Login() {
   const navigate = useNavigate();
 
   const handleGoogleLogin = async () => {
+    const origin = window.location.origin;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: "http://localhost:5173/admin/dashboard", // update in prod
+        redirectTo: `${origin}/admin/dashboard`,
       },
     });
     if (error) setError(error.message);
