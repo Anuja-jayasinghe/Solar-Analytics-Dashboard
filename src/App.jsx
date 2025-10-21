@@ -9,6 +9,7 @@ import Navbar from "./components/Navbar";
 import GoToTopButton from "./components/GoToTopButton";
 import "./index.css";
 import { verifySupabaseConnection } from "./lib/verifySupabaseConnection";
+import { Analytics } from "@vercel/analytics/react"
 
 // Lazy load pages for better code splitting
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -94,6 +95,7 @@ function App() {
       <ThemeProvider>
         <DataProvider>
           <Router>
+            <Analytics/>
             <AppContent />
           </Router>
         </DataProvider>
