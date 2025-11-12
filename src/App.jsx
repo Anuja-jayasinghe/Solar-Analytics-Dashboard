@@ -10,6 +10,7 @@ import GoToTopButton from "./components/GoToTopButton";
 import "./index.css";
 import { verifySupabaseConnection } from "./lib/verifySupabaseConnection";
 import { Analytics } from "@vercel/analytics/react"
+import MaintenancePage from "./pages/MaintenancePage";
 
 // Lazy load pages for better code splitting
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -89,7 +90,14 @@ function AppContent() {
   );
 }
 
+// maintanance toggle
+const IS_MAINTENANCE = true
+
 function App() {
+
+  if (IS_MAINTENANCE){
+    return <MaintenancePage/>
+  }
   return (
     <AuthProvider>
       <ThemeProvider>
