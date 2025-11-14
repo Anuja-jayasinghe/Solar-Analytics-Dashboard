@@ -4,7 +4,7 @@ import {
   ResponsiveContainer, Legend, LineChart, Line
 } from "recharts";
 import { createClient } from "@supabase/supabase-js";
-import { useInView } from 'react-intersection-observer'; // 1. Import the hook
+import { useInView } from 'react-intersection-observer';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -13,10 +13,9 @@ const supabase = createClient(
 );
 
 const EnergyCharts = () => {
-  // 2. Set up the inView hook
   const { ref, inView } = useInView({
-    triggerOnce: true, // Only animate once
-    threshold: 0.1,    // Trigger when 10% of the chart is visible
+    triggerOnce: true,
+    threshold: 0.1,
   });
   
   const [data, setData] = useState([]);
@@ -29,8 +28,12 @@ const EnergyCharts = () => {
     try {
       const { data: alignedData, error: rpcError } = await supabase.rpc('get_monthly_comparison');
       if (rpcError) throw rpcError;
+
+      // --- UPDATED MAPPING ---
+      // Map both labels from the database to our component's data
       const formattedData = alignedData.map(d => ({
-        month: d.month_label,
+        month: d.month_label,   // The simple label (e.g., "Oct '25")
+        period: d.period_label, // The detailed label (e.g., "Sep 05 - Oct 04")
         inverter: d.inverter_kwh,
         ceb: d.ceb_kwh
       }));
@@ -47,13 +50,16 @@ const EnergyCharts = () => {
     fetchData();
   }, []);
 
-  // 3. Updated Tooltip to be clearer
-  const CustomTooltip = ({ active, payload, label }) => {
+  // --- UPDATED TOOLTIP ---
+  // Now displays the detailed 'period' from the data payload
+  const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       return (
         <div style={tooltipStyle}>
           <p style={tooltipLabelStyle}>Billing Period:</p>
-          <p style={tooltipValueStyle}>{label}</p>
+          {/* Use the 'period' field from the payload */}
+          <p style={tooltipValueStyle}>{payload[0].payload.period}</p>
+          
           <div style={{marginTop: '8px'}}>
             <p style={{ margin: '4px 0 0', padding: 0, color: '#00c2a8' }}>
               {`Inverter: ${payload[0].value.toFixed(2)} kWh`}
@@ -69,7 +75,6 @@ const EnergyCharts = () => {
   };
   
   return (
-    // 4. Attach the 'ref' to the main container
     <div className="chart-container" style={chartBox} ref={ref}>
       <style>{keyframesCSS}</style>
       <div style={chartHeader}>
@@ -91,19 +96,18 @@ const EnergyCharts = () => {
       ) : (
         <>
           <ResponsiveContainer width="100%" height={300}>
-            {/* 5. Pass isAnimationActive={inView} to trigger animation */}
             <BarChart data={data} isAnimationActive={inView}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.2} stroke="var(--chart-grid)" />
-              {/* 6. Updated XAxis for long labels */}
+              {/* XAxis now uses the simple 'month' label */}
               <XAxis 
                 dataKey="month" 
                 stroke="var(--chart-text)" 
                 fontSize={12} 
                 tickLine={false} 
                 axisLine={false}
-                angle={-25}
-                textAnchor="end"
-                height={60}
+                angle={0} // No longer need to tilt
+                textAnchor="middle"
+                height={30}
                 interval={0}
               />
               <YAxis stroke="var(--chart-text)" fontSize={12} />
@@ -112,12 +116,11 @@ const EnergyCharts = () => {
                 cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
               />
               <Legend wrapperStyle={{ color: 'var(--text-color)', paddingTop: '20px' }} />
-              <Bar 
+              <Bar Save
                 dataKey="inverter" 
                 fill="#00c2a8" 
                 name="Inverter (kWh)"
                 style={{ filter: 'drop-shadow(0 2px 4px rgba(0, 194, 168, 0.3))' }}
-                // Removed hover effects for a cleaner look
               />
               <Bar 
                 dataKey="ceb" 
@@ -129,19 +132,18 @@ const EnergyCharts = () => {
           </ResponsiveContainer>
 
           <ResponsiveContainer width="100%" height={250} style={{ marginTop: "2rem" }}>
-            {/* 5. Pass isAnimationActive={inView} to trigger animation */}
             <LineChart data={data} isAnimationActive={inView}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.2} stroke="var(--chart-grid)" />
-              {/* 6. Updated XAxis for long labels */}
+              {/* XAxis now uses the simple 'month' label */}
               <XAxis 
                 dataKey="month" 
                 stroke="var(--chart-text)" 
                 fontSize={12} 
                 tickLine={false} 
                 axisLine={false}
-                angle={-25}
-                textAnchor="end"
-                height={60}
+                angle={0} // No longer need to tilt
+                textAnchor="middle"
+                height={30}
                 interval={0}
               />
               <YAxis stroke="var(--chart-text)" fontSize={12} />
@@ -185,8 +187,8 @@ const chartBox = {
   backdropFilter: 'blur(12px)',
   border: '1px solid rgba(255,255,255,0.1)',
   color: 'var(--text-color, #fff)',
-  height: 'auto', // Auto-height to fit both charts
-  minHeight: '400px', // Set a min-height for loading state
+  height: 'auto', 
+  minHeight: '400px',
   flex: 2,
 };
 const chartHeader = {
@@ -202,7 +204,7 @@ const messageContainer = {
   flexDirection: "column",
   alignItems: "center",
   justifyContent: "center",
-  height: "550px", // Set a fixed height for loading/error
+  height: "550px", 
   color: "var(--text-color, #a0aec0)",
 };
 const spinner = {
@@ -227,7 +229,7 @@ const retryButton = {
 };
 const keyframesCSS = `@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`;
 
-// --- New Tooltip Styles ---
+// --- Tooltip Styles ---
 const tooltipStyle = {
   background: 'rgba(10, 10, 12, 0.85)',
   backdropFilter: 'blur(5px)',
