@@ -1,6 +1,6 @@
 // src/components/TotalEarningsCard.jsx
 import React, { useEffect, useState } from "react";
-import { useData } from "../../contexts/DataContext";
+import { useData } from "../../hooks/useData"; // Adjust path as needed
 import { supabase } from "../../lib/supabaseClient";
 
 const TotalEarningsCard = () => {

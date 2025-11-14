@@ -1,20 +1,19 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { useData } from "../../contexts/DataContext";
-import { supabase } from "../../lib/supabaseClient";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { createClient } from "@supabase/supabase-js"; // We will fix this in a moment
+import { useData } from "../../hooks/useData"; // Make sure this path is correct
+
+// TODO: Remove this createClient call
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL || "https://example.supabase.co",
+  import.meta.env.VITE_SUPABASE_ANON_KEY || "example-key"
+);
 
 const DailyTargetTracker = () => {
-  const { livePowerData, loading, errors, refreshData } = useData();
-  const [target, setTarget] = useState(0);
-  const [phase, setPhase] = useState(0); // wave phase for smooth motion
-  const [time, setTime] = useState(0);   // global time for subtle bobbing
-  const [smoothPercent, setSmoothPercent] = useState(0); // eased fill percent
-  const rafRef = useRef(null);
+  // Get all data from the central context
+  const { livePowerData, loading } = useData();
+  const [target, setTarget] = useState(30);
 
-  // Extract data from context
-  const todayGen = livePowerData?.dailyGeneration || 0;
-  const isLoading = loading.live;
-
-  // Fetch daily target from settings
+  // Fetch the static target ONCE
   useEffect(() => {
     const fetchTarget = async () => {
       try {
@@ -31,65 +30,30 @@ const DailyTargetTracker = () => {
     fetchTarget();
   }, []);
 
-  // --- Calculations (Unchanged) ---
+  // --- Calculations & Visuals ---
+  // ✅ FIX: Access the nested 'value' property
+  const todayGen = livePowerData?.dailyGeneration?.value || 0;
+
   const percent = target > 0 ? (todayGen / target) * 100 : 0;
-  const targetPercent = isLoading && todayGen === 0 ? 0 : percent;
-  const displayPercent = smoothPercent;
-  const displayTodayGen = isLoading && todayGen === 0 ? 0 : todayGen;
+  const displayPercent = loading.live && todayGen === 0 ? 0 : percent;
+  const displayTodayGen = loading.live && todayGen === 0 ? 0 : todayGen;
 
   // --- Helper Functions (Unchanged) ---
-  const generateWavePath = useCallback((pct, amplitude, wavelength, phaseOffset, noiseAmount = 0) => {
+  const generateWavePath = useCallback((pct, amplitude, frequency) => {
     const cx = 120, cy = 120, radius = 105;
-    const baseFillLevel = cy + radius - (pct / 100) * (radius * 2);
-    if (pct < 1) return `M ${cx - radius},${cy + radius} L ${cx + radius},${cy + radius} Z`;
-    // subtle bobbing tied to time
-    const bob = Math.sin(time * 0.7) * 1.5;
-    const fillLevel = baseFillLevel + bob;
+    const fillLevel = cy + radius - (pct / 100) * (radius * 2);
+    if (pct < 1) return `M ${cx-radius},${cy+radius} L ${cx+radius},${cy+radius} Z`;
     const points = [];
-    // lightweight pseudo-noise for organic variation
-    const noise = (n) => {
-      const s = Math.sin(n * 12.9898 + 78.233) * 43758.5453;
-      return (s - Math.floor(s)) * 2 - 1; // [-1, 1]
-    };
-    for (let angle = 0; angle <= 360; angle += 3) {
+    for (let angle = 0; angle <= 360; angle += 5) {
       const rad = (angle * Math.PI) / 180;
       const x = cx + Math.cos(rad) * radius;
-      // primary wave + a subtle second harmonic for realism
-      const theta = (angle / wavelength) + phaseOffset;
-      const yWave = Math.sin(theta) * amplitude + Math.sin(theta * 2.2) * (amplitude * 0.35);
-      const yNoise = noise(angle * 0.15 + phaseOffset) * noiseAmount;
-      const y = fillLevel + yWave + yNoise;
-      if (y <= cy + radius) points.push(`${x},${y}`);
+      const baseY = fillLevel + Math.sin(angle / frequency) * amplitude;
+      if (baseY <= cy + radius) points.push(`${x},${baseY}`);
     }
-    return points.length > 0
-      ? `M${points[0]} L${points.slice(1).join(" ")} L${cx + radius},${cy + radius} L${cx - radius},${cy + radius} Z`
-      : `M ${cx - radius},${cy + radius} L ${cx + radius},${cy + radius} Z`;
-  }, [time]);
-
-  // Animation loop for wave phase and eased filling
-  useEffect(() => {
-    let last = performance.now();
-    const tick = (now) => {
-      const dt = Math.min(0.05, (now - last) / 1000); // cap delta for stability
-      last = now;
-      // progress global time
-      setTime((t) => t + dt);
-      // advance phase based on time; slower when idle
-      setPhase((p) => p + dt * 1.2);
-      // ease smoothPercent toward targetPercent
-      setSmoothPercent((current) => {
-        const diff = targetPercent - current;
-        const speed = 3.0; // higher = faster catch-up
-        const step = diff * (1 - Math.exp(-speed * dt));
-        return current + step;
-      });
-      rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [targetPercent]);
+    return points.length > 0 
+      ? `M${points[0]} L${points.slice(1).join(" ")} L${cx+radius},${cy+radius} L${cx-radius},${cy+radius} Z` 
+      : `M ${cx-radius},${cy+radius} L ${cx+radius},${cy+radius} Z`;
+  }, []);
 
   const bubbles = useMemo(() => {
     if (displayPercent < 10) return [];
@@ -104,26 +68,8 @@ const DailyTargetTracker = () => {
   return (
     <div style={styles.container}>
       <style>{keyframesCSS}</style>
-      {/* Glow overlay is now part of the main container's box-shadow */}
       
-      <h2 style={styles.title}>
-        ☀️ Daily Generation
-        {errors.live && (
-          <button 
-            onClick={() => refreshData('live')} 
-            style={styles.retryButton}
-            title="Retry loading data"
-          >
-            ⚠️
-          </button>
-        )}
-      </h2>
-      <p style={styles.dateText}>{new Date().toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      })}</p>
+      <h2 style={styles.title}>☀️ Daily Generation</h2>
 
       <div style={styles.gaugeContainer}>
         <svg viewBox="0 0 240 240" style={{ width: '100%', height: '100%' }}>
@@ -144,13 +90,15 @@ const DailyTargetTracker = () => {
           <circle cx="120" cy="120" r="105" fill="rgba(28, 30, 33, 0.4)" stroke="rgba(0, 255, 240, 0.3)" strokeWidth="2" />
 
           <g clipPath="url(#circleClip)">
-            {/* Single solid orange liquid fill */}
-            <path
-              d={generateWavePath(displayPercent, 8, 19, phase * 1.0, 0.4)}
-              fill="#FF7A00"
-              opacity="1"
-            />
-            {/* Bubbles removed for a fully solid orange appearance */}
+            <path d={generateWavePath(displayPercent, 6, 18)} fill="url(#liquidGrad)" opacity="0.5" filter="url(#liquidGlow)" style={{ animation: 'wave 4s linear infinite', transition: 'all 0.6s ease' }} />
+            <path d={generateWavePath(displayPercent, 7, 22)} fill="url(#liquidGrad)" opacity="0.6" filter="url(#liquidGlow)" style={{ animation: 'wave-alt 5s linear infinite', transition: 'all 0.6s ease' }} />
+            {bubbles.map((bubble) => (
+              <circle
+                key={bubble.id} cx={bubble.x} cy={bubble.y} r={bubble.r}
+                fill="hsl(25 100% 50% / 0.3)"
+                style={{ animation: `bubble ${bubble.duration}s ease-in infinite`, animationDelay: `${bubble.delay}s` }}
+              />
+            ))}
           </g>
           
           <text x="120" y="125" textAnchor="middle" style={styles.percentText}>
@@ -163,6 +111,7 @@ const DailyTargetTracker = () => {
         <div style={styles.statItem}>
           <p style={styles.statLabel}>Generated</p>
           <p style={styles.statValue}>
+            {/* ✅ This line is now safe and will not crash */}
             {displayTodayGen.toFixed(2)} <span style={styles.unit}>kWh</span>
           </p>
         </div>
@@ -182,106 +131,47 @@ const DailyTargetTracker = () => {
   );
 };
 
-// --- STYLES (Matched with CurrentPower.jsx) ---
+// --- STYLES ---
 const styles = {
   container: {
-    background: 'var(--glass-bg)',
-    borderRadius: '24px',
-    padding: '1.5rem',
-    textAlign: 'center',
-    backdropFilter: 'blur(12px)',
-    border: '1px solid var(--glass-border)',
-    boxShadow: '0 8px 32px var(--card-shadow), inset 0 1px 1px var(--glass-border)',
-    width: '38%',
-    height: '300px',
-    margin: '0 auto',
-    position: 'relative',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-around',
+    background: 'linear-gradient(145deg, rgba(20,20,22,0.8), rgba(12,12,14,0.85))',
+    borderRadius: '24px', padding: '1.5rem', backdropFilter: 'blur(12px)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    boxShadow: '0 8px 32px rgba(0,255,255,0.1), inset 0 1px 1px rgba(255,255,255,0.05)',
+    width: '38%', height: '300px', margin: '0 auto', position: 'relative',
+    display: 'flex', flexDirection: 'column', justifyContent: 'space-around',
   },
   title: {
-    color: 'var(--accent)',
-    fontWeight: 'bold',
-    fontSize: '1.25rem',
-    textShadow: '0 0 10px var(--accent)',
-    margin: 0,
-  },
-  dateText: {
-    color: 'var(--text-secondary)',
-    fontSize: '0.75rem',
-    fontWeight: '500',
-    margin: '0.25rem 0 0 0',
-    opacity: 0.8,
-    letterSpacing: '0.025em',
+    color: 'var(--accent, #00eaff)', fontWeight: 'bold', fontSize: '1.25rem',
+    textShadow: '0 0 10px var(--accent, #00eaff)', textAlign: 'center', margin: 0,
   },
   gaugeContainer: {
-    position: 'relative',
-    width: '160px',
-    height: '160px',
-    margin: '0 auto',
+    position: 'relative', width: '160px', height: '160px', margin: '0 auto',
   },
   percentText: {
-    fontSize: '2.25rem',
-    fontWeight: '700',
-    fill: 'var(--text-color)',
-    textShadow: '0 0 15px var(--text-color)',
+    fontSize: '2.25rem', fontWeight: '700', fill: '#ffffff',
+    textShadow: '0 0 15px rgba(255,255,255,0.5)',
   },
   stats: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    padding: '0.25rem 0',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '0.25rem 0',
   },
-  statItem: {
-    textAlign: 'center',
-    flex: '1',
-  },
+  statItem: { textAlign: 'center', flex: '1' },
   statLabel: {
-    color: 'var(--accent)',
-    fontSize: '0.75rem',
-    textTransform: 'uppercase',
-    opacity: 0.8,
-    marginBottom: '0.25rem',
-    letterSpacing: '0.05em',
+    color: 'var(--accent, #00eaff)', fontSize: '0.75rem', textTransform: 'uppercase',
+    opacity: 0.8, marginBottom: '0.25rem', letterSpacing: '0.05em',
   },
-  statValue: {
-    color: 'var(--text-color)',
-    fontSize: '1.125rem',
-    fontWeight: '700',
-  },
-  unit: {
-    fontSize: '0.875rem',
-    color: 'var(--text-secondary)',
-  },
-  divider: {
-    width: '1px',
-    height: '2rem',
-    backgroundColor: 'var(--glass-border)',
-  },
+  statValue: { color: '#ffffff', fontSize: '1.125rem', fontWeight: '700' },
+  unit: { fontSize: '0.875rem', color: '#a0aec0' },
+  divider: { width: '1px', height: '2rem', backgroundColor: 'rgba(255, 255, 255, 0.1)' },
   progressBarOuter: {
-    width: '100%',
-    height: '0.375rem',
-    borderRadius: '9999px',
-    backgroundColor: 'var(--glass-border)',
-    overflow: 'hidden',
+    width: '100%', height: '0.375rem', borderRadius: '9999px',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)', overflow: 'hidden',
   },
   progressBarInner: {
     height: '100%',
     backgroundImage: 'linear-gradient(to right, hsl(35, 100%, 65%), hsl(28, 100%, 50%))',
     boxShadow: '0 0 18px rgba(255, 165, 0, 0.6)',
     transition: 'width 600ms ease-out',
-  },
-  retryButton: {
-    background: 'var(--accent)',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    padding: '0.2rem 0.4rem',
-    fontSize: '0.7rem',
-    cursor: 'pointer',
-    marginLeft: '0.5rem',
-    transition: 'all 0.2s ease',
   },
 };
 
