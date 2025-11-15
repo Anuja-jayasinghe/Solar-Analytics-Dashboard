@@ -1,14 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase client
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { supabase } from '../lib/supabaseClient';
 
 // Create the context
-const DataContext = createContext();
+export const DataContext = createContext();
 
 // Create the provider component
 export const DataProvider = ({ children }) => {
@@ -18,9 +12,6 @@ export const DataProvider = ({ children }) => {
   const [totalGenerationData, setTotalGenerationData] = useState({ total: 0 });
   const [totalEarningsData, setTotalEarningsData] = useState({ total: 0 });
   const [monthlyGenerationData, setMonthlyGenerationData] = useState({ total: 0 });
-  
-  // --- NEW ---
-  // This will hold the (Total Generation * Tariff) value
   const [inverterPotentialValue, setInverterPotentialValue] = useState({ total: 0 }); 
 
   // Loading and error states
@@ -52,7 +43,6 @@ export const DataProvider = ({ children }) => {
       }
       
       else if (key === 'totalGen') {
-        // This is efficient. It fetches all rows to be summed.
         const { data, error } = await supabase.from('inverter_data_daily_summary').select('total_generation_kwh');
         if (error) throw error;
         const total = data.reduce((sum, record) => sum + (parseFloat(record.total_generation_kwh) || 0), 0);
@@ -60,25 +50,28 @@ export const DataProvider = ({ children }) => {
       }
       
       else if (key === 'totalEarnings') {
-        // This is efficient. It fetches all rows to be summed.
         const { data, error } = await supabase.from('ceb_data').select('earnings');
         if (error) throw error;
         const total = data.reduce((sum, record) => sum + (record.earnings || 0), 0);
         setTotalEarningsData({ total });
       }
 
-      // --- NEW: Logic to calculate Inverter Potential Value ---
       else if (key === 'inverterValue') {
         const [genResponse, settingResponse] = await Promise.all([
           supabase.from('inverter_data_daily_summary').select('total_generation_kwh'),
-          supabase.from('system_settings').select('setting_value').eq('setting_name', 'generation_tariff').single()
+          // --- THIS IS THE FIX ---
+          // Updated 'generation_tariff' to 'rate per kwh' to match your table
+          supabase.from('system_settings').select('setting_value').eq('setting_name', 'rate per kwh').limit(1)
         ]);
+        // --- END OF FIX ---
 
         if (genResponse.error) throw genResponse.error;
         if (settingResponse.error) throw settingResponse.error;
 
         const totalGeneration = genResponse.data.reduce((sum, record) => sum + (parseFloat(record.total_generation_kwh) || 0), 0);
-        const tariff = parseFloat(settingResponse.data?.setting_value) || 50; // Default to 50 if setting is missing
+        
+        // Use 50 as a default if the row is still not found for any reason
+        const tariff = parseFloat(settingResponse.data?.[0]?.setting_value) || 50; 
 
         setInverterPotentialValue({ total: totalGeneration * tariff });
       }
@@ -123,7 +116,7 @@ export const DataProvider = ({ children }) => {
       fetchData('totalGen'),
       fetchData('totalEarnings'),
       fetchData('monthlyGen'),
-      fetchData('inverterValue') // --- NEW: Fetch our new value ---
+      fetchData('inverterValue')
     ]);
   }, [fetchData]);
 
@@ -133,7 +126,7 @@ export const DataProvider = ({ children }) => {
 
   const value = {
     energyChartsData, livePowerData, totalGenerationData, totalEarningsData, monthlyGenerationData,
-    inverterPotentialValue, // --- NEW: Provide the new value ---
+    inverterPotentialValue,
     loading, errors, refreshData,
   };
 
