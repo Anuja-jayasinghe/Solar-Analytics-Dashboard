@@ -9,7 +9,7 @@ import CacheStatusIndicator from "../components/CacheStatusIndicator";
 
 // Lazy load heavy chart components
 const EnergyCharts = lazy(() => import("../components/dashboard/EnergyCharts"));
-const EarningsBreakdown = lazy(() => import("../components/dashboard/EarningsBreakdown"));
+const EarningsBreakdown = lazy(() => import("../components/dashboard/EarningsDifference"));
 const EnvironmentalImpact = lazy(() => import("../components/dashboard/EnvironmentalImpact"));
 const SystemTrends = lazy(() => import("../components/dashboard/SystemTrends"));
 

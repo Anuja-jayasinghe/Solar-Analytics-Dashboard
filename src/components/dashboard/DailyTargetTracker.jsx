@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { createClient } from "@supabase/supabase-js"; // We will fix this in a moment
+import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { createClient } from "@supabase/supabase-js";
 import { useData } from "../../hooks/useData"; // Make sure this path is correct
 
-// TODO: Remove this createClient call
+// TODO: Remove this createClient and use the imported 'supabase' from your lib
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL || "https://example.supabase.co",
   import.meta.env.VITE_SUPABASE_ANON_KEY || "example-key"
@@ -11,7 +11,7 @@ const supabase = createClient(
 const DailyTargetTracker = () => {
   // Get all data from the central context
   const { livePowerData, loading } = useData();
-  const [target, setTarget] = useState(30);
+  const [target, setTarget] =useState(30);
 
   // Fetch the static target ONCE
   useEffect(() => {
@@ -31,10 +31,11 @@ const DailyTargetTracker = () => {
   }, []);
 
   // --- Calculations & Visuals ---
-  // ✅ FIX: Access the nested 'value' property
+  // ✅ FIX: Access the nested 'value' property from the context data
   const todayGen = livePowerData?.dailyGeneration?.value || 0;
 
   const percent = target > 0 ? (todayGen / target) * 100 : 0;
+  // Use the loading state from the context
   const displayPercent = loading.live && todayGen === 0 ? 0 : percent;
   const displayTodayGen = loading.live && todayGen === 0 ? 0 : todayGen;
 

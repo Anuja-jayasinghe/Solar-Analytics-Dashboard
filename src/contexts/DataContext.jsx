@@ -7,8 +7,8 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
-// 1. Export the context so the hook can use it
-export const DataContext = createContext();
+// Create the context
+const DataContext = createContext();
 
 // Create the provider component
 export const DataProvider = ({ children }) => {
@@ -19,9 +19,19 @@ export const DataProvider = ({ children }) => {
   const [totalEarningsData, setTotalEarningsData] = useState({ total: 0 });
   const [monthlyGenerationData, setMonthlyGenerationData] = useState({ total: 0 });
   
-  const [loading, setLoading] = useState({ charts: true, live: true, totalGen: true, totalEarnings: true, monthlyGen: true });
-  const [errors, setErrors] = useState({ charts: null, live: null, totalGen: null, totalEarnings: null, monthlyGen: null });
+  // --- NEW ---
+  // This will hold the (Total Generation * Tariff) value
+  const [inverterPotentialValue, setInverterPotentialValue] = useState({ total: 0 }); 
 
+  // Loading and error states
+  const [loading, setLoading] = useState({ 
+    charts: true, live: true, totalGen: true, totalEarnings: true, monthlyGen: true, inverterValue: true 
+  });
+  const [errors, setErrors] = useState({ 
+    charts: null, live: null, totalGen: null, totalEarnings: null, monthlyGen: null, inverterValue: null 
+  });
+
+  // The main function to fetch all dashboard data
   const fetchData = useCallback(async (key) => {
     if (!key) return;
     setLoading((prev) => ({ ...prev, [key]: true }));
@@ -29,9 +39,9 @@ export const DataProvider = ({ children }) => {
 
     try {
       if (key === 'charts') {
-        const { data, error } = await supabase.rpc('get_monthly_comparison');
-        if (error) throw error;
-        setEnergyChartsData(data.map(d => ({ month: d.month_label, inverter: d.inverter_kwh, ceb: d.ceb_kwh })));
+        const { data: alignedData, error: rpcError } = await supabase.rpc('get_monthly_comparison');
+        if (rpcError) throw rpcError;
+        setEnergyChartsData(alignedData.map(d => ({ month: d.month_label, inverter: d.inverter_kwh, ceb: d.ceb_kwh })));
       } 
       
       else if (key === 'live') {
@@ -42,6 +52,7 @@ export const DataProvider = ({ children }) => {
       }
       
       else if (key === 'totalGen') {
+        // This is efficient. It fetches all rows to be summed.
         const { data, error } = await supabase.from('inverter_data_daily_summary').select('total_generation_kwh');
         if (error) throw error;
         const total = data.reduce((sum, record) => sum + (parseFloat(record.total_generation_kwh) || 0), 0);
@@ -49,10 +60,27 @@ export const DataProvider = ({ children }) => {
       }
       
       else if (key === 'totalEarnings') {
+        // This is efficient. It fetches all rows to be summed.
         const { data, error } = await supabase.from('ceb_data').select('earnings');
         if (error) throw error;
         const total = data.reduce((sum, record) => sum + (record.earnings || 0), 0);
         setTotalEarningsData({ total });
+      }
+
+      // --- NEW: Logic to calculate Inverter Potential Value ---
+      else if (key === 'inverterValue') {
+        const [genResponse, settingResponse] = await Promise.all([
+          supabase.from('inverter_data_daily_summary').select('total_generation_kwh'),
+          supabase.from('system_settings').select('setting_value').eq('setting_name', 'generation_tariff').single()
+        ]);
+
+        if (genResponse.error) throw genResponse.error;
+        if (settingResponse.error) throw settingResponse.error;
+
+        const totalGeneration = genResponse.data.reduce((sum, record) => sum + (parseFloat(record.total_generation_kwh) || 0), 0);
+        const tariff = parseFloat(settingResponse.data?.setting_value) || 50; // Default to 50 if setting is missing
+
+        setInverterPotentialValue({ total: totalGeneration * tariff });
       }
       
       else if (key === 'monthlyGen') {
@@ -95,6 +123,7 @@ export const DataProvider = ({ children }) => {
       fetchData('totalGen'),
       fetchData('totalEarnings'),
       fetchData('monthlyGen'),
+      fetchData('inverterValue') // --- NEW: Fetch our new value ---
     ]);
   }, [fetchData]);
 
@@ -104,10 +133,18 @@ export const DataProvider = ({ children }) => {
 
   const value = {
     energyChartsData, livePowerData, totalGenerationData, totalEarningsData, monthlyGenerationData,
+    inverterPotentialValue, // --- NEW: Provide the new value ---
     loading, errors, refreshData,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
 
-// 2. We have removed the 'useData' hook from this file.
+// Custom hook to use the context
+export const useData = () => {
+  const context = useContext(DataContext);
+  if (context === undefined) {
+    throw new Error('useData must be used within a DataProvider');
+  }
+  return context;
+};
