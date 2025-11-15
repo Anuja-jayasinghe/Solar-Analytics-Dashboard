@@ -1,5 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 // Create the context
 export const DataContext = createContext();
@@ -9,17 +15,17 @@ export const DataProvider = ({ children }) => {
   // Data states
   const [energyChartsData, setEnergyChartsData] = useState([]);
   const [livePowerData, setLivePowerData] = useState(null);
-  const [totalGenerationData, setTotalGenerationData] = useState({ total: 0 });
+  const [totalGenerationData, setTotalGenerationData] = useState({ total: 0 }); // This is now redundant, but we'll leave it for 'TotalGenerationCard'
   const [totalEarningsData, setTotalEarningsData] = useState({ total: 0 });
   const [monthlyGenerationData, setMonthlyGenerationData] = useState({ total: 0 });
-  const [inverterPotentialValue, setInverterPotentialValue] = useState({ total: 0 }); 
+  // --- REMOVED inverterPotentialValue state ---
 
   // Loading and error states
   const [loading, setLoading] = useState({ 
-    charts: true, live: true, totalGen: true, totalEarnings: true, monthlyGen: true, inverterValue: true 
+    charts: true, live: true, totalGen: true, totalEarnings: true, monthlyGen: true
   });
   const [errors, setErrors] = useState({ 
-    charts: null, live: null, totalGen: null, totalEarnings: null, monthlyGen: null, inverterValue: null 
+    charts: null, live: null, totalGen: null, totalEarnings: null, monthlyGen: null
   });
 
   // The main function to fetch all dashboard data
@@ -40,8 +46,16 @@ export const DataProvider = ({ children }) => {
         if (error) throw error;
         setLivePowerData(data);
         localStorage.setItem('solisLiveData', JSON.stringify({ data, timestamp: Date.now() }));
+        
+        // --- OPTIMIZATION ---
+        // Since we have the total generation here, let's also set totalGenerationData
+        // This makes 'totalGen' fetch redundant
+        const totalGen = data?.totalGeneration?.value || 0;
+        setTotalGenerationData({ total: totalGen });
+        setLoading((prev) => ({ ...prev, totalGen: false })); // Mark 'totalGen' as loaded
       }
       
+      // --- This is now redundant but kept for other components. 'live' fetch is superior ---
       else if (key === 'totalGen') {
         const { data, error } = await supabase.from('inverter_data_daily_summary').select('total_generation_kwh');
         if (error) throw error;
@@ -55,38 +69,14 @@ export const DataProvider = ({ children }) => {
         const total = data.reduce((sum, record) => sum + (record.earnings || 0), 0);
         setTotalEarningsData({ total });
       }
-
-      else if (key === 'inverterValue') {
-        const [genResponse, settingResponse] = await Promise.all([
-          supabase.from('inverter_data_daily_summary').select('total_generation_kwh'),
-          // --- THIS IS THE FIX ---
-          // Updated 'generation_tariff' to 'rate per kwh' to match your table
-          supabase.from('system_settings').select('setting_value').eq('setting_name', 'rate per kwh').limit(1)
-        ]);
-        // --- END OF FIX ---
-
-        if (genResponse.error) throw genResponse.error;
-        if (settingResponse.error) throw settingResponse.error;
-
-        const totalGeneration = genResponse.data.reduce((sum, record) => sum + (parseFloat(record.total_generation_kwh) || 0), 0);
-        
-        // Use 50 as a default if the row is still not found for any reason
-        const tariff = parseFloat(settingResponse.data?.[0]?.setting_value) || 37; 
-
-        setInverterPotentialValue({ total: totalGeneration * tariff });
-      }
+      
+      // --- REMOVED 'inverterValue' block ---
       
       else if (key === 'monthlyGen') {
         const today = new Date();
         const startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
         const endDate = new Date(today.getFullYear(), today.getMonth() + 1, 1).toISOString();
-
-        const { data, error } = await supabase
-          .from('inverter_data_daily_summary')
-          .select('total_generation_kwh')
-          .gte('summary_date', startDate)
-          .lt('summary_date', endDate);
-
+        const { data, error } = await supabase.from('inverter_data_daily_summary').select('total_generation_kwh').gte('summary_date', startDate).lt('summary_date', endDate);
         if (error) throw error;
         const total = data.reduce((sum, record) => sum + (parseFloat(record.total_generation_kwh) || 0), 0);
         setMonthlyGenerationData({ total });
@@ -106,17 +96,20 @@ export const DataProvider = ({ children }) => {
       const { data, timestamp } = JSON.parse(cached);
       if (Date.now() - timestamp < 300000) {
         setLivePowerData(data);
-        setLoading(prev => ({...prev, live: false}));
+        // Also set totalGen from cache
+        const totalGen = data?.totalGeneration?.value || 0;
+        setTotalGenerationData({ total: totalGen });
+        setLoading(prev => ({...prev, live: false, totalGen: false}));
       }
     }
 
     Promise.all([
       fetchData('charts'),
       fetchData('live'),
-      fetchData('totalGen'),
+      // We can remove this if 'live' always provides it
+      // fetchData('totalGen'), 
       fetchData('totalEarnings'),
       fetchData('monthlyGen'),
-      fetchData('inverterValue')
     ]);
   }, [fetchData]);
 
@@ -126,7 +119,7 @@ export const DataProvider = ({ children }) => {
 
   const value = {
     energyChartsData, livePowerData, totalGenerationData, totalEarningsData, monthlyGenerationData,
-    inverterPotentialValue,
+    // inverterPotentialValue is removed
     loading, errors, refreshData,
   };
 

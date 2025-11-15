@@ -1,23 +1,57 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useData } from '../../hooks/useData'; // Make sure path is correct
+import { createClient } from '@supabase/supabase-js'; // Assuming you have a client setup
+
+// Initialize Supabase client (or import from your lib/supabaseClient.js)
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL || 'https://example.supabase.co',
+  import.meta.env.VITE_SUPABASE_ANON_KEY || 'example-key'
+);
 
 const EarningsDifference = () => {
-  const { inverterPotentialValue, totalEarningsData, loading } = useData();
+  // Get data from context
+  const { livePowerData, totalEarningsData, loading } = useData();
+  const [ratePerKwh, setRatePerKwh] = useState(50); // Default fallback
+  const [rateLoading, setRateLoading] = useState(true);
 
-  const inverterValue = inverterPotentialValue?.total || 0;
-  const cebEarnings = totalEarningsData?.total || 0;
+  // Fetch the tariff rate on component mount
+  useEffect(() => {
+    async function fetchRate() {
+      try {
+        const { data: settingData, error } = await supabase
+          .from('system_settings')
+          .select('setting_value')
+          .eq('setting_name', 'rate per kwh')
+          .limit(1);
 
-  const { difference, needleRotation, differenceText, showWarning } = useMemo(() => {
-    const isLoading = loading.inverterValue || loading.totalEarnings;
+        if (error) throw error;
+        if (settingData && settingData.length > 0) {
+          setRatePerKwh(parseFloat(settingData[0].setting_value));
+        }
+      } catch (err) {
+        console.error("Error fetching tariff:", err);
+      } finally {
+        setRateLoading(false);
+      }
+    }
+    fetchRate();
+  }, []);
+
+  const { difference, needleRotation, differenceText, showWarning, inverterValue, cebEarnings } = useMemo(() => {
+    const isLoading = loading.live || loading.totalEarnings || rateLoading;
     if (isLoading) {
-      return { difference: 0, needleRotation: 0, differenceText: '', showWarning: false };
+      return { difference: 0, needleRotation: 0, differenceText: '', showWarning: false, inverterValue: 0, cebEarnings: 0 };
     }
 
-    const diff = inverterValue - cebEarnings;
-    const isWarning = cebEarnings > inverterValue;
+    // Get values from context and state
+    const totalGeneration = livePowerData?.totalGeneration?.value || 0;
+    const calculatedInverterValue = totalGeneration * ratePerKwh;
+    const calculatedCebEarnings = totalEarningsData?.total || 0;
+
+    const diff = calculatedInverterValue - calculatedCebEarnings;
+    const isWarning = calculatedCebEarnings > calculatedInverterValue;
     
-    // Make gauge move +/- 10% of the inverter value
-    const maxRange = inverterValue * 0.1 || 1; 
+    const maxRange = calculatedInverterValue * 0.1 || 1; 
     const clampedDiff = Math.max(-maxRange, Math.min(maxRange, diff));
     const rotation = (clampedDiff / maxRange) * 90;
 
@@ -25,9 +59,9 @@ const EarningsDifference = () => {
     const absDiffFormatted = Math.abs(diff).toLocaleString(undefined, { maximumFractionDigits: 2 });
 
     if (isWarning) {
-      text = `CEB earnings are LKR ${absDiffFormatted} higher than your total potential value!`;
+      text = `CEB earnings are LKR ${absDiffFormatted} higher than potential value!`;
     } else if (diff > 0) {
-      text = `Your system's potential value is LKR ${absDiffFormatted} more than your earnings.`;
+      text = `Potential value is LKR ${absDiffFormatted} more than earnings.`;
     } else {
       text = 'Values match perfectly.';
     }
@@ -36,21 +70,23 @@ const EarningsDifference = () => {
       difference: diff, 
       needleRotation: rotation, 
       differenceText: text,
-      showWarning: isWarning 
+      showWarning: isWarning,
+      inverterValue: calculatedInverterValue,
+      cebEarnings: calculatedCebEarnings
     };
-  }, [inverterValue, cebEarnings, loading]);
+  }, [livePowerData, totalEarningsData, loading, ratePerKwh, rateLoading]);
 
   const differenceColor = showWarning ? '#e53e3e' : (difference >= 0 ? '#48bb78' : '#f56565');
+  const isLoading = loading.live || loading.totalEarnings || rateLoading;
 
   return (
     <div style={styles.container}>
       <h2 style={styles.title}>Potential vs. Actual Earnings</h2>
 
-      {loading.inverterValue || loading.totalEarnings ? (
+      {isLoading ? (
         <p style={styles.loadingText}>Calculating Difference...</p>
       ) : (
         <>
-          {/* --- THIS IS THE NEW WARNING --- */}
           {showWarning && (
             <div style={styles.warningBox}>
               <strong>Warning:</strong> CEB earnings exceed your system's total potential value. This may indicate an accounting error.
