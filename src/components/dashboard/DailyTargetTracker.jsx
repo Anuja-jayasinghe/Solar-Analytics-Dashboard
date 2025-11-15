@@ -139,11 +139,11 @@ const styles = {
     borderRadius: '24px', padding: '1.5rem', backdropFilter: 'blur(12px)',
     border: '1px solid rgba(255,255,255,0.1)',
     boxShadow: '0 8px 32px rgba(0,255,255,0.1), inset 0 1px 1px rgba(255,255,255,0.05)',
-    width: '38%', height: '300px', margin: '0 auto', position: 'relative',
+    width: '49%', height: '400px', margin: '0 auto', position: 'relative',
     display: 'flex', flexDirection: 'column', justifyContent: 'space-around',
   },
   title: {
-    color: 'var(--accent, #00eaff)', fontWeight: 'bold', fontSize: '1.25rem',
+    color: 'var(--accent, #00eaff)', fontWeight: 'bold', fontSize: '2rem',
     textShadow: '0 0 10px var(--accent, #00eaff)', textAlign: 'center', margin: 0,
   },
   gaugeContainer: {

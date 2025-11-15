@@ -25,6 +25,7 @@ export default defineConfig({
             return 'vendor';
           }
           
+          
           // Feature chunks
           if (id.includes('src/components/dashboard/')) {
             if (id.includes('EnergyCharts') || id.includes('SystemTrends')) {
@@ -44,4 +45,5 @@ export default defineConfig({
     },
     chunkSizeWarningLimit: 1000
   }
+  
 })

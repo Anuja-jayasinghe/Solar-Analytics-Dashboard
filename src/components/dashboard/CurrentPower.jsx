@@ -51,7 +51,7 @@ const CurrentPower = () => {
       </h2>
       {loading.live && status === "Offline" && <span className="loading-hint">Connecting...</span>}
 
-      <svg viewBox="0 0 200 160" className="dial-svg">
+      <svg viewBox="0 0 200 160" className="dial-svg" >
         <defs>
           <linearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#00eaff" />
@@ -81,21 +81,20 @@ const CurrentPower = () => {
 
       <p className="dial-footer-text">Max Capacity: {maxPower} kW</p>
 
-      {/* --- STYLES --- */}
       <style>{`
         .current-power-dial {
           background: linear-gradient(145deg, rgba(20,20,22,0.8), rgba(12,12,14,0.85));
-          border-radius: 24px; padding: 1.5rem; text-align: center;
+          border-radius: 4px; padding: 1.5rem; text-align: center;
           backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1);
           box-shadow: 0 8px 32px rgba(0,255,255,0.1), inset 0 1px 1px rgba(255,255,255,0.05);
-          width: 38%; height: 300px; margin: 0 auto; position: relative;
+          width: 49%; height: 400px; margin: 0 auto; position: relative;
         }
         .dial-title { 
-          color: var(--accent, #00eaff); margin-bottom: 0.5rem; font-weight: bold; font-size: 1.25rem;
+          color: var(--accent, #00eaff); margin-bottom: 0.5rem; font-weight: bold; font-size: 2rem;
           text-shadow: 0 0 10px var(--accent, #00eaff); display: flex; align-items: center; justify-content: center; gap: 0.5rem;
         }
         .status-indicator {
-          width: 12px; height: 12px; border-radius: 50%;
+          width: 15px; height: 15px; border-radius: 50%;
           animation: ${status === "Online" ? "pulse 2s infinite" : "none"};
           position: relative;
         }
