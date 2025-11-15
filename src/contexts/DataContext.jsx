@@ -15,20 +15,18 @@ export const DataProvider = ({ children }) => {
   // Data states
   const [energyChartsData, setEnergyChartsData] = useState([]);
   const [livePowerData, setLivePowerData] = useState(null);
-  const [totalGenerationData, setTotalGenerationData] = useState({ total: 0 }); // This is now redundant, but we'll leave it for 'TotalGenerationCard'
   const [totalEarningsData, setTotalEarningsData] = useState({ total: 0 });
   const [monthlyGenerationData, setMonthlyGenerationData] = useState({ total: 0 });
-  // --- REMOVED inverterPotentialValue state ---
+  const [inverterPotentialValue, setInverterPotentialValue] = useState({ total: 0 }); 
 
   // Loading and error states
   const [loading, setLoading] = useState({ 
-    charts: true, live: true, totalGen: true, totalEarnings: true, monthlyGen: true
+    charts: true, live: true, totalEarnings: true, monthlyGen: true, inverterValue: true 
   });
   const [errors, setErrors] = useState({ 
-    charts: null, live: null, totalGen: null, totalEarnings: null, monthlyGen: null
+    charts: null, live: null, totalEarnings: null, monthlyGen: null, inverterValue: null 
   });
 
-  // The main function to fetch all dashboard data
   const fetchData = useCallback(async (key) => {
     if (!key) return;
     setLoading((prev) => ({ ...prev, [key]: true }));
@@ -42,35 +40,62 @@ export const DataProvider = ({ children }) => {
       } 
       
       else if (key === 'live') {
-        const { data, error } = await supabase.functions.invoke('solis-live-data');
-        if (error) throw error;
-        setLivePowerData(data);
-        localStorage.setItem('solisLiveData', JSON.stringify({ data, timestamp: Date.now() }));
+        console.log("--- 💰 Starting Potential Earnings Calculation ---");
+        setLoading(prev => ({ ...prev, inverterValue: true }));
+        setErrors(prev => ({ ...prev, inverterValue: null }));
+
+        // 1. Fetch live data (which now includes totalGeneration)
+        const { data: liveData, error: liveError } = await supabase.functions.invoke('solis-live-data');
+        if (liveError) throw liveError;
+        setLivePowerData(liveData);
+        localStorage.setItem('solisLiveData', JSON.stringify({ data: liveData, timestamp: Date.now() }));
         
-        // --- OPTIMIZATION ---
-        // Since we have the total generation here, let's also set totalGenerationData
-        // This makes 'totalGen' fetch redundant
-        const totalGen = data?.totalGeneration?.value || 0;
-        setTotalGenerationData({ total: totalGen });
-        setLoading((prev) => ({ ...prev, totalGen: false })); // Mark 'totalGen' as loaded
-      }
-      
-      // --- This is now redundant but kept for other components. 'live' fetch is superior ---
-      else if (key === 'totalGen') {
-        const { data, error } = await supabase.from('inverter_data_daily_summary').select('total_generation_kwh');
-        if (error) throw error;
-        const total = data.reduce((sum, record) => sum + (parseFloat(record.total_generation_kwh) || 0), 0);
-        setTotalGenerationData({ total });
+        console.log("1. Raw API Response:", liveData);
+        
+        // 2. Fetch the tariff from settings
+        const { data: settingData, error: settingError } = await supabase
+          .from('system_settings')
+          .select('setting_value')
+          .eq('setting_name', 'rate_per_kwh')
+          .limit(1);
+        if (settingError) throw settingError;
+        
+        console.log("2. Fetched Tariff Data:", settingData);
+
+        const tariff = parseFloat(settingData?.[0]?.setting_value) || 50; 
+        console.log("3. Parsed Tariff Rate:", tariff, "LKR/kWh");
+
+        // 4. --- THIS IS THE MWh to kWh FIX ---
+        const totalGen_MWh = liveData?.totalGeneration?.value || 0;
+        console.log("4. Extracted Total Generation:", totalGen_MWh, liveData?.totalGeneration?.unit);
+
+        const totalGen_kWh = totalGen_MWh * 1000; // Convert MWh to kWh
+        console.log("5. Converted to kWh:", totalGen_kWh, "kWh");
+        
+        // 5. Calculate and set the potential value
+        const potentialValue = totalGen_kWh * tariff;
+        console.log(`6. Final Calculation: ${totalGen_kWh} kWh * ${tariff} LKR =`, potentialValue, "LKR");
+        
+        setInverterPotentialValue({ total: potentialValue });
+        
+        console.log("--- ✅ Calculation Complete ---");
+        
+        setLoading(prev => ({ ...prev, live: false, inverterValue: false }));
       }
       
       else if (key === 'totalEarnings') {
         const { data, error } = await supabase.from('ceb_data').select('earnings');
         if (error) throw error;
         const total = data.reduce((sum, record) => sum + (record.earnings || 0), 0);
+        
+        // Log the other side of the comparison
+        console.log("--- 💰 Fetched Actual CEB Earnings ---");
+        console.log("7. Final Actual Earnings (CEB):", total, "LKR");
+        
         setTotalEarningsData({ total });
       }
       
-      // --- REMOVED 'inverterValue' block ---
+      // 'inverterValue' logic is now part of 'live'
       
       else if (key === 'monthlyGen') {
         const today = new Date();
@@ -84,9 +109,15 @@ export const DataProvider = ({ children }) => {
       
     } catch (err) {
       console.error(`Error in DataContext fetching ${key}:`, err);
-      setErrors((prev) => ({ ...prev, [key]: err.message }));
+      if (key === 'live') {
+        setErrors((prev) => ({ ...prev, live: err.message, inverterValue: err.message }));
+      } else {
+        setErrors((prev) => ({ ...prev, [key]: err.message }));
+      }
     } finally {
-      setLoading((prev) => ({ ...prev, [key]: false }));
+      if (key !== 'live') {
+        setLoading((prev) => ({ ...prev, [key]: false }));
+      }
     }
   }, []);
 
@@ -96,18 +127,13 @@ export const DataProvider = ({ children }) => {
       const { data, timestamp } = JSON.parse(cached);
       if (Date.now() - timestamp < 300000) {
         setLivePowerData(data);
-        // Also set totalGen from cache
-        const totalGen = data?.totalGeneration?.value || 0;
-        setTotalGenerationData({ total: totalGen });
-        setLoading(prev => ({...prev, live: false, totalGen: false}));
+        setLoading(prev => ({...prev, live: false}));
       }
     }
 
     Promise.all([
       fetchData('charts'),
-      fetchData('live'),
-      // We can remove this if 'live' always provides it
-      // fetchData('totalGen'), 
+      fetchData('live'), // This now also triggers 'inverterValue' calculation
       fetchData('totalEarnings'),
       fetchData('monthlyGen'),
     ]);
@@ -118,8 +144,8 @@ export const DataProvider = ({ children }) => {
   };
 
   const value = {
-    energyChartsData, livePowerData, totalGenerationData, totalEarningsData, monthlyGenerationData,
-    // inverterPotentialValue is removed
+    energyChartsData, livePowerData, totalEarningsData, monthlyGenerationData,
+    inverterPotentialValue,
     loading, errors, refreshData,
   };
 

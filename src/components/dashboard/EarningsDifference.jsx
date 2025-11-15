@@ -1,51 +1,18 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { useData } from '../../hooks/useData'; // Make sure path is correct
-import { createClient } from '@supabase/supabase-js'; // Assuming you have a client setup
-
-// Initialize Supabase client (or import from your lib/supabaseClient.js)
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL || 'https://example.supabase.co',
-  import.meta.env.VITE_SUPABASE_ANON_KEY || 'example-key'
-);
+import React, { useMemo } from 'react';
+import { useData } from '../../hooks/useData'; // Makes values from DataContext available
 
 const EarningsDifference = () => {
-  // Get data from context
-  const { livePowerData, totalEarningsData, loading } = useData();
-  const [ratePerKwh, setRatePerKwh] = useState(50); // Default fallback
-  const [rateLoading, setRateLoading] = useState(true);
-
-  // Fetch the tariff rate on component mount
-  useEffect(() => {
-    async function fetchRate() {
-      try {
-        const { data: settingData, error } = await supabase
-          .from('system_settings')
-          .select('setting_value')
-          .eq('setting_name', 'rate per kwh')
-          .limit(1);
-
-        if (error) throw error;
-        if (settingData && settingData.length > 0) {
-          setRatePerKwh(parseFloat(settingData[0].setting_value));
-        }
-      } catch (err) {
-        console.error("Error fetching tariff:", err);
-      } finally {
-        setRateLoading(false);
-      }
-    }
-    fetchRate();
-  }, []);
+  // Get data from context (inverterPotentialValue is already calculated in DataContext)
+  const { totalEarningsData, loading, inverterPotentialValue } = useData();
 
   const { difference, needleRotation, differenceText, showWarning, inverterValue, cebEarnings } = useMemo(() => {
-    const isLoading = loading.live || loading.totalEarnings || rateLoading;
+    const isLoading = loading.live || loading.totalEarnings || loading.inverterValue;
     if (isLoading) {
       return { difference: 0, needleRotation: 0, differenceText: '', showWarning: false, inverterValue: 0, cebEarnings: 0 };
     }
 
-    // Get values from context and state
-    const totalGeneration = livePowerData?.totalGeneration?.value || 0;
-    const calculatedInverterValue = totalGeneration * ratePerKwh;
+    // Use the pre-calculated potential value (monetary LKR) from DataContext
+    const calculatedInverterValue = inverterPotentialValue?.total || 0;
     const calculatedCebEarnings = totalEarningsData?.total || 0;
 
     const diff = calculatedInverterValue - calculatedCebEarnings;
@@ -74,10 +41,10 @@ const EarningsDifference = () => {
       inverterValue: calculatedInverterValue,
       cebEarnings: calculatedCebEarnings
     };
-  }, [livePowerData, totalEarningsData, loading, ratePerKwh, rateLoading]);
+  }, [totalEarningsData, loading, inverterPotentialValue]);
 
   const differenceColor = showWarning ? '#e53e3e' : (difference >= 0 ? '#48bb78' : '#f56565');
-  const isLoading = loading.live || loading.totalEarnings || rateLoading;
+  const isLoading = loading.live || loading.totalEarnings || loading.inverterValue;
 
   return (
     <div style={styles.container}>
