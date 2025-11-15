@@ -86,7 +86,7 @@ const DailyTargetTracker = () => {
             <clipPath id="circleClip"><circle cx="120" cy="120" r="105" /></clipPath>
           </defs>
 
-          <circle cx="120" cy="120" r="110" stroke="rgba(0, 255, 240, 0.3)" strokeWidth="2" fill="none" style={{ animation: 'glow-pulse 3s ease-in-out infinite' }} />
+          <circle cx="120" cy="120" r="110" stroke="rgba(0, 255, 240, 0.3)" strokeWidth="2" fill="none" style={{ animation: 'glow-pulse 2s ease-in-out infinite' }} />
           <circle cx="120" cy="120" r="107" stroke="rgba(255, 165, 0, 0.2)" strokeWidth="1" fill="none" />
           <circle cx="120" cy="120" r="105" fill="rgba(28, 30, 33, 0.4)" stroke="rgba(0, 255, 240, 0.3)" strokeWidth="2" />
 

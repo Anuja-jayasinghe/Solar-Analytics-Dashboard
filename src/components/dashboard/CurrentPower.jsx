@@ -84,7 +84,7 @@ const CurrentPower = () => {
       <style>{`
         .current-power-dial {
           background: linear-gradient(145deg, rgba(20,20,22,0.8), rgba(12,12,14,0.85));
-          border-radius: 4px; padding: 1.5rem; text-align: center;
+          border-radius: 24px; padding: 1.5rem; text-align: center;
           backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1);
           box-shadow: 0 8px 32px rgba(0,255,255,0.1), inset 0 1px 1px rgba(255,255,255,0.05);
           width: 49%; height: 400px; margin: 0 auto; position: relative;
@@ -94,7 +94,7 @@ const CurrentPower = () => {
           text-shadow: 0 0 10px var(--accent, #00eaff); display: flex; align-items: center; justify-content: center; gap: 0.5rem;
         }
         .status-indicator {
-          width: 15px; height: 15px; border-radius: 50%;
+          width: 14px; height: 14px; border-radius: 50%;
           animation: ${status === "Online" ? "pulse 2s infinite" : "none"};
           position: relative;
         }
@@ -109,11 +109,11 @@ const CurrentPower = () => {
         }
         .status-indicator:hover::after { opacity: 1; visibility: visible; }
         @keyframes pulse { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
-        .dial-svg { width: 100%; height: auto; max-height: 200px; }
+  .dial-svg { width: 100%; height: auto; max-height: 270px; }
         .dial-needle { transition: transform 0.7s cubic-bezier(0.68,-0.55,0.27,1.55); transform-origin: center; }
-        .dial-value-text { font-size: 2.5rem; font-weight: bold; fill: #fff; text-shadow: 0 0 15px rgba(255,255,255,0.5); }
-        .dial-unit-text { font-size: 1rem; fill: #a0aec0; }
-        .dial-footer-text { color: #a0aec0; font-size: 0.9rem; margin-top: -1rem; }
+  .dial-value-text { font-size: 2.8rem; font-weight: bold; fill: #fff; text-shadow: 0 0 18px rgba(255,255,255,0.6); }
+  .dial-unit-text { font-size: .8rem; fill: #a0aec0; }
+  .dial-footer-text { color: #a0aec0; font-size: 1.25rem; margin-top: -1.30rem; }
         .loading-hint { position: absolute; top: 0; right: 0; font-size: 0.75rem; color: #888; padding: 0.5rem; }
       `}</style>
     </div>
