@@ -109,16 +109,20 @@ const EarningsDifference = () => {
 const COLORS = ['#ffcc00', '#00eaff'];
 const styles = {
   container: {
-    background: 'linear-gradient(145deg, rgba(20,20,22,0.8), rgba(12,12,14,0.85))',
-    borderRadius: '24px', padding: '1.5rem', backdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    boxShadow: '0 8px 32px rgba(7, 9, 9, 0.1), inset 0 1px 1px rgba(255,255,255,0.05)',
-    height: 'auto', minHeight: '300px', flex: 1, 
-    position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+    background: 'var(--card-bg)',
+    borderRadius: '10px',
+    padding: '1.5rem',
+    boxShadow: '0 0 20px var(--card-shadow)',
+    height: '360px',
+    width: '90%',
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
   },
   title: {
-    color: 'var(--accent,rgb(250, 240, 240))', fontWeight: 'bold', fontSize: '1.25rem',
-    textShadow: '0 0 10px var(--accent,rgb(238, 230, 230))', textAlign: 'center', margin: '0 0 1rem 0',
+    color: 'var(--accent)', fontWeight: 'bold', fontSize: '1.1rem',
+    textAlign: 'center', margin: '0 0 1rem 0',
   },
   loadingText: { color: '#a0aec0', textAlign: 'center', margin: 'auto' },
   valuesContainer: {
@@ -132,8 +136,8 @@ const styles = {
   valueText: { fontSize: '1.125rem', fontWeight: 'bold', margin: 0 },
   valueDivider: { width: '1px', height: '2.5rem', backgroundColor: 'rgba(255, 255, 255, 0.1)' },
   gaugeContainer: {
-    width: '100%', minHeight: '110px', flexGrow: 1, display: 'flex', 
-    alignItems: 'center', justifyContent: 'center', paddingTop: 15,
+    width: '100%', height: '110px', display: 'flex', 
+    alignItems: 'center', justifyContent: 'center', paddingTop: 8,
   },
   summaryContainer: { textAlign: 'center', marginTop: 'auto' },
   summaryLabel: { color: '#a0aec0', fontSize: '0.8rem', textTransform: 'uppercase', margin: 0 },

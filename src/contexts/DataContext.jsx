@@ -71,7 +71,7 @@ export const DataProvider = ({ children }) => {
         const totalGeneration = genResponse.data.reduce((sum, record) => sum + (parseFloat(record.total_generation_kwh) || 0), 0);
         
         // Use 50 as a default if the row is still not found for any reason
-        const tariff = parseFloat(settingResponse.data?.[0]?.setting_value) || 50; 
+        const tariff = parseFloat(settingResponse.data?.[0]?.setting_value) || 37; 
 
         setInverterPotentialValue({ total: totalGeneration * tariff });
       }
