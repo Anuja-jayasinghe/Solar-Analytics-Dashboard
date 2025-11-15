@@ -176,7 +176,7 @@ function Navbar() {
                   e.target.style.opacity = "0.5";
                 }}
               >
-                <em>Or maybe this text is clickable...</em>
+                <em>BoooooooooooooooHaa!...</em>
               </span>
             </div>
             <button
