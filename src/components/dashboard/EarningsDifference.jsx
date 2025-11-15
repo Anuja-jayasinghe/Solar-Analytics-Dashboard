@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { useData } from '../../hooks/useData'; // Makes values from DataContext available
+import { ZAxis } from 'recharts';
 
 const EarningsDifference = () => {
   // Get data from context (inverterPotentialValue is already calculated in DataContext)
@@ -77,7 +78,7 @@ const EarningsDifference = () => {
           </div>
 
           <div style={styles.gaugeContainer}>
-            <svg viewBox="0 0 200 110" style={{ width: '100%', height: '100%' }}>
+            <svg viewBox="0 0 200 130" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
               <defs>
                 <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%" stopColor="#f56565" />
@@ -85,7 +86,7 @@ const EarningsDifference = () => {
                   <stop offset="100%" stopColor="#48bb78" />
                 </linearGradient>
               </defs>
-              <path d="M 10 90 A 80 80 0 0 1 190 90" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="10" strokeLinecap="round" />
+              <path d="M 10 90 A 80 80 0 0 1 190 90" fill="none" stroke="rgba(255, 255, 255, 1)" strokeWidth="10" strokeLinecap="round" />
               <path d="M 10 90 A 80 80 0 0 1 190 90" fill="none" stroke="url(#gaugeGradient)" strokeWidth="10" strokeLinecap="round" />
               <g style={{ transform: `rotate(${needleRotation}deg)`, transformOrigin: 'center 90px', transition: 'transform 0.7s ease-out' }}>
                 <path d="M 100 20 L 97 90 L 103 90 Z" fill="#fff" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
@@ -121,7 +122,7 @@ const styles = {
     position: 'relative',
     display: 'flex',
     flexDirection: 'column',
-    overflow: 'hidden',
+    overflow: 'visible', // allow gauge arc to extend above inner elements
   },
   title: {
     color: 'var(--accent)', fontWeight: 'bold', fontSize: '1.1rem',
@@ -139,8 +140,9 @@ const styles = {
   valueText: { fontSize: '1.125rem', fontWeight: 'bold', margin: 0 },
   valueDivider: { width: '1px', height: '2.5rem', backgroundColor: 'rgba(255, 255, 255, 0.1)' },
   gaugeContainer: {
-    width: '100%', height: '110px', display: 'flex', 
-    alignItems: 'center', justifyContent: 'center', paddingTop: 8,
+    width: '100%', height: '130px', display: 'flex', 
+    alignItems: 'center', justifyContent: 'center', paddingTop: 12,
+    position: 'relative',
   },
   summaryContainer: { textAlign: 'center', marginTop: 'auto' },
   summaryLabel: { color: '#a0aec0', fontSize: '0.8rem', textTransform: 'uppercase', margin: 0 },
@@ -148,7 +150,7 @@ const styles = {
     fontSize: '1.75rem', fontWeight: 'bold', margin: '0.25rem 0 0 0', textShadow: '0 0 10px currentColor',
   },
   summaryDescription: {
-    color: '#a0aec0', fontSize: '0.75rem', margin: '0.25rem 0 0 0', minHeight: '1.5em',
+    color: '#a0aec0', fontSize: '0.75rem', margin: '1.25rem 0 0 0', minHeight: '1.5em',
   },
   warningBox: {
     background: 'rgba(229, 62, 62, 0.1)',

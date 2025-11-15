@@ -40,7 +40,6 @@ export const DataProvider = ({ children }) => {
       } 
       
       else if (key === 'live') {
-        console.log("--- 💰 Starting Potential Earnings Calculation ---");
         setLoading(prev => ({ ...prev, inverterValue: true }));
         setErrors(prev => ({ ...prev, inverterValue: null }));
 
@@ -50,7 +49,6 @@ export const DataProvider = ({ children }) => {
         setLivePowerData(liveData);
         localStorage.setItem('solisLiveData', JSON.stringify({ data: liveData, timestamp: Date.now() }));
         
-        console.log("1. Raw API Response:", liveData);
         
         // 2. Fetch the tariff from settings
         const { data: settingData, error: settingError } = await supabase
@@ -62,23 +60,18 @@ export const DataProvider = ({ children }) => {
         
         console.log("2. Fetched Tariff Data:", settingData);
 
-        const tariff = parseFloat(settingData?.[0]?.setting_value) || 50; 
-        console.log("3. Parsed Tariff Rate:", tariff, "LKR/kWh");
+        const tariff = parseFloat(settingData?.[0]?.setting_value) || 37; 
 
         // 4. --- THIS IS THE MWh to kWh FIX ---
         const totalGen_MWh = liveData?.totalGeneration?.value || 0;
-        console.log("4. Extracted Total Generation:", totalGen_MWh, liveData?.totalGeneration?.unit);
 
         const totalGen_kWh = totalGen_MWh * 1000; // Convert MWh to kWh
-        console.log("5. Converted to kWh:", totalGen_kWh, "kWh");
         
         // 5. Calculate and set the potential value
         const potentialValue = totalGen_kWh * tariff;
-        console.log(`6. Final Calculation: ${totalGen_kWh} kWh * ${tariff} LKR =`, potentialValue, "LKR");
         
         setInverterPotentialValue({ total: potentialValue });
         
-        console.log("--- ✅ Calculation Complete ---");
         
         setLoading(prev => ({ ...prev, live: false, inverterValue: false }));
       }
@@ -89,8 +82,6 @@ export const DataProvider = ({ children }) => {
         const total = data.reduce((sum, record) => sum + (record.earnings || 0), 0);
         
         // Log the other side of the comparison
-        console.log("--- 💰 Fetched Actual CEB Earnings ---");
-        console.log("7. Final Actual Earnings (CEB):", total, "LKR");
         
         setTotalEarningsData({ total });
       }
