@@ -1,16 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
-  ResponsiveContainer, Legend, LineChart, Line
+  ResponsiveContainer, Legend, LineChart, Line, ReferenceLine
 } from "recharts";
-import { createClient } from "@supabase/supabase-js";
 import { useInView } from 'react-intersection-observer';
-
-// Initialize Supabase client
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { useData } from '../../hooks/useData';
 
 const EnergyCharts = () => {
   const { ref, inView } = useInView({
@@ -18,37 +12,38 @@ const EnergyCharts = () => {
     threshold: 0.1,
   });
   
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { energyChartsData: data, loading, errors, refreshData } = useData();
+  const [ruler, setRuler] = useState(() => {
+    const saved = localStorage.getItem('chart_ruler_value');
+    return saved ? Number(saved) : 3700;
+  });
+  const [showRuler, setShowRuler] = useState(() => {
+    const saved = localStorage.getItem('chart_ruler_visible');
+    return saved ? saved === 'true' : true;
+  });
 
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data: alignedData, error: rpcError } = await supabase.rpc('get_monthly_comparison');
-      if (rpcError) throw rpcError;
-
-      // --- UPDATED MAPPING ---
-      // Map both labels from the database to our component's data
-      const formattedData = alignedData.map(d => ({
-        month: d.month_label,   // The simple label (e.g., "Oct '25")
-        period: d.period_label, // The detailed label (e.g., "Sep 05 - Oct 04")
-        inverter: d.inverter_kwh,
-        ceb: d.ceb_kwh
-      }));
-      setData(formattedData);
-    } catch (err) {
-      console.error("Error fetching energy chart data:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const clampRuler = (val) => Math.min(Math.max(val, 0), 7000);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    localStorage.setItem('chart_ruler_value', String(clampRuler(ruler)));
+  }, [ruler]);
+
+  useEffect(() => {
+    localStorage.setItem('chart_ruler_visible', String(showRuler));
+  }, [showRuler]);
+
+  // Compute Y domain bounds based on data and ruler value
+  const { yMin, yMax } = useMemo(() => {
+    if (!data || data.length === 0) return { yMin: 0, yMax: Math.max(4000, ruler) };
+    let maxVal = 0;
+    for (const d of data) {
+      maxVal = Math.max(maxVal, Number(d.inverter || 0), Number(d.ceb || 0));
+    }
+    const top = Math.max(maxVal, ruler);
+    return { yMin: 0, yMax: Math.ceil(top * 1.1 || 1000) };
+  }, [data, ruler]);
+  const isLoading = loading.charts;
+  const error = errors.charts;
 
   // --- UPDATED TOOLTIP ---
   // Now displays the detailed 'period' from the data payload
@@ -79,17 +74,46 @@ const EnergyCharts = () => {
       <style>{keyframesCSS}</style>
       <div style={chartHeader}>
         <h2 style={{ margin: 0 }}>Monthly Energy Summary</h2>
+        <div style={rulerControls}>
+          <label htmlFor="rulerSlider" style={rulerLabel}>Ruler</label>
+          <button
+            onClick={() => setShowRuler((v) => !v)}
+            style={toggleBtn}
+            title={showRuler ? 'Hide ruler' : 'Show ruler'}
+          >
+            {showRuler ? '👁' : '🙈'}
+          </button>
+          <input
+            id="rulerSlider"
+            type="range"
+            min={0}
+            max={7000}
+            step={100}
+            value={clampRuler(ruler)}
+            onChange={(e) => setRuler(clampRuler(Number(e.target.value)))}
+            style={rulerSlider}
+            title="Move ruler line"
+          />
+          <span style={rulerValueBadge}>{`${clampRuler(ruler).toLocaleString()} kWh`}</span>
+          <button
+            onClick={() => setRuler(3700)}
+            style={resetBtn}
+            title="Reset to 3700"
+          >
+            Reset
+          </button>
+        </div>
       </div>
 
-      {loading ? (
+      {isLoading && data.length === 0 ? (
         <div style={messageContainer}>
           <div style={spinner}></div>
           <p>Loading energy data...</p>
         </div>
-      ) : error ? (
+      ) : error && data.length === 0 ? (
         <div style={messageContainer}>
           <p style={{color: '#f56565'}}>Failed to load data.</p>
-          <button onClick={fetchData} style={retryButton}>Try Again</button>
+          <button onClick={() => refreshData('charts')} style={retryButton}>Try Again</button>
         </div>
       ) : data.length === 0 ? (
         <div style={messageContainer}><p>No energy data available</p></div>
@@ -110,13 +134,17 @@ const EnergyCharts = () => {
                 height={30}
                 interval={0}
               />
-              <YAxis stroke="var(--chart-text)" fontSize={12} />
+              <YAxis stroke="var(--chart-text)" fontSize={12} domain={[yMin, yMax]} />
               <Tooltip 
                 content={<CustomTooltip />}
                 cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
               />
               <Legend wrapperStyle={{ color: 'var(--text-color)', paddingTop: '20px' }} />
-              <Bar Save
+              {/* Horizontal Ruler Line */}
+              {showRuler && (
+                <ReferenceLine y={clampRuler(ruler)} stroke="#22c55e" strokeDasharray="6 6" label={{ value: `${clampRuler(ruler)} kWh`, position: 'right', fill: '#22c55e' }} />
+              )}
+              <Bar 
                 dataKey="inverter" 
                 fill="#00c2a8" 
                 name="Inverter (kWh)"
@@ -146,12 +174,16 @@ const EnergyCharts = () => {
                 height={30}
                 interval={0}
               />
-              <YAxis stroke="var(--chart-text)" fontSize={12} />
+              <YAxis stroke="var(--chart-text)" fontSize={12} domain={[yMin, yMax]} />
               <Tooltip 
                 content={<CustomTooltip />}
                 cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
               />
               <Legend wrapperStyle={{ color: 'var(--text-color)', paddingTop: '20px' }} />
+              {/* Horizontal Ruler Line */}
+              {showRuler && (
+                <ReferenceLine y={clampRuler(ruler)} stroke="#22c55e" strokeDasharray="6 6" label={{ value: `${clampRuler(ruler)} kWh`, position: 'right', fill: '#22c55e' }} />
+              )}
               <Line 
                 type="monotone" 
                 dataKey="inverter" 
@@ -199,6 +231,12 @@ const chartHeader = {
   color: 'var(--accent, #00eaff)',
   textShadow: '0 0 10px var(--accent, #00eaff)',
 };
+const rulerControls = { display: 'flex', alignItems: 'center', gap: '8px' };
+const rulerLabel = { fontSize: '0.8rem', color: 'var(--text-color, #ccd)' };
+const rulerSlider = { width: 160, accentColor: 'var(--accent, #00eaff)' };
+const rulerValueBadge = { fontSize: '0.8rem', color: '#22c55e', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', padding: '2px 6px', borderRadius: 6 };
+const resetBtn = { background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--text-color, #ccd)', borderRadius: 6, padding: '1px 6px', cursor: 'pointer', fontSize: '0.75rem' };
+const toggleBtn = { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--text-color, #ccd)', borderRadius: 6, padding: '2px 6px', cursor: 'pointer', fontSize: '0.9rem', lineHeight: 1 };
 const messageContainer = {
   display: "flex",
   flexDirection: "column",

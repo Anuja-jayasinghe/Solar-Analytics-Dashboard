@@ -8,10 +8,13 @@ const supabase = createClient(
 );
 
 const CurrentPower = () => {
-  const { livePowerData, loading } = useData();
+  const { livePowerData, loading, lastUpdate } = useData();
 
   const power = livePowerData?.currentPower?.value || 0;
   const status = livePowerData?.status || "Offline";
+  
+  // Calculate staleness (live data is most time-sensitive - 5 min refresh)
+  const isStale = lastUpdate.live && (Date.now() - lastUpdate.live) > 10 * 60 * 1000;
 
   const maxPower = 40;
 
@@ -44,6 +47,11 @@ const CurrentPower = () => {
           data-tooltip={status}
         />
         ⚡ Live Power
+        {isStale && (
+          <span style={staleBadgeStyle} title="Live data is stale (>10 min old) - May be offline">
+            ⏱️ STALE
+          </span>
+        )}
       </h2>
       {loading.live && status === "Offline" && <span className="loading-hint">Connecting...</span>}
 
@@ -144,6 +152,14 @@ const CurrentPower = () => {
       `}</style>
     </div>
   );
+};
+
+const staleBadgeStyle = {
+  marginLeft: "0.5rem",
+  fontSize: "0.7rem",
+  color: "#ff9800",
+  fontWeight: "600",
+  opacity: 0.9,
 };
 
 export default CurrentPower;

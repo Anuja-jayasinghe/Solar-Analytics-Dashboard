@@ -22,6 +22,8 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 function AppContent() {
   const { isAdmin, loading, session } = useContext(AuthContext);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [devToolsOpen, setDevToolsOpen] = useState(false);
+  const devtoolsEnabled = (import.meta?.env?.VITE_ENABLE_DEVTOOLS ?? 'true') === 'true';
 
   useEffect(() => {
     verifySupabaseConnection().then((result) => {
@@ -60,7 +62,11 @@ function AppContent() {
           path="/*"
           element={
             <div className="app-container" style={{ display: "flex" }}>
-              <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
+              <Sidebar 
+                isCollapsed={isCollapsed} 
+                setIsCollapsed={setIsCollapsed}
+                onDevToolsToggle={devtoolsEnabled ? (() => setDevToolsOpen((v) => !v)) : undefined}
+              />
               <div
                 className="main-content"
                 style={{
@@ -73,8 +79,8 @@ function AppContent() {
                 <div className="page-container">
                   <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh', color: 'var(--accent)' }}>Loading page...</div>}>
                     <Routes>
-                      <Route index element={<Dashboard />} />
-                      <Route path="dashboard" element={<Dashboard />} />
+                      <Route index element={<Dashboard devToolsOpen={devToolsOpen} setDevToolsOpen={setDevToolsOpen} />} />
+                      <Route path="dashboard" element={<Dashboard devToolsOpen={devToolsOpen} setDevToolsOpen={setDevToolsOpen} />} />
                       <Route path="settings" element={<Settings />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>

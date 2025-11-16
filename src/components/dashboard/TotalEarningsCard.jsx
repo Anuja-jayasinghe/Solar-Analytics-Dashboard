@@ -6,12 +6,15 @@ import { Skeleton } from "@chakra-ui/react";
 
 const TotalEarningsCard = () => {
   // 1. Get all the correct data from the context
-  const { totalEarningsData, loading, errors, refreshData } = useData();
+  const { totalEarningsData, loading, errors, refreshData, lastUpdate } = useData();
 
   // 2. Use the correct keys for loading and errors
   const totalEarnings = totalEarningsData?.total || 0;
   const isLoading = loading.totalEarnings; // Corrected from 'totalEar'
   const hasError = errors.totalEarnings; // Corrected from 'totalEar'
+  
+  // 3. Calculate staleness (earnings derived from monthly data, 15min refresh)
+  const isStale = lastUpdate.totalEarnings && (Date.now() - lastUpdate.totalEarnings) > 10 * 60 * 1000;
 
   return (
     <div
@@ -24,11 +27,12 @@ const TotalEarningsCard = () => {
     >
       <h3 style={{ ...labelStyle, color: "var(--accent)" }}>
         💰 Total Earnings (CEB_Total)
+        {isStale && <span style={staleBadge} title="Data is stale (>10 min old)">⏱️</span>}
         {hasError && ( // Corrected from 'errors.totalEar'
           <button 
             onClick={() => refreshData('totalEarnings')} // Corrected from 'totalEar'
             style={retryButton}
-            title="Retry loading data"
+            title={`Error: ${typeof hasError === 'object' ? hasError.message : hasError}`}
           >
             ⚠️
           </button>
@@ -56,6 +60,12 @@ const cardStyle = {
 const labelStyle = { fontSize: "0.9rem", opacity: 0.95, marginBottom: "0.5rem" };
 
 const valueStyle = { fontSize: "1.6rem", fontWeight: "800" };
+
+const staleBadge = {
+  marginLeft: "0.5rem",
+  fontSize: "0.8rem",
+  opacity: 0.7,
+};
 
 const retryButton = {
   background: "var(--accent)",
