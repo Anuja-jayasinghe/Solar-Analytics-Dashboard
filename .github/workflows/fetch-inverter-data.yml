@@ -32,7 +32,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile --prefer-offline
 
       - name: Run fetch-inverter-data
         run: node functions/fetch_inverter_data/index.js
