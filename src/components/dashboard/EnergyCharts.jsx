@@ -1,16 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   ResponsiveContainer, Legend, LineChart, Line
 } from "recharts";
-import { createClient } from "@supabase/supabase-js";
 import { useInView } from 'react-intersection-observer';
-
-// Initialize Supabase client
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { useData } from '../../hooks/useData';
 
 const EnergyCharts = () => {
   const { ref, inView } = useInView({
@@ -18,37 +12,9 @@ const EnergyCharts = () => {
     threshold: 0.1,
   });
   
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data: alignedData, error: rpcError } = await supabase.rpc('get_monthly_comparison');
-      if (rpcError) throw rpcError;
-
-      // --- UPDATED MAPPING ---
-      // Map both labels from the database to our component's data
-      const formattedData = alignedData.map(d => ({
-        month: d.month_label,   // The simple label (e.g., "Oct '25")
-        period: d.period_label, // The detailed label (e.g., "Sep 05 - Oct 04")
-        inverter: d.inverter_kwh,
-        ceb: d.ceb_kwh
-      }));
-      setData(formattedData);
-    } catch (err) {
-      console.error("Error fetching energy chart data:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const { energyChartsData: data, loading, errors, refreshData } = useData();
+  const isLoading = loading.charts;
+  const error = errors.charts;
 
   // --- UPDATED TOOLTIP ---
   // Now displays the detailed 'period' from the data payload
@@ -81,15 +47,15 @@ const EnergyCharts = () => {
         <h2 style={{ margin: 0 }}>Monthly Energy Summary</h2>
       </div>
 
-      {loading ? (
+      {isLoading && data.length === 0 ? (
         <div style={messageContainer}>
           <div style={spinner}></div>
           <p>Loading energy data...</p>
         </div>
-      ) : error ? (
+      ) : error && data.length === 0 ? (
         <div style={messageContainer}>
           <p style={{color: '#f56565'}}>Failed to load data.</p>
-          <button onClick={fetchData} style={retryButton}>Try Again</button>
+          <button onClick={() => refreshData('charts')} style={retryButton}>Try Again</button>
         </div>
       ) : data.length === 0 ? (
         <div style={messageContainer}><p>No energy data available</p></div>

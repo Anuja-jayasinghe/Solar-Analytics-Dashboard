@@ -6,8 +6,9 @@ import { supabase } from "../../lib/supabaseClient";
 const MonthlyGenerationCard = () => {
   const { monthlyGenerationData, loading, errors, refreshData } = useData();
 
-  // Extract data from context
+    // Extract data from context
   const total = monthlyGenerationData?.total || 0;
+  const billingPeriodLabel = monthlyGenerationData?.billingPeriodLabel;
   const isLoading = loading.monthlyGen;
 
   // ✅ Convert only if >= 1000 kWh — keep exact precision
@@ -21,7 +22,7 @@ const MonthlyGenerationCard = () => {
 
   // Optional: format with commas for readability
   const formattedValue = displayValue.toLocaleString(undefined, {
-    maximumFractionDigits: 3, // show up to 3 decimals but don’t force rounding
+    maximumFractionDigits: 3, // show up to 3 decimals but don't force rounding
   });
 
   return (
@@ -34,7 +35,7 @@ const MonthlyGenerationCard = () => {
       }}
     >
       <h3 style={{ ...labelStyle, color: "var(--accent)" }}>
-        📆 This Month's Generation
+        📆 {billingPeriodLabel || "This Month's Generation"}
         {errors.monthlyGen && (
           <button 
             onClick={() => refreshData('monthlyGen')} 
