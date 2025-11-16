@@ -6,6 +6,7 @@ import MonthlyGenerationCard from "../components/dashboard/MonthlyGenerationCard
 import TotalGenerationCard from "../components/dashboard/TotalGenerationCard";
 import TotalEarningsCard from "../components/dashboard/TotalEarningsCard";
 import CacheStatusIndicator from "../components/CacheStatusIndicator";
+import ComingSoonNote from "../components/ComingSoonNote";
 
 // Lazy load heavy chart components
 const EnergyCharts = lazy(() => import("../components/dashboard/EnergyCharts"));
@@ -17,6 +18,7 @@ function Dashboard() {
   return (
     <div style={pageStyle}>
       <CacheStatusIndicator />
+      <ComingSoonNote />
 
       {/* --- Upper Highlight Section --- */}
       <div style={highlightSection}>
