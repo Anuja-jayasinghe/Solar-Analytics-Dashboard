@@ -18,7 +18,7 @@ const SettingsIcon = ({ className }) => (
   </svg>
 );
 
-function Sidebar() {
+function Sidebar({ onDevToolsToggle }) {
   const [isMobile, setIsMobile] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -108,6 +108,53 @@ function Sidebar() {
           font-size: 2rem;
           color: var(--text-color);
           margin-bottom: 2rem;
+        }
+        
+        .devtools-divider {
+          width: 32px;
+          height: 1px;
+          background: linear-gradient(90deg, transparent, var(--accent), transparent);
+          margin: 2rem 0;
+        }
+        
+        .devtools-button {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 48px;
+          height: 48px;
+          background: linear-gradient(135deg, var(--accent), var(--accent-dark, #0070f3));
+          color: white;
+          border: 2px solid rgba(255,255,255,0.1);
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 12px rgba(0,122,255,0.3);
+          font-size: 1.25rem;
+          animation: pulse 3s ease-in-out infinite;
+        }
+        
+        .devtools-button:hover {
+          transform: scale(1.1);
+          box-shadow: 0 6px 20px rgba(0,122,255,0.5);
+          border-color: rgba(255,255,255,0.3);
+        }
+        
+        @keyframes pulse {
+          0%, 100% {
+            box-shadow: 0 4px 12px rgba(0,122,255,0.3);
+          }
+          50% {
+            box-shadow: 0 4px 20px rgba(0,122,255,0.6);
+          }
+        }
+        
+        .sidebar.mobile .devtools-divider {
+          display: none;
+        }
+        
+        .sidebar.mobile .devtools-button {
+          margin-left: auto;
         }
         
         .sidebar.mobile .sidebar-logo {
@@ -211,16 +258,30 @@ function Sidebar() {
             <SettingsIcon />
           </NavLink>
         </nav>
+        
+        {!isMobile && <div className="devtools-divider" />}
+        
+        <button
+          className="devtools-button"
+          onClick={() => {
+            if (onDevToolsToggle) onDevToolsToggle();
+            if (isMobile) closeSidebar();
+          }}
+          title="Toggle Dev Tools"
+          aria-label="Toggle Dev Tools"
+        >
+          🛠️
+        </button>
       </div>
     </>
   );
 }
 
 // --- Layout wrapper ---
-export function AppLayout({ children }) {
+export function AppLayout({ children, onDevToolsToggle }) {
   return (
     <>
-      <Sidebar />
+      <Sidebar onDevToolsToggle={onDevToolsToggle} />
       <main style={{ marginLeft: "80px", padding: "2rem" }}>
         {children}
       </main>

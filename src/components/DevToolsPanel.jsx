@@ -2,8 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { cacheService } from '../lib/cacheService';
 import { useData } from '../hooks/useData';
 
-const DevToolsPanel = () => {
-  const [open, setOpen] = useState(false);
+const DevToolsPanel = ({ open, onClose }) => {
   const [activeTab, setActiveTab] = useState('cache'); // 'cache' | 'context'
   const [cacheStats, setCacheStats] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -27,12 +26,12 @@ const DevToolsPanel = () => {
     if (!open) return;
     const handleClick = (e) => {
       if (panelRef.current && !panelRef.current.contains(e.target)) {
-        setOpen(false);
+        if (onClose) onClose();
       }
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, [open]);
+  }, [open, onClose]);
 
   const formatTime = (seconds) => {
     if (seconds == null) return '-';
@@ -53,16 +52,6 @@ const DevToolsPanel = () => {
 
   return (
     <>
-      {/* Toggle handle (left center) */}
-      <button
-        aria-label="Toggle Dev Tools"
-        onClick={() => setOpen((v) => !v)}
-        style={toggleHandleStyle}
-        title={open ? 'Hide Dev Tools' : 'Show Dev Tools'}
-      >
-        🛠️
-      </button>
-
       {open && (
         <div ref={panelRef} style={panelStyle}>
           {/* Header with tabs */}
@@ -90,7 +79,7 @@ const DevToolsPanel = () => {
               >
                 🔄
               </button>
-              <button style={headerBtn} onClick={() => setOpen(false)}>✕</button>
+              <button style={headerBtn} onClick={onClose}>✕</button>
             </div>
           </div>
 
@@ -204,21 +193,6 @@ const Metric = ({ label, value, sub, highlight, title }) => (
 const Dot = ({ color }) => <span style={{...dot, background: color}} />
 
 // Styles
-const toggleHandleStyle = {
-  position: 'fixed',
-  top: '50%',
-  left: '16px',
-  transform: 'translateY(-50%)',
-  zIndex: 9996,
-  background: 'rgba(20,20,22,0.6)',
-  color: '#fff',
-  border: '1px solid var(--glass-border)',
-  borderRadius: '8px',
-  padding: '8px 10px',
-  cursor: 'pointer',
-  backdropFilter: 'blur(8px)',
-};
-
 const panelStyle = {
   position: 'fixed',
   top: '80px',

@@ -207,41 +207,31 @@ export const DataProvider = ({ children }) => {
       }
       
       else if (key === 'monthlyGen') {
-        // Fetch billing period settings
-        const { data: billingSettings, error: settingsError } = await supabase
-          .from('system_settings')
-          .select('setting_name, setting_value')
-          .in('setting_name', ['last_billing_date', 'billing_cycle_days']);
+        // Fetch latest CEB bill date
+        const { data: latestBill, error: billError } = await supabase
+          .from('ceb_data')
+          .select('bill_date, id')
+          .order('bill_date', { ascending: false })
+          .limit(1)
+          .single();
         
-        const lastBillingDateStr = billingSettings?.find(s => s.setting_name === 'last_billing_date')?.setting_value;
-        const billingCycleDays = parseInt(billingSettings?.find(s => s.setting_name === 'billing_cycle_days')?.setting_value || '30');
-        
-        let startDate, endDate, billingPeriodLabel;
+        let startDate, endDate, billingPeriodLabel, billId;
         const today = new Date();
         
-        if (lastBillingDateStr) {
-          // Use billing period logic
-          const lastBillingDate = new Date(lastBillingDateStr);
+        if (latestBill && !billError) {
+          // Use latest CEB bill date as start of period
+          const billDate = new Date(latestBill.bill_date);
+          billId = latestBill.id;
           
-          // Calculate current billing period start
-          // Find the most recent billing date that's <= today
-          let currentPeriodStart = new Date(lastBillingDate);
-          while (currentPeriodStart < today) {
-            const nextStart = new Date(currentPeriodStart);
-            nextStart.setDate(nextStart.getDate() + billingCycleDays);
-            if (nextStart > today) break;
-            currentPeriodStart = nextStart;
-          }
+          startDate = billDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+          endDate = today.toISOString().split('T')[0];
           
-          startDate = currentPeriodStart.toISOString();
-          endDate = today.toISOString();
-          
-          const formatDate = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
-          billingPeriodLabel = `${formatDate(currentPeriodStart)} – ${formatDate(today)}`;
+          const formatDate = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+          billingPeriodLabel = `${formatDate(billDate)} – ${formatDate(today)}`;
         } else {
-          // Fallback to first-of-month
-          startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
-          endDate = new Date(today.getFullYear(), today.getMonth() + 1, 1).toISOString();
+          // Fallback to first-of-month if no CEB bill found
+          startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+          endDate = today.toISOString().split('T')[0];
           billingPeriodLabel = today.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
         }
         
@@ -249,12 +239,12 @@ export const DataProvider = ({ children }) => {
           .from('inverter_data_daily_summary')
           .select('total_generation_kwh')
           .gte('summary_date', startDate)
-          .lt('summary_date', endDate);
+          .lte('summary_date', endDate);
         
         if (error) throw error;
         
         const total = data.reduce((sum, record) => sum + (parseFloat(record.total_generation_kwh) || 0), 0);
-        const result = { total, billingPeriodLabel };
+        const result = { total, billingPeriodLabel, startDate, billId };
         
         setMonthlyGenerationData(result);
         cacheService.set(key, 'data', result);

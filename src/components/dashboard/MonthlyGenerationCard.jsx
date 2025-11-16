@@ -4,15 +4,19 @@ import { useData } from "../../hooks/useData"; // Adjust path as needed
 import { supabase } from "../../lib/supabaseClient";
 
 const MonthlyGenerationCard = () => {
-  const { monthlyGenerationData, loading, errors, refreshData, lastUpdate } = useData();
+  const { monthlyGenerationData, loading } = useData();
 
   // Extract data from context
   const total = monthlyGenerationData?.total || 0;
-  const billingPeriodLabel = monthlyGenerationData?.billingPeriodLabel;
+  const startDate = monthlyGenerationData?.startDate;
   const isLoading = loading.monthlyGen;
+
+  // Format start date short (DD Mon)
+  const formattedStartDate = startDate
+    ? new Date(startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+    : null;
   
-  // Check if data is stale (>10 minutes old)
-  const isStale = lastUpdate.monthlyGen && (Date.now() - lastUpdate.monthlyGen > 10 * 60 * 1000);  // ✅ Convert only if >= 1000 kWh — keep exact precision
+  // Convert only if >= 1000 kWh — keep exact precision
   let displayValue = total;
   let unit = "kWh";
 
@@ -35,24 +39,15 @@ const MonthlyGenerationCard = () => {
         boxShadow: "0 8px 28px var(--card-shadow), inset 0 1px 1px var(--glass-border)",
       }}
     >
-      <h3 style={{ ...labelStyle, color: "var(--accent)", display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
-        📆 {billingPeriodLabel || "This Month's Generation"}
-        {errors.monthlyGen && (
-          <button 
-            onClick={() => refreshData('monthlyGen')} 
-            style={retryButton}
-            title={`Error: ${typeof errors.monthlyGen === 'object' ? errors.monthlyGen.message : errors.monthlyGen}`}
-          >
-            ⚠️
-          </button>
-        )}
-        {isStale && !errors.monthlyGen && (
-          <span style={staleBadge} title="Data may be outdated">⏱️</span>
-        )}
+      <h3 style={{ ...labelStyle, color: "var(--accent)", textAlign: 'center' }}>
+        Monthly Generation Total
       </h3>
       <p style={{ ...valueStyle, color: "var(--accent)" }}>
         {isLoading ? "..." : `${formattedValue} ${unit}`}
       </p>
+      {formattedStartDate && (
+        <p style={startDateOnlyStyle}>Start: {formattedStartDate}</p>
+      )}
     </div>
   );
 };
@@ -70,21 +65,10 @@ const cardStyle = {
 const labelStyle = { fontSize: "0.9rem", opacity: 0.95, marginBottom: "0.5rem" };
 const valueStyle = { fontSize: "1.6rem", fontWeight: "800" };
 
-const retryButton = {
-  background: "var(--accent)",
-  color: "white",
-  border: "none",
-  borderRadius: "4px",
-  padding: "0.2rem 0.4rem",
-  fontSize: "0.7rem",
-  cursor: "pointer",
-  transition: "all 0.2s ease",
-};
-
-const staleBadge = {
-  fontSize: '0.9rem',
-  opacity: 0.7,
-  cursor: 'help',
+const startDateOnlyStyle = {
+  fontSize: '0.8rem',
+  color: 'var(--text-secondary)',
+  marginTop: '0.25rem',
 };
 
 export default MonthlyGenerationCard;

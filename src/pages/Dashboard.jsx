@@ -19,7 +19,7 @@ const EarningsBreakdown = lazy(() => import("../components/dashboard/EarningsDif
 const EnvironmentalImpact = lazy(() => import("../components/dashboard/EnvironmentalImpact"));
 const SystemTrends = lazy(() => import("../components/dashboard/SystemTrends"));
 
-function Dashboard() {
+function Dashboard({ devToolsOpen, setDevToolsOpen }) {
   return (
     <div style={pageStyle}>
       <CacheStatusIndicator />
@@ -27,7 +27,7 @@ function Dashboard() {
       <RefreshIndicator />
       <ErrorBanner />
       <AuthErrorModal />
-      <DevToolsPanel />
+      <DevToolsPanel open={devToolsOpen} onClose={() => setDevToolsOpen(false)} />
 
       {/* --- Upper Highlight Section --- */}
       <div style={highlightSection}>
