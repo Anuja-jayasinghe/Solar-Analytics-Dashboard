@@ -1,0 +1,85 @@
+
+
+GINLONG TECHNOLOGIES CO.,LTD.
+                                S5-GC(25-40)K
+Solis Three Phase Grid-Tied Inverters
+Models:
+S5-GC25K / S5-GC30K
+S5-GC33K / S5-GC36K
+S5-GC40K
+360º View
+• 
+Max. efficiency 98.7%
+• 
+3/4 MPPT design, suitable for multi-facing roof
+• 
+AFCI protection, proactively reduces fire risk
+• 
+Nighttime PID recovery function (optional)
+• 
+Intelligent string monitoring, smart I-V curve scan
+• 
+24-hour load consumption monitoring
+• 
+IP66
+Features:
+
+solisinverters.com/uk
+DATASHEETS5-GC(25-40)K
+Models25K30K33K36K40K
+Input DC
+Recommended max. PV power37.5 kW45 kW49.5 kW54 kW60 kW
+Max. input voltage1100 V
+Rated voltage600 V
+Start-up voltage180 V
+MPPT voltage range200 - 1000 V
+Max. input current32 A / 32 A / 32 A4 × 32 A
+Max. short circuit current40 A / 40 A / 40 A4 × 40 A
+MPPT number / Max. input strings number3 / 64 / 8
+Output AC
+Rated output power25 kW30 kW33 kW36 kW40 kW
+Max. apparent output power27.5 kVA33 kVA36.3 kVA39.6 kVA44 kVA
+Max. output power27.5 kW33 kW36.3 kW39.6 kW44 kW
+Rated grid voltage3/N/PE, 220 V / 380 V, 230 V / 400 V
+Rated grid frequency50 Hz / 60 Hz
+Rated grid output current38.0 A / 36.1 A45.6 A / 43.3 A50.1 A / 47.6 A54.7 A / 52.0 A60.8 A / 57.7 A
+Max. output current41.8 A50.2 A55.1 A60.2 A66.9 A
+Power factor> 0.99 (0.8 leading - 0.8 lagging)
+THDi< 3%
+Efficiency
+Max. efficiency98.5%98.6%98.7%
+EU efficiency98.1%98.2%98.3%
+Protection
+DC reverse-polarity protectionYes
+Short circuit protectionYes
+Output over current protectionYes
+Surge protectionDC Type II / AC Type II
+Grid monitoringYes
+Anti-islanding protectionYes
+Temperature protectionYes
+Strings monitoringYes
+I/V Curve scanningYes
+Multi peak scanYes
+Integrated AFCI 2.0Optional
+Integrated PID recoveryOptional
+Integrated DC switchYes
+General Data
+Dimensions (W × H × D)647 × 629 × 252 mm
+Weight38.2 kg42.1 kg
+TopologyTransformerless
+Self-consumption (night)< 1 W
+Operating ambient temperature range-25 ~ +60°C
+Relative humidity0 - 100%
+Ingress protectionIP66
+Noise emission (typical)≤ 60 dB(A)
+Cooling conceptIntelligent fan-cooling
+Max. operation altitude4000 m
+Grid connection standard
+G99, VDE-AR-N 4105/VDE V 0124, EN 50549-1, VDE 0126/UTE C 15/VFR:2019, RD 1699/RD 244/UNE 206006/
+UNE 206007-1, CEI 0-21, C10/11, NRS 097-2-1, EIFS 2018.2, IEC 62116, IEC 61727, IEC60068, IEC 61683, EN 50530
+Safety / EMC standardIEC/EN 62109-1/-2, IEC/EN 61000-6-1/-2/-3/-4
+Features
+DC connectionMC4 connector
+AC connectionOT terminal
+DisplayLCD
+CommunicationRS485, Optional: Wi-Fi, GPRS

@@ -1,11 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-// Initialize Supabase client
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL || "https://example.supabase.co",
-  import.meta.env.VITE_SUPABASE_ANON_KEY || "example-key"
-);
+import { supabase } from '../../lib/supabaseClient';
 
 const CO2_PER_KWH = 0.984; // kg
 const CO2_ABSORBED_BY_TREE_10_YEARS = 220; // kg
@@ -84,7 +78,7 @@ const styles = {
     borderRadius: '10px',
     padding: '1.5rem',
     boxShadow: '0 0 20px var(--card-shadow)',
-    height: '260px',
+    height: '360px',
     width: '90%',
     position: 'relative',
     display: 'flex', overflow: 'hidden',

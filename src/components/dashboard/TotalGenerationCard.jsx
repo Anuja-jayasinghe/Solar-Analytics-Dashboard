@@ -1,18 +1,23 @@
 // src/components/TotalGenerationCard.jsx
-import React, { useEffect, useState } from "react";
-import { useData } from "../../contexts/DataContext";
-import { supabase } from "../../lib/supabaseClient";
+import React from "react";
+import { useData } from "../../hooks/useData"; // Adjust path as needed
 
 const TotalGenerationCard = () => {
-  const { totalGenerationData, loading, errors, refreshData } = useData();
+  // --- UPDATED LOGIC ---
+  // 1. Get the correct data, loading, and error states from the context
+  const { livePowerData, loading, errors, refreshData } = useData();
 
-  // Extract data from context
-  const total = totalGenerationData?.total || 0;
-  const isLoading = loading.totalGen;
+  // 2. Extract the data from the 'livePowerData' object
+  const total = livePowerData?.totalGeneration?.value || 0;
+  const unit = livePowerData?.totalGeneration?.unit || "kWh";
+  const isLoading = loading.live;
+  const hasError = errors.live;
 
-  // Automatically adjust units
-  const displayValue = total >= 1000 ? (total / 1000).toFixed(2) : total.toFixed(2);
-  const unit = "MWh";
+  // 3. Format the value for display
+  const formattedValue = total.toLocaleString(undefined, {
+    maximumFractionDigits: 1, // Show one decimal
+  });
+  // --- END UPDATED LOGIC ---
 
   return (
     <div
@@ -24,10 +29,11 @@ const TotalGenerationCard = () => {
       }}
     >
       <h3 style={{ ...labelStyle, color: "var(--accent)" }}>
-        ⚡ Total Lifetime Generation
-        {errors.totalGen && (
+        {/* 4. Update title and error handling keys */}
+        ⚡ All-Time Generation
+        {hasError && (
           <button 
-            onClick={() => refreshData('totalGen')} 
+            onClick={() => refreshData('live')} // Refresh 'live' data
             style={retryButton}
             title="Retry loading data"
           >
@@ -36,13 +42,13 @@ const TotalGenerationCard = () => {
         )}
       </h3>
       <p style={{ ...valueStyle, color: "var(--accent)" }}>
-        {isLoading ? "..." : `${displayValue} ${unit}`}
+        {isLoading ? "..." : `${formattedValue} ${unit}`}
       </p>
     </div>
   );
 };
 
-// 🎨 Styles
+// --- STYLES (Unchanged, as requested) ---
 const cardStyle = {
   flex: 1,
   padding: "1.2rem",
@@ -54,7 +60,6 @@ const cardStyle = {
 };
 
 const labelStyle = { fontSize: "0.9rem", opacity: 0.95, marginBottom: "0.5rem" };
-
 const valueStyle = { fontSize: "1.6rem", fontWeight: "800" };
 
 const retryButton = {

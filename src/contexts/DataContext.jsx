@@ -1,257 +1,153 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { 
-  getMonthlyData, 
-  getYearlyData, 
-  getLivePowerData, 
-  getDashboardSummary, 
-  getEnergyChartsData,
-  getMonthlyGenerationData,
-  getTotalGenerationData,
-  getTotalEarningsData,
-  clearCache,
-  getCacheStats
-} from '../lib/dataService';
+import { createClient } from '@supabase/supabase-js';
 
-const DataContext = createContext();
+// Initialize Supabase client
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
+// Create the context
+export const DataContext = createContext();
+
+// Create the provider component
+export const DataProvider = ({ children }) => {
+  // Data states
+  const [energyChartsData, setEnergyChartsData] = useState([]);
+  const [livePowerData, setLivePowerData] = useState(null);
+  const [totalEarningsData, setTotalEarningsData] = useState({ total: 0 });
+  const [monthlyGenerationData, setMonthlyGenerationData] = useState({ total: 0 });
+  const [inverterPotentialValue, setInverterPotentialValue] = useState({ total: 0 }); 
+
+  // Loading and error states
+  const [loading, setLoading] = useState({ 
+    charts: true, live: true, totalEarnings: true, monthlyGen: true, inverterValue: true 
+  });
+  const [errors, setErrors] = useState({ 
+    charts: null, live: null, totalEarnings: null, monthlyGen: null, inverterValue: null 
+  });
+
+  const fetchData = useCallback(async (key) => {
+    if (!key) return;
+    setLoading((prev) => ({ ...prev, [key]: true }));
+    setErrors((prev) => ({ ...prev, [key]: null }));
+
+    try {
+      if (key === 'charts') {
+        const { data: alignedData, error: rpcError } = await supabase.rpc('get_monthly_comparison');
+        if (rpcError) throw rpcError;
+        setEnergyChartsData(alignedData.map(d => ({ month: d.month_label, inverter: d.inverter_kwh, ceb: d.ceb_kwh })));
+      } 
+      
+      else if (key === 'live') {
+        setLoading(prev => ({ ...prev, inverterValue: true }));
+        setErrors(prev => ({ ...prev, inverterValue: null }));
+
+        // 1. Fetch live data (which now includes totalGeneration)
+        const { data: liveData, error: liveError } = await supabase.functions.invoke('solis-live-data');
+        if (liveError) throw liveError;
+        setLivePowerData(liveData);
+        localStorage.setItem('solisLiveData', JSON.stringify({ data: liveData, timestamp: Date.now() }));
+        
+        
+        // 2. Fetch the tariff from settings
+        const { data: settingData, error: settingError } = await supabase
+          .from('system_settings')
+          .select('setting_value')
+          .eq('setting_name', 'rate_per_kwh')
+          .limit(1);
+        if (settingError) throw settingError;
+        
+        console.log("2. Fetched Tariff Data:", settingData);
+
+        const tariff = parseFloat(settingData?.[0]?.setting_value) || 37; 
+
+        // 4. --- THIS IS THE MWh to kWh FIX ---
+        const totalGen_MWh = liveData?.totalGeneration?.value || 0;
+
+        const totalGen_kWh = totalGen_MWh * 1000; // Convert MWh to kWh
+        
+        // 5. Calculate and set the potential value
+        const potentialValue = totalGen_kWh * tariff;
+        
+        setInverterPotentialValue({ total: potentialValue });
+        
+        
+        setLoading(prev => ({ ...prev, live: false, inverterValue: false }));
+      }
+      
+      else if (key === 'totalEarnings') {
+        const { data, error } = await supabase.from('ceb_data').select('earnings');
+        if (error) throw error;
+        const total = data.reduce((sum, record) => sum + (record.earnings || 0), 0);
+        
+        // Log the other side of the comparison
+        
+        setTotalEarningsData({ total });
+      }
+      
+      // 'inverterValue' logic is now part of 'live'
+      
+      else if (key === 'monthlyGen') {
+        const today = new Date();
+        const startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
+        const endDate = new Date(today.getFullYear(), today.getMonth() + 1, 1).toISOString();
+        const { data, error } = await supabase.from('inverter_data_daily_summary').select('total_generation_kwh').gte('summary_date', startDate).lt('summary_date', endDate);
+        if (error) throw error;
+        const total = data.reduce((sum, record) => sum + (parseFloat(record.total_generation_kwh) || 0), 0);
+        setMonthlyGenerationData({ total });
+      }
+      
+    } catch (err) {
+      console.error(`Error in DataContext fetching ${key}:`, err);
+      if (key === 'live') {
+        setErrors((prev) => ({ ...prev, live: err.message, inverterValue: err.message }));
+      } else {
+        setErrors((prev) => ({ ...prev, [key]: err.message }));
+      }
+    } finally {
+      if (key !== 'live') {
+        setLoading((prev) => ({ ...prev, [key]: false }));
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const cached = localStorage.getItem('solisLiveData');
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp < 300000) {
+        setLivePowerData(data);
+        setLoading(prev => ({...prev, live: false}));
+      }
+    }
+
+    Promise.all([
+      fetchData('charts'),
+      fetchData('live'), // This now also triggers 'inverterValue' calculation
+      fetchData('totalEarnings'),
+      fetchData('monthlyGen'),
+    ]);
+  }, [fetchData]);
+
+  const refreshData = (key) => {
+    fetchData(key);
+  };
+
+  const value = {
+    energyChartsData, livePowerData, totalEarningsData, monthlyGenerationData,
+    inverterPotentialValue,
+    loading, errors, refreshData,
+  };
+
+  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
+};
+
+// Custom hook to use the context
 export const useData = () => {
   const context = useContext(DataContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useData must be used within a DataProvider');
   }
   return context;
-};
-
-export const DataProvider = ({ children }) => {
-  // State for different data types
-  const [monthlyData, setMonthlyData] = useState(null);
-  const [yearlyData, setYearlyData] = useState(null);
-  const [livePowerData, setLivePowerData] = useState(null);
-  const [dashboardSummary, setDashboardSummary] = useState(null);
-  const [energyChartsData, setEnergyChartsData] = useState(null);
-  const [monthlyGenerationData, setMonthlyGenerationData] = useState(null);
-  const [totalGenerationData, setTotalGenerationData] = useState(null);
-  const [totalEarningsData, setTotalEarningsData] = useState(null);
-
-  // Loading states
-  const [loading, setLoading] = useState({
-    monthly: false,
-    yearly: false,
-    live: false,
-    summary: false,
-    charts: false,
-    monthlyGen: false,
-    totalGen: false,
-    totalEarnings: false
-  });
-
-  // Error states
-  const [errors, setErrors] = useState({
-    monthly: null,
-    yearly: null,
-    live: null,
-    summary: null,
-    charts: null,
-    monthlyGen: null,
-    totalGen: null,
-    totalEarnings: null
-  });
-
-  // Background refresh state
-  const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
-  const [lastRefresh, setLastRefresh] = useState(null);
-
-  // Cache statistics
-  const [cacheStats, setCacheStats] = useState(null);
-
-  /**
-   * Generic data fetcher with error handling and loading states
-   */
-  const fetchData = useCallback(async (dataType, fetchFunction, setter, forceRefresh = false) => {
-    setLoading(prev => ({ ...prev, [dataType]: true }));
-    setErrors(prev => ({ ...prev, [dataType]: null }));
-
-    try {
-      const data = await fetchFunction(forceRefresh);
-      setter(data);
-      setLastRefresh(Date.now());
-    } catch (error) {
-      console.error(`Error fetching ${dataType} data:`, error);
-      setErrors(prev => ({ ...prev, [dataType]: error.message }));
-    } finally {
-      setLoading(prev => ({ ...prev, [dataType]: false }));
-    }
-  }, []);
-
-  /**
-   * Fetch all data on initial load
-   */
-  const fetchAllData = useCallback(async (forceRefresh = false) => {
-    const promises = [
-      fetchData('monthly', getMonthlyData, setMonthlyData, forceRefresh),
-      fetchData('yearly', getYearlyData, setYearlyData, forceRefresh),
-      fetchData('live', getLivePowerData, setLivePowerData, forceRefresh),
-      fetchData('summary', getDashboardSummary, setDashboardSummary, forceRefresh),
-      fetchData('charts', getEnergyChartsData, setEnergyChartsData, forceRefresh),
-      fetchData('monthlyGen', getMonthlyGenerationData, setMonthlyGenerationData, forceRefresh),
-      fetchData('totalGen', getTotalGenerationData, setTotalGenerationData, forceRefresh),
-      fetchData('totalEarnings', getTotalEarningsData, setTotalEarningsData, forceRefresh)
-    ];
-
-    await Promise.allSettled(promises);
-  }, [fetchData]);
-
-  /**
-   * Background refresh function
-   */
-  const backgroundRefresh = useCallback(async () => {
-    if (isBackgroundRefreshing) return;
-    
-    setIsBackgroundRefreshing(true);
-    try {
-      await fetchAllData(true); // Force refresh for background updates
-      console.log('Background refresh completed');
-    } catch (error) {
-      console.error('Background refresh failed:', error);
-    } finally {
-      setIsBackgroundRefreshing(false);
-    }
-  }, [fetchAllData, isBackgroundRefreshing]);
-
-  /**
-   * Manual refresh function
-   */
-  const refreshData = useCallback(async (dataType = null) => {
-    if (dataType) {
-      // Refresh specific data type
-      switch (dataType) {
-        case 'monthly':
-          await fetchData('monthly', getMonthlyData, setMonthlyData, true);
-          break;
-        case 'yearly':
-          await fetchData('yearly', getYearlyData, setYearlyData, true);
-          break;
-        case 'live':
-          await fetchData('live', getLivePowerData, setLivePowerData, true);
-          break;
-        case 'summary':
-          await fetchData('summary', getDashboardSummary, setDashboardSummary, true);
-          break;
-        case 'charts':
-          await fetchData('charts', getEnergyChartsData, setEnergyChartsData, true);
-          break;
-        case 'monthlyGen':
-          await fetchData('monthlyGen', getMonthlyGenerationData, setMonthlyGenerationData, true);
-          break;
-        case 'totalGen':
-          await fetchData('totalGen', getTotalGenerationData, setTotalGenerationData, true);
-          break;
-        case 'totalEarnings':
-          await fetchData('totalEarnings', getTotalEarningsData, setTotalEarningsData, true);
-          break;
-        default:
-          console.warn(`Unknown data type: ${dataType}`);
-      }
-    } else {
-      // Refresh all data
-      await fetchAllData(true);
-    }
-  }, [fetchData, fetchAllData]);
-
-  /**
-   * Clear all cached data
-   */
-  const clearAllCache = useCallback(() => {
-    clearCache();
-    setCacheStats(getCacheStats());
-    console.log('Cache cleared');
-  }, []);
-
-  /**
-   * Update cache statistics
-   */
-  const updateCacheStats = useCallback(() => {
-    setCacheStats(getCacheStats());
-  }, []);
-
-  // Initialize data on mount
-  useEffect(() => {
-    fetchAllData();
-    updateCacheStats();
-  }, [fetchAllData, updateCacheStats]);
-
-  // Set up background refresh interval
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Only refresh if tab is visible
-      if (!document.hidden) {
-        backgroundRefresh();
-      }
-    }, 3 * 60 * 1000); // 3 minutes
-
-    return () => clearInterval(interval);
-  }, [backgroundRefresh]);
-
-  // Update cache stats periodically
-  useEffect(() => {
-    const statsInterval = setInterval(updateCacheStats, 30 * 1000); // Every 30 seconds
-    return () => clearInterval(statsInterval);
-  }, [updateCacheStats]);
-
-  // Listen for visibility changes to refresh when tab becomes active
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && lastRefresh && Date.now() - lastRefresh > 5 * 60 * 1000) {
-        // If tab becomes visible and last refresh was more than 5 minutes ago
-        backgroundRefresh();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [backgroundRefresh, lastRefresh]);
-
-  const value = {
-    // Data
-    monthlyData,
-    yearlyData,
-    livePowerData,
-    dashboardSummary,
-    energyChartsData,
-    monthlyGenerationData,
-    totalGenerationData,
-    totalEarningsData,
-
-    // Loading states
-    loading,
-    isBackgroundRefreshing,
-
-    // Error states
-    errors,
-
-    // Actions
-    refreshData,
-    clearAllCache,
-    backgroundRefresh,
-
-    // Cache info
-    cacheStats,
-    lastRefresh,
-
-    // Individual data fetchers (for components that need specific data)
-    fetchMonthlyData: () => fetchData('monthly', getMonthlyData, setMonthlyData, true),
-    fetchYearlyData: () => fetchData('yearly', getYearlyData, setYearlyData, true),
-    fetchLivePowerData: () => fetchData('live', getLivePowerData, setLivePowerData, true),
-    fetchDashboardSummary: () => fetchData('summary', getDashboardSummary, setDashboardSummary, true),
-    fetchEnergyChartsData: () => fetchData('charts', getEnergyChartsData, setEnergyChartsData, true),
-    fetchMonthlyGenerationData: () => fetchData('monthlyGen', getMonthlyGenerationData, setMonthlyGenerationData, true),
-    fetchTotalGenerationData: () => fetchData('totalGen', getTotalGenerationData, setTotalGenerationData, true),
-    fetchTotalEarningsData: () => fetchData('totalEarnings', getTotalEarningsData, setTotalEarningsData, true),
-  };
-
-  return (
-    <DataContext.Provider value={value}>
-      {children}
-    </DataContext.Provider>
-  );
 };

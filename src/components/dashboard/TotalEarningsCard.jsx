@@ -1,14 +1,17 @@
-// src/components/TotalEarningsCard.jsx
-import React, { useEffect, useState } from "react";
-import { useData } from "../../contexts/DataContext";
-import { supabase } from "../../lib/supabaseClient";
+import React from "react";
+import { useData } from "../../hooks/useData"; // Corrected import path
+// Skeleton is imported but not used in your code, so I've left it as is.
+// If you want to add it, wrap the main <div> with <Skeleton isLoaded={!isLoading} ...>
+import { Skeleton } from "@chakra-ui/react"; 
 
 const TotalEarningsCard = () => {
+  // 1. Get all the correct data from the context
   const { totalEarningsData, loading, errors, refreshData } = useData();
 
-  // Extract data from context
-  const total = totalEarningsData?.total || 0;
-  const isLoading = loading.totalEarnings;
+  // 2. Use the correct keys for loading and errors
+  const totalEarnings = totalEarningsData?.total || 0;
+  const isLoading = loading.totalEarnings; // Corrected from 'totalEar'
+  const hasError = errors.totalEarnings; // Corrected from 'totalEar'
 
   return (
     <div
@@ -20,10 +23,10 @@ const TotalEarningsCard = () => {
       }}
     >
       <h3 style={{ ...labelStyle, color: "var(--accent)" }}>
-        💰 Total Earnings (CEB)
-        {errors.totalEarnings && (
+        💰 Total Earnings (CEB_Total)
+        {hasError && ( // Corrected from 'errors.totalEar'
           <button 
-            onClick={() => refreshData('totalEarnings')} 
+            onClick={() => refreshData('totalEarnings')} // Corrected from 'totalEar'
             style={retryButton}
             title="Retry loading data"
           >
@@ -32,12 +35,14 @@ const TotalEarningsCard = () => {
         )}
       </h3>
       <p style={{ ...valueStyle, color: "var(--accent)" }}>
-        {isLoading ? "..." : `LKR ${total.toLocaleString()}`}
+        {/* 3. Correctly format the value as LKR (currency) */}
+        {isLoading ? "..." : `LKR ${Math.round(totalEarnings).toLocaleString()}`}
       </p>
     </div>
   );
 };
 
+// 🎨 Styles (Unchanged, as requested)
 const cardStyle = {
   flex: 1,
   padding: "1.2rem",
@@ -47,9 +52,9 @@ const cardStyle = {
   textAlign: "center",
   transition: "transform 0.3s ease, boxShadow 0.3s ease",
 };
-  
+
 const labelStyle = { fontSize: "0.9rem", opacity: 0.95, marginBottom: "0.5rem" };
-  
+
 const valueStyle = { fontSize: "1.6rem", fontWeight: "800" };
 
 const retryButton = {

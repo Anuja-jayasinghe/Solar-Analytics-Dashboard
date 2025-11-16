@@ -120,7 +120,7 @@ const styles = {
     boxShadow: '0 0 20px var(--card-shadow)',
     width: '90%',
     margin: 0,
-    height: '260px',
+    height: '360px',
     display: 'flex', overflow: 'hidden',
     flexDirection: 'column',
   },
@@ -134,6 +134,8 @@ const styles = {
   chartContainer: {
     flexGrow: 1,
     width: '100%',
+    paddingRight:"1rem",
+    paddingTop:"2.5rem",
   },
   loadingText: {
     color: 'var(--text-secondary)',

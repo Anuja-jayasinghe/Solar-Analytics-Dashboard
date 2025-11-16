@@ -91,7 +91,7 @@ function AppContent() {
 }
 
 // maintanance toggle
-const IS_MAINTENANCE = true
+const IS_MAINTENANCE = false
 
 function App() {
 

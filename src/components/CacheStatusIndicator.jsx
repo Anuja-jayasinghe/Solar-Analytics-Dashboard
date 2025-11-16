@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useData } from '../contexts/DataContext';
+import { useData } from "../hooks/useData"; // Adjust path as needed
 
 const CacheStatusIndicator = () => {
   const { cacheStats, lastRefresh, isBackgroundRefreshing } = useData();

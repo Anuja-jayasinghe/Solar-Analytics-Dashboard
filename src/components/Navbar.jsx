@@ -24,7 +24,7 @@ function Navbar() {
   return (
     <>
       <nav className="navbar">
-        <h1 style={{ color: "var(--accent)" }}>SolarEdge</h1>
+        <h1 style={{ color: "var(--accent)", fontSize:"1.5rem", fontWeight: "bold" }}>SolarEdge</h1>
         <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
           <button
             onClick={toggleTheme}
@@ -176,7 +176,7 @@ function Navbar() {
                   e.target.style.opacity = "0.5";
                 }}
               >
-                <em>Or maybe this text is clickable...</em>
+                <em>BoooooooooooooooHaa!...</em>
               </span>
             </div>
             <button

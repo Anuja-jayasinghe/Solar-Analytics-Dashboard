@@ -1,0 +1,28 @@
+{
+  "nPages": 2,
+  "info": {
+    "PDFFormatVersion": "1.4",
+    "IsAcroFormPresent": false,
+    "IsXFAPresent": false,
+    "Creator": "Adobe InDesign 16.0 (Windows)",
+    "Producer": "Adobe PDF Library 15.0",
+    "CreationDate": "D:20250701185130+08'00'",
+    "ModDate": "D:20250701185130+08'00'",
+    "Trapped": {
+      "name": "False"
+    }
+  },
+  "metadata": {
+    "_metadata": {
+      "xmp:modifydate": "2025-07-01T18:51:30+08:00",
+      "xmp:createdate": "2025-07-01T18:51:30+08:00",
+      "xmp:metadatadate": "2025-07-01T18:51:30+08:00",
+      "xmp:creatortool": "Adobe InDesign 16.0 (Windows)",
+      "dc:format": "application/pdf",
+      "xmpmm:documentid": "uuid:d1a1cae5-2650-4307-9935-a11a1f97f75b",
+      "xmpmm:instanceid": "uuid:5364c98a-45c0-44ae-ad3b-3cb0ac5859cb",
+      "pdf:producer": "Adobe PDF Library 15.0",
+      "pdf:trapped": "False"
+    }
+  }
+}
