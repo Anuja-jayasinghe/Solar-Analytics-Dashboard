@@ -7,6 +7,8 @@ import TotalGenerationCard from "../components/dashboard/TotalGenerationCard";
 import TotalEarningsCard from "../components/dashboard/TotalEarningsCard";
 import CacheStatusIndicator from "../components/CacheStatusIndicator";
 import ComingSoonNote from "../components/ComingSoonNote";
+import RefreshIndicator from "../components/RefreshIndicator";
+import { ChartSkeleton, CardSkeleton } from "../components/SkeletonLoader";
 
 // Lazy load heavy chart components
 const EnergyCharts = lazy(() => import("../components/dashboard/EnergyCharts"));
@@ -19,6 +21,7 @@ function Dashboard() {
     <div style={pageStyle}>
       <CacheStatusIndicator />
       <ComingSoonNote />
+      <RefreshIndicator />
 
       {/* --- Upper Highlight Section --- */}
       <div style={highlightSection}>
@@ -38,20 +41,20 @@ function Dashboard() {
 
       {/* --- Main Energy Analytics --- */}
       <div style={mainCharts}>
-        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px', color: 'var(--accent)' }}>Loading charts...</div>}>
+        <Suspense fallback={<ChartSkeleton />}>
           <EnergyCharts />
         </Suspense>
       </div>
 
       {/* --- Secondary Section --- */}
       <div style={gridStyle}>
-        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px', color: 'var(--accent)' }}>Loading...</div>}>
+        <Suspense fallback={<CardSkeleton />}>
           <EarningsBreakdown />
         </Suspense>
-        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px', color: 'var(--accent)' }}>Loading...</div>}>
+        <Suspense fallback={<CardSkeleton />}>
           <EnvironmentalImpact/>
         </Suspense>
-        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px', color: 'var(--accent)' }}>Loading...</div>}>
+        <Suspense fallback={<CardSkeleton />}>
           <SystemTrends />
         </Suspense>
       </div>

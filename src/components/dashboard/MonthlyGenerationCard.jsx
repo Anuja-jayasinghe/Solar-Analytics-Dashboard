@@ -4,14 +4,15 @@ import { useData } from "../../hooks/useData"; // Adjust path as needed
 import { supabase } from "../../lib/supabaseClient";
 
 const MonthlyGenerationCard = () => {
-  const { monthlyGenerationData, loading, errors, refreshData } = useData();
+  const { monthlyGenerationData, loading, errors, refreshData, lastUpdate } = useData();
 
-    // Extract data from context
+  // Extract data from context
   const total = monthlyGenerationData?.total || 0;
   const billingPeriodLabel = monthlyGenerationData?.billingPeriodLabel;
   const isLoading = loading.monthlyGen;
-
-  // ✅ Convert only if >= 1000 kWh — keep exact precision
+  
+  // Check if data is stale (>10 minutes old)
+  const isStale = lastUpdate.monthlyGen && (Date.now() - lastUpdate.monthlyGen > 10 * 60 * 1000);  // ✅ Convert only if >= 1000 kWh — keep exact precision
   let displayValue = total;
   let unit = "kWh";
 
@@ -34,7 +35,7 @@ const MonthlyGenerationCard = () => {
         boxShadow: "0 8px 28px var(--card-shadow), inset 0 1px 1px var(--glass-border)",
       }}
     >
-      <h3 style={{ ...labelStyle, color: "var(--accent)" }}>
+      <h3 style={{ ...labelStyle, color: "var(--accent)", display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
         📆 {billingPeriodLabel || "This Month's Generation"}
         {errors.monthlyGen && (
           <button 
@@ -44,6 +45,9 @@ const MonthlyGenerationCard = () => {
           >
             ⚠️
           </button>
+        )}
+        {isStale && !errors.monthlyGen && (
+          <span style={staleBadge} title="Data may be outdated">⏱️</span>
         )}
       </h3>
       <p style={{ ...valueStyle, color: "var(--accent)" }}>
@@ -74,8 +78,13 @@ const retryButton = {
   padding: "0.2rem 0.4rem",
   fontSize: "0.7rem",
   cursor: "pointer",
-  marginLeft: "0.5rem",
   transition: "all 0.2s ease",
+};
+
+const staleBadge = {
+  fontSize: '0.9rem',
+  opacity: 0.7,
+  cursor: 'help',
 };
 
 export default MonthlyGenerationCard;

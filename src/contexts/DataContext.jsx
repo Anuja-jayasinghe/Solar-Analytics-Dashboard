@@ -32,8 +32,89 @@ export const DataProvider = ({ children }) => {
   const [lastUpdate, setLastUpdate] = useState({});
   const [isStale, setIsStale] = useState(false);
 
+  // Retry and circuit breaker states
+  const retryStateRef = useRef({
+    charts: { attempts: 0, nextRetry: null, consecutiveFailures: 0, circuitOpen: false },
+    live: { attempts: 0, nextRetry: null, consecutiveFailures: 0, circuitOpen: false },
+    totalEarnings: { attempts: 0, nextRetry: null, consecutiveFailures: 0, circuitOpen: false },
+    monthlyGen: { attempts: 0, nextRetry: null, consecutiveFailures: 0, circuitOpen: false }
+  });
+
   // Refs for polling intervals
   const intervalsRef = useRef({});
+
+  // Error classification helper
+  const classifyError = (error) => {
+    // Check for HTTP status codes
+    const status = error?.status || error?.code;
+    const message = error?.message?.toLowerCase() || '';
+
+    if (status === 401 || status === 403) {
+      return { type: 'auth', shouldRetry: false, action: 'show-auth-modal' };
+    }
+    if (status === 429) {
+      return { type: 'rate-limit', shouldRetry: true, action: 'extend-interval' };
+    }
+    if (status === 400 || status === 404) {
+      return { type: 'client', shouldRetry: false, action: 'log-only' };
+    }
+    if (status >= 500 && status < 600) {
+      return { type: 'server', shouldRetry: true, action: 'exponential-backoff' };
+    }
+    if (message.includes('timeout') || message.includes('network')) {
+      return { type: 'transient', shouldRetry: true, action: 'exponential-backoff' };
+    }
+    
+    // Default: treat as transient
+    return { type: 'unknown', shouldRetry: true, action: 'exponential-backoff' };
+  };
+
+  // Calculate retry delay with exponential backoff
+  const getRetryDelay = (attempts) => {
+    const delays = [30000, 60000, 300000]; // 30s, 1m, 5m
+    return delays[Math.min(attempts, delays.length - 1)];
+  };
+
+  // Schedule retry for a specific key
+  const scheduleRetry = useCallback((key, error) => {
+    const errorClass = classifyError(error);
+    const retryState = retryStateRef.current[key];
+
+    if (!errorClass.shouldRetry) {
+      console.log(`[DataContext] Error for ${key} is not retryable:`, errorClass.type);
+      retryState.attempts = 0;
+      return;
+    }
+
+    retryState.attempts += 1;
+    retryState.consecutiveFailures += 1;
+
+    // Circuit breaker: open circuit after 5 consecutive failures
+    if (retryState.consecutiveFailures >= 5) {
+      console.warn(`[DataContext] Circuit breaker opened for ${key} after 5 consecutive failures`);
+      retryState.circuitOpen = true;
+      retryState.nextRetry = Date.now() + 30 * 60 * 1000; // 30 minutes pause
+      return;
+    }
+
+    // Max 3 retries, then 30-min pause
+    if (retryState.attempts >= 3) {
+      console.warn(`[DataContext] Max retries reached for ${key}, pausing for 30 minutes`);
+      retryState.attempts = 0;
+      retryState.nextRetry = Date.now() + 30 * 60 * 1000;
+      return;
+    }
+
+    const delay = getRetryDelay(retryState.attempts - 1);
+    retryState.nextRetry = Date.now() + delay;
+    
+    console.log(`[DataContext] Scheduling retry ${retryState.attempts}/3 for ${key} in ${delay/1000}s`);
+    
+    setTimeout(() => {
+      console.log(`[DataContext] Retrying ${key} (attempt ${retryState.attempts})`);
+      fetchData(key);
+    }, delay);
+  }, []);
 
   const fetchData = useCallback(async (key, skipCache = false) => {
     if (!key) return;
@@ -178,23 +259,45 @@ export const DataProvider = ({ children }) => {
         setLastUpdate(prev => ({ ...prev, [key]: Date.now() }));
       }
 
-      // Clear errors on success
+      // Clear errors and reset retry state on success
       setErrors((prev) => ({ ...prev, [key]: null }));
+      const retryState = retryStateRef.current[key];
+      retryState.attempts = 0;
+      retryState.consecutiveFailures = 0;
+      retryState.circuitOpen = false;
+      retryState.nextRetry = null;
       
     } catch (err) {
       console.error(`Error in DataContext fetching ${key}:`, err);
+      
+      // Classify error and determine action
+      const errorClass = classifyError(err);
+      
       // Keep showing cached data on error; just mark error
+      const errorMessage = err.message || 'Unknown error';
       if (key === 'live') {
-        setErrors((prev) => ({ ...prev, live: err.message, inverterValue: err.message }));
+        setErrors((prev) => ({ 
+          ...prev, 
+          live: { message: errorMessage, type: errorClass.type, time: Date.now() },
+          inverterValue: { message: errorMessage, type: errorClass.type, time: Date.now() }
+        }));
       } else {
-        setErrors((prev) => ({ ...prev, [key]: err.message }));
+        setErrors((prev) => ({ 
+          ...prev, 
+          [key]: { message: errorMessage, type: errorClass.type, time: Date.now() }
+        }));
+      }
+
+      // Handle retry logic based on error classification
+      if (errorClass.shouldRetry) {
+        scheduleRetry(key, err);
       }
     } finally {
       if (key !== 'live') {
         setLoading((prev) => ({ ...prev, [key]: false }));
       }
     }
-  }, []);
+  }, [scheduleRetry]);
 
   // Setup polling intervals with visibility awareness
   const setupPolling = useCallback(() => {
@@ -205,8 +308,33 @@ export const DataProvider = ({ children }) => {
       monthlyGen: 15 * 60 * 1000  // 15 minutes
     };
 
-    const shouldPoll = () => {
-      return document.visibilityState === 'visible' && navigator.onLine;
+    const shouldPoll = (key) => {
+      if (document.visibilityState !== 'visible' || !navigator.onLine) {
+        return false;
+      }
+
+      // Check circuit breaker
+      const retryState = retryStateRef.current[key];
+      if (retryState.circuitOpen && Date.now() < retryState.nextRetry) {
+        console.log(`[DataContext] Circuit breaker open for ${key}, skipping poll`);
+        return false;
+      }
+
+      // Check if waiting for retry
+      if (retryState.nextRetry && Date.now() < retryState.nextRetry) {
+        console.log(`[DataContext] Waiting for retry for ${key}, skipping poll`);
+        return false;
+      }
+
+      // Reset circuit breaker if cooldown expired
+      if (retryState.circuitOpen && Date.now() >= retryState.nextRetry) {
+        console.log(`[DataContext] Circuit breaker reset for ${key}`);
+        retryState.circuitOpen = false;
+        retryState.consecutiveFailures = 0;
+        retryState.attempts = 0;
+      }
+
+      return true;
     };
 
     Object.entries(pollingConfig).forEach(([key, interval]) => {
@@ -215,7 +343,7 @@ export const DataProvider = ({ children }) => {
       }
 
       intervalsRef.current[key] = setInterval(() => {
-        if (shouldPoll()) {
+        if (shouldPoll(key)) {
           console.log(`[DataContext] Polling ${key}`);
           fetchData(key);
         }
