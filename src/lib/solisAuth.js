@@ -38,8 +38,11 @@ export async function buildSolisHeaders(apiPath, body = '', method = 'POST') {
   const signature = CryptoJS.HmacSHA1(canonical, apiSecret);
   const base64Sign = CryptoJS.enc.Base64.stringify(signature);
 
-  console.log('🧾 Canonical String:\n' + canonical);
-  console.log('🔏 Signature:', base64Sign);
+  const DEBUG = (process?.env?.NODE_ENV !== 'production') && ((typeof import.meta !== 'undefined' && import.meta?.env?.DEV) || (process?.env?.DEBUG === 'true'));
+  if (DEBUG) {
+    console.log('🧾 Canonical String:\n' + canonical);
+    console.log('🔏 Signature:', base64Sign);
+  }
 
   return {
     'Content-MD5': contentMd5,
@@ -64,7 +67,7 @@ export async function solisFetch(apiPath, body = {}, method = 'POST') {
   const headers = await buildSolisHeaders(apiPath, body, method);
 
   const endpoint = `${apiUrl.replace(/\/+$/, '')}/${apiPath.replace(/^\/+/, '')}`;
-  console.log('🌍 Solis API Endpoint:', endpoint);
+  if (DEBUG) console.log('🌍 Solis API Endpoint:', endpoint);
 
   const options = { method, headers };
   if (method === 'POST') options.body = JSON.stringify(body);
@@ -81,10 +84,9 @@ export async function solisFetch(apiPath, body = {}, method = 'POST') {
   }
 
   if (!res.ok) {
-    console.error('❌ Solis API Error:', data);
+    if (DEBUG) console.error('❌ Solis API Error:', data);
     throw new Error(`HTTP ${res.status}: ${data.msg || text}`);
   }
-
-  console.log('✅ Solis API Response:', data);
+  if (DEBUG) console.log('✅ Solis API Response:', data);
   return data;
 }

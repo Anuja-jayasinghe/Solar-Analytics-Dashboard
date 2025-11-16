@@ -19,6 +19,7 @@ const SettingsIcon = ({ className }) => (
 );
 
 function Sidebar({ onDevToolsToggle }) {
+  const devtoolsEnabled = (import.meta?.env?.VITE_ENABLE_DEVTOOLS ?? 'true') === 'true';
   const [isMobile, setIsMobile] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -259,19 +260,20 @@ function Sidebar({ onDevToolsToggle }) {
           </NavLink>
         </nav>
         
-        {!isMobile && <div className="devtools-divider" />}
-        
-        <button
-          className="devtools-button"
-          onClick={() => {
-            if (onDevToolsToggle) onDevToolsToggle();
-            if (isMobile) closeSidebar();
-          }}
-          title="Toggle Dev Tools"
-          aria-label="Toggle Dev Tools"
-        >
-          🛠️
-        </button>
+        {!isMobile && devtoolsEnabled && <div className="devtools-divider" />}
+        {devtoolsEnabled && (
+          <button
+            className="devtools-button"
+            onClick={() => {
+              if (onDevToolsToggle) onDevToolsToggle();
+              if (isMobile) closeSidebar();
+            }}
+            title="Toggle Dev Tools"
+            aria-label="Toggle Dev Tools"
+          >
+            🛠️
+          </button>
+        )}
       </div>
     </>
   );
