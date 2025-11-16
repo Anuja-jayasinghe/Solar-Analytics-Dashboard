@@ -38,8 +38,8 @@ const Settings = () => {
         setMessage('⚠️ No settings found in database. You need to add some settings first.');
       } else {
         setMessage('');
-        const themeSetting = data?.find(s => s.setting_name === 'theme');
-        if (themeSetting) setTheme(themeSetting.setting_value);
+        // Don't auto-apply theme from database on mount - respect user's current theme
+        // Only sync if database value differs from current localStorage/context
       }
     }
     setLoading(false);
