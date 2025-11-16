@@ -20,6 +20,7 @@ const EnvironmentalImpact = lazy(() => import("../components/dashboard/Environme
 const SystemTrends = lazy(() => import("../components/dashboard/SystemTrends"));
 
 function Dashboard({ devToolsOpen, setDevToolsOpen }) {
+  const devtoolsEnabled = (import.meta?.env?.VITE_ENABLE_DEVTOOLS ?? 'true') === 'true';
   return (
     <div style={pageStyle}>
       <CacheStatusIndicator />
@@ -27,7 +28,9 @@ function Dashboard({ devToolsOpen, setDevToolsOpen }) {
       <RefreshIndicator />
       <ErrorBanner />
       <AuthErrorModal />
-      <DevToolsPanel open={devToolsOpen} onClose={() => setDevToolsOpen(false)} />
+      {devtoolsEnabled && (
+        <DevToolsPanel open={devToolsOpen} onClose={() => setDevToolsOpen(false)} />
+      )}
 
       {/* --- Upper Highlight Section --- */}
       <div style={highlightSection}>

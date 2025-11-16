@@ -1,45 +1,10 @@
-# .github/workflows/fetch_solis_data.yml
-name: ☀️ Fetch SolisCloud Inverter Data
+name: DISABLED — Fetch SolisCloud Inverter Data (duplicate)
 
 on:
-  workflow_dispatch:
-
-  schedule:
-    # Corrected: Fetch live data every 5 minutes (approx. 06:30 AM – 07:59 PM LK)
-    - cron: '*/5 1-14 * * *'
-    # Nightly summary at 11:30 PM LK (18:00 UTC) - This was already correct
-    - cron: '0 18 * * *'
+  workflow_call:
 
 jobs:
-  fetch-and-store:
+  noop:
     runs-on: ubuntu-latest
-
-    # Define environment variables once for the entire job
-    env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-      SOLIS_API_ID: ${{ secrets.SOLIS_API_ID }}
-      SOLIS_API_SECRET: ${{ secrets.SOLIS_API_SECRET }}
-
     steps:
-      - name: 🧩 Checkout repository
-        uses: actions/checkout@v4
-
-      # --- FIX: Install pnpm before using it ---
-      - name: 🧰 Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
-      - name: 🧰 Setup Node.js and cache dependencies
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm' # Cache dependencies for pnpm for faster runs
-
-      - name: 📦 Install dependencies
-        run: pnpm install # This will now work
-
-      - name: 🚀 Run SolisCloud Fetch Script
-        # The env variables are inherited from the job level
-        run: node ./functions/fetch_inverter_data/index.js
+      - run: echo "This duplicate workflow file is disabled; use fetch-inverter-data.yml"

@@ -23,6 +23,7 @@ function AppContent() {
   const { isAdmin, loading, session } = useContext(AuthContext);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [devToolsOpen, setDevToolsOpen] = useState(false);
+  const devtoolsEnabled = (import.meta?.env?.VITE_ENABLE_DEVTOOLS ?? 'true') === 'true';
 
   useEffect(() => {
     verifySupabaseConnection().then((result) => {
@@ -64,7 +65,7 @@ function AppContent() {
               <Sidebar 
                 isCollapsed={isCollapsed} 
                 setIsCollapsed={setIsCollapsed}
-                onDevToolsToggle={() => setDevToolsOpen((v) => !v)}
+                onDevToolsToggle={devtoolsEnabled ? (() => setDevToolsOpen((v) => !v)) : undefined}
               />
               <div
                 className="main-content"

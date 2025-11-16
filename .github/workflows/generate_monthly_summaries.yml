@@ -1,43 +1,10 @@
-# .github/workflows/generate_monthly_summaries.yml
-name: 📅 Generate Monthly Summaries
+name: DISABLED — Generate Monthly Summaries (duplicate)
 
 on:
-  workflow_dispatch:
-  schedule:
-    # Runs once a day at 19:00 UTC (12:30 AM Sri Lanka)
-    - cron: '0 19 * * *'
+  workflow_call:
 
 jobs:
-  monthly-summary:
+  noop:
     runs-on: ubuntu-latest
-
-    # Define environment variables once for the entire job
-    env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-
     steps:
-      - name: 🧩 Checkout repository
-        uses: actions/checkout@v4
-
-      # --- START OF FIX ---
-
-      - name: 🧰 Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8 # Or your preferred version
-
-      - name: 🧰 Setup Node.js and cache dependencies
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm' # Cache pnpm dependencies for faster runs
-
-      # --- END OF FIX ---
-
-      - name: 📦 Install dependencies
-        run: pnpm install # This will now work
-
-      - name: 🚀 Run Monthly Summary Script
-        # Environment variables are inherited from the job level
-        run: node ./functions/generate_monthly_summaries/index.js
+      - run: echo "This duplicate workflow file is disabled; use generate-monthly-summaries.yml"
