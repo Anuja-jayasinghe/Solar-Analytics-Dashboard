@@ -6,6 +6,9 @@ const ErrorBanner = () => {
   const [visibleErrors, setVisibleErrors] = useState([]);
 
   useEffect(() => {
+    // Safety check
+    if (!errors || typeof errors !== 'object') return;
+
     // Check for errors that are >5 minutes old (prolonged outages)
     const now = Date.now();
     const prolongedThreshold = 5 * 60 * 1000; // 5 minutes

@@ -39,7 +39,7 @@ const TotalGenerationCard = () => {
           <button 
             onClick={() => refreshData('live')} // Refresh 'live' data
             style={retryButton}
-            title="Retry loading data"
+            title={`Error: ${typeof hasError === 'object' ? hasError.message : hasError}`}
           >
             ⚠️
           </button>

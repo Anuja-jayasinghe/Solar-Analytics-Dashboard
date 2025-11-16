@@ -32,7 +32,7 @@ const TotalEarningsCard = () => {
           <button 
             onClick={() => refreshData('totalEarnings')} // Corrected from 'totalEar'
             style={retryButton}
-            title="Retry loading data"
+            title={`Error: ${typeof hasError === 'object' ? hasError.message : hasError}`}
           >
             ⚠️
           </button>

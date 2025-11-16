@@ -40,8 +40,9 @@ export const DataProvider = ({ children }) => {
     monthlyGen: { attempts: 0, nextRetry: null, consecutiveFailures: 0, circuitOpen: false }
   });
 
-  // Refs for polling intervals
+  // Refs for polling intervals and fetchData (to avoid circular dependencies)
   const intervalsRef = useRef({});
+  const fetchDataRef = useRef(null);
 
   // Error classification helper
   const classifyError = (error) => {
@@ -75,8 +76,8 @@ export const DataProvider = ({ children }) => {
     return delays[Math.min(attempts, delays.length - 1)];
   };
 
-  // Schedule retry for a specific key
-  const scheduleRetry = useCallback((key, error) => {
+  // Schedule retry for a specific key (using ref to avoid circular dependency)
+  const scheduleRetry = (key, error) => {
     const errorClass = classifyError(error);
     const retryState = retryStateRef.current[key];
 
@@ -112,9 +113,10 @@ export const DataProvider = ({ children }) => {
     
     setTimeout(() => {
       console.log(`[DataContext] Retrying ${key} (attempt ${retryState.attempts})`);
-      fetchData(key);
+      // Call fetchData directly - no circular dependency since it's in setTimeout
+      fetchDataRef.current(key);
     }, delay);
-  }, []);
+  };
 
   const fetchData = useCallback(async (key, skipCache = false) => {
     if (!key) return;
@@ -297,7 +299,10 @@ export const DataProvider = ({ children }) => {
         setLoading((prev) => ({ ...prev, [key]: false }));
       }
     }
-  }, [scheduleRetry]);
+  }, []);
+
+  // Store fetchData in ref for retry mechanism
+  fetchDataRef.current = fetchData;
 
   // Setup polling intervals with visibility awareness
   const setupPolling = useCallback(() => {

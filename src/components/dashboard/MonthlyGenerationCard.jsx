@@ -41,7 +41,7 @@ const MonthlyGenerationCard = () => {
           <button 
             onClick={() => refreshData('monthlyGen')} 
             style={retryButton}
-            title="Retry loading data"
+            title={`Error: ${typeof errors.monthlyGen === 'object' ? errors.monthlyGen.message : errors.monthlyGen}`}
           >
             ⚠️
           </button>

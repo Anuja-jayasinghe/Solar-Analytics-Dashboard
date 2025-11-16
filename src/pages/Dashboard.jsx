@@ -8,6 +8,8 @@ import TotalEarningsCard from "../components/dashboard/TotalEarningsCard";
 import CacheStatusIndicator from "../components/CacheStatusIndicator";
 import ComingSoonNote from "../components/ComingSoonNote";
 import RefreshIndicator from "../components/RefreshIndicator";
+import ErrorBanner from "../components/ErrorBanner";
+import AuthErrorModal from "../components/AuthErrorModal";
 import { ChartSkeleton, CardSkeleton } from "../components/SkeletonLoader";
 
 // Lazy load heavy chart components
@@ -22,6 +24,8 @@ function Dashboard() {
       <CacheStatusIndicator />
       <ComingSoonNote />
       <RefreshIndicator />
+      <ErrorBanner />
+      <AuthErrorModal />
 
       {/* --- Upper Highlight Section --- */}
       <div style={highlightSection}>
