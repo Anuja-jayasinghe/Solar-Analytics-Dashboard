@@ -1,4 +1,4 @@
-# ☀️ Solar Analytics Dashboard
+"# ☀️ Solar Analytics Dashboard
 
 Real-time solar power monitoring and analytics dashboard with advanced caching, error handling, and billing period tracking.
 
@@ -6,10 +6,6 @@ Real-time solar power monitoring and analytics dashboard with advanced caching, 
 ![React](https://img.shields.io/badge/react-19.2.0-blue)
 ![Vite](https://img.shields.io/badge/vite-7.1.10-purple)
 ![License](https://img.shields.io/badge/license-MIT-green)
-
-## 📋 Overview
-
-**Solar Analytics Dashboard** is a modern React-based web application for monitoring and analyzing solar energy generation data. It provides comprehensive analytics for both CEB (Ceylon Electricity Board) export data and inverter generation data, with advanced admin management capabilities, real-time updates, and intelligent caching.
 
 ## ✨ Features
 
@@ -49,32 +45,14 @@ Real-time solar power monitoring and analytics dashboard with advanced caching, 
 - **Chart Alignment** - Tooltips show exact billing periods (e.g., "Oct 05 - Nov 04")
 - **Fallback Logic** - Defaults to calendar month if settings unavailable
 
-#### 🔐 Admin Features
-- **Google OAuth Integration** - Secure admin authentication
-- **Role-based Access Control** - Admin verification from database
-- **CEB Data Management** - Complete CRUD operations
-- **Session Persistence** - Maintains login state
-- **Cache Management** - Admin status caching with retry logic
-
 ## 🏗️ Architecture
 
 ### Tech Stack
-
-#### Frontend
-- **React 19.2** - Modern React with latest features
-- **Vite 7.1** - Fast build tool and development server
-- **React Router DOM 7.9** - Client-side routing
-- **Recharts 3.2** - React charting library
-- **Chart.js 4.5** - Additional charting capabilities
-
-#### Backend & Database
-- **Supabase 2.58** - Backend-as-a-Service (BaaS) platform
-- **PostgreSQL** - Database (via Supabase)
-- **Solis Cloud API** - Inverter data integration
-
-#### Development Tools
-- **ESLint 9.36** - Code linting and quality
-- **JavaScript (ES6+)** - Modern JavaScript with modules
+- **Frontend**: React 19.2, Vite 7.1
+- **Styling**: Custom CSS with CSS Variables for theming
+- **Charts**: Recharts
+- **Backend**: Supabase (PostgreSQL + Edge Functions)
+- **API**: Solis Cloud API for inverter data
 
 ### Data Flow
 ```
@@ -177,30 +155,22 @@ $$ LANGUAGE plpgsql;
 
 ## 📱 Usage
 
-### Dashboard Components
-
-#### Power Monitoring
+### Dashboard
 - **Live Power Dial** - Shows current generation in kW
-- **Daily Target Tracker** - Progress against generation goals
-- **Current Power Card** - Real-time power output
-
-#### Generation & Earnings
 - **Monthly Generation** - Total kWh for current billing period
 - **Total Generation** - All-time generation from inverter
 - **Total Earnings** - Cumulative earnings from CEB
-- **Earnings Difference** - Comparison between sources
 
-#### Charts & Analytics
+### Charts
 - **Energy Charts** - Monthly inverter vs CEB comparison
-- **System Trends** - Performance analytics over time
-- **Environmental Impact** - CO2 savings and tree equivalency visualization
+- **Earnings Breakdown** - Monthly earnings trend
+- **Environmental Impact** - CO2 savings visualization
+- **System Trends** - Performance analytics
 
 ### Admin Features
-Access via `/admin` route:
-- **CEB Data Management** - Full CRUD operations for export data
-- **System Settings** - Configuration management
-- **Cache Statistics** - Monitor cache performance
-- **Admin User Management** - Control admin access
+- CEB data management (CRUD operations)
+- System settings configuration
+- Cache statistics and controls
 
 ## 🧪 Testing
 
@@ -285,57 +255,43 @@ Set these in your deployment platform:
 
 ## 📝 Documentation
 
-### User Guides
-- **[Testing Guide](./docs/guides/TESTING_GUIDE.md)** - Comprehensive test procedures and checklists
-- **[Deployment Checklist](./docs/guides/DEPLOYMENT_CHECKLIST.md)** - Production deployment steps
-- **[Data Refresh & Caching Guide](./docs/guides/DATA_REFRESH_AND_CACHING_GUIDE.md)** - Caching strategy and polling details
+- [TESTING_GUIDE.md](./TESTING_GUIDE.md) - Comprehensive test procedures
+- [IMPLEMENTATION_TRACKER.md](./IMPLEMENTATION_TRACKER.md) - Phase 1-4 implementation checklist
+- [CACHING_IMPLEMENTATION.md](./CACHING_IMPLEMENTATION.md) - Caching strategy details
+- [ADMIN_IMPROVEMENT_NOTES.md](./ADMIN_IMPROVEMENT_NOTES.md) - Future admin enhancements
 
-### Development Docs
-- **[Admin Improvement Notes](./docs/development/ADMIN_IMPROVEMENT_NOTES.md)** - Future admin enhancements and security improvements
-- **[Documentation Index](./docs/README.md)** - Complete documentation hub
-
-### Historical Records
-- **[Implementation Tracker](./docs/archive/IMPLEMENTATION_TRACKER.md)** - Phase 1-4 implementation history
-- **[Data Fetching Audit](./docs/archive/DATA_FETCHING_AUDIT_REPORT.md)** - Architecture audit and findings
-- **[Changelog](./CHANGELOG.md)** - Version history and release notes
+## 🛠️ Development
 
 ### Project Structure
 ```
-Solar-Analytics-Dashboard/
-├── src/
-│   ├── components/         # Reusable UI components
-│   │   ├── dashboard/     # Dashboard-specific components
-│   │   ├── admin/         # Admin panel components
-│   │   └── ...            # Common components (Navbar, Sidebar, etc.)
-│   ├── contexts/          # React Context providers
-│   │   ├── DataContext.jsx       # Main data management with SWR
-│   │   ├── AuthContext.jsx       # Authentication state
-│   │   └── ThemeContext.jsx      # Theme management
-│   ├── hooks/             # Custom React hooks
-│   │   └── useData.js    # Data context consumer
-│   ├── lib/               # Utilities and services
-│   │   ├── cacheService.js       # Dual-layer caching with TTL
-│   │   ├── dataService.js        # API calls and aggregation
-│   │   ├── solisAuth.js          # Solis API authentication
-│   │   └── supabaseClient.js     # Supabase configuration
-│   ├── pages/             # Route components
-│   │   ├── Dashboard.jsx
-│   │   ├── Settings.jsx
-│   │   ├── AdminLogin.jsx
-│   │   └── AdminDashboard.jsx
-│   └── assets/            # Static assets
-├── api/                   # Serverless API functions (Vercel)
-│   ├── fetch-inverter-data.js
-│   ├── generate-monthly-summaries.js
-│   └── update-total-generation.js
-├── docs/                  # Documentation
-│   ├── guides/           # User and deployment guides
-│   ├── development/      # Development notes and plans
-│   └── archive/          # Historical documentation
-├── scripts/              # Utility scripts
-│   └── backfill_monthly_summaries.js
-└── public/               # Static public assets
+src/
+├── components/         # Reusable UI components
+│   ├── dashboard/     # Dashboard-specific components
+│   ├── admin/         # Admin panel components
+│   └── SkeletonLoader.jsx, ErrorBanner.jsx, etc.
+├── contexts/          # React Context providers
+│   ├── DataContext.jsx       # Main data management
+│   ├── AuthContext.jsx       # Authentication
+│   └── ThemeContext.jsx      # Theme management
+├── hooks/             # Custom React hooks
+│   └── useData.js    # Data context consumer
+├── lib/               # Utilities and services
+│   ├── cacheService.js       # Caching layer
+│   ├── dataService.js        # API calls
+│   └── supabaseClient.js     # Supabase config
+├── pages/             # Route components
+│   ├── Dashboard.jsx
+│   ├── Settings.jsx
+│   └── AdminDashboard.jsx
+└── assets/            # Static assets
 ```
+
+### Key Files
+- **DataContext.jsx** - Central state management with SWR, polling, error handling
+- **cacheService.js** - Dual-layer cache with TTL expiration
+- **Dashboard.jsx** - Main dashboard layout with lazy loading
+- **ErrorBanner.jsx** - Prolonged outage notifications
+- **AuthErrorModal.jsx** - Authentication error handling
 
 ## 🐛 Troubleshooting
 
@@ -361,40 +317,36 @@ Solar-Analytics-Dashboard/
 
 ## 🎯 Roadmap
 
-### Completed ✅
-- SWR caching implementation
-- Adaptive polling with visibility awareness
-- Error handling with exponential backoff
-- Circuit breaker pattern
-- Billing period accuracy
-- Theme persistence
-- User notifications (banners/modals)
-- Skeleton loaders and loading states
-- Admin authentication with Google OAuth
+### Completed (Phase 1-5)
+- ✅ SWR caching implementation
+- ✅ Adaptive polling with visibility awareness
+- ✅ Error handling with exponential backoff
+- ✅ Circuit breaker pattern
+- ✅ Billing period accuracy
+- ✅ Theme persistence fix
+- ✅ User notifications (banners/modals)
 
-### In Progress 🚧
-- Advanced admin features
-- User management system
-- Enhanced error logging
+### Phase 6 (Optional)
+- [ ] Cache statistics dashboard
+- [ ] Context state inspector
+- [ ] Advanced logging system
 
-### Planned 📋
-- Cache statistics dashboard
-- IndexedDB for larger datasets
-- Request deduplication
-- Mobile app (React Native)
-- Push notifications
-- Export to CSV/PDF
-- Multi-site support
-- ML-based predictions
+### Phase 7 (Optional)
+- [ ] IndexedDB for larger datasets
+- [ ] Request deduplication
+- [ ] Prefetching strategies
+- [ ] Background sync API
+
+### Future Enhancements
+- [ ] Mobile app (React Native)
+- [ ] Push notifications for alerts
+- [ ] Export data to CSV/PDF
+- [ ] Multi-site support
+- [ ] Advanced analytics (ML predictions)
 
 ## 🤝 Contributing
 
-Contributions welcome! Please follow these steps:
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
+Contributions welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) first.
 
 ## 📄 License
 
@@ -413,7 +365,6 @@ MIT License - see [LICENSE](./LICENSE) file
 
 ---
 
-**Last Updated:** November 17, 2025  
+**Last Updated:** November 16, 2025  
 **Version:** 2.0.0  
-**Status:** Production Ready ✅
-
+**Status:** Production Ready ✅" 
