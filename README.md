@@ -14,8 +14,6 @@
 ![Vite](https://img.shields.io/badge/vite-7.1.10-purple)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-<<<<<<< Updated upstream
-=======
 ---
 
 ## 📌 Overview
@@ -43,7 +41,6 @@ Solar Analytics Dashboard was born out of the need to efficiently monitor solar 
 
 ---
 
->>>>>>> Stashed changes
 ## ✨ Features
 
 * 🔐 **Admin Authentication** with Google OAuth
@@ -86,16 +83,6 @@ Solar Analytics Dashboard was born out of the need to efficiently monitor solar 
 
 ## 🛠 Development Commands
 
-<<<<<<< Updated upstream
-## 🏗️ Architecture
-
-### Tech Stack
-- **Frontend**: React 19.2, Vite 7.1
-- **Styling**: Custom CSS with CSS Variables for theming
-- **Charts**: Recharts
-- **Backend**: Supabase (PostgreSQL + Edge Functions)
-- **API**: Solis Cloud API for inverter data
-=======
 * `npm run dev` — Start dev server
 * `npm run build` — Create production build
 * `npm run preview` — Preview production build
@@ -116,7 +103,6 @@ Solar Analytics Dashboard was born out of the need to efficiently monitor solar 
 ---
 
 ## 🏗️ Architecture Details
->>>>>>> Stashed changes
 
 ### Data Flow
 ```
@@ -221,24 +207,6 @@ $$ LANGUAGE plpgsql;
 
 ## 📦 Deployment
 
-<<<<<<< Updated upstream
-### Dashboard
-- **Live Power Dial** - Shows current generation in kW
-- **Monthly Generation** - Total kWh for current billing period
-- **Total Generation** - All-time generation from inverter
-- **Total Earnings** - Cumulative earnings from CEB
-
-### Charts
-- **Energy Charts** - Monthly inverter vs CEB comparison
-- **Earnings Breakdown** - Monthly earnings trend
-- **Environmental Impact** - CO2 savings visualization
-- **System Trends** - Performance analytics
-
-### Admin Features
-- CEB data management (CRUD operations)
-- System settings configuration
-- Cache statistics and controls
-=======
 * **Frontend**: Deployed on [Vercel](https://vercel.com) at [solaredge.anujajay.com](https://solaredge.anujajay.com/)
 * **Backend**: Powered by Supabase + Solis Cloud API
 * **Admin Security**: Google OAuth + Database role verification
@@ -261,140 +229,20 @@ $$ LANGUAGE plpgsql;
 * SWR caching strategy
 * Memoized calculations
 * Debounced API calls
->>>>>>> Stashed changes
 
 ---
 
-## 📦 Deployment
-
-### Build
-```bash
-npm run build
-# Output: dist/
-```
-
-### Deploy to Netlify
-```bash
-# Install Netlify CLI
-npm install -g netlify-cli
-
-# Deploy
-netlify deploy --prod
-```
-
-### Deploy to Vercel
-```bash
-# Install Vercel CLI
-npm install -g vercel
-
-# Deploy
-vercel --prod
-```
-
-### Environment Variables (Production)
-Set these in your deployment platform:
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-- `VITE_SOLIS_API_KEY`
-- `VITE_SOLIS_API_SECRET`
-- `VITE_SOLIS_BASE_URL`
-
 ## 📝 Documentation
 
-- [TESTING_GUIDE.md](./TESTING_GUIDE.md) - Comprehensive test procedures
-- [IMPLEMENTATION_TRACKER.md](./IMPLEMENTATION_TRACKER.md) - Phase 1-4 implementation checklist
-- [CACHING_IMPLEMENTATION.md](./CACHING_IMPLEMENTATION.md) - Caching strategy details
-- [ADMIN_IMPROVEMENT_NOTES.md](./ADMIN_IMPROVEMENT_NOTES.md) - Future admin enhancements
+For comprehensive guides and development documentation, visit the **[Documentation Hub](./docs/README.md)**
 
-## 🛠️ Development
+### Quick Links:
+* **[Testing Guide](./docs/guides/TESTING_GUIDE.md)** - Test procedures and checklists
+* **[Deployment Checklist](./docs/guides/DEPLOYMENT_CHECKLIST.md)** - Production deployment
+* **[Caching Guide](./docs/guides/DATA_REFRESH_AND_CACHING_GUIDE.md)** - Cache strategy
+* **[Admin Improvements](./docs/development/ADMIN_IMPROVEMENT_NOTES.md)** - Future enhancements
+* **[Changelog](./CHANGELOG.md)** - Version history
 
-<<<<<<< Updated upstream
-### Project Structure
-```
-src/
-├── components/         # Reusable UI components
-│   ├── dashboard/     # Dashboard-specific components
-│   ├── admin/         # Admin panel components
-│   └── SkeletonLoader.jsx, ErrorBanner.jsx, etc.
-├── contexts/          # React Context providers
-│   ├── DataContext.jsx       # Main data management
-│   ├── AuthContext.jsx       # Authentication
-│   └── ThemeContext.jsx      # Theme management
-├── hooks/             # Custom React hooks
-│   └── useData.js    # Data context consumer
-├── lib/               # Utilities and services
-│   ├── cacheService.js       # Caching layer
-│   ├── dataService.js        # API calls
-│   └── supabaseClient.js     # Supabase config
-├── pages/             # Route components
-│   ├── Dashboard.jsx
-│   ├── Settings.jsx
-│   └── AdminDashboard.jsx
-└── assets/            # Static assets
-```
-
-### Key Files
-- **DataContext.jsx** - Central state management with SWR, polling, error handling
-- **cacheService.js** - Dual-layer cache with TTL expiration
-- **Dashboard.jsx** - Main dashboard layout with lazy loading
-- **ErrorBanner.jsx** - Prolonged outage notifications
-- **AuthErrorModal.jsx** - Authentication error handling
-
-## 🐛 Troubleshooting
-
-### White Screen on Load
-- Check browser console for errors
-- Verify environment variables are set
-- Clear cache and hard refresh (Ctrl + Shift + R)
-
-### Data Not Updating
-- Check network tab in DevTools
-- Verify Supabase/Solis API credentials
-- Check console for circuit breaker messages
-
-### Theme Not Persisting
-- Check localStorage in DevTools (Application tab)
-- Verify ThemeContext is wrapping app
-- Clear site data and test again
-
-### Cache Issues
-- Open console: `cacheService.clear()`
-- Check localStorage size (max 5-10MB)
-- Verify cache TTLs in cacheService.js
-
-## 🎯 Roadmap
-
-### Completed (Phase 1-5)
-- ✅ SWR caching implementation
-- ✅ Adaptive polling with visibility awareness
-- ✅ Error handling with exponential backoff
-- ✅ Circuit breaker pattern
-- ✅ Billing period accuracy
-- ✅ Theme persistence fix
-- ✅ User notifications (banners/modals)
-
-### Phase 6 (Optional)
-- [ ] Cache statistics dashboard
-- [ ] Context state inspector
-- [ ] Advanced logging system
-
-### Phase 7 (Optional)
-- [ ] IndexedDB for larger datasets
-- [ ] Request deduplication
-- [ ] Prefetching strategies
-- [ ] Background sync API
-
-### Future Enhancements
-- [ ] Mobile app (React Native)
-- [ ] Push notifications for alerts
-- [ ] Export data to CSV/PDF
-- [ ] Multi-site support
-- [ ] Advanced analytics (ML predictions)
-
-## 🤝 Contributing
-
-Contributions welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) first.
-=======
 ---
 
 ## 🤝 Contributing
@@ -402,7 +250,6 @@ Contributions welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) first.
 Solar Analytics Dashboard is open to contributions! Feel free to fork, open issues, or submit pull requests. Ideas and suggestions are always welcome. 🛠️
 
 ---
->>>>>>> Stashed changes
 
 ## 📄 License
 
@@ -410,9 +257,6 @@ This project is licensed under the MIT License — see the LICENSE file for more
 
 ---
 
-<<<<<<< Updated upstream
-**Last Updated:** November 16, 2025  
-=======
 ## 👤 Author
 
 * Developed by **Anuja Jayasinghe**
@@ -425,6 +269,5 @@ This project is licensed under the MIT License — see the LICENSE file for more
 > Crafted with ☀️ to bring clarity to solar energy monitoring and maximize your renewable investment.
 
 **Last Updated:** November 17, 2025  
->>>>>>> Stashed changes
 **Version:** 2.0.0  
-**Status:** Production Ready ✅" 
+**Status:** Production Ready ✅ 
