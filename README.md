@@ -1,50 +1,92 @@
 "# ☀️ Solar Analytics Dashboard
 
-Real-time solar power monitoring and analytics dashboard with advanced caching, error handling, and billing period tracking.
+**Solar Analytics Dashboard** is a modern web application that helps you monitor real-time solar power generation, track earnings, and visualize energy data with interactive charts. Built with React, Vite, and Supabase, it offers intelligent caching, billing period tracking, and admin management—all in a sleek dark/light theme UI.
 
+### 🚀 **Live Website:**  
+&nbsp;&nbsp;&nbsp;&nbsp;[![Website](https://img.shields.io/badge/solaredge.anujajay.com-000000?style=flat&logo=vercel&logoColor=white)](https://solaredge.anujajay.com/)  
+
+### 💻 **GitHub Repo:**  
+&nbsp;&nbsp;&nbsp;&nbsp;[![GitHub](https://img.shields.io/badge/Solar--Analytics--Dashboard-100000?style=flat&logo=github&logoColor=white)](https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard)
+
+### 📊 **Badges:**
 ![Version](https://img.shields.io/badge/version-2.0.0-blue)
 ![React](https://img.shields.io/badge/react-19.2.0-blue)
 ![Vite](https://img.shields.io/badge/vite-7.1.10-purple)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+<<<<<<< Updated upstream
+=======
+---
+
+## 📌 Overview
+
+Solar Analytics Dashboard was born out of the need to efficiently monitor solar panel performance and earnings. This modern energy tracker eliminates spreadsheet chaos with a comprehensive, real-time dashboard. Built for homeowners and businesses wanting clarity in their solar investment, it transforms raw inverter data into actionable insights—with elegant theming and performance optimization.
+
+> "Why guess your solar performance when Solar Analytics Dashboard tracks, visualizes, and optimizes it for you?"
+
+---
+
+## 📚 Tech Stack
+
+| Category           | Tech Used                                  |
+| ------------------ | ------------------------------------------ |
+| Framework          | [React 19.2](https://react.dev/)          |
+| Build Tool         | [Vite 7.1](https://vitejs.dev/)           |
+| Language           | JavaScript (ES6+)                          |
+| Styling            | Custom CSS with CSS Variables              |
+| Backend            | [Supabase](https://supabase.com/)          |
+| Charts             | Recharts + Chart.js                        |
+| Routing            | React Router DOM 7.9                       |
+| API Integration    | Solis Cloud API                            |
+| State Management   | React Context API                          |
+| Caching            | SWR (Stale-While-Revalidate)              |
+
+---
+
+>>>>>>> Stashed changes
 ## ✨ Features
 
-### Core Functionality
-- 📊 **Real-time Power Monitoring** - Live solar generation data with 5-minute updates
-- 💰 **Earnings Tracking** - Total earnings calculation with CEB billing integration
-- 📈 **Energy Charts** - Monthly comparison charts with billing period alignment
-- 🌍 **Environmental Impact** - CO2 savings and tree equivalency metrics
-- 🎯 **Daily Target Tracker** - Progress tracking against generation goals
+* 🔐 **Admin Authentication** with Google OAuth
+* 📊 **Real-time Dashboard** for solar monitoring
+* ⚡ **Live Power Tracking** with 5-minute updates
+* 💰 **Earnings Calculator** with CEB billing integration
+* 📈 **Interactive Charts** (Bar, Line, Area)
+* 🌍 **Environmental Impact** metrics (CO2 savings)
+* 🎯 **Daily Target Tracker** with progress visualization
+* 🚀 **Advanced Caching** with SWR strategy
+* 🎨 **Dark/Light Theme** with persistence
+* 📅 **Billing Period Alignment** for accurate tracking
+* 🛡️ **Error Resilience** with circuit breaker pattern
+* 💾 **Dual-layer Cache** (Memory + LocalStorage)
+* ⚙️ **Admin Panel** for CEB data management
+* 📱 **Responsive Design** for all devices
 
-### Advanced Features (Phase 1-4 Implementation)
+---
 
-#### 🚀 Performance & Caching
-- **SWR (Stale-While-Revalidate)** - Instant page loads with cached data
-- **Dual-layer Cache** - Memory + localStorage for reliability
-- **Adaptive Polling** - Smart intervals (5m live, 15m charts/earnings)
-- **Visibility-aware** - Pauses polling when tab hidden or offline
-- **TTL-based Expiration** - Automatic cache invalidation
+## 📁 Project Structure
 
-#### 🛡️ Error Handling & Resilience
-- **Exponential Backoff** - Automatic retry with 30s → 1m → 5m delays
-- **Error Classification** - Handles auth, rate-limit, server, transient errors
-- **Circuit Breaker** - Pauses failing endpoints after 5 consecutive failures
-- **Graceful Degradation** - Shows stale data during outages
-- **User Notifications** - Banners for prolonged issues, modals for auth errors
+```
+.
+├── src/
+│   ├── components/     # Reusable React components
+│   ├── contexts/       # Context providers (Auth, Data, Theme)
+│   ├── hooks/          # Custom React hooks
+│   ├── lib/            # Utilities and services
+│   ├── pages/          # Route components
+│   └── assets/         # Static assets
+├── api/                # Serverless API functions
+├── docs/               # Documentation hub
+├── public/             # Public static files
+├── scripts/            # Utility scripts
+├── package.json        # Project metadata and scripts
+└── vite.config.js      # Vite configuration
+```
 
-#### 🎨 User Experience
-- **Skeleton Loaders** - Smooth loading states with shimmer animations
-- **Staleness Indicators** - Visual badges for data >10 minutes old
-- **Refresh Indicator** - Real-time loading status with timestamps
-- **Theme Support** - Dark/Light themes with persistence
-- **Error Recovery** - Manual refresh buttons on all cards
+---
 
-#### 📅 Billing Period Accuracy
-- **Dynamic Billing Cycles** - Calculates periods based on actual bill dates
-- **Cross-month Support** - Handles month/year boundaries correctly
-- **Chart Alignment** - Tooltips show exact billing periods (e.g., "Oct 05 - Nov 04")
-- **Fallback Logic** - Defaults to calendar month if settings unavailable
+## 🛠 Development Commands
 
+<<<<<<< Updated upstream
 ## 🏗️ Architecture
 
 ### Tech Stack
@@ -53,6 +95,28 @@ Real-time solar power monitoring and analytics dashboard with advanced caching, 
 - **Charts**: Recharts
 - **Backend**: Supabase (PostgreSQL + Edge Functions)
 - **API**: Solis Cloud API for inverter data
+=======
+* `npm run dev` — Start dev server
+* `npm run build` — Create production build
+* `npm run preview` — Preview production build
+* `npm run lint` — Check for code issues
+
+---
+
+## 📌 Pages Overview
+
+| Page                | Description                              |
+| ------------------- | ---------------------------------------- |
+| `/`                 | Main dashboard / Landing                 |
+| `/dashboard`        | Private dashboard with full analytics    |
+| `/settings`         | System configuration and preferences     |
+| `/admin`            | Admin authentication                     |
+| `/admin/dashboard`  | Admin panel for CEB data management      |
+
+---
+
+## 🏗️ Architecture Details
+>>>>>>> Stashed changes
 
 ### Data Flow
 ```
@@ -75,6 +139,8 @@ Retryable? → Yes → Schedule Retry (exponential backoff)
      ↓                    ↓
 Show Error Badge    ErrorBanner (>5min outage)
 ```
+
+---
 
 ## 🚀 Getting Started
 
@@ -153,8 +219,9 @@ END;
 $$ LANGUAGE plpgsql;
 ```
 
-## 📱 Usage
+## 📦 Deployment
 
+<<<<<<< Updated upstream
 ### Dashboard
 - **Live Power Dial** - Shows current generation in kW
 - **Monthly Generation** - Total kWh for current billing period
@@ -171,53 +238,32 @@ $$ LANGUAGE plpgsql;
 - CEB data management (CRUD operations)
 - System settings configuration
 - Cache statistics and controls
+=======
+* **Frontend**: Deployed on [Vercel](https://vercel.com) at [solaredge.anujajay.com](https://solaredge.anujajay.com/)
+* **Backend**: Powered by Supabase + Solis Cloud API
+* **Admin Security**: Google OAuth + Database role verification
 
-## 🧪 Testing
+---
 
-See [TESTING_GUIDE.md](./TESTING_GUIDE.md) for comprehensive testing procedures.
+## 📊 Performance Metrics
 
-Quick tests:
-```bash
-# Run development server
-npm run dev
+| Metric              | Target  | Status |
+| ------------------- | ------- | ------ |
+| First Load          | < 3s    | ✅     |
+| Cached Load         | < 1s    | ✅     |
+| Time to Interactive | < 3s    | ✅     |
+| Bundle Size         | < 500KB | ✅     |
+| Cache Hit Rate      | > 80%   | ✅     |
 
-# Build for production
-npm run build
+**Optimizations:**
+* Lazy loading for chart components
+* Code splitting by route
+* SWR caching strategy
+* Memoized calculations
+* Debounced API calls
+>>>>>>> Stashed changes
 
-# Preview production build
-npm run preview
-```
-
-### Manual Testing Checklist
-- [ ] Hard refresh → data loads from cache instantly
-- [ ] Wait 10 minutes → stale badges appear
-- [ ] Simulate offline → data persists, polling pauses
-- [ ] Toggle theme → persists across navigation
-- [ ] Hover chart → tooltips show billing periods
-
-## 📊 Performance
-
-### Metrics (Target vs Actual)
-- **First Load**: < 3s ✅
-- **Cached Load**: < 1s ✅
-- **Time to Interactive**: < 3s ✅
-- **Bundle Size**: < 500KB gzipped ✅
-- **Cache Hit Rate**: > 80% ✅
-
-### Optimizations
-- Lazy loading for chart components
-- Code splitting by route
-- Memoized calculations
-- Debounced API calls
-- Optimistic UI updates
-
-## 🔒 Security
-
-- Environment variables for sensitive data
-- Supabase Row Level Security (RLS)
-- Rate limiting via circuit breakers
-- Auth token refresh handling
-- XSS protection via React escaping
+---
 
 ## 📦 Deployment
 
@@ -262,6 +308,7 @@ Set these in your deployment platform:
 
 ## 🛠️ Development
 
+<<<<<<< Updated upstream
 ### Project Structure
 ```
 src/
@@ -347,24 +394,37 @@ src/
 ## 🤝 Contributing
 
 Contributions welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) first.
+=======
+---
+
+## 🤝 Contributing
+
+Solar Analytics Dashboard is open to contributions! Feel free to fork, open issues, or submit pull requests. Ideas and suggestions are always welcome. 🛠️
+
+---
+>>>>>>> Stashed changes
 
 ## 📄 License
 
-MIT License - see [LICENSE](./LICENSE) file
-
-## 👥 Authors
-
-- **Development Team** - Initial work and Phase 1-4 implementation
-
-## 🙏 Acknowledgments
-
-- Solis Cloud API for inverter data
-- Supabase for backend infrastructure
-- Recharts for visualization
-- React community for best practices
+This project is licensed under the MIT License — see the LICENSE file for more info.
 
 ---
 
+<<<<<<< Updated upstream
 **Last Updated:** November 16, 2025  
+=======
+## 👤 Author
+
+* Developed by **Anuja Jayasinghe**
+  🌐 [anujajay.com](https://anujajay.com)
+
+  [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/anuja-jayasinghe/) [![GitHub](https://img.shields.io/badge/GitHub-100000?style=flat&logo=github&logoColor=white)](https://github.com/Anuja-jayasinghe)
+
+---
+
+> Crafted with ☀️ to bring clarity to solar energy monitoring and maximize your renewable investment.
+
+**Last Updated:** November 17, 2025  
+>>>>>>> Stashed changes
 **Version:** 2.0.0  
 **Status:** Production Ready ✅" 
