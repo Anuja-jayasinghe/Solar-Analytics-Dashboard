@@ -6,7 +6,6 @@ import MonthlyGenerationCard from "../components/dashboard/MonthlyGenerationCard
 import TotalGenerationCard from "../components/dashboard/TotalGenerationCard";
 import TotalEarningsCard from "../components/dashboard/TotalEarningsCard";
 import CacheStatusIndicator from "../components/CacheStatusIndicator";
-import ComingSoonNote from "../components/ComingSoonNote";
 import RefreshIndicator from "../components/RefreshIndicator";
 import ErrorBanner from "../components/ErrorBanner";
 import AuthErrorModal from "../components/AuthErrorModal";
@@ -24,7 +23,6 @@ function Dashboard({ devToolsOpen, setDevToolsOpen }) {
   return (
     <div style={pageStyle}>
       <CacheStatusIndicator />
-      <ComingSoonNote />
       <RefreshIndicator />
       <ErrorBanner />
       <AuthErrorModal />
