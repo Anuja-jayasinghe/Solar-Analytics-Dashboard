@@ -26,7 +26,7 @@ const TotalEarningsCard = () => {
       }}
     >
       <h3 style={{ ...labelStyle, color: "var(--accent)" }}>
-        💰 Total Earnings (CEB_Total)
+        💲 Total Earnings (CEB_Total)
         {isStale && <span style={staleBadge} title="Data is stale (>10 min old)">⏱️</span>}
         {hasError && ( // Corrected from 'errors.totalEar'
           <button 

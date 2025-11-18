@@ -4,6 +4,9 @@ import { ThemeContext } from "./ThemeContext";
 import { ShieldEllipsis } from "lucide-react";
 import { ShieldEllipsisIcon } from "lucide-react";
 import { ComputerIcon } from "lucide-react";
+import { FileWarning } from "lucide-react";
+import { LucideMessageSquareWarning } from "lucide-react";
+import { MailWarning } from "lucide-react";
 
 // --- SVG Icons ---
 const DashboardIcon = ({ className }) => (
@@ -97,12 +100,13 @@ function Sidebar({ onDevToolsToggle }) {
           background: 'var(--navbar-bg)',
           display: 'flex',
           alignItems: 'center',
-          padding: '0 1.5rem',
+          paddingLeft:'1rem',
+          paddingTop:'0.5rem',
           zIndex: 100
         }}>
           <h1 style={{ 
             color: "var(--accent)", 
-            fontSize: "1.5rem", 
+            fontSize: "2rem", 
             fontWeight: "bold",
             margin: 0
           }}>
@@ -170,7 +174,7 @@ function Sidebar({ onDevToolsToggle }) {
           </button>
           <h1 style={{ 
             color: "var(--accent)", 
-            fontSize: "1.25rem", 
+            fontSize: "1.5rem", 
             fontWeight: "bold",
             margin: 0
           }}>
@@ -442,7 +446,7 @@ function Sidebar({ onDevToolsToggle }) {
             title="Admin Access"
             aria-label="Admin access"
           >
-            <LockIcon />
+            <LockIcon/>
           </button>
         </nav>
         

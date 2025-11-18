@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useData } from "../../hooks/useData";
+import { Zap } from "lucide-react";
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -46,10 +47,10 @@ const CurrentPower = () => {
           style={{ backgroundColor: statusColor, boxShadow: `0 0 12px ${statusColor}` }}
           data-tooltip={status}
         />
-        ⚡ Live Power
+         <Zap/> Live Power
         {isStale && (
           <span style={staleBadgeStyle} title="Live data is stale (>10 min old) - May be offline">
-            ⏱️ STALE
+            <Hourglass /> STALE
           </span>
         )}
       </h2>

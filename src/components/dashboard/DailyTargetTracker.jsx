@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useData } from "../../hooks/useData";
+import { LockIcon } from "lucide-react";
+import { HousePlugIcon } from "lucide-react";
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL || "https://example.supabase.co",
@@ -110,7 +112,17 @@ const DailyTargetTracker = () => {
     <div style={styles.container}>
       <style>{keyframesCSS}</style>
       
-      <h2 style={styles.title}>☀️ Daily Generation</h2>
+      <h2 style={styles.title}>
+        <HousePlugIcon style={{ 
+          width: 'clamp(20px, 4vw, 24px)',
+          height: 'clamp(20px, 4vw, 24px)',
+          display: 'inline-block',
+          verticalAlign: 'middle',
+          marginRight: '0.5rem',
+          marginBottom:'0.9px'
+        }} />
+        Daily Generation
+      </h2>
 
       <div style={styles.gaugeContainer}>
         <svg viewBox="0 0 240 240" style={{ width: '100%', height: '100%' }}>

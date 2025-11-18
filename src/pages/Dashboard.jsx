@@ -5,7 +5,6 @@ import PeakPowerDial from "../components/dashboard/CurrentPower";
 import MonthlyGenerationCard from "../components/dashboard/MonthlyGenerationCard";
 import TotalGenerationCard from "../components/dashboard/TotalGenerationCard";
 import TotalEarningsCard from "../components/dashboard/TotalEarningsCard";
-import CacheStatusIndicator from "../components/CacheStatusIndicator";
 import RefreshIndicator from "../components/RefreshIndicator";
 import ErrorBanner from "../components/ErrorBanner";
 import AuthErrorModal from "../components/AuthErrorModal";
@@ -20,7 +19,6 @@ const SystemTrends = lazy(() => import("../components/dashboard/SystemTrends"));
 function Dashboard() {
   return (
     <div style={pageStyle}>
-      <CacheStatusIndicator />
       <RefreshIndicator />
       <ErrorBanner />
       <AuthErrorModal />
