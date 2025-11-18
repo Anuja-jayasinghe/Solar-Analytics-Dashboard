@@ -117,7 +117,7 @@ function Sidebar({ onDevToolsToggle }) {
             }}
           >
             <span style={{
-              width: '24px',
+              width: '4px',
               height: '3px',
               background: 'var(--accent)',
               borderRadius: '2px',
