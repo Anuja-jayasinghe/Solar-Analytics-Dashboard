@@ -5,7 +5,6 @@ import { ThemeProvider } from "./components/ThemeContext";
 import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 import { DataProvider } from "./contexts/DataContext";
 import Sidebar from "./components/Sidebar";
-import Navbar from "./components/Navbar";
 import GoToTopButton from "./components/GoToTopButton";
 import DevToolsPanel from "./components/DevToolsPanel";
 import "./index.css";
