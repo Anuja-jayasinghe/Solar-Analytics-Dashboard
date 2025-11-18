@@ -125,7 +125,8 @@ const Settings = () => {
         color: "var(--accent)", 
         marginBottom: "2rem", 
         fontSize: "2rem",
-        fontWeight: "bold"
+        fontWeight: "bold",
+        marginTop: "70px"
       }}>
         ⚙️ Settings
       </h1>
