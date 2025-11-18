@@ -5,11 +5,9 @@ import PeakPowerDial from "../components/dashboard/CurrentPower";
 import MonthlyGenerationCard from "../components/dashboard/MonthlyGenerationCard";
 import TotalGenerationCard from "../components/dashboard/TotalGenerationCard";
 import TotalEarningsCard from "../components/dashboard/TotalEarningsCard";
-import CacheStatusIndicator from "../components/CacheStatusIndicator";
 import RefreshIndicator from "../components/RefreshIndicator";
 import ErrorBanner from "../components/ErrorBanner";
 import AuthErrorModal from "../components/AuthErrorModal";
-import DevToolsPanel from "../components/DevToolsPanel";
 import { ChartSkeleton, CardSkeleton } from "../components/SkeletonLoader";
 
 // Lazy load heavy chart components
@@ -18,32 +16,27 @@ const EarningsBreakdown = lazy(() => import("../components/dashboard/EarningsDif
 const EnvironmentalImpact = lazy(() => import("../components/dashboard/EnvironmentalImpact"));
 const SystemTrends = lazy(() => import("../components/dashboard/SystemTrends"));
 
-function Dashboard({ devToolsOpen, setDevToolsOpen }) {
-  const devtoolsEnabled = (import.meta?.env?.VITE_ENABLE_DEVTOOLS ?? 'true') === 'true';
+function Dashboard() {
   return (
     <div style={pageStyle}>
-      <CacheStatusIndicator />
       <RefreshIndicator />
       <ErrorBanner />
       <AuthErrorModal />
-      {devtoolsEnabled && (
-        <DevToolsPanel open={devToolsOpen} onClose={() => setDevToolsOpen(false)} />
-      )}
 
       {/* --- Upper Highlight Section --- */}
       <div style={highlightSection}>
-      <div style={statsRow}>
+        {/* Stats cards below - side by side */}
+        <div style={statsRow}>
           <MonthlyGenerationCard />
           <TotalGenerationCard />
           <TotalEarningsCard />
         </div>
-
+        
+        {/* Live components first - side by side */}
         <div style={highlightCards}>
           <DailyTargetTracker />
           <PeakPowerDial />
         </div>
-
-        
       </div>
 
       {/* --- Main Energy Analytics --- */}
@@ -71,11 +64,13 @@ function Dashboard({ devToolsOpen, setDevToolsOpen }) {
 
 // --- Styles ---
 const pageStyle = {
-  padding: "2rem",
+  padding: "clamp(0.75rem, 3vw, 2rem)",
   color: "#fff",
   maxWidth: "1300px",
   margin: "auto",
   fontFamily: "Inter, sans-serif",
+  width: "100%",
+  boxSizing: "border-box",
 };
 
 const headerStyle = {
@@ -89,52 +84,39 @@ const headerStyle = {
 const highlightSection = {
   display: "flex",
   flexDirection: "column",
-  gap: "1.5rem",
-  marginBottom: "2rem",
+  gap: "clamp(1rem, 2vw, 1.5rem)",
+  marginBottom: "clamp(1rem, 3vw, 2rem)",
 };
 
 const highlightCards = {
-  display: "flex",
-  gap: "1.5rem",
-  justifyContent: "space-between",
-  flexWrap: "wrap",
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 350px), 1fr))",
+  gap: "clamp(1rem, 2vw, 1.5rem)",
 };
 
 const statsRow = {
-  display: "flex",
-  gap: "1.5rem",
-  justifyContent: "space-between",
-  flexWrap: "wrap",
-  "@media (max-width: 768px)": {
-    flexDirection: "column",
-    gap: "1rem",
-  },
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))",
+  gap: "clamp(1rem, 2vw, 1.5rem)",
 };
 
 const mainCharts = {
-  marginTop: "1rem",
+  marginTop: "clamp(0.75rem, 2vw, 1rem)",
   background: "var(--card-bg)",
   borderRadius: "12px",
   backdropFilter: "blur(10px)",
-  padding: "1rem",
+  padding: "clamp(0.75rem, 2vw, 1rem)",
   boxShadow: "0 0 25px var(--card-shadow)",
+  overflow: "hidden",
 };
 
 const gridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-  gap: "1rem",
-  marginTop: "2rem",
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 250px), 1fr))",
+  gap: "clamp(1rem, 2vw, 1.5rem)",
+  marginTop: "clamp(1rem, 3vw, 2rem)",
   alignItems: "stretch",
   width: "100%",
-  "@media (max-width: 768px)": {
-    gridTemplateColumns: "1fr",
-    gap: "1rem",
-    marginTop: "1.5rem",
-  },
-  "@media (min-width: 769px) and (max-width: 1024px)": {
-    gridTemplateColumns: "repeat(2, 1fr)",
-  },
 };
 
 export default Dashboard;

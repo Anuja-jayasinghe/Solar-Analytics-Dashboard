@@ -52,19 +52,29 @@ const TotalGenerationCard = () => {
   );
 };
 
-// --- STYLES (Unchanged, as requested) ---
+// --- STYLES (Updated for mobile) ---
 const cardStyle = {
   flex: 1,
-  padding: "1.2rem",
-  borderRadius: "14px",
+  padding: "clamp(0.75rem, 2vw, 1.2rem)",
+  borderRadius: "clamp(10px, 2vw, 14px)",
   color: "#fff",
   backdropFilter: "blur(12px)",
   textAlign: "center",
   transition: "transform 0.3s ease, boxShadow 0.3s ease",
+  minWidth: "min(100%, 200px)",
 };
 
-const labelStyle = { fontSize: "0.9rem", opacity: 0.95, marginBottom: "0.5rem" };
-const valueStyle = { fontSize: "1.6rem", fontWeight: "800" };
+const labelStyle = { 
+  fontSize: "clamp(0.8rem, 2vw, 0.9rem)", 
+  opacity: 0.95, 
+  marginBottom: "0.5rem",
+  lineHeight: 1.3
+};
+const valueStyle = { 
+  fontSize: "clamp(1.3rem, 4vw, 1.6rem)", 
+  fontWeight: "800",
+  wordBreak: "break-word"
+};
 
 const staleBadge = {
   marginLeft: "0.5rem",

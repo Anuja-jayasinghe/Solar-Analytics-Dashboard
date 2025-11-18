@@ -80,8 +80,20 @@ const EnergyCharts = () => {
             onClick={() => setShowRuler((v) => !v)}
             style={toggleBtn}
             title={showRuler ? 'Hide ruler' : 'Show ruler'}
+            onMouseEnter={(e) => e.target.style.opacity = '1'}
+            onMouseLeave={(e) => e.target.style.opacity = '0.6'}
           >
-            {showRuler ? '👁' : '🙈'}
+            {showRuler ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            )}
           </button>
           <input
             id="rulerSlider"
@@ -213,15 +225,16 @@ const EnergyCharts = () => {
 // --- Styles (from your original component) ---
 const chartBox = {
   background: "var(--card-bg)",
-  borderRadius: "24px",
-  padding: "1.5rem",
+  borderRadius: "clamp(12px, 3vw, 24px)",
+  padding: "clamp(0.75rem, 2vw, 1.5rem)",
   boxShadow: "0 8px 32px rgba(0,255,255,0.1), inset 0 1px 1px rgba(255,255,255,0.05)",
   backdropFilter: 'blur(12px)',
   border: '1px solid rgba(255,255,255,0.1)',
   color: 'var(--text-color, #fff)',
   height: 'auto', 
-  minHeight: '400px',
+  minHeight: 'clamp(300px, 50vh, 400px)',
   flex: 2,
+  overflow: 'hidden',
 };
 const chartHeader = {
   display: "flex",
@@ -230,13 +243,64 @@ const chartHeader = {
   marginBottom: "1rem",
   color: 'var(--accent, #00eaff)',
   textShadow: '0 0 10px var(--accent, #00eaff)',
+  flexWrap: 'wrap',
+  gap: '0.75rem',
 };
-const rulerControls = { display: 'flex', alignItems: 'center', gap: '8px' };
-const rulerLabel = { fontSize: '0.8rem', color: 'var(--text-color, #ccd)' };
-const rulerSlider = { width: 160, accentColor: 'var(--accent, #00eaff)' };
-const rulerValueBadge = { fontSize: '0.8rem', color: '#22c55e', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', padding: '2px 6px', borderRadius: 6 };
-const resetBtn = { background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--text-color, #ccd)', borderRadius: 6, padding: '1px 6px', cursor: 'pointer', fontSize: '0.75rem' };
-const toggleBtn = { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--text-color, #ccd)', borderRadius: 6, padding: '2px 6px', cursor: 'pointer', fontSize: '0.9rem', lineHeight: 1 };
+const rulerControls = { 
+  display: 'flex', 
+  alignItems: 'center', 
+  gap: '8px', 
+  flexWrap: 'wrap',
+  justifyContent: 'center'
+};
+const rulerLabel = { 
+  fontSize: 'clamp(0.7rem, 2vw, 0.8rem)', 
+  color: 'var(--text-color, #ccd)',
+  whiteSpace: 'nowrap'
+};
+const rulerSlider = { 
+  width: 'clamp(100px, 30vw, 160px)', 
+  accentColor: 'var(--accent, #00eaff)',
+  touchAction: 'none'
+};
+const rulerValueBadge = { 
+  fontSize: 'clamp(0.7rem, 2vw, 0.8rem)', 
+  color: '#22c55e', 
+  background: 'rgba(34,197,94,0.1)', 
+  border: '1px solid rgba(34,197,94,0.3)', 
+  padding: '4px 8px', 
+  borderRadius: 6,
+  whiteSpace: 'nowrap',
+  minWidth: '90px',
+  textAlign: 'center',
+  display: 'inline-block'
+};
+const resetBtn = { 
+  background: 'transparent', 
+  border: '1px solid rgba(255,255,255,0.2)', 
+  color: 'var(--text-color, #ccd)', 
+  borderRadius: 6, 
+  padding: '6px 10px', 
+  cursor: 'pointer', 
+  fontSize: 'clamp(0.7rem, 2vw, 0.75rem)',
+  minHeight: '36px'
+};
+const toggleBtn = { 
+  background: 'transparent', 
+  border: '1px solid rgba(255,255,255,0.1)', 
+  color: 'var(--text-secondary, #888)', 
+  borderRadius: 6, 
+  padding: '6px 10px', 
+  cursor: 'pointer', 
+  fontSize: 'clamp(0.75rem, 2vw, 0.85rem)', 
+  lineHeight: 1,
+  minHeight: '36px',
+  opacity: 0.6,
+  transition: 'opacity 0.2s ease',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center'
+};
 const messageContainer = {
   display: "flex",
   flexDirection: "column",

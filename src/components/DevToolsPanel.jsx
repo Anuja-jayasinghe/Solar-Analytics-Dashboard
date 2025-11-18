@@ -53,7 +53,19 @@ const DevToolsPanel = ({ open, onClose }) => {
   return (
     <>
       {open && (
-        <div ref={panelRef} style={panelStyle}>
+        <>
+          <style>{`
+            @media (max-width: 768px) {
+              .devtools-panel {
+                top: 70px !important;
+                right: 10px !important;
+                left: 10px !important;
+                width: calc(100vw - 20px) !important;
+                max-height: calc(100vh - 90px) !important;
+              }
+            }
+          `}</style>
+          <div ref={panelRef} className="devtools-panel" style={panelStyle}>
           {/* Header with tabs */}
           <div style={headerStyle}>
             <div style={tabsStyle}>
@@ -77,7 +89,9 @@ const DevToolsPanel = ({ open, onClose }) => {
                 disabled={refreshing}
                 title="Refresh cache stats"
               >
-                🔄
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+                  <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6m12-4a9 9 0 0 1-15 6.7L3 16"/>
+                </svg>
               </button>
               <button style={headerBtn} onClick={onClose}>✕</button>
             </div>
@@ -92,7 +106,8 @@ const DevToolsPanel = ({ open, onClose }) => {
               <ContextTab context={context} formattedLastUpdate={formattedLastUpdate} />
             )}
           </div>
-        </div>
+          </div>
+        </>
       )}
     </>
   );
@@ -196,12 +211,12 @@ const Dot = ({ color }) => <span style={{...dot, background: color}} />
 const panelStyle = {
   position: 'fixed',
   top: '80px',
-  left: '20px',
-  width: '520px',
+  left: '80px',
+  width: 'min(520px, calc(100vw - 120px))',
   maxHeight: 'calc(100vh - 120px)',
   overflowY: 'auto',
   zIndex: 9996,
-  background: 'rgba(20,20,22,0.6)',
+  background: 'rgba(20,20,22,0.95)',
   border: '1px solid var(--glass-border)',
   borderRadius: '12px',
   boxShadow: '0 20px 60px rgba(0,0,0,0.45)',
@@ -232,12 +247,12 @@ const tabActiveStyle = {
 };
 
 const headerActionsStyle = { display: 'flex', gap: '6px' };
-const headerBtn = { background: 'transparent', border: '1px solid var(--glass-border)', color: 'var(--text-secondary)', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.3s ease' };
-const refreshingStyle = { animation: 'spin 0.5s linear', background: 'var(--accent)', color: '#fff', borderColor: 'var(--accent)' };
+const headerBtn = { background: 'transparent', border: 'none', color: 'var(--text-secondary)', padding: '8px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.3s ease', display: 'flex', alignItems: 'center', justifyContent: 'center' };
+const refreshingStyle = { animation: 'spin 1s linear infinite', background: 'transparent', color: 'var(--accent)', border: 'none' };
 
 const bodyStyle = { padding: '12px' };
 
-const metricsGrid = { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '12px' };
+const metricsGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px', marginBottom: '12px' };
 const metricCard = { background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '10px' };
 const metricLabel = { fontSize: '0.75rem', color: 'var(--text-secondary)' };
 const metricValue = { fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent)' };

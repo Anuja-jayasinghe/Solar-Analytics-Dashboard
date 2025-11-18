@@ -1,5 +1,6 @@
 import React from 'react';
 import { useData } from '../hooks/useData';
+import { FileWarning } from 'lucide-react';
 
 const RefreshIndicator = () => {
   const { loading, lastUpdate, isStale } = useData();
@@ -31,7 +32,7 @@ const RefreshIndicator = () => {
         </span>
         {isStale && (
           <span style={staleWarningStyle} title="Data is older than 10 minutes">
-            ⚠️ Stale
+            <biohazard/> Stale
           </span>
         )}
       </div>
@@ -41,8 +42,8 @@ const RefreshIndicator = () => {
 
 const containerStyle = {
   position: 'fixed',
-  top: 80,
-  right: 16,
+  top: 50,
+  right:25,
   zIndex: 1000,
   display: 'flex',
   alignItems: 'center',
