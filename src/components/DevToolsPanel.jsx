@@ -89,7 +89,9 @@ const DevToolsPanel = ({ open, onClose }) => {
                 disabled={refreshing}
                 title="Refresh cache stats"
               >
-                🔄
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+                  <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6m12-4a9 9 0 0 1-15 6.7L3 16"/>
+                </svg>
               </button>
               <button style={headerBtn} onClick={onClose}>✕</button>
             </div>
@@ -245,8 +247,8 @@ const tabActiveStyle = {
 };
 
 const headerActionsStyle = { display: 'flex', gap: '6px' };
-const headerBtn = { background: 'transparent', border: '1px solid var(--glass-border)', color: 'var(--text-secondary)', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.3s ease' };
-const refreshingStyle = { animation: 'spin 0.5s linear', background: 'var(--accent)', color: '#fff', borderColor: 'var(--accent)' };
+const headerBtn = { background: 'transparent', border: 'none', color: 'var(--text-secondary)', padding: '8px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.3s ease', display: 'flex', alignItems: 'center', justifyContent: 'center' };
+const refreshingStyle = { animation: 'spin 1s linear infinite', background: 'transparent', color: 'var(--accent)', border: 'none' };
 
 const bodyStyle = { padding: '12px' };
 
