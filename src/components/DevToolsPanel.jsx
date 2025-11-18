@@ -209,8 +209,8 @@ const Dot = ({ color }) => <span style={{...dot, background: color}} />
 const panelStyle = {
   position: 'fixed',
   top: '80px',
-  right: '20px',
-  width: 'min(520px, calc(100vw - 40px))',
+  left: '80px',
+  width: 'min(520px, calc(100vw - 120px))',
   maxHeight: 'calc(100vh - 120px)',
   overflowY: 'auto',
   zIndex: 9996,

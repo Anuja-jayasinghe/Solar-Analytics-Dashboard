@@ -1,6 +1,9 @@
 import { Link, NavLink } from "react-router-dom";
 import { useState, useEffect, useContext } from "react";
 import { ThemeContext } from "./ThemeContext";
+import { ShieldEllipsis } from "lucide-react";
+import { ShieldEllipsisIcon } from "lucide-react";
+import { ComputerIcon } from "lucide-react";
 
 // --- SVG Icons ---
 const DashboardIcon = ({ className }) => (
@@ -454,7 +457,7 @@ function Sidebar({ onDevToolsToggle }) {
             title="Toggle Dev Tools"
             aria-label="Toggle Dev Tools"
           >
-            🛠️
+            <ComputerIcon/>
           </button>
         )}
       </div>
