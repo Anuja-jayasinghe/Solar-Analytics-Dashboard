@@ -42,8 +42,8 @@ const RefreshIndicator = () => {
 
 const containerStyle = {
   position: 'fixed',
-  top: 80,
-  right: 16,
+  top: 50,
+  right:25,
   zIndex: 1000,
   display: 'flex',
   alignItems: 'center',

@@ -97,7 +97,7 @@ function Sidebar({ onDevToolsToggle }) {
           left: 60,
           right: 0,
           height: '60px',
-          background: 'var(--navbar-bg)',
+          background: 'var(--bg-color)',
           display: 'flex',
           alignItems: 'center',
           paddingLeft:'1rem',
