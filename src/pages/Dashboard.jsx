@@ -71,6 +71,8 @@ const pageStyle = {
   fontFamily: "Inter, sans-serif",
   width: "100%",
   boxSizing: "border-box",
+  position: "relative",
+  zIndex: 200,
 };
 
 const headerStyle = {
@@ -86,6 +88,8 @@ const highlightSection = {
   flexDirection: "column",
   gap: "clamp(1rem, 2vw, 1.5rem)",
   marginBottom: "clamp(1rem, 3vw, 2rem)",
+  position: "relative",
+  zIndex: 201,
 };
 
 const highlightCards = {
@@ -108,6 +112,8 @@ const mainCharts = {
   padding: "clamp(0.75rem, 2vw, 1rem)",
   boxShadow: "0 0 25px var(--card-shadow)",
   overflow: "hidden",
+  position: "relative",
+  zIndex: 201,
 };
 
 const gridStyle = {
@@ -117,6 +123,8 @@ const gridStyle = {
   marginTop: "clamp(1rem, 3vw, 2rem)",
   alignItems: "stretch",
   width: "100%",
+  position: "relative",
+  zIndex: 201,
 };
 
 export default Dashboard;
