@@ -25,17 +25,17 @@ function Dashboard() {
 
       {/* --- Upper Highlight Section --- */}
       <div style={highlightSection}>
-        {/* Live components first - side by side */}
-        <div style={highlightCards}>
-          <DailyTargetTracker />
-          <PeakPowerDial />
-        </div>
-
         {/* Stats cards below - side by side */}
         <div style={statsRow}>
           <MonthlyGenerationCard />
           <TotalGenerationCard />
           <TotalEarningsCard />
+        </div>
+        
+        {/* Live components first - side by side */}
+        <div style={highlightCards}>
+          <DailyTargetTracker />
+          <PeakPowerDial />
         </div>
       </div>
 
