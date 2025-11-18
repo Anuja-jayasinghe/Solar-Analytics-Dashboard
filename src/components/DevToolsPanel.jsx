@@ -53,7 +53,19 @@ const DevToolsPanel = ({ open, onClose }) => {
   return (
     <>
       {open && (
-        <div ref={panelRef} style={panelStyle}>
+        <>
+          <style>{`
+            @media (max-width: 768px) {
+              .devtools-panel {
+                top: 70px !important;
+                right: 10px !important;
+                left: 10px !important;
+                width: calc(100vw - 20px) !important;
+                max-height: calc(100vh - 90px) !important;
+              }
+            }
+          `}</style>
+          <div ref={panelRef} className="devtools-panel" style={panelStyle}>
           {/* Header with tabs */}
           <div style={headerStyle}>
             <div style={tabsStyle}>
@@ -92,7 +104,8 @@ const DevToolsPanel = ({ open, onClose }) => {
               <ContextTab context={context} formattedLastUpdate={formattedLastUpdate} />
             )}
           </div>
-        </div>
+          </div>
+        </>
       )}
     </>
   );
@@ -196,12 +209,12 @@ const Dot = ({ color }) => <span style={{...dot, background: color}} />
 const panelStyle = {
   position: 'fixed',
   top: '80px',
-  left: '20px',
-  width: '520px',
+  right: '20px',
+  width: 'min(520px, calc(100vw - 40px))',
   maxHeight: 'calc(100vh - 120px)',
   overflowY: 'auto',
   zIndex: 9996,
-  background: 'rgba(20,20,22,0.6)',
+  background: 'rgba(20,20,22,0.95)',
   border: '1px solid var(--glass-border)',
   borderRadius: '12px',
   boxShadow: '0 20px 60px rgba(0,0,0,0.45)',
@@ -237,7 +250,7 @@ const refreshingStyle = { animation: 'spin 0.5s linear', background: 'var(--acce
 
 const bodyStyle = { padding: '12px' };
 
-const metricsGrid = { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '12px' };
+const metricsGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px', marginBottom: '12px' };
 const metricCard = { background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '10px' };
 const metricLabel = { fontSize: '0.75rem', color: 'var(--text-secondary)' };
 const metricValue = { fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent)' };

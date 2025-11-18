@@ -7,6 +7,7 @@ import { DataProvider } from "./contexts/DataContext";
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
 import GoToTopButton from "./components/GoToTopButton";
+import DevToolsPanel from "./components/DevToolsPanel";
 import "./index.css";
 import { verifySupabaseConnection } from "./lib/verifySupabaseConnection";
 import { Analytics } from "@vercel/analytics/react"
@@ -75,17 +76,19 @@ function AppContent() {
                   transition: "margin-left 0.3s ease",
                 }}
               >
-                <Navbar />
                 <div className="page-container">
                   <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh', color: 'var(--accent)' }}>Loading page...</div>}>
                     <Routes>
-                      <Route index element={<Dashboard devToolsOpen={devToolsOpen} setDevToolsOpen={setDevToolsOpen} />} />
-                      <Route path="dashboard" element={<Dashboard devToolsOpen={devToolsOpen} setDevToolsOpen={setDevToolsOpen} />} />
+                      <Route index element={<Dashboard />} />
+                      <Route path="dashboard" element={<Dashboard />} />
                       <Route path="settings" element={<Settings />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </Suspense>
                 </div>
+                {devtoolsEnabled && (
+                  <DevToolsPanel open={devToolsOpen} onClose={() => setDevToolsOpen(false)} />
+                )}
               </div>
               <GoToTopButton />
             </div>

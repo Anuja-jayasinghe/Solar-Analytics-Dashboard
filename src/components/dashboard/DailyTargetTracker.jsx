@@ -291,14 +291,14 @@ const DailyTargetTracker = () => {
 const styles = {
   container: {
     background: 'linear-gradient(145deg, rgba(20,20,22,0.8), rgba(12,12,14,0.85))',
-    borderRadius: '24px', 
-    padding: '1.5rem', 
+    borderRadius: 'clamp(12px, 3vw, 24px)', 
+    padding: 'clamp(1rem, 3vw, 1.5rem)', 
     backdropFilter: 'blur(12px)',
     border: '1px solid rgba(255,255,255,0.1)',
     boxShadow: '0 8px 32px rgba(0,255,255,0.1), inset 0 1px 1px rgba(255,255,255,0.05)',
-    width: '49%', 
-    height: '370px', 
-    margin: '0 auto', 
+    width: '100%',
+    minHeight: 'clamp(300px, 40vh, 370px)',
+    height: '100%',
     position: 'relative',
     display: 'flex', 
     flexDirection: 'column', 
@@ -307,19 +307,19 @@ const styles = {
   title: {
     color: 'var(--accent, #00eaff)', 
     fontWeight: 'bold', 
-    fontSize: '1.5rem',
+    fontSize: 'clamp(1.1rem, 4vw, 1.5rem)',
     textShadow: '0 0 10px var(--accent, #00eaff)', 
     textAlign: 'center', 
     margin: 0,
   },
   gaugeContainer: {
     position: 'relative', 
-    width: '160px', 
-    height: '160px', 
+    width: 'clamp(140px, 35vw, 160px)', 
+    height: 'clamp(140px, 35vw, 160px)', 
     margin: '0 auto',
   },
   percentText: {
-    fontSize: '2.25rem', 
+    fontSize: 'clamp(1.75rem, 5vw, 2.25rem)', 
     fontWeight: '700', 
     fill: '#ffffff',
     textShadow: '0 0 15px rgba(255,255,255,0.5)',
@@ -329,14 +329,17 @@ const styles = {
     alignItems: 'center', 
     justifyContent: 'space-around', 
     padding: '0.25rem 0',
+    flexWrap: 'wrap',
+    gap: 'clamp(0.5rem, 2vw, 1rem)',
   },
   statItem: { 
     textAlign: 'center', 
-    flex: '1' 
+    flex: '1 1 auto',
+    minWidth: 'min(100px, 30%)',
   },
   statLabel: {
     color: 'var(--accent, #00eaff)', 
-    fontSize: '0.75rem', 
+    fontSize: 'clamp(0.65rem, 2vw, 0.75rem)', 
     textTransform: 'uppercase',
     opacity: 0.8, 
     marginBottom: '0.25rem', 
@@ -344,11 +347,11 @@ const styles = {
   },
   statValue: { 
     color: '#ffffff', 
-    fontSize: '1.125rem', 
+    fontSize: 'clamp(1rem, 3vw, 1.125rem)', 
     fontWeight: '700' 
   },
   unit: { 
-    fontSize: '0.875rem', 
+    fontSize: 'clamp(0.75rem, 2vw, 0.875rem)', 
     color: '#a0aec0' 
   },
   divider: { 

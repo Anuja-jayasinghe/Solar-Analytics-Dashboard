@@ -119,17 +119,35 @@ const CurrentPower = () => {
       <style>{`
         .current-power-dial {
           background: linear-gradient(145deg, rgba(20,20,22,0.8), rgba(12,12,14,0.85));
-          border-radius: 24px; padding: 1.5rem; text-align: center;
+          border-radius: clamp(12px, 3vw, 24px); 
+          padding: clamp(1rem, 3vw, 1.5rem); 
+          text-align: center;
           backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1);
           box-shadow: 0 8px 32px rgba(0,255,255,0.1), inset 0 1px 1px rgba(255,255,255,0.05);
-          width: 49%; height: 370px; margin: 0 auto; position: relative;
+          width: 100%;
+          min-height: clamp(300px, 40vh, 370px);
+          height: 100%;
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
         }
         .dial-title { 
-          color: var(--accent, #00eaff); margin-bottom: 0.5rem; font-weight: bold; font-size: 1.5rem;
-          text-shadow: 0 0 10px var(--accent, #00eaff); display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+          color: var(--accent, #00eaff); 
+          margin-bottom: 0.5rem; 
+          font-weight: bold; 
+          font-size: clamp(1.1rem, 4vw, 1.5rem);
+          text-shadow: 0 0 10px var(--accent, #00eaff); 
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          gap: 0.5rem;
+          flex-wrap: wrap;
         }
         .status-indicator {
-          width: 10px; height: 10px; border-radius: 50%;
+          width: clamp(8px, 2vw, 10px); 
+          height: clamp(8px, 2vw, 10px); 
+          border-radius: 50%;
           animation: ${status === "Online" ? "pulse 2s infinite" : "none"};
           position: relative;
         }
@@ -144,11 +162,46 @@ const CurrentPower = () => {
         }
         .status-indicator:hover::after { opacity: 1; visibility: visible; }
         @keyframes pulse { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
-        .dial-svg { width: 100%; height: auto; max-height: 270px; overflow: visible; }
-        .dial-value-text { font-size: 2.8rem; font-weight: bold; fill: #fff; text-shadow: 0 0 18px rgba(255,255,255,0.6); }
-        .dial-unit-text { font-size: .8rem; fill: #a0aec0; }
-        .dial-footer-text { color: #a0aec0; font-size: 1.25rem; margin-top: -1.30rem; }
-        .loading-hint { position: absolute; top: 0; right: 0; font-size: 0.75rem; color: #888; padding: 0.5rem; }
+        .dial-svg { 
+          width: 100%; 
+          height: auto; 
+          max-height: clamp(220px, 40vh, 270px); 
+          overflow: visible; 
+        }
+        .dial-value-text { 
+          font-size: clamp(2rem, 7vw, 2.8rem); 
+          font-weight: bold; 
+          fill: #fff; 
+          text-shadow: 0 0 18px rgba(255,255,255,0.6); 
+        }
+        .dial-unit-text { 
+          font-size: clamp(0.7rem, 2vw, 0.8rem); 
+          fill: #a0aec0; 
+        }
+        .dial-footer-text { 
+          color: #a0aec0; 
+          font-size: clamp(1rem, 3vw, 1.25rem); 
+          margin-top: clamp(-1rem, -2vw, -1.30rem); 
+        }
+        .loading-hint { 
+          position: absolute; 
+          top: 0; 
+          right: 0; 
+          font-size: clamp(0.7rem, 2vw, 0.75rem); 
+          color: #888; 
+          padding: 0.5rem; 
+        }
+        @media (max-width: 768px) {
+          .current-power-dial {
+            width: 100%;
+            min-height: 320px;
+          }
+        }
+        @media (min-width: 769px) and (max-width: 1024px) {
+          .current-power-dial {
+            min-height: 350px;
+          }
+        }
       `}</style>
     </div>
   );
