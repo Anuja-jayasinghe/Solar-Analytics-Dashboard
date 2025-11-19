@@ -1,5 +1,10 @@
 # Solar Analytics Dashboard - Complete Project Documentation
 
+> **📦 Archive Notice:** This document contains legacy project details. For current documentation, see the main [README.md](../../README.md) and [Documentation Hub](../README.md).
+
+**Status:** 📦 Archived - Historical Reference  
+**Maintainer:** Anuja Jayasinghe
+
 ## 📋 Project Overview
 
 **Solar Analytics Dashboard** is a modern React-based web application designed for monitoring and analyzing solar energy generation data. The application provides comprehensive analytics for both CEB (Ceylon Electricity Board) export data and inverter generation data, with advanced admin management capabilities.
@@ -407,6 +412,19 @@ VITE_SUPABASE_TABLE_INVERTER=inverter_data
 ### 2. Scalability
 - **Component-based**: Modular architecture
 - **State Management**: Efficient state handling
+
+---
+
+## 📋 Document History
+
+**Maintainer:** Anuja Jayasinghe  
+
+### Change Log
+- **Created:** Pre-v2.0.0 - Comprehensive legacy project documentation
+- **Updated:** November 19, 2025 - Added archive notice and maintainer log
+
+**Status:** 📦 Archived - Historical reference for project structure  
+**Last Updated:** November 19, 2025
 - **Database**: Scalable Supabase backend
 - **API Design**: RESTful data access
 

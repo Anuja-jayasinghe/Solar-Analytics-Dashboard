@@ -1,4 +1,12 @@
-"# ☀️ Solar Analytics Dashboard
+# ☀️ Solar Analytics Dashboard (OLD VERSION)
+
+> **📦 Archive Notice:** This is an archived version of the README. For current documentation, see the main [README.md](../../README.md).
+
+**Status:** 📦 Archived - Historical Reference  
+**Maintainer:** Anuja Jayasinghe  
+**Archived Date:** November 19, 2025
+
+---
 
 Real-time solar power monitoring and analytics dashboard with advanced caching, error handling, and billing period tracking.
 
@@ -361,6 +369,20 @@ MIT License - see [LICENSE](./LICENSE) file
 - Solis Cloud API for inverter data
 - Supabase for backend infrastructure
 - Recharts for visualization
+
+---
+
+## 📋 Document History
+
+**Maintainer:** Anuja Jayasinghe  
+
+### Change Log
+- **Created:** Pre-November 17, 2025 - Previous version of main README
+- **Archived:** November 17, 2025 - Replaced by updated README with v2.0.0 features
+- **Updated:** November 19, 2025 - Added archive notice, corrected header format, added maintainer log
+
+**Status:** 📦 Archived - Superseded by current README.md  
+**Last Updated:** November 19, 2025
 - React community for best practices
 
 ---

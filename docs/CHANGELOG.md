@@ -280,3 +280,15 @@ SET setting_value = EXCLUDED.setting_value;
 **Full Changelog:** [GitHub Releases](https://github.com/your-repo/releases)  
 **Upgrade Guide:** See README.md for detailed instructions  
 **Support:** Contact development team or open an issue
+
+---
+
+## 📋 Document History
+
+**Maintainer:** Anuja Jayasinghe  
+
+### Change Log
+- **Created:** November 16, 2025 - Initial v2.0.0 changelog documentation
+- **Updated:** November 19, 2025 - Added maintainer log, verified all entries accurate
+
+**Last Updated:** November 19, 2025

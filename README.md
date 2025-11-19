@@ -10,8 +10,8 @@
 
 ### 📊 **Badges:**
 ![Version](https://img.shields.io/badge/version-2.0.0-blue)
-![React](https://img.shields.io/badge/react-19.2.0-blue)
-![Vite](https://img.shields.io/badge/vite-7.1.10-purple)
+![React](https://img.shields.io/badge/react-19.1.1-blue)
+![Vite](https://img.shields.io/badge/vite-7.1.7-purple)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
@@ -28,16 +28,18 @@ Solar Analytics Dashboard was born out of the need to efficiently monitor solar 
 
 | Category           | Tech Used                                  |
 | ------------------ | ------------------------------------------ |
-| Framework          | [React 19.2](https://react.dev/)          |
-| Build Tool         | [Vite 7.1](https://vitejs.dev/)           |
+| Framework          | [React 19.1.1](https://react.dev/)        |
+| Build Tool         | [Vite 7.1.7](https://vitejs.dev/)         |
 | Language           | JavaScript (ES6+)                          |
+| UI Library         | [Chakra UI 3.29.0](https://chakra-ui.com/) |
 | Styling            | Custom CSS with CSS Variables              |
 | Backend            | [Supabase](https://supabase.com/)          |
-| Charts             | Recharts + Chart.js                        |
-| Routing            | React Router DOM 7.9                       |
+| Charts             | [Recharts 3.3.0](https://recharts.org/)    |
+| Routing            | React Router DOM 7.9.1                     |
 | API Integration    | Solis Cloud API                            |
 | State Management   | React Context API                          |
 | Caching            | SWR (Stale-While-Revalidate)              |
+| Icons              | Lucide React 0.545.0                       |
 
 ---
 
@@ -268,6 +270,16 @@ This project is licensed under the MIT License — see the LICENSE file for more
 
 > Crafted with ☀️ to bring clarity to solar energy monitoring and maximize your renewable investment.
 
-**Last Updated:** November 17, 2025  
+---
+
+## 📋 Document History
+
+**Maintainer:** Anuja Jayasinghe  
+
+### Change Log
+- **Created:** November 17, 2025 - Initial v2.0.0 documentation
+- **Updated:** November 19, 2025 - Corrected dependency versions (React 19.1.1, Vite 7.1.7, Chakra UI 3.29.0, Recharts 3.3.0), added Chakra UI to tech stack, added maintainer log
+
+**Last Updated:** November 19, 2025  
 **Version:** 2.0.0  
 **Status:** Production Ready ✅ 

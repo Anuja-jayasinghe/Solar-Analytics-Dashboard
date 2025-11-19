@@ -1,7 +1,8 @@
 # Admin Improvement Notes
 
-Date: November 16, 2025  
-Status: Draft for post-dashboard iteration
+**Date:** November 19, 2025  
+**Status:** Draft for post-dashboard iteration  
+**Maintainer:** Anuja Jayasinghe
 
 ---
 
@@ -140,3 +141,15 @@ Status: Draft for post-dashboard iteration
 - `src/pages/AdminLogin.jsx`, `src/pages/AdminDashboard.jsx`
 - Supabase policies/Row Level Security (if used)
 - Serverless functions handling sensitive operations
+
+---
+
+## 📋 Document History
+
+**Maintainer:** Anuja Jayasinghe  
+
+### Change Log
+- **Created:** November 16, 2025 - Initial admin improvement planning document
+- **Updated:** November 19, 2025 - Updated date and status in header, added maintainer log
+
+**Last Updated:** November 19, 2025
