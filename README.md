@@ -1,9 +1,9 @@
-"# ☀️ Solar Analytics Dashboard
+# ☀️ Solar Analytics Dashboard
 
 **Solar Analytics Dashboard** is a modern web application that helps you monitor real-time solar power generation, track earnings, and visualize energy data with interactive charts. Built with React, Vite, and Supabase, it offers intelligent caching, billing period tracking, and admin management—all in a sleek dark/light theme UI.
 
 ### 🚀 **Live Website:**  
-&nbsp;&nbsp;&nbsp;&nbsp;[![Website](https://img.shields.io/badge/solaredge.anujajay.com-000000?style=flat&logo=vercel&logoColor=white)](https://solaredge.anujajay.com/)  
+&nbsp;&nbsp;&nbsp;&nbsp;[![Website](https://img.shields.io/badge/solaredge.anujajay.com-000000?style=flat&logo=google-chrome&logoColor=white)](https://solaredge.anujajay.com/)  
 
 ### 💻 **GitHub Repo:**  
 &nbsp;&nbsp;&nbsp;&nbsp;[![GitHub](https://img.shields.io/badge/Solar--Analytics--Dashboard-100000?style=flat&logo=github&logoColor=white)](https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard)
