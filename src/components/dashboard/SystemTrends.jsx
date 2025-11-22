@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { createClient } from "@supabase/supabase-js";
 
 // Initialize Supabase client
@@ -11,24 +11,79 @@ const supabase = createClient(
 const SystemTrends = () => {
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [billingPeriod, setBillingPeriod] = useState("");
+  const [daysInPeriod, setDaysInPeriod] = useState(0);
 
   useEffect(() => {
     async function loadTrends() {
       setLoading(true);
       try {
+        // Fetch latest CEB bill date to determine billing period start
+        const { data: latestBill, error: billError } = await supabase
+          .from('ceb_data')
+          .select('bill_date')
+          .order('bill_date', { ascending: false })
+          .limit(1)
+          .single();
+        
+        const today = new Date();
+        let startDate, endDate;
+        
+        if (latestBill && !billError) {
+          // Use latest CEB bill date as start of billing period
+          const billDate = new Date(latestBill.bill_date);
+          startDate = billDate.toISOString().split('T')[0];
+          endDate = today.toISOString().split('T')[0];
+          
+          const formatDate = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+          setBillingPeriod(`${formatDate(billDate)} – ${formatDate(today)}`);
+          
+          // Calculate days in period
+          const diffTime = Math.abs(today - billDate);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+          setDaysInPeriod(diffDays);
+        } else {
+          // Fallback to first-of-month if no CEB bill found
+          startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+          endDate = today.toISOString().split('T')[0];
+          setBillingPeriod(today.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }));
+          setDaysInPeriod(today.getDate());
+        }
+
+        // Fetch daily summaries for billing period
+        console.log(`[SystemTrends] Fetching data from ${startDate} to ${endDate}`);
         const { data, error } = await supabase
           .from("inverter_data_daily_summary")
           .select("summary_date, total_generation_kwh, peak_power_kw")
-          .order("summary_date", { ascending: false })
-          .limit(10);
+          .gte('summary_date', startDate)
+          .lte('summary_date', endDate)
+          .order("summary_date", { ascending: true });
 
         if (error) throw error;
         
-        const formattedData = data.map(row => ({
-          ...row,
-          date: new Date(row.summary_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }),
-        })).reverse();
+        console.log(`[SystemTrends] Fetched ${data?.length || 0} rows from database`);
+        
+        // Aggregate by date (in case of multiple inverters)
+        const aggregatedData = {};
+        data.forEach(row => {
+          const date = row.summary_date;
+          if (!aggregatedData[date]) {
+            aggregatedData[date] = { generation: 0, peakPower: 0 };
+          }
+          aggregatedData[date].generation += row.total_generation_kwh || 0;
+          // Use max peak power if multiple inverters
+          aggregatedData[date].peakPower = Math.max(aggregatedData[date].peakPower, row.peak_power_kw || 0);
+        });
 
+        // Format for chart
+        const formattedData = Object.keys(aggregatedData).map(date => ({
+          summary_date: date,
+          date: new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+          daily_generation_kwh: aggregatedData[date].generation,
+          peak_power_kw: aggregatedData[date].peakPower,
+        }));
+
+        console.log(`[SystemTrends] Chart will display ${formattedData.length} days`);
         setChartData(formattedData);
       } catch (err) {
         console.error("Error fetching trend data:", err);
@@ -39,28 +94,45 @@ const SystemTrends = () => {
     loadTrends();
   }, []);
 
-  // --- NEW: Calculate peak power stats ---
-  const { highestPeak, averagePeak } = useMemo(() => {
+  // Calculate billing period stats
+  const { totalGeneration, dailyAverage, bestDay, maxPeakPower } = useMemo(() => {
     if (!chartData || chartData.length === 0) {
-      return { highestPeak: 0, averagePeak: 0 };
+      return { totalGeneration: 0, dailyAverage: 0, bestDay: { value: 0, date: '' }, maxPeakPower: 0 };
     }
-    const peakValues = chartData.map(d => d.peak_power_kw).filter(Boolean); // Filter out null/undefined
-    if (peakValues.length === 0) {
-      return { highestPeak: 0, averagePeak: 0 };
-    }
-    const highest = Math.max(...peakValues);
-    const average = peakValues.reduce((sum, val) => sum + val, 0) / peakValues.length;
-    return { highestPeak: highest, averagePeak: average };
+    
+    const total = chartData.reduce((sum, d) => sum + (d.daily_generation_kwh || 0), 0);
+    const average = chartData.length > 0 ? total / chartData.length : 0;
+    
+    const best = chartData.reduce((max, d) => {
+      return (d.daily_generation_kwh || 0) > max.value 
+        ? { value: d.daily_generation_kwh, date: d.date }
+        : max;
+    }, { value: 0, date: '' });
+    
+    const maxPeak = chartData.reduce((max, d) => Math.max(max, d.peak_power_kw || 0), 0);
+    
+    return { 
+      totalGeneration: total, 
+      dailyAverage: average, 
+      bestDay: best,
+      maxPeakPower: maxPeak
+    };
   }, [chartData]);
 
-  // Custom Tooltip for the line graph
-  const CustomTooltip = ({ active, payload, label }) => {
+  // Custom Tooltip for the bar chart
+  const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
+      const data = payload[0].payload;
       return (
         <div style={styles.tooltip}>
-          <p style={{ margin: 0, padding: 0, color: 'var(--text-secondary)' }}>Date: {label}</p>
-          <p style={{ margin: '4px 0 0', padding: 0, color: 'var(--accent)' }}>
-            {`Total: ${payload[0].value.toFixed(2)} kWh`}
+          <p style={{ margin: 0, padding: 0, color: 'var(--text-secondary)', fontWeight: 'bold' }}>
+            {data.date}
+          </p>
+          <p style={{ margin: '4px 0 2px', padding: 0, color: 'var(--accent)' }}>
+            Generation: {data.daily_generation_kwh.toFixed(2)} kWh
+          </p>
+          <p style={{ margin: '2px 0 0', padding: 0, color: '#4CAF50' }}>
+            Peak Power: {data.peak_power_kw.toFixed(2)} kW
           </p>
         </div>
       );
@@ -70,41 +142,74 @@ const SystemTrends = () => {
 
   return (
     <div className="chart-container" style={styles.container}>
-      <h2 style={styles.title}>Recent Trends</h2>
+      <div style={styles.headerContainer}>
+        <h2 style={styles.title}>Billing Period Generation</h2>
+        {billingPeriod && (
+          <p style={styles.subtitle}>
+            {billingPeriod} {daysInPeriod > 0 && `(${daysInPeriod} days)`}
+          </p>
+        )}
+      </div>
       <div style={styles.chartContainer}>
-        {loading && <p style={styles.loadingText}>Loading Trends...</p>}
+        {loading && <p style={styles.loadingText}>Loading generation data...</p>}
+        {!loading && chartData.length === 0 && (
+          <p style={styles.loadingText}>No data available for this billing period</p>
+        )}
         {!loading && chartData.length > 0 && (
           <ResponsiveContainer width="100%" height={150}>
-            <LineChart data={chartData} margin={{ top: 0, right: 12, left: -6, bottom: 0 }}>
+            <BarChart data={chartData} margin={{ top: 0, right: 12, left: -6, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
-              <XAxis dataKey="date" stroke="var(--chart-text)" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="var(--accent)" fontSize={12} tickLine={false} axisLine={false} />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--glass-border)' }} />
-              {/* Legend removed to preserve space within fixed height */}
-              <Line 
-                type="monotone" 
-                dataKey="total_generation_kwh" 
-                name="Total Generation (kWh)"
-                stroke="var(--accent)" 
-                strokeWidth={2}
-                dot={{ r: 4, fill: 'var(--accent)' }}
-                activeDot={{ r: 8, stroke: 'rgba(255, 122, 0, 0.3)', strokeWidth: 8 }}
+              <XAxis 
+                dataKey="date" 
+                stroke="var(--chart-text)" 
+                fontSize={10} 
+                tickLine={false} 
+                axisLine={false}
+                angle={-45}
+                textAnchor="end"
+                height={60}
+                interval={0}
               />
-            </LineChart>
+              <YAxis 
+                stroke="var(--accent)" 
+                fontSize={12} 
+                tickLine={false} 
+                axisLine={false}
+                label={{ value: 'kWh', angle: -90, position: 'insideLeft', style: { fill: 'var(--text-secondary)', fontSize: 11 } }}
+              />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--glass-border)' }} />
+              <Bar 
+                dataKey="daily_generation_kwh" 
+                fill="var(--accent)"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={25}
+              />
+            </BarChart>
           </ResponsiveContainer>
         )}
       </div>
 
-      {/* --- NEW: Peak Power Stats Section --- */}
+      {/* Billing Period Stats Section */}
       <div style={styles.statsContainer}>
         <div style={styles.statItem}>
-          <p style={styles.statLabel}>Highest Peak</p>
-          <p style={styles.statValue}>{highestPeak.toFixed(2)} <span style={styles.unit}>kW</span></p>
+          <p style={styles.statLabel}>Total</p>
+          <p style={styles.statValue}>{totalGeneration.toFixed(1)} <span style={styles.unit}>kWh</span></p>
         </div>
         <div style={styles.divider} />
         <div style={styles.statItem}>
-          <p style={styles.statLabel}>Average Peak</p>
-          <p style={styles.statValue}>{averagePeak.toFixed(2)} <span style={styles.unit}>kW</span></p>
+          <p style={styles.statLabel}>Daily Avg</p>
+          <p style={styles.statValue}>{dailyAverage.toFixed(1)} <span style={styles.unit}>kWh</span></p>
+        </div>
+        <div style={styles.divider} />
+        <div style={styles.statItem}>
+          <p style={styles.statLabel}>Max Peak</p>
+          <p style={styles.statValue}>{maxPeakPower.toFixed(2)} <span style={styles.unit}>kW</span></p>
+        </div>
+        <div style={styles.divider} />
+        <div style={styles.statItem}>
+          <p style={styles.statLabel}>Best Day</p>
+          <p style={styles.statValue}>{bestDay.value.toFixed(1)} <span style={styles.unit}>kWh</span></p>
+          {bestDay.date && <p style={styles.bestDayDate}>{bestDay.date}</p>}
         </div>
       </div>
     </div>
@@ -118,24 +223,34 @@ const styles = {
     borderRadius: '10px',
     padding: '1.5rem',
     boxShadow: '0 0 20px var(--card-shadow)',
+    height: '360px',
     width: '90%',
     margin: 0,
-    height: '360px',
-    display: 'flex', overflow: 'hidden',
+    display: 'flex', 
+    overflow: 'hidden',
     flexDirection: 'column',
+  },
+  headerContainer: {
+    textAlign: 'center',
+    marginBottom: '0.5rem',
   },
   title: {
     color: 'var(--accent)',
     fontWeight: 'bold',
     fontSize: '1.25rem',
-    textAlign: 'center',
-    margin: '0 0 1rem 0',
+    margin: '0 0 0.25rem 0',
+  },
+  subtitle: {
+    color: 'var(--text-secondary)',
+    fontSize: '0.85rem',
+    margin: 0,
   },
   chartContainer: {
     flexGrow: 1,
     width: '100%',
-    paddingRight:"1rem",
-    paddingTop:"2.5rem",
+    paddingRight: '1rem',
+    paddingTop: '1rem',
+    minHeight: '200px',
   },
   loadingText: {
     color: 'var(--text-secondary)',
@@ -155,31 +270,39 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-around',
     alignItems: 'center',
-    marginTop: '1.5rem',
-    paddingTop: '0.5rem',
+    marginTop: '1rem',
+    paddingTop: '0.75rem',
     borderTop: '1px solid var(--glass-border)',
   },
   statItem: {
     textAlign: 'center',
+    flex: 1,
   },
   statLabel: {
     color: 'var(--text-secondary)',
-    fontSize: '0.75rem',
+    fontSize: '0.7rem',
     textTransform: 'uppercase',
     marginBottom: '0.25rem',
+    letterSpacing: '0.5px',
   },
   statValue: {
     color: 'var(--accent)',
-    fontSize: '1.25rem',
+    fontSize: '1.1rem',
     fontWeight: 'bold',
+    margin: '0.25rem 0',
   },
   unit: {
-    fontSize: '0.875rem',
+    fontSize: '0.8rem',
     opacity: 0.8,
+  },
+  bestDayDate: {
+    color: 'var(--text-secondary)',
+    fontSize: '0.65rem',
+    margin: '0.25rem 0 0 0',
   },
   divider: {
     width: '1px',
-    height: '2rem',
+    height: '2.5rem',
     backgroundColor: 'var(--glass-border)',
   }
 };
