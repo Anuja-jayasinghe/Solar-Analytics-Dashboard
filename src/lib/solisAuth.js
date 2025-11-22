@@ -64,6 +64,8 @@ export async function solisFetch(apiPath, body = {}, method = 'POST') {
     getEnv('VITE_SOLIS_API_URL') ||
     'https://www.soliscloud.com:13333';
 
+  const DEBUG = (process?.env?.NODE_ENV !== 'production') && ((typeof import.meta !== 'undefined' && import.meta?.env?.DEV) || (process?.env?.DEBUG === 'true'));
+
   const headers = await buildSolisHeaders(apiPath, body, method);
 
   const endpoint = `${apiUrl.replace(/\/+$/, '')}/${apiPath.replace(/^\/+/, '')}`;
