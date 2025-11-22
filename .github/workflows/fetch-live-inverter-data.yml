@@ -1,0 +1,110 @@
+name: Fetch Live Inverter Data (Every 5 Minutes)
+
+# ============================================
+# WORKFLOW PURPOSE
+# ============================================
+# This workflow fetches real-time data from SolisCloud API and stores it in the 
+# inverter_data_live table in Supabase. This keeps the database up-to-date with
+# current power generation, inverter status, and temperature readings.
+#
+# Schedule: Every 5 minutes (288 runs per day)
+# Runtime: ~5-10 seconds per execution
+# Table: public.inverter_data_live
+# ============================================
+
+on:
+  # Active window in Sri Lanka local time (UTC+5:30): 05:00–19:55
+  # Quiet window (no runs) in Sri Lanka: 20:00–04:59
+  # Converted to UTC quiet window: 14:30–23:29
+  # We approximate by splitting cron expressions:
+  #   1) Every 5 min from 00:00–13:59 UTC
+  #   2) Every 5 min from 14:00–14:25 UTC (stop before 14:30 quiet start)
+  #   3) Every 5 min from 23:30–23:55 UTC (covers 05:00–05:25 local next day start)
+  schedule:
+    - cron: '*/5 0-13 * * *'
+    - cron: '0-25/5 14 * * *'
+    - cron: '30-55/5 23 * * *'
+  
+  # Allow manual trigger for testing
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: 'Enable debug logging'
+        required: false
+        default: 'false'
+
+# Only allow one instance of this workflow to run at a time
+concurrency:
+  group: fetch-live-inverter-data
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  fetch-live-data:
+    name: Fetch & Store Live Inverter Data
+    runs-on: ubuntu-latest
+    timeout-minutes: 5  # Fail if takes longer than 5 minutes
+    
+    steps:
+      # ============================================
+      # STEP 1: CHECKOUT CODE
+      # ============================================
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1  # Shallow clone for speed
+
+      # ============================================
+      # STEP 2: SETUP PNPM
+      # ============================================
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      # ============================================
+      # STEP 3: SETUP NODE.JS
+      # ============================================
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # ============================================
+      # STEP 4: INSTALL DEPENDENCIES
+      # ============================================
+      - name: 📚 Install Dependencies
+        run: pnpm install --no-frozen-lockfile --prefer-offline
+
+      # ============================================
+      # STEP 5: RUN LIVE DATA FETCHER
+      # ============================================
+      - name: 🚀 Execute Live Data Fetcher
+        run: node functions/fetch_live_data/index.js
+        env:
+          # Supabase Configuration
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          
+          # SolisCloud API Configuration
+          SOLIS_API_URL: ${{ secrets.SOLIS_API_URL }}
+          SOLIS_API_ID: ${{ secrets.SOLIS_API_ID }}
+          SOLIS_API_SECRET: ${{ secrets.SOLIS_API_SECRET }}
+          
+          # Environment
+          NODE_ENV: production
+          DEBUG: ${{ github.event.inputs.debug || 'false' }}
+
+      # ============================================
+      # STEP 6: NOTIFY ON FAILURE (Optional)
+      # ============================================
+      - name: 📧 Notify on Failure
+        if: failure()
+        run: |
+          echo "❌ Live data fetch failed at $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          echo "Check the logs above for error details"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Run ID: ${{ github.run_id }}"
