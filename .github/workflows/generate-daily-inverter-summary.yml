@@ -1,0 +1,72 @@
+name: Generate Daily Inverter Summary
+
+# =============================================================
+# WORKFLOW PURPOSE
+# =============================================================
+# Aggregates the day's inverter live data into daily summaries.
+# Summary fields: total_generation_kwh (max cumulative today), peak_power_kw (max power).
+# Runs once per day late at night (Sri Lanka 23:30 local) to ensure final values are stable.
+# Table: public.inverter_data_daily_summary
+# =============================================================
+
+on:
+  schedule:
+    # 23:30 Sri Lanka time (UTC+5:30) => 18:00 UTC daily
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: 'Enable debug logging'
+        required: false
+        default: 'false'
+
+concurrency:
+  group: generate-daily-inverter-summary
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  generate-daily-summary:
+    name: Generate Daily Summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📚 Install Dependencies
+        run: pnpm install --no-frozen-lockfile --prefer-offline
+
+      - name: 🧮 Generate Daily Inverter Summary
+        run: node functions/generate_daily_summary/index.js
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SOLIS_API_URL: ${{ secrets.SOLIS_API_URL }}
+          SOLIS_API_ID: ${{ secrets.SOLIS_API_ID }}
+          SOLIS_API_SECRET: ${{ secrets.SOLIS_API_SECRET }}
+          NODE_ENV: production
+          DEBUG: ${{ github.event.inputs.debug || 'false' }}
+
+      - name: 📧 Notify on Failure
+        if: failure()
+        run: |
+          echo "❌ Daily summary generation failed at $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Run ID: ${{ github.run_id }}"
