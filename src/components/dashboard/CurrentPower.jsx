@@ -1,5 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { createClient } from "@supabase/supabase-js";
+import React from "react";
 import { useData } from "../../hooks/useData";
 import { Zap, Hourglass } from "lucide-react";
 

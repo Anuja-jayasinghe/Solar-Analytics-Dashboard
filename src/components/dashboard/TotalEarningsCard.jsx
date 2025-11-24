@@ -1,8 +1,5 @@
 import React from "react";
 import { useData } from "../../hooks/useData"; // Corrected import path
-// Skeleton is imported but not used in your code, so I've left it as is.
-// If you want to add it, wrap the main <div> with <Skeleton isLoaded={!isLoading} ...>
-import { Skeleton } from "@chakra-ui/react"; 
 
 const TotalEarningsCard = () => {
   // 1. Get all the correct data from the context

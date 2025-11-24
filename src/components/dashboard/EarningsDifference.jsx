@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import { useData } from '../../hooks/useData'; // Makes values from DataContext available
-import { ZAxis } from 'recharts';
 
 const EarningsDifference = () => {
   // Get data from context (inverterPotentialValue is already calculated in DataContext)

@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { cacheService } from '../lib/cacheService';
 import { supabase } from '../lib/supabaseClient';
 

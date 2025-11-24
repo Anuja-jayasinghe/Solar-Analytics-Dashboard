@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { ThemeContext } from '../components/ThemeContext';
 

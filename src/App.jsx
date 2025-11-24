@@ -1,6 +1,6 @@
 // App.js
-import { useState, useEffect, useContext, Suspense, lazy } from "react";
-import { BrowserRouter as Router, Routes, Route, NavLink } from "react-router-dom";
+import React, { useState, useEffect, useContext, Suspense, lazy } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./components/ThemeContext";
 import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 import { DataProvider } from "./contexts/DataContext";

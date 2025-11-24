@@ -1,12 +1,7 @@
+import React, { useState, useEffect, useContext } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { useState, useEffect, useContext } from "react";
 import { ThemeContext } from "./ThemeContext";
-import { ShieldEllipsis } from "lucide-react";
-import { ShieldEllipsisIcon } from "lucide-react";
 import { ComputerIcon } from "lucide-react";
-import { FileWarning } from "lucide-react";
-import { LucideMessageSquareWarning } from "lucide-react";
-import { MailWarning } from "lucide-react";
 
 // --- SVG Icons ---
 const DashboardIcon = ({ className }) => (
