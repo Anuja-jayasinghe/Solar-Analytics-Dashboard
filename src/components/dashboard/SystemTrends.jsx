@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { createClient } from "@supabase/supabase-js";
 
 // Initialize Supabase client
@@ -13,6 +13,7 @@ const SystemTrends = () => {
   const [loading, setLoading] = useState(true);
   const [billingPeriod, setBillingPeriod] = useState("");
   const [daysInPeriod, setDaysInPeriod] = useState(0);
+  const [showXAxisLabels, setShowXAxisLabels] = useState(false);
 
   useEffect(() => {
     async function loadTrends() {
@@ -78,7 +79,8 @@ const SystemTrends = () => {
         // Format for chart
         const formattedData = Object.keys(aggregatedData).map(date => ({
           summary_date: date,
-          date: new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+          date: new Date(date).toLocaleDateString('en-GB', { day: '2-digit' }),
+          fullDate: new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
           daily_generation_kwh: aggregatedData[date].generation,
           peak_power_kw: aggregatedData[date].peakPower,
         }));
@@ -95,9 +97,9 @@ const SystemTrends = () => {
   }, []);
 
   // Calculate billing period stats
-  const { totalGeneration, dailyAverage, bestDay, maxPeakPower } = useMemo(() => {
+  const { totalGeneration, dailyAverage, bestDay, maxPeak } = useMemo(() => {
     if (!chartData || chartData.length === 0) {
-      return { totalGeneration: 0, dailyAverage: 0, bestDay: { value: 0, date: '' }, maxPeakPower: 0 };
+      return { totalGeneration: 0, dailyAverage: 0, bestDay: { value: 0, date: '' }, maxPeak: { value: 0, date: '' } };
     }
     
     const total = chartData.reduce((sum, d) => sum + (d.daily_generation_kwh || 0), 0);
@@ -105,28 +107,32 @@ const SystemTrends = () => {
     
     const best = chartData.reduce((max, d) => {
       return (d.daily_generation_kwh || 0) > max.value 
-        ? { value: d.daily_generation_kwh, date: d.date }
+        ? { value: d.daily_generation_kwh, date: d.fullDate }
         : max;
     }, { value: 0, date: '' });
     
-    const maxPeak = chartData.reduce((max, d) => Math.max(max, d.peak_power_kw || 0), 0);
+    const peak = chartData.reduce((max, d) => {
+      return (d.peak_power_kw || 0) > max.value
+        ? { value: d.peak_power_kw, date: d.fullDate }
+        : max;
+    }, { value: 0, date: '' });
     
     return { 
       totalGeneration: total, 
       dailyAverage: average, 
       bestDay: best,
-      maxPeakPower: maxPeak
+      maxPeak: peak
     };
   }, [chartData]);
 
-  // Custom Tooltip for the bar chart
+  // Custom Tooltip for the chart
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
         <div style={styles.tooltip}>
           <p style={{ margin: 0, padding: 0, color: 'var(--text-secondary)', fontWeight: 'bold' }}>
-            {data.date}
+            {data.fullDate}
           </p>
           <p style={{ margin: '4px 0 2px', padding: 0, color: 'var(--accent)' }}>
             Generation: {data.daily_generation_kwh.toFixed(2)} kWh
@@ -150,41 +156,78 @@ const SystemTrends = () => {
           </p>
         )}
       </div>
-      <div style={styles.chartContainer}>
+      <div 
+        style={styles.chartContainer}
+        onMouseEnter={() => setShowXAxisLabels(true)}
+        onMouseLeave={() => setShowXAxisLabels(false)}
+      >
         {loading && <p style={styles.loadingText}>Loading generation data...</p>}
         {!loading && chartData.length === 0 && (
           <p style={styles.loadingText}>No data available for this billing period</p>
         )}
         {!loading && chartData.length > 0 && (
-          <ResponsiveContainer width="100%" height={150}>
-            <BarChart data={chartData} margin={{ top: 0, right: 12, left: -6, bottom: 0 }}>
+          <ResponsiveContainer width="100%" height={190}>
+            <AreaChart 
+              data={chartData} 
+              margin={{ top: 20, right: 12, left: 0, bottom: 5 }}
+            >
+              <defs>
+                <linearGradient id="generationFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.6} />
+                  <stop offset="90%" stopColor="var(--accent)" stopOpacity={0.05} />
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
-              <XAxis 
-                dataKey="date" 
-                stroke="var(--chart-text)" 
-                fontSize={10} 
-                tickLine={false} 
+              <XAxis
+                dataKey="date"
+                stroke="var(--chart-text)"
+                fontSize={7}
+                tickLine={false}
                 axisLine={false}
-                angle={-45}
-                textAnchor="end"
-                height={60}
+                height={20}
                 interval={0}
+                angle={75}
+                textAnchor="end"
+                dy={15}
+                tickFormatter={(value) => (showXAxisLabels ? value : '')}
+                style={{fill:'var(--accent)'}}
               />
-              <YAxis 
-                stroke="var(--accent)" 
-                fontSize={12} 
-                tickLine={false} 
+              <YAxis
+                stroke="var(--accent)"
+                fontSize={12}
+                tickLine={false}
                 axisLine={false}
-                label={{ value: 'kWh', angle: -90, position: 'insideLeft', style: { fill: 'var(--text-secondary)', fontSize: 11 } }}
+                width={45}
+              label={{ value: 'kW/kWh', angle: -90, position: 'insideLeft', offset: 5, style: { fill: 'var(--text-secondary)', fontSize: 12, fontWeight: 'bold' } }}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--glass-border)' }} />
-              <Bar 
+              <Legend 
+                verticalAlign="top" 
+                height={20} 
+                formatter={(value) => {
+                  if (value === 'daily_generation_kwh') return 'Generation (kWh)';
+                  if (value === 'peak_power_kw') return 'Peak Power (kW)';
+                  return value;
+                }}
+                wrapperStyle={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}
+              />
+              <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--accent)', strokeWidth: 1 }} />
+              <Area 
+                type="monotone" 
                 dataKey="daily_generation_kwh" 
-                fill="var(--accent)"
-                radius={[4, 4, 0, 0]}
-                maxBarSize={25}
+                stroke="var(--accent)" 
+                strokeWidth={2}
+                fill="url(#generationFill)"
+                activeDot={{ r: 4, stroke: 'var(--accent)', strokeWidth: 1 }}
               />
-            </BarChart>
+              <Area 
+                type="monotone"
+                dataKey="peak_power_kw"
+                stroke="#4CAF50"
+                strokeWidth={1.5}
+                fill="none"
+                activeDot={{ r: 4, stroke: '#4CAF50', strokeWidth: 1 }}
+              />
+            </AreaChart>
           </ResponsiveContainer>
         )}
       </div>
@@ -203,7 +246,8 @@ const SystemTrends = () => {
         <div style={styles.divider} />
         <div style={styles.statItem}>
           <p style={styles.statLabel}>Max Peak</p>
-          <p style={styles.statValue}>{maxPeakPower.toFixed(2)} <span style={styles.unit}>kW</span></p>
+          <p style={styles.statValue}>{maxPeak.value.toFixed(2)} <span style={styles.unit}>kW</span></p>
+          {maxPeak.date && <p style={styles.bestDayDate}>{maxPeak.date}</p>}
         </div>
         <div style={styles.divider} />
         <div style={styles.statItem}>
@@ -249,7 +293,7 @@ const styles = {
     flexGrow: 1,
     width: '100%',
     paddingRight: '1rem',
-    paddingTop: '1rem',
+    paddingTop: '0.5rem',
     minHeight: '200px',
   },
   loadingText: {
