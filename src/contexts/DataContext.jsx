@@ -361,31 +361,49 @@ export const DataProvider = ({ children }) => {
     return cleanup;
   }, [fetchData, setupPolling]);
 
-  // Handle visibility and network changes
+  // Handle visibility and network changes with debouncing
   useEffect(() => {
+    let visibilityTimeout = null;
+    
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('[DataContext] Tab visible, refreshing data');
-        // Immediate refresh when tab becomes visible
-        fetchData('live');
-        fetchData('charts');
-        fetchData('totalEarnings');
-        fetchData('monthlyGen');
+        // Debounce to prevent multiple rapid refreshes
+        if (visibilityTimeout) clearTimeout(visibilityTimeout);
+        
+        visibilityTimeout = setTimeout(() => {
+          console.log('[DataContext] Tab visible, refreshing data');
+          // Use requestAnimationFrame to batch updates
+          requestAnimationFrame(() => {
+            try {
+              fetchData('live');
+              fetchData('charts');
+              fetchData('totalEarnings');
+              fetchData('monthlyGen');
+            } catch (error) {
+              console.error('[DataContext] Error during visibility refresh:', error);
+            }
+          });
+        }, 100); // 100ms debounce
       }
     };
 
     const handleOnline = () => {
       console.log('[DataContext] Network online, refreshing data');
-      fetchData('live');
-      fetchData('charts');
-      fetchData('totalEarnings');
-      fetchData('monthlyGen');
+      try {
+        fetchData('live');
+        fetchData('charts');
+        fetchData('totalEarnings');
+        fetchData('monthlyGen');
+      } catch (error) {
+        console.error('[DataContext] Error during online refresh:', error);
+      }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('online', handleOnline);
 
     return () => {
+      if (visibilityTimeout) clearTimeout(visibilityTimeout);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('online', handleOnline);
     };

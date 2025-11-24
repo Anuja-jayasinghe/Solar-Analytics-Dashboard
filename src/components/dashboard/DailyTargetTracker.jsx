@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useData } from "../../hooks/useData";
 import { HousePlugIcon } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
@@ -275,14 +275,14 @@ const DailyTargetTracker = () => {
         <div style={styles.statItem}>
           <p style={styles.statLabel}>Generated</p>
           <p style={styles.statValue}>
-            {displayTodayGen.toFixed(2)} <span style={styles.unit}>kWh</span>
+            {Number(displayTodayGen || 0).toFixed(2)} <span style={styles.unit}>kWh</span>
           </p>
         </div>
         <div style={styles.divider} />
         <div style={styles.statItem}>
           <p style={styles.statLabel}>Target</p>
           <p style={styles.statValue}>
-            {target} <span style={styles.unit}>kWh</span>
+            {target || 0} <span style={styles.unit}>kWh</span>
           </p>
         </div>
       </div>

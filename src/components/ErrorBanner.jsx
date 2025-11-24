@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Copy } from 'lucide-react';
 import { useData } from '../hooks/useData';
 
 const ErrorBanner = () => {
@@ -59,6 +60,22 @@ const ErrorBanner = () => {
     }
   };
 
+  const copyErrorDetails = () => {
+    const errorText = visibleErrors.map(error => 
+      `[${new Date().toISOString()}] ${getErrorTitle(error.type)}\n` +
+      `Service: ${error.key}\n` +
+      `Type: ${error.type}\n` +
+      `Duration: ${error.duration} minutes\n` +
+      `Message: ${error.message}\n`
+    ).join('\n---\n\n');
+    
+    navigator.clipboard.writeText(errorText).then(() => {
+      console.log('Error details copied to clipboard');
+    }).catch(err => {
+      console.error('Failed to copy error details:', err);
+    });
+  };
+
   if (visibleErrors.length === 0) return null;
 
   return (
@@ -74,6 +91,13 @@ const ErrorBanner = () => {
                 {error.type === 'transient' && ' Retrying automatically...'}
               </span>
             </div>
+            <button 
+              onClick={copyErrorDetails}
+              style={copyButtonStyle}
+              title="Copy error details"
+            >
+              <Copy size={16} />
+            </button>
           </div>
         </div>
       ))}
@@ -132,6 +156,20 @@ const messageStyle = {
   color: 'var(--text-secondary)',
   fontSize: '0.85rem',
   opacity: 0.9,
+};
+
+const copyButtonStyle = {
+  background: 'rgba(255, 152, 0, 0.2)',
+  border: '1px solid rgba(255, 152, 0, 0.4)',
+  borderRadius: '6px',
+  padding: '0.5rem 0.75rem',
+  cursor: 'pointer',
+  fontSize: '1.1rem',
+  transition: 'all 0.2s ease',
+  flexShrink: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
 };
 
 export default ErrorBanner;

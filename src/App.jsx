@@ -11,6 +11,7 @@ import "./index.css";
 import { verifySupabaseConnection } from "./lib/verifySupabaseConnection";
 import { Analytics } from "@vercel/analytics/react"
 import MaintenancePage from "./pages/MaintenancePage";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 // Lazy load pages for better code splitting
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -102,21 +103,45 @@ function AppContent() {
 const IS_MAINTENANCE = false
 
 function App() {
+  // Add global error handlers
+  useEffect(() => {
+    const handleUnhandledRejection = (event) => {
+      console.error('Unhandled promise rejection:', event.reason);
+    };
+    
+    const handleError = (event) => {
+      console.error('Window error:', event.error);
+    };
+
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    window.addEventListener('error', handleError);
+
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      window.removeEventListener('error', handleError);
+    };
+  }, []);
 
   if (IS_MAINTENANCE){
     return <MaintenancePage/>
   }
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <DataProvider>
-          <Router>
-            <Analytics/>
-            <AppContent />
-          </Router>
-        </DataProvider>
-      </ThemeProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <ThemeProvider>
+          <ErrorBoundary>
+            <DataProvider>
+              <Router>
+                <Analytics/>
+                <ErrorBoundary>
+                  <AppContent />
+                </ErrorBoundary>
+              </Router>
+            </DataProvider>
+          </ErrorBoundary>
+        </ThemeProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

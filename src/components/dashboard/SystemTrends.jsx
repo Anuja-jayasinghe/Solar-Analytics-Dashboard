@@ -129,10 +129,10 @@ const SystemTrends = () => {
             {data.fullDate}
           </p>
           <p style={{ margin: '4px 0 2px', padding: 0, color: 'var(--accent)' }}>
-            Generation: {data.daily_generation_kwh.toFixed(2)} kWh
+            Generation: {Number(data.daily_generation_kwh || 0).toFixed(2)} kWh
           </p>
           <p style={{ margin: '2px 0 0', padding: 0, color: '#4CAF50' }}>
-            Peak Power: {data.peak_power_kw.toFixed(2)} kW
+            Peak Power: {Number(data.peak_power_kw || 0).toFixed(2)} kW
           </p>
         </div>
       );
@@ -230,23 +230,23 @@ const SystemTrends = () => {
       <div style={styles.statsContainer}>
         <div style={styles.statItem}>
           <p style={styles.statLabel}>Total</p>
-          <p style={styles.statValue}>{totalGeneration.toFixed(1)} <span style={styles.unit}>kWh</span></p>
+          <p style={styles.statValue}>{Number(totalGeneration || 0).toFixed(1)} <span style={styles.unit}>kWh</span></p>
         </div>
         <div style={styles.divider} />
         <div style={styles.statItem}>
           <p style={styles.statLabel}>Daily Avg</p>
-          <p style={styles.statValue}>{dailyAverage.toFixed(1)} <span style={styles.unit}>kWh</span></p>
+          <p style={styles.statValue}>{Number(dailyAverage || 0).toFixed(1)} <span style={styles.unit}>kWh</span></p>
         </div>
         <div style={styles.divider} />
         <div style={styles.statItem}>
           <p style={styles.statLabel}>Max Peak</p>
-          <p style={styles.statValue}>{maxPeak.value.toFixed(2)} <span style={styles.unit}>kW</span></p>
+          <p style={styles.statValue}>{Number(maxPeak?.value || 0).toFixed(2)} <span style={styles.unit}>kW</span></p>
           {maxPeak.date && <p style={styles.bestDayDate}>{maxPeak.date}</p>}
         </div>
         <div style={styles.divider} />
         <div style={styles.statItem}>
           <p style={styles.statLabel}>Best Day</p>
-          <p style={styles.statValue}>{bestDay.value.toFixed(1)} <span style={styles.unit}>kWh</span></p>
+          <p style={styles.statValue}>{Number(bestDay?.value || 0).toFixed(1)} <span style={styles.unit}>kWh</span></p>
           {bestDay.date && <p style={styles.bestDayDate}>{bestDay.date}</p>}
         </div>
       </div>
