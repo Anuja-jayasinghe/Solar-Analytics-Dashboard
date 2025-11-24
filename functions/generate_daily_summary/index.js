@@ -104,6 +104,14 @@ async function processSingleDay(dateParts) {
 
   console.log(`   📥 Fetched ${liveRows.length} live data rows`);
   
+  // Check if data is sufficient (at least 10 rows for a full day)
+  const MIN_ROWS_FOR_FULL_DAY = 10;
+  const hasInsufficientData = liveRows.length < MIN_ROWS_FOR_FULL_DAY;
+  if (hasInsufficientData) {
+    console.log(`   ⚠️  Insufficient data (${liveRows.length} rows < ${MIN_ROWS_FOR_FULL_DAY} minimum)`);
+    console.log(`   ℹ️  Live data may have been pruned - will not update existing records`);
+  }
+  
   // Log sample of fetched data (first 3 rows)
   if (liveRows.length > 0) {
     const sampleSize = Math.min(3, liveRows.length);
@@ -168,14 +176,32 @@ async function processSingleDay(dateParts) {
       console.log(`      ➕ ${newRow.inverter_sn}: NEW RECORD (gen=${newRow.total_generation_kwh} kWh, peak=${newRow.peak_power_kw} kW)`);
       actions.push({ inverter: newRow.inverter_sn, action: 'insert', data: newRow });
     } else {
+      // If data is insufficient, skip updating existing records to prevent data loss
+      if (hasInsufficientData) {
+        console.log(`      ⏭️  ${newRow.inverter_sn}: SKIPPED (insufficient live data - preserving existing record)`);
+        actions.push({ inverter: newRow.inverter_sn, action: 'skipped_insufficient_data' });
+        continue;
+      }
+      
       // Check if values differ (update needed)
       const genChanged = Math.abs(existing.total_generation_kwh - newRow.total_generation_kwh) > 0.01;
       const peakChanged = Math.abs((existing.peak_power_kw || 0) - newRow.peak_power_kw) > 0.01;
+      
+      // Additional safety check: don't update if new peak is significantly lower (likely incomplete data)
+      const peakDroppedSignificantly = (existing.peak_power_kw || 0) - newRow.peak_power_kw > 5.0;
+      
       if (genChanged || peakChanged) {
-        console.log(`      🔄 ${newRow.inverter_sn}: UPDATE NEEDED`);
-        console.log(`         Generation: ${existing.total_generation_kwh} → ${newRow.total_generation_kwh} kWh (Δ ${(newRow.total_generation_kwh - existing.total_generation_kwh).toFixed(2)})`);
-        console.log(`         Peak Power: ${existing.peak_power_kw || 0} → ${newRow.peak_power_kw} kW (Δ ${(newRow.peak_power_kw - (existing.peak_power_kw || 0)).toFixed(2)})`);
-        actions.push({ inverter: newRow.inverter_sn, action: 'update', data: newRow, oldData: existing });
+        if (peakDroppedSignificantly) {
+          console.log(`      ⚠️  ${newRow.inverter_sn}: UPDATE BLOCKED (peak dropped by ${((existing.peak_power_kw || 0) - newRow.peak_power_kw).toFixed(2)} kW - likely incomplete data)`);
+          console.log(`         Generation: ${existing.total_generation_kwh} → ${newRow.total_generation_kwh} kWh`);
+          console.log(`         Peak Power: ${existing.peak_power_kw || 0} kW (existing) vs ${newRow.peak_power_kw} kW (calculated)`);
+          actions.push({ inverter: newRow.inverter_sn, action: 'blocked_suspicious_drop' });
+        } else {
+          console.log(`      🔄 ${newRow.inverter_sn}: UPDATE NEEDED`);
+          console.log(`         Generation: ${existing.total_generation_kwh} → ${newRow.total_generation_kwh} kWh (Δ ${(newRow.total_generation_kwh - existing.total_generation_kwh).toFixed(2)})`);
+          console.log(`         Peak Power: ${existing.peak_power_kw || 0} → ${newRow.peak_power_kw} kW (Δ ${(newRow.peak_power_kw - (existing.peak_power_kw || 0)).toFixed(2)})`);
+          actions.push({ inverter: newRow.inverter_sn, action: 'update', data: newRow, oldData: existing });
+        }
       } else {
         console.log(`      ✓ ${newRow.inverter_sn}: UNCHANGED (gen=${newRow.total_generation_kwh} kWh, peak=${newRow.peak_power_kw} kW)`);
         actions.push({ inverter: newRow.inverter_sn, action: 'unchanged' });
@@ -252,15 +278,16 @@ async function main() {
       const inserts = result.actions.filter(a => a.action === 'insert').length;
       const updates = result.actions.filter(a => a.action === 'update').length;
       const unchanged = result.actions.filter(a => a.action === 'unchanged').length;
+      const blocked = result.actions.filter(a => a.action === 'blocked_suspicious_drop' || a.action === 'skipped_insufficient_data').length;
 
       totalInserts += inserts;
       totalUpdates += updates;
       totalUnchanged += unchanged;
 
-      console.log(`   📊 Result: ${inserts} inserted, ${updates} updated, ${unchanged} unchanged`);
+      console.log(`   📊 Result: ${inserts} inserted, ${updates} updated, ${unchanged} unchanged${blocked > 0 ? `, ${blocked} blocked/skipped` : ''}`);
       console.log(`${'─'.repeat(60)}`);
 
-      results.push({ date: dateStr, status: 'processed', inserts, updates, unchanged });
+      results.push({ date: dateStr, status: 'processed', inserts, updates, unchanged, blocked });
     }
 
     // Optional: Prune very old live data (> 14 days) to keep table lean
