@@ -1,12 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useData } from "../../hooks/useData";
-import { Zap } from "lucide-react";
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { Zap, Hourglass } from "lucide-react";
 
 const CurrentPower = () => {
   const { livePowerData, loading, lastUpdate } = useData();

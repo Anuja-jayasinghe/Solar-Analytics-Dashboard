@@ -1,13 +1,8 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useData } from "../../hooks/useData";
-import { LockIcon } from "lucide-react";
 import { HousePlugIcon } from "lucide-react";
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL || "https://example.supabase.co",
-  import.meta.env.VITE_SUPABASE_ANON_KEY || "example-key"
-);
+import { supabase } from "../../lib/supabaseClient";
 
 const DailyTargetTracker = () => {
   const { livePowerData, loading } = useData();

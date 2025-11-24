@@ -1,12 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { createClient } from "@supabase/supabase-js";
-
-// Initialize Supabase client
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL || "https://example.supabase.co",
-  import.meta.env.VITE_SUPABASE_ANON_KEY || "example-key"
-);
+import { supabase } from "../../lib/supabaseClient";
 
 const SystemTrends = () => {
   const [chartData, setChartData] = useState([]);

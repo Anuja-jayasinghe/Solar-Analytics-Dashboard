@@ -1,7 +1,7 @@
 // src/components/MonthlyGenerationCard.jsx
 import React, { useEffect, useState } from "react";
 import { useData } from "../../hooks/useData"; // Adjust path as needed
-import { supabase } from "../../lib/supabaseClient";
+
 
 const MonthlyGenerationCard = () => {
   const { monthlyGenerationData, loading } = useData();

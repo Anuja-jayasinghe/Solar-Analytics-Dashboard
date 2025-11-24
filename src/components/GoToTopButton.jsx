@@ -19,7 +19,7 @@ const GoToTopButton = () => {
       } else {
         // Fallback to window scroll if page-container not found
         const scrollY = window.pageYOffset || document.documentElement.scrollTop;
-        console.log('Window scroll position:', scrollY);
+        // console.log('Window scroll position:', scrollY);
         
         if (scrollY > 200) {
           setIsVisible(true);
