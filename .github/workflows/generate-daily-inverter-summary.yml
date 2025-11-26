@@ -5,7 +5,7 @@ name: Generate Daily Inverter Summary
 # =============================================================
 # Aggregates inverter live data into daily summaries with backfill capability.
 # Summary fields: total_generation_kwh (max cumulative today), peak_power_kw (max power).
-# Runs daily at 22:30 Sri Lanka time (17:00 UTC) to ensure stable end-of-day values.
+# Runs twice daily at 10:30 AM and 10:30 PM Sri Lanka time to ensure data availability.
 # Features:
 # - Backfills last 30 days of missing or incomplete summaries
 # - Updates records if new data differs from existing
@@ -16,7 +16,9 @@ name: Generate Daily Inverter Summary
 
 on:
   schedule:
-    # 22:30 Sri Lanka time (UTC+5:30) => 17:00 UTC daily
+    # 10:30 AM Sri Lanka time (UTC+5:30) => 05:00 UTC
+    - cron: '0 5 * * *'
+    # 10:30 PM Sri Lanka time (UTC+5:30) => 17:00 UTC
     - cron: '0 17 * * *'
   workflow_dispatch:
     inputs:

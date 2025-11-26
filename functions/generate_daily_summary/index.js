@@ -105,7 +105,7 @@ async function processSingleDay(dateParts) {
   console.log(`   📥 Fetched ${liveRows.length} live data rows`);
   
   // Check if data is sufficient (at least 10 rows for a full day)
-  const MIN_ROWS_FOR_FULL_DAY = 10;
+  const MIN_ROWS_FOR_FULL_DAY = 1;
   const hasInsufficientData = liveRows.length < MIN_ROWS_FOR_FULL_DAY;
   if (hasInsufficientData) {
     console.log(`   ⚠️  Insufficient data (${liveRows.length} rows < ${MIN_ROWS_FOR_FULL_DAY} minimum)`);
