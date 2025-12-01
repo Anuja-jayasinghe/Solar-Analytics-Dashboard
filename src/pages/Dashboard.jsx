@@ -1,5 +1,6 @@
 // src/pages/Dashboard.jsx
 import React, { Suspense, lazy } from "react";
+import { DemoDataProvider } from "../contexts/DemoDataContext";
 import DailyTargetTracker from "../components/dashboard/DailyTargetTracker";
 import PeakPowerDial from "../components/dashboard/CurrentPower";
 import MonthlyGenerationCard from "../components/dashboard/MonthlyGenerationCard";
@@ -17,7 +18,9 @@ const EnvironmentalImpact = lazy(() => import("../components/dashboard/Environme
 const SystemTrends = lazy(() => import("../components/dashboard/SystemTrends"));
 
 function Dashboard() {
-  return (
+  const demoTestMode = (import.meta?.env?.VITE_DEMO_TEST_MODE ?? 'true') === 'true';
+
+  const content = (
     <div style={pageStyle}>
       <RefreshIndicator />
       <ErrorBanner />
@@ -59,6 +62,12 @@ function Dashboard() {
         </Suspense>
       </div>
     </div>
+  );
+
+  return demoTestMode ? (
+    <DemoDataProvider>{content}</DemoDataProvider>
+  ) : (
+    content
   );
 }
 
