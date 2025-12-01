@@ -178,12 +178,16 @@ const SystemTrends = () => {
                 fontSize={7}
                 tickLine={false}
                 axisLine={false}
-                height={20}
+                height={30}
                 interval={0}
-                angle={75}
+                angle={0}
                 textAnchor="end"
                 dy={15}
-                tickFormatter={(value) => (showXAxisLabels ? value : '')}
+                tickFormatter={(value) => {
+                  const dayNum = parseInt(value, 10);
+                  const show = showXAxisLabels && dayNum % 3 === 0;
+                  return show ? value : '';
+                }}
                 style={{fill:'var(--accent)'}}
               />
               <YAxis
