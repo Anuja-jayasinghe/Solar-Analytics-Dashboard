@@ -10,6 +10,9 @@ Purpose: Track the separation of demo vs real dashboards and pages, including te
 | 4  | Demo Settings page | `src/pages/demo/SettingsDemo.jsx` | Done | Copilot | Shows banner; functional blocking to be wired later |
 | 5  | Real Settings page | `src/pages/real/SettingsReal.jsx` | Done | Copilot | Re-exports existing `Settings` |
 | 6  | Demo test flag in Dashboard | `src/pages/Dashboard.jsx` | Done | Copilot | Uses `VITE_DEMO_TEST_MODE` to wrap with `DemoDataProvider` |
+| 7  | Wire `/demo/dashboard` route in App.jsx | `src/App.jsx` | In Progress | — | Add demo route without auth requirement |
+| 8  | Wire `/demo/settings` route in App.jsx | `src/App.jsx` | In Progress | — | Add demo settings route (read-only) |
+| 9  | Make Settings read-only for demo | `src/pages/demo/SettingsDemo.jsx` | In Progress | — | Block all save operations, show banner |
 | 7  | Wire demo access blocking (Settings) | `src/pages/Settings.jsx` (via context) | Planned | — | Use `dashboardAccess` + modal to block saves |
 | 8  | Add `dashboardAccess` to `AuthContext` | `src/contexts/AuthContext.jsx` | Planned | — | Values: `demo` / `real`; helper `hasRealAccess()` |
 | 9  | Optional DB column `dashboard_access` | Supabase `admin_users` | Planned | — | Migration script to add column |

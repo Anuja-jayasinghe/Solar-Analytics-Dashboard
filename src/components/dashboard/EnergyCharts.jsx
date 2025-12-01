@@ -131,7 +131,7 @@ const EnergyCharts = () => {
         <div style={messageContainer}><p>No energy data available</p></div>
       ) : (
         <>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={400}>
             <BarChart data={data} isAnimationActive={inView}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.2} stroke="var(--chart-grid)" />
               {/* XAxis now uses the simple 'month' label */}
@@ -171,7 +171,7 @@ const EnergyCharts = () => {
             </BarChart>
           </ResponsiveContainer>
 
-          <ResponsiveContainer width="100%" height={250} style={{ marginTop: "2rem" }}>
+          <ResponsiveContainer width="100%" height={350} style={{ marginTop: "2rem" }}>
             <LineChart data={data} isAnimationActive={inView}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.2} stroke="var(--chart-grid)" />
               {/* XAxis now uses the simple 'month' label */}

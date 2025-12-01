@@ -13,6 +13,41 @@ const SystemTrends = () => {
     async function loadTrends() {
       setLoading(true);
       try {
+        const demoMode = (import.meta?.env?.VITE_DEMO_TEST_MODE ?? 'false') === 'true';
+        if (demoMode) {
+          const today = new Date();
+          const start = new Date(today);
+          start.setDate(today.getDate() - 26); // Nov 5 to Dec 1 = 27 days
+          const formatISO = (d) => d.toISOString().split('T')[0];
+          const formatShort = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+
+          const demoRows = [];
+          // Generate realistic daily patterns: higher in mid-month, varies by weather
+          for (let i = 0; i <= 26; i++) {
+            const d = new Date(start);
+            d.setDate(start.getDate() + i);
+            // Simulate seasonal variation + random weather (20-45 kWh typical range)
+            const baseGen = 28 + Math.sin(i / 27 * Math.PI) * 8; // Peak mid-period
+            const weatherVariation = (Math.random() - 0.3) * 10; // Random clouds/sun
+            const gen = Math.max(18, Math.min(45, baseGen + weatherVariation));
+            // Peak power proportional to generation (2.5-5.5 kW)
+            const peak = 2.8 + (gen / 35) * 2.2 + (Math.random() - 0.5) * 0.8;
+            demoRows.push({
+              summary_date: formatISO(d),
+              date: d.toLocaleDateString('en-GB', { day: '2-digit' }),
+              fullDate: formatShort(d),
+              daily_generation_kwh: Number(gen.toFixed(2)),
+              peak_power_kw: Number(peak.toFixed(2)),
+            });
+          }
+
+          const billStart = new Date(start);
+          const formatLong = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+          setBillingPeriod(`${formatLong(billStart)} – ${formatLong(today)}`);
+          setDaysInPeriod(27);
+          setChartData(demoRows);
+          return;
+        }
         // Fetch latest CEB bill date to determine billing period start
         const { data: latestBill, error: billError } = await supabase
           .from('ceb_data')

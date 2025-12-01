@@ -16,6 +16,12 @@ import ErrorBoundary from "./components/ErrorBoundary";
 // Lazy load pages for better code splitting
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Settings = lazy(() => import("./pages/Settings"));
+const Landing = lazy(() => import("./pages/Landing"));
+// Demo/Real separated pages
+const DashboardDemo = lazy(() => import("./pages/demo/DashboardDemo"));
+const SettingsDemo = lazy(() => import("./pages/demo/SettingsDemo"));
+const DashboardReal = lazy(() => import("./pages/real/DashboardReal"));
+const SettingsReal = lazy(() => import("./pages/real/SettingsReal"));
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -46,6 +52,9 @@ function AppContent() {
   return (
     <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'var(--accent)' }}>Loading...</div>}>
       <Routes>
+        {/* Landing page - standalone, no sidebar */}
+        <Route path="/" element={<Landing />} />
+
         {/* Admin routes - standalone layout */}
         <Route path="/admin" element={<AdminLogin />} />
         <Route
@@ -79,9 +88,15 @@ function AppContent() {
                 <div className="page-container">
                   <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh', color: 'var(--accent)' }}>Loading page...</div>}>
                     <Routes>
-                      <Route index element={<Dashboard />} />
-                      <Route path="dashboard" element={<Dashboard />} />
-                      <Route path="settings" element={<Settings />} />
+                      {/* Real routes */}
+                      <Route index element={<DashboardReal />} />
+                      <Route path="dashboard" element={<DashboardReal />} />
+                      <Route path="settings" element={<SettingsReal />} />
+
+                      {/* Demo routes (as requested) */}
+                      <Route path="demodashbaard" element={<DashboardDemo />} />
+                      <Route path="demosettings" element={<SettingsDemo />} />
+
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </Suspense>
