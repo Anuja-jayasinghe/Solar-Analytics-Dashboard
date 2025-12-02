@@ -123,9 +123,38 @@ export class SupabaseAuthAdapter extends AuthAdapter {
   }
 
   async getDashboardAccess(user) {
-    // Supabase users default to "real" access
-    // This could be extended to check a user_metadata field
-    return user ? 'real' : 'demo';
+    if (!user?.email) return 'demo';
+
+    const email = user.email.toLowerCase().trim();
+
+    // Check env overrides first
+    const forceDemo = (import.meta?.env?.VITE_FORCE_DEMO_USERS ?? 'false') === 'true';
+    if (forceDemo) return 'demo';
+
+    const demoList = (import.meta?.env?.VITE_DEMO_EMAILS ?? '').toLowerCase();
+    const isDemoListed = demoList.split(',').map(s => s.trim()).filter(Boolean).includes(email);
+    if (isDemoListed) return 'demo';
+
+    // Check optional Supabase column: admin_users.dashboard_access
+    try {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('dashboard_access')
+        .ilike('email', email)
+        .limit(1)
+        .maybeSingle();
+      
+      if (error) {
+        console.log('⚠️ dashboard_access query error:', error.message);
+        return 'real';
+      }
+      
+      const access = data?.dashboard_access ?? 'real';
+      return access === 'demo' ? 'demo' : 'real';
+    } catch (e) {
+      console.log('⚠️ getDashboardAccess error:', e.message);
+      return 'real';
+    }
   }
 
   async updateUserMetadata(userId, metadata) {

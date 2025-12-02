@@ -1,6 +1,7 @@
 // App.js
 import React, { useState, useEffect, useContext, Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { ClerkProvider } from "@clerk/clerk-react";
 import { ThemeProvider } from "./components/ThemeContext";
 import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 import { DataProvider } from "./contexts/DataContext";
@@ -12,6 +13,10 @@ import { verifySupabaseConnection } from "./lib/verifySupabaseConnection";
 import { Analytics } from "@vercel/analytics/react"
 import MaintenancePage from "./pages/MaintenancePage";
 import ErrorBoundary from "./components/ErrorBoundary";
+
+// Clerk configuration
+const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const USE_CLERK_AUTH = import.meta.env.VITE_USE_CLERK_AUTH === 'true';
 
 // Lazy load pages for better code splitting
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -142,7 +147,9 @@ function App() {
   if (IS_MAINTENANCE){
     return <MaintenancePage/>
   }
-  return (
+
+  // Conditionally wrap with ClerkProvider if using Clerk auth
+  const appTree = (
     <ErrorBoundary>
       <AuthProvider>
         <ThemeProvider>
@@ -160,6 +167,18 @@ function App() {
       </AuthProvider>
     </ErrorBoundary>
   );
+
+  // Wrap with ClerkProvider if feature flag is enabled
+  if (USE_CLERK_AUTH && CLERK_PUBLISHABLE_KEY) {
+    return (
+      <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+        {appTree}
+      </ClerkProvider>
+    );
+  }
+
+  // Otherwise, use Supabase auth (default)
+  return appTree;
 }
 
 export default App;

@@ -15,7 +15,8 @@ export class ClerkAuthAdapter extends AuthAdapter {
   }
 
   async getCurrentUser() {
-    const { user } = this.useUser();
+    // Access current user from Clerk instance (not hooks)
+    const user = this.clerk?.user;
     
     if (!user) return null;
 
@@ -103,9 +104,12 @@ export class ClerkAuthAdapter extends AuthAdapter {
   }
 
   async signOut() {
-    const { signOut } = this.useAuth();
-    await signOut();
-    return { error: null };
+    try {
+      await this.clerk.signOut();
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
   }
 
   async checkIsAdmin(user) {
