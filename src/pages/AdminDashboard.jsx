@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CebDataManagement from "../components/admin/CebDataManagement"; 
 import AdminManagement from "../components/admin/AdminManagement";
+import UserAccessManagement from "../components/admin/UserAccessManagement";
 // (Later you'll add:)
  // import InverterDataManagement from "../components/InverterDataManagement";
  
@@ -16,6 +17,8 @@ function AdminDashboard() {
         return <CebDataManagement />;
       case "admins":
         return <AdminManagement />;
+      case "users":
+        return <UserAccessManagement />;
       default:
         return null;
     }
@@ -77,6 +80,7 @@ function AdminDashboard() {
       >
         {[
           { id: "ceb", label: "CEB Data" },
+          { id: "users", label: "User Access" },
           { id: "admins", label: "Admin Management" },
         ].map((item) => (
           <button

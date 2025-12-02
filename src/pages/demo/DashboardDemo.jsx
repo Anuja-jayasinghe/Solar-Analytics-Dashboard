@@ -40,37 +40,35 @@ export default function DashboardDemo() {
           Demo Mode - Sample Data Only
         </div>
         
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
           <button 
             onClick={() => navigate('/')}
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
+              justifyContent: 'center',
+              width: '32px',
+              height: '32px',
               background: 'rgba(255, 255, 255, 0.9)',
               color: '#856404',
               border: '1px solid rgba(133, 100, 4, 0.2)',
               borderRadius: '6px',
               cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: '500',
               transition: 'all 0.2s ease'
             }}
             onMouseEnter={(e) => {
               e.target.style.background = 'rgba(255, 255, 255, 1)';
-              e.target.style.transform = 'translateY(-1px)';
-              e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
+              e.target.style.transform = 'scale(1.1)';
+              e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
             }}
             onMouseLeave={(e) => {
               e.target.style.background = 'rgba(255, 255, 255, 0.9)';
-              e.target.style.transform = 'translateY(0)';
+              e.target.style.transform = 'scale(1)';
               e.target.style.boxShadow = 'none';
             }}
             title="Go to landing page"
           >
-            <Home size={14} />
-            Home
+            <Home size={16} />
           </button>
           
           <button 
@@ -78,29 +76,27 @@ export default function DashboardDemo() {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
+              justifyContent: 'center',
+              width: '32px',
+              height: '32px',
               background: 'var(--accent)',
               color: 'white',
               border: 'none',
               borderRadius: '6px',
               cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: '500',
               transition: 'all 0.2s ease'
             }}
             onMouseEnter={(e) => {
-              e.target.style.transform = 'translateY(-1px)';
+              e.target.style.transform = 'scale(1.1)';
               e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
             }}
             onMouseLeave={(e) => {
-              e.target.style.transform = 'translateY(0)';
+              e.target.style.transform = 'scale(1)';
               e.target.style.boxShadow = 'none';
             }}
             title="Request access to real dashboard"
           >
-            <UserPlus size={14} />
-            Request Access
+            <UserPlus size={16} />
           </button>
         </div>
       </div>

@@ -1,9 +1,28 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Zap, TrendingUp, BarChart3, Leaf, Github, Linkedin, Globe } from 'lucide-react';
+import { AuthContext } from '../contexts/AuthContext';
 
 const Landing = () => {
   const navigate = useNavigate();
+  const { session, dashboardAccess, loading } = useContext(AuthContext);
+
+  // Handle dashboard button click
+  const handleDashboardClick = () => {
+    if (loading) return; // Don't navigate while loading
+    
+    if (session) {
+      // User is logged in - check access level
+      if (dashboardAccess === 'real') {
+        navigate('/dashboard'); // Real dashboard access
+      } else {
+        navigate('/access'); // Demo user - show access request page
+      }
+    } else {
+      // Not logged in - go to login page
+      navigate('/admin');
+    }
+  };
 
   const features = [
     {
@@ -41,16 +60,17 @@ const Landing = () => {
         </div>
         <div style={styles.headerLinks}>
           <button 
-            onClick={() => navigate('/dashboard')}
+            onClick={handleDashboardClick}
             style={styles.headerButton}
+            disabled={loading}
           >
-            Dashboard
+            {loading ? 'Loading...' : 'Dashboard'}
           </button>
           <button 
             onClick={() => navigate('/demodashbaard')}
             style={styles.headerButtonOutline}
           >
-            Try Demo
+            Demo
           </button>
         </div>
       </header>
@@ -67,10 +87,11 @@ const Landing = () => {
           </p>
           <div style={styles.heroCTA}>
             <button 
-              onClick={() => navigate('/dashboard')}
+              onClick={handleDashboardClick}
               style={styles.primaryButton}
+              disabled={loading}
             >
-              View Dashboard
+              {loading ? 'Loading...' : session ? 'Go to Dashboard' : 'Get Started'}
             </button>
             <button 
               onClick={() => navigate('/demodashbaard')}

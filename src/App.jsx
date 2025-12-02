@@ -29,6 +29,7 @@ const DashboardReal = lazy(() => import("./pages/real/DashboardReal"));
 const SettingsReal = lazy(() => import("./pages/real/SettingsReal"));
 const AccessRequest = lazy(() => import("./pages/AccessRequest"));
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
+const Signup = lazy(() => import("./pages/Signup"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -61,8 +62,9 @@ function AppContent() {
         {/* Landing page - standalone, no sidebar */}
         <Route path="/" element={<Landing />} />
 
-        {/* Admin routes - standalone layout */}
+        {/* Auth routes - standalone layout */}
         <Route path="/admin" element={<AdminLogin />} />
+        <Route path="/signup" element={<Signup />} />
         <Route
           path="/admin/dashboard"
           element={

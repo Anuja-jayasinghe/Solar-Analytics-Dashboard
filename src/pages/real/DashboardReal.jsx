@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext';
+import { LogOut } from 'lucide-react';
 
 // Real dashboard simply reuses the existing page
 const Dashboard = lazy(() => import('../Dashboard'));
@@ -85,8 +86,51 @@ export default function DashboardReal() {
   }
 
   return (
-    <Suspense fallback={<div style={{ color: 'var(--accent)', textAlign: 'center' }}>Loading real dashboard...</div>}>
-      <Dashboard />
-    </Suspense>
+    <>
+      {/* Logout button in sidebar style - fixed left position */}
+      <div style={{
+        position: 'fixed',
+        left: '8px',
+        bottom: '80px',
+        zIndex: 1000
+      }}>
+        <button 
+          onClick={handleLogout}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '44px',
+            height: '44px',
+            background: 'var(--card-bg)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = '#ff4444';
+            e.target.style.color = 'white';
+            e.target.style.borderColor = '#ff4444';
+            e.target.style.transform = 'scale(1.05)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'var(--card-bg)';
+            e.target.style.color = 'var(--text-primary)';
+            e.target.style.borderColor = 'var(--border-color)';
+            e.target.style.transform = 'scale(1)';
+          }}
+          title={`Logout (${user.email})`}
+        >
+          <LogOut size={20} />
+        </button>
+      </div>
+
+      <Suspense fallback={<div style={{ color: 'var(--accent)', textAlign: 'center' }}>Loading real dashboard...</div>}>
+        <Dashboard />
+      </Suspense>
+    </>
   );
 }
