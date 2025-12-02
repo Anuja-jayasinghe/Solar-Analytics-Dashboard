@@ -175,7 +175,7 @@ const Landing = () => {
       {/* Footer */}
       <footer style={styles.footer}>
         <p style={styles.footerText}>
-          Built with ☀️ by <strong>Anuja Jayasinghe</strong> • A Personal Project
+          Built with 💖 by <strong>Anuja Jayasinghe</strong> • A Personal Project
         </p>
         <div style={styles.footerLinks}>
           <a 

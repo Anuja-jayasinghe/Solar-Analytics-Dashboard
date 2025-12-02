@@ -22,6 +22,7 @@ const DashboardDemo = lazy(() => import("./pages/demo/DashboardDemo"));
 const SettingsDemo = lazy(() => import("./pages/demo/SettingsDemo"));
 const DashboardReal = lazy(() => import("./pages/real/DashboardReal"));
 const SettingsReal = lazy(() => import("./pages/real/SettingsReal"));
+const AccessRequest = lazy(() => import("./pages/AccessRequest"));
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -92,6 +93,7 @@ function AppContent() {
                       <Route index element={<DashboardReal />} />
                       <Route path="dashboard" element={<DashboardReal />} />
                       <Route path="settings" element={<SettingsReal />} />
+                      <Route path="access" element={<AccessRequest />} />
 
                       {/* Demo routes (as requested) */}
                       <Route path="demodashbaard" element={<DashboardDemo />} />

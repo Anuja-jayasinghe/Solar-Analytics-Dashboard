@@ -1,12 +1,17 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { ThemeContext } from '../components/ThemeContext';
+import { AuthContext } from '../contexts/AuthContext';
+import DemoAccessBanner from '../components/DemoAccessBanner';
+import DemoBlockModal from '../components/DemoBlockModal';
 
 const Settings = () => {
   const [settings, setSettings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const { theme, setTheme } = useContext(ThemeContext);
+  const { dashboardAccess, hasRealAccess } = useContext(AuthContext);
+  const [blockOpen, setBlockOpen] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -46,12 +51,20 @@ const Settings = () => {
   };
 
   const handleChange = (id, value) => {
+    if (!hasRealAccess()) {
+      setBlockOpen(true);
+      return;
+    }
     setSettings(prev =>
       prev.map(s => (s.id === id ? { ...s, setting_value: value } : s))
     );
   };
 
   const handleSave = async (setting) => {
+    if (!hasRealAccess()) {
+      setBlockOpen(true);
+      return;
+    }
     const { id, setting_value } = setting;
     const { error } = await supabase
       .from('system_settings')
@@ -130,6 +143,8 @@ const Settings = () => {
       }}>
         ⚙️ Settings
       </h1>
+
+      {dashboardAccess === 'demo' && <DemoAccessBanner />}
 
       {message && (
         <div style={{
@@ -302,6 +317,8 @@ const Settings = () => {
           </div>
         </div>
       )}
+
+      <DemoBlockModal open={blockOpen} onClose={() => setBlockOpen(false)} />
     </div>
   );
 };

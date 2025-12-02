@@ -8,6 +8,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [dashboardAccess, setDashboardAccess] = useState('real'); // 'demo' | 'real'
   
   // Simple admin cache to avoid repeated DB calls
   const [adminCache, setAdminCache] = useState(new Map());
@@ -147,6 +148,36 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // Determine dashboard access level
+  async function resolveDashboardAccess(email) {
+    // Temporary logic: allow overriding via env or hardcoded list
+    const forceDemo = (import.meta?.env?.VITE_FORCE_DEMO_USERS ?? 'false') === 'true';
+    if (forceDemo) return 'demo';
+
+    const demoList = (import.meta?.env?.VITE_DEMO_EMAILS ?? '').toLowerCase();
+    const isDemoListed = email && demoList.split(',').map(s => s.trim()).filter(Boolean).includes(email.toLowerCase().trim());
+    if (isDemoListed) return 'demo';
+
+    try {
+      // Optional Supabase column: admin_users.dashboard_access
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('dashboard_access')
+        .ilike('email', email?.toLowerCase().trim())
+        .limit(1)
+        .maybeSingle();
+      if (error) {
+        console.log('⚠️ dashboard_access query error:', error.message);
+        return 'real';
+      }
+      const access = (data?.dashboard_access ?? 'real');
+      return access === 'demo' ? 'demo' : 'real';
+    } catch (e) {
+      console.log('⚠️ resolveDashboardAccess error:', e.message);
+      return 'real';
+    }
+  }
+
   useEffect(() => {
     // load initial session (supabase persists it automatically)
     const init = async () => {
@@ -176,8 +207,11 @@ export function AuthProvider({ children }) {
       if (currentSession?.user?.email) {
         console.log("🔍 AuthContext: Starting admin check for:", currentSession.user.email);
         const admin = await checkAdmin(currentSession.user.email);
+        const access = await resolveDashboardAccess(currentSession.user.email);
         setIsAdmin(admin);
+        setDashboardAccess(access);
         console.log("👤 AuthContext: Admin status set to:", admin);
+        console.log("🪪 AuthContext: dashboardAccess:", access);
       }
       setLoading(false);
       console.log("✅ AuthContext: Initialization complete");
@@ -191,9 +225,12 @@ export function AuthProvider({ children }) {
         setUser(s?.user ?? null);
         if (s?.user?.email) {
           const admin = await checkAdmin(s.user.email);
+          const access = await resolveDashboardAccess(s.user.email);
           setIsAdmin(admin);
+          setDashboardAccess(access);
         } else {
           setIsAdmin(false);
+          setDashboardAccess('real');
         }
       }
     );
@@ -222,6 +259,7 @@ export function AuthProvider({ children }) {
     setSession(null);
     setUser(null);
     setIsAdmin(false);
+    setDashboardAccess('real');
     setAdminCache(new Map()); // Clear admin cache on sign out
   };
 
@@ -230,13 +268,15 @@ export function AuthProvider({ children }) {
     if (user?.email) {
       setAdminCache(new Map()); // Clear cache
       const admin = await checkAdmin(user.email);
+      const access = await resolveDashboardAccess(user.email);
       setIsAdmin(admin);
+      setDashboardAccess(access);
     }
   };
 
   return (
     <AuthContext.Provider
-      value={{ session, user, isAdmin, loading, setIsAdmin, signOut, refreshAdminStatus }}
+      value={{ session, user, isAdmin, loading, dashboardAccess, hasRealAccess: () => dashboardAccess === 'real', setIsAdmin, signOut, refreshAdminStatus }}
     >
       {children}
     </AuthContext.Provider>
