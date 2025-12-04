@@ -7,6 +7,7 @@ export default function AccessRequest() {
   const navigate = useNavigate();
   const { dashboardAccess } = useContext(AuthContext);
 
+  const hasRealAccess = dashboardAccess === 'real';
   const isDemo = dashboardAccess === 'demo';
 
   return (
@@ -17,7 +18,7 @@ export default function AccessRequest() {
         fontSize: '2rem',
         fontWeight: 800,
         marginTop: '70px'
-      }}>🔒 Access Required</h1>
+      }}>{hasRealAccess ? '✅ Access Granted' : '🔒 Access Required'}</h1>
 
       {isDemo && <DemoAccessBanner />}
 
@@ -28,9 +29,19 @@ export default function AccessRequest() {
         padding: '1.25rem',
         boxShadow: '0 4px 20px var(--card-shadow)'
       }}>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-          You currently have demo-only access. To view the real dashboard and manage settings, please contact the admin to request access.
-        </p>
+        {hasRealAccess ? (
+          <>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              🎉 Congratulations! You now have access to the real dashboard with live solar data.
+            </p>
+          </>
+        ) : (
+          <>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              You currently have demo-only access. To view the real dashboard and manage settings, please contact the admin to request access.
+            </p>
+          </>
+        )}
         <ul style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
           <li>Email: <a href="mailto:anujajay.com@gmail.com" style={{ color: 'var(--accent)' }}>anujajay.com@gmail.com</a></li>
           <li>LinkedIn: <a href="http://linkedin.com/in/anujajayasinghe" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>anujajayasinghe</a></li>
@@ -38,40 +49,64 @@ export default function AccessRequest() {
         </ul>
 
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => navigate('/demodashbaard')}
-            style={{
-              background: 'var(--accent)',
-              color: '#0c0c0c',
-              border: 'none',
-              padding: '10px 16px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 700
-            }}
-          >
-            🚀 Visit Demo Dashboard
-          </button>
-          <button
-            onClick={() => navigate('/admin')}
-            style={{
-              background: 'var(--hover-bg)',
-              color: 'var(--text-color)',
-              border: '1px solid var(--glass-border)',
-              padding: '10px 16px',
-              borderRadius: '8px',
-              cursor: 'not-allowed',
-              fontWeight: 700
-            }}
-            title="Admin access required"
-          >
-            🔑 Admin Login (Restricted)
-          </button>
+          {hasRealAccess ? (
+            <>
+              <button
+                onClick={() => navigate('/dashboard')}
+                style={{
+                  background: 'var(--accent)',
+                  color: '#0c0c0c',
+                  border: 'none',
+                  padding: '12px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: '16px'
+                }}
+              >
+                🚀 Go to Real Dashboard
+              </button>
+              <button
+                onClick={() => navigate('/demodashbaard')}
+                style={{
+                  background: 'var(--hover-bg)',
+                  color: 'var(--text-color)',
+                  border: '1px solid var(--glass-border)',
+                  padding: '12px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 700
+                }}
+              >
+                📊 View Demo Dashboard
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => navigate('/demodashbaard')}
+                style={{
+                  background: 'var(--accent)',
+                  color: '#0c0c0c',
+                  border: 'none',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 700
+                }}
+              >
+                🚀 Visit Demo Dashboard
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       <div style={{ marginTop: '1.25rem', color: 'var(--text-muted)' }}>
-        Tip: You can explore all visuals safely in demo mode. Real changes remain protected until access is granted.
+        {hasRealAccess 
+          ? 'Tip: You can switch between real and demo dashboards anytime.'
+          : 'Tip: You can explore all visuals safely in demo mode. Real changes remain protected until access is granted.'
+        }
       </div>
     </div>
   );

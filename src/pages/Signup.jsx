@@ -20,7 +20,7 @@ export default function Signup() {
           Create Account
         </h1>
         <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
-          Sign up to access the demo dashboard
+          Sign up to request dashboard access
         </p>
       </div>
       
@@ -40,8 +40,8 @@ export default function Signup() {
         routing="path"
         path="/signup"
         signInUrl="/admin"
-        afterSignUpUrl="/demodashbaard"
-        redirectUrl="/demodashbaard"
+        afterSignUpUrl="/access"
+        redirectUrl="/access"
       />
       
       <div style={{ marginTop: '2rem', textAlign: 'center' }}>

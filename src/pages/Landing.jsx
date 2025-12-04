@@ -5,24 +5,6 @@ import { AuthContext } from '../contexts/AuthContext';
 
 const Landing = () => {
   const navigate = useNavigate();
-  const { session, dashboardAccess, loading } = useContext(AuthContext);
-
-  // Handle dashboard button click
-  const handleDashboardClick = () => {
-    if (loading) return; // Don't navigate while loading
-    
-    if (session) {
-      // User is logged in - check access level
-      if (dashboardAccess === 'real') {
-        navigate('/dashboard'); // Real dashboard access
-      } else {
-        navigate('/access'); // Demo user - show access request page
-      }
-    } else {
-      // Not logged in - go to login page
-      navigate('/admin');
-    }
-  };
 
   const features = [
     {
@@ -60,17 +42,10 @@ const Landing = () => {
         </div>
         <div style={styles.headerLinks}>
           <button 
-            onClick={handleDashboardClick}
+            onClick={() => navigate('/admin')}
             style={styles.headerButton}
-            disabled={loading}
           >
-            {loading ? 'Loading...' : 'Dashboard'}
-          </button>
-          <button 
-            onClick={() => navigate('/demodashbaard')}
-            style={styles.headerButtonOutline}
-          >
-            Demo
+            Login
           </button>
         </div>
       </header>
@@ -87,11 +62,10 @@ const Landing = () => {
           </p>
           <div style={styles.heroCTA}>
             <button 
-              onClick={handleDashboardClick}
+              onClick={() => navigate('/admin')}
               style={styles.primaryButton}
-              disabled={loading}
             >
-              {loading ? 'Loading...' : session ? 'Go to Dashboard' : 'Get Started'}
+              Get Started
             </button>
             <button 
               onClick={() => navigate('/demodashbaard')}
