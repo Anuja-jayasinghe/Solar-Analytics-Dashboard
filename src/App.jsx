@@ -63,7 +63,7 @@ function AppContent() {
         <Route path="/" element={<Landing />} />
 
         {/* Auth routes - standalone layout */}
-        <Route path="/admin" element={<AdminLogin />} />
+        <Route path="/login" element={<AdminLogin />} />
         <Route path="/signup" element={<Signup />} />
         <Route
           path="/admin/dashboard"

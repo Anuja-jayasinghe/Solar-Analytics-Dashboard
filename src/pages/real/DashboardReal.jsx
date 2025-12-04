@@ -1,19 +1,26 @@
 import React, { Suspense, lazy, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext';
-import { LogOut } from 'lucide-react';
+import { LogOut, Settings } from 'lucide-react';
 
 // Real dashboard simply reuses the existing page
 const Dashboard = lazy(() => import('../Dashboard'));
 
 export default function DashboardReal() {
-  const { session, user, loading, signOut } = useContext(AuthContext);
+  const { session, user, loading, signOut, isAdmin } = useContext(AuthContext);
   const navigate = useNavigate();
 
   // Handle logout
   const handleLogout = async () => {
     await signOut();
     navigate('/');
+  };
+
+  // Handle admin access
+  const handleAdminAccess = () => {
+    if (isAdmin) {
+      navigate('/admin/dashboard');
+    }
   };
 
   // Show loading state while checking authentication
@@ -87,13 +94,53 @@ export default function DashboardReal() {
 
   return (
     <>
-      {/* Logout button in sidebar style - fixed left position */}
+      {/* Admin button and logout button in sidebar style - fixed left position */}
       <div style={{
         position: 'fixed',
         left: '8px',
         bottom: '80px',
-        zIndex: 1000
+        zIndex: 1000,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px'
       }}>
+        {/* Admin access button - only show if user is admin */}
+        {isAdmin && (
+          <button 
+            onClick={handleAdminAccess}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '44px',
+              height: '44px',
+              background: 'var(--card-bg)',
+              color: 'var(--accent)',
+              border: '2px solid var(--accent)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              fontWeight: 'bold',
+              fontSize: '18px'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = 'var(--accent)';
+              e.target.style.color = 'white';
+              e.target.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'var(--card-bg)';
+              e.target.style.color = 'var(--accent)';
+              e.target.style.transform = 'scale(1)';
+            }}
+            title="Admin Panel"
+          >
+            <Settings size={20} />
+          </button>
+        )}
+
+        {/* Logout button */}
         <button 
           onClick={handleLogout}
           style={{

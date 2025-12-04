@@ -10,7 +10,7 @@ export default function AdminLogin() {
 
   useEffect(() => {
     // Auto-redirect based on user role and access level
-    if (!loading && session?.user) {
+    if (!loading && clerkLoaded && session?.user) {
       console.log('🔐 AdminLogin Debug:', {
         isAdmin,
         dashboardAccess,
@@ -18,20 +18,35 @@ export default function AdminLogin() {
         metadata: clerkUser?.publicMetadata
       });
       
-      if (isAdmin) {
-        // Admin users go to admin dashboard
-        console.log('✅ Redirecting to /admin/dashboard (Admin access)');
-        navigate("/admin/dashboard");
+      if (dashboardAccess === 'real') {
+        // Real users and admins go to real dashboard
+        console.log('✅ Redirecting to /dashboard (Real user or Admin)');
+        navigate("/dashboard", { replace: true });
       } else {
-        // All regular users go to access page (can request or access dashboard from there)
-        console.log('✅ Redirecting to /access (User access page)');
-        navigate("/access");
+        // Demo users go to demo dashboard
+        console.log('✅ Redirecting to /demodashbaard (Demo user)');
+        navigate("/demodashbaard", { replace: true });
       }
     }
-  }, [session, isAdmin, dashboardAccess, loading, navigate, clerkUser]);
+  }, [session, isAdmin, dashboardAccess, loading, navigate, clerkUser, clerkLoaded]);
 
-  // Show account management options if already logged in (regardless of admin status)
-  if (clerkLoaded && clerkUser && !loading) {
+  // Show loading while redirecting if already logged in
+  if (clerkLoaded && clerkUser && !loading && session) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        color: 'var(--accent)'
+      }}>
+        Redirecting...
+      </div>
+    );
+  }
+
+  // Show account management options only if not authenticated yet (this shouldn't normally show)
+  if (clerkLoaded && clerkUser && !loading && !session) {
     return (
       <div style={{ padding: 20, maxWidth: 500, margin: '2rem auto' }}>
         <div style={{ 
@@ -134,10 +149,10 @@ export default function AdminLogin() {
     }}>
       <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
         <h1 style={{ color: 'var(--accent)', fontSize: '2rem', margin: '0 0 0.5rem 0' }}>
-          Admin Login
+          Login
         </h1>
         <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
-          Sign in with your admin account
+          Sign in to access your dashboard
         </p>
       </div>
       
@@ -155,10 +170,10 @@ export default function AdminLogin() {
           }
         }}
         routing="path"
-        path="/admin"
+        path="/login"
         signUpUrl="/signup"
-        afterSignInUrl="/admin"
-        redirectUrl="/admin"
+        afterSignInUrl="/"
+        redirectUrl="/"
       />
     </div>
   );

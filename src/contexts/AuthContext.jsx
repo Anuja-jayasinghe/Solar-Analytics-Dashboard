@@ -50,6 +50,12 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!authAdapter) return;
 
+    // If using Clerk, wait for it to be loaded
+    if (isClerkEnabled() && !clerkUser.isLoaded) {
+      console.log("⏳ AuthContext: Waiting for Clerk to load...");
+      return;
+    }
+
     const loadSession = async () => {
       console.log("🔄 AuthContext: Loading initial session...");
       setLoading(true);
@@ -84,7 +90,7 @@ export function AuthProvider({ children }) {
     };
 
     loadSession();
-  }, [authAdapter]);
+  }, [authAdapter, clerkUser.isLoaded]); // Add clerkUser.isLoaded dependency
 
   // Subscribe to auth state changes
   useEffect(() => {

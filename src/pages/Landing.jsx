@@ -1,10 +1,39 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Zap, TrendingUp, BarChart3, Leaf, Github, Linkedin, Globe } from 'lucide-react';
 import { AuthContext } from '../contexts/AuthContext';
 
 const Landing = () => {
   const navigate = useNavigate();
+  const { session, dashboardAccess, isAdmin, loading } = useContext(AuthContext);
+
+  // Auto-redirect logged-in users to their respective dashboard
+  useEffect(() => {
+    console.log('🏠 Landing: Redirect check', {
+      loading,
+      hasSession: !!session,
+      dashboardAccess,
+      isAdmin
+    });
+
+    if (loading) {
+      console.log('⏳ Landing: Still loading, skipping redirect');
+      return;
+    }
+
+    if (session) {
+      console.log('✅ Landing: User is logged in, redirecting...');
+      if (dashboardAccess === 'real') {
+        console.log('➡️ Redirecting to /dashboard (Real user or Admin)');
+        navigate('/dashboard', { replace: true });
+      } else {
+        console.log('➡️ Redirecting to /demodashbaard (Demo user)');
+        navigate('/demodashbaard', { replace: true });
+      }
+    } else {
+      console.log('🔓 Landing: User not logged in, showing landing page');
+    }
+  }, [session, dashboardAccess, isAdmin, loading, navigate]);
 
   const features = [
     {
@@ -42,7 +71,7 @@ const Landing = () => {
         </div>
         <div style={styles.headerLinks}>
           <button 
-            onClick={() => navigate('/admin')}
+            onClick={() => navigate('/login')}
             style={styles.headerButton}
           >
             Login
@@ -62,7 +91,7 @@ const Landing = () => {
           </p>
           <div style={styles.heroCTA}>
             <button 
-              onClick={() => navigate('/admin')}
+              onClick={() => navigate('/login')}
               style={styles.primaryButton}
             >
               Get Started
