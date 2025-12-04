@@ -359,15 +359,18 @@ export default function UserAccessManagement() {
       <div style={{
         marginTop: '1.5rem',
         padding: '1rem',
-        background: 'rgba(255, 193, 7, 0.1)',
-        border: '1px solid rgba(255, 193, 7, 0.3)',
+        background: 'rgba(0, 122, 255, 0.1)',
+        border: '1px solid rgba(0, 122, 255, 0.3)',
         borderRadius: '8px',
         fontSize: '13px',
         color: 'var(--text-secondary)'
       }}>
-        <strong style={{ color: '#ffc107' }}>💡 Note:</strong> User access changes require backend API setup. 
-        Currently showing mock data for demonstration. Implement <code>/api/admin/users</code> endpoint 
-        to enable real user management with Clerk.
+        <strong style={{ color: 'var(--accent)' }}>🔐 Clerk Integration:</strong> This system uses Clerk's 
+        <code>publicMetadata</code> to manage user roles and access levels. No Supabase required! 
+        Changes are stored directly in Clerk and reflected immediately after user re-login.
+        <br/><br/>
+        <strong>Setup:</strong> Deploy the API endpoints (<code>/api/admin/users</code>) to enable live management. 
+        Currently showing mock data for demonstration.
       </div>
     </div>
   );

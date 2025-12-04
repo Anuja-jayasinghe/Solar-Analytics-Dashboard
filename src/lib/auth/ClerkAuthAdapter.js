@@ -115,16 +115,23 @@ export class ClerkAuthAdapter extends AuthAdapter {
   async checkIsAdmin(user) {
     if (!user) return false;
     
-    // Check publicMetadata.role
-    const role = user.metadata?.role || user.raw?.publicMetadata?.role;
+    // Check Clerk publicMetadata.role (set in Clerk Dashboard)
+    const role = user.raw?.publicMetadata?.role || user.metadata?.role;
+    console.log('🔍 checkIsAdmin:', { 
+      userId: user.id, 
+      email: user.email,
+      role, 
+      publicMetadata: user.raw?.publicMetadata,
+      isAdmin: role === 'admin' 
+    });
     return role === 'admin';
   }
 
   async hasRealAccess(user) {
     if (!user) return false;
     
-    // Check publicMetadata.dashboardAccess
-    const access = user.metadata?.dashboardAccess || user.raw?.publicMetadata?.dashboardAccess;
+    // Check Clerk publicMetadata.dashboardAccess (set in Clerk Dashboard or API)
+    const access = user.raw?.publicMetadata?.dashboardAccess || user.metadata?.dashboardAccess;
     return access === 'real';
   }
 
@@ -153,8 +160,20 @@ export class ClerkAuthAdapter extends AuthAdapter {
   }
 
   async getDashboardAccess(user) {
-    const hasReal = await this.hasRealAccess(user);
-    return hasReal ? 'real' : 'demo';
+    if (!user) return 'demo';
+    
+    // Read directly from Clerk publicMetadata
+    const access = user.raw?.publicMetadata?.dashboardAccess || user.metadata?.dashboardAccess;
+    console.log('🔍 getDashboardAccess:', { 
+      userId: user.id,
+      email: user.email, 
+      access,
+      publicMetadata: user.raw?.publicMetadata,
+      result: access === 'real' ? 'real' : 'demo'
+    });
+    
+    // Default to demo if not set
+    return access === 'real' ? 'real' : 'demo';
   }
 
   async updateUserMetadata(userId, metadata) {

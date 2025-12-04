@@ -11,18 +11,28 @@ export default function AdminLogin() {
   useEffect(() => {
     // Auto-redirect based on user role and access level
     if (!loading && session?.user) {
+      console.log('🔐 AdminLogin Debug:', {
+        isAdmin,
+        dashboardAccess,
+        email: session.user.email,
+        metadata: clerkUser?.publicMetadata
+      });
+      
       if (isAdmin) {
         // Admin users go to admin dashboard
+        console.log('✅ Redirecting to /admin/dashboard (Admin access)');
         navigate("/admin/dashboard");
       } else if (dashboardAccess === 'real') {
         // Real dashboard access users
+        console.log('✅ Redirecting to /dashboard (Real access)');
         navigate("/dashboard");
       } else {
         // Demo users - redirect to access request page
+        console.log('⚠️ Redirecting to /access (Demo access only)');
         navigate("/access");
       }
     }
-  }, [session, isAdmin, dashboardAccess, loading, navigate]);
+  }, [session, isAdmin, dashboardAccess, loading, navigate, clerkUser]);
 
   // Show non-admin message if logged in but not admin
   if (clerkLoaded && clerkUser && !loading && !isAdmin) {
