@@ -151,8 +151,8 @@ function App() {
     return <MaintenancePage/>
   }
 
-  // Conditionally wrap with ClerkProvider if using Clerk auth
-  const appTree = (
+  // ClerkProvider must be at the top level to ensure all hooks work
+  const clerkWrappedApp = (
     <ErrorBoundary>
       <AuthProvider>
         <ThemeProvider>
@@ -175,13 +175,13 @@ function App() {
   if (USE_CLERK_AUTH && CLERK_PUBLISHABLE_KEY) {
     return (
       <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
-        {appTree}
+        {clerkWrappedApp}
       </ClerkProvider>
     );
   }
 
   // Otherwise, use Supabase auth (default)
-  return appTree;
+  return clerkWrappedApp;
 }
 
 export default App;
