@@ -23,7 +23,7 @@
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
         { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=()" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; img-src 'self' data: https://*.clerk.com https://*.clerk.accounts.dev https://vercel.live; style-src 'self' 'unsafe-inline' https://*.clerk.com https://vercel.live; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://*.clerk.accounts.dev https://vercel.live https://*.vercel.live; connect-src 'self' https://*.supabase.co https://*.supabase.in https://*.clerk.com https://*.clerk.accounts.dev https://api.clerk.com wss://*.clerk.com https://vercel.live wss://vercel.live; frame-src https://*.clerk.com https://*.clerk.accounts.dev https://vercel.live; frame-ancestors 'self'; base-uri 'self';" }
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; img-src 'self' data: https://*.clerk.com https://*.clerk.accounts.dev https://vercel.live; style-src 'self' 'unsafe-inline' https://*.clerk.com https://vercel.live; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://*.clerk.accounts.dev https://vercel.live https://*.vercel.live; worker-src blob:; connect-src 'self' https://*.supabase.co https://*.supabase.in https://*.clerk.com https://*.clerk.accounts.dev https://api.clerk.com wss://*.clerk.com https://vercel.live wss://vercel.live; frame-src https://*.clerk.com https://*.clerk.accounts.dev https://vercel.live; frame-ancestors 'self'; base-uri 'self';" }
       ]
     }
   ]
