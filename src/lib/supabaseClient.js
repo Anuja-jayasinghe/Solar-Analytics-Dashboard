@@ -4,11 +4,21 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
+// Log environment configuration (for debugging)
+console.log('🔍 Supabase Configuration:', {
+  url: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : '❌ MISSING',
+  key: supabaseKey ? `${supabaseKey.substring(0, 10)}...` : '❌ MISSING',
+  environment: import.meta.env.MODE,
+  isProduction: import.meta.env.PROD
+});
+
 // Warn if credentials are missing
 if (!supabaseUrl || !supabaseKey) {
   console.warn('⚠️ Supabase credentials not configured:', {
     hasUrl: !!supabaseUrl,
-    hasKey: !!supabaseKey
+    hasKey: !!supabaseKey,
+    urlValue: supabaseUrl || 'undefined',
+    keyValue: supabaseKey ? '***' : 'undefined'
   })
 }
 
