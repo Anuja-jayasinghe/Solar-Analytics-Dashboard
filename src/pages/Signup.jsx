@@ -39,7 +39,7 @@ export default function Signup() {
         }}
         routing="path"
         path="/signup"
-        signInUrl="/admin"
+        signInUrl="/login"
         afterSignUpUrl="/access"
         redirectUrl="/access"
       />

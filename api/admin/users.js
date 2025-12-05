@@ -3,7 +3,9 @@
  * Get all users for admin management
  */
 
+
 import { clerkClient } from '@clerk/clerk-sdk-node';
+import { verifyAdminToken } from '../middleware/verifyAdminToken.js';
 
 export default async function handler(req, res) {
   // CORS headers
@@ -25,11 +27,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Verify the user is authenticated and is an admin
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Unauthorized - No token provided' });
-    }
+    // Verify admin session and role
+    const adminUser = await verifyAdminToken(req, res);
+    if (!adminUser) return; // Response already sent
 
     // Get all users from Clerk
     const userList = await clerkClient.users.getUserList({

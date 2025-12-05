@@ -44,7 +44,7 @@ export default function DashboardReal() {
         </p>
         <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
           <button 
-            onClick={() => navigate('/admin')}
+            onClick={() => navigate('/login')}
             style={{
               padding: '12px 24px',
               background: 'var(--accent)',

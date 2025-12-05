@@ -1,6 +1,6 @@
 // App.js
 import React, { useState, useEffect, useContext, Suspense, lazy } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { ClerkProvider } from "@clerk/clerk-react";
 import { ThemeProvider } from "./components/ThemeContext";
 import { AuthProvider, AuthContext } from "./contexts/AuthContext";
@@ -73,6 +73,7 @@ function AppContent() {
             </RequireAdmin>
           }
         />
+        <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="/admin/*" element={<NotFound />} />
 
         {/* Main app routes - with sidebar and navbar */}

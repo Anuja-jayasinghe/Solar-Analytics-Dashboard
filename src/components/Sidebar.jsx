@@ -559,7 +559,7 @@ function Sidebar({ onDevToolsToggle }) {
               <span
                 onClick={() => {
                   setShowAdminPopup(false);
-                  window.location.href = '/admin';
+                  window.location.href = '/admin/dashboard';
                 }}
                 style={{
                   color: "#666",

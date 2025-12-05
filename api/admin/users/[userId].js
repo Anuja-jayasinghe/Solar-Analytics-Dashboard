@@ -3,7 +3,9 @@
  * Manages user roles and dashboard access using Clerk
  */
 
+
 import { clerkClient } from '@clerk/clerk-sdk-node';
+import { verifyAdminToken } from '../../middleware/verifyAdminToken.js';
 
 export default async function handler(req, res) {
   // CORS headers
@@ -20,18 +22,12 @@ export default async function handler(req, res) {
     return;
   }
 
-  try {
-    // Verify the user is authenticated and is an admin
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Unauthorized - No token provided' });
-    }
 
-    const token = authHeader.substring(7);
-    
-    // Verify token with Clerk (simplified - in production, use Clerk's verifyToken)
-    // For now, we'll trust the frontend authentication
-    
+  try {
+    // Verify admin session and role
+    const adminUser = await verifyAdminToken(req, res);
+    if (!adminUser) return; // Response already sent
+
     const { userId } = req.query;
 
     if (req.method === 'GET') {
@@ -103,6 +99,26 @@ export default async function handler(req, res) {
         success: true,
         message: 'User updated successfully',
         metadata: updatedMetadata
+      });
+    }
+
+    if (req.method === 'DELETE') {
+      // DELETE /api/admin/users/[userId] - Delete user
+      if (!userId) {
+        return res.status(400).json({ error: 'User ID required' });
+      }
+
+      // Prevent admin from deleting themselves
+      if (userId === adminUser.id) {
+        return res.status(400).json({ error: 'Cannot delete your own account' });
+      }
+
+      // Delete user from Clerk
+      await clerkClient.users.deleteUser(userId);
+
+      return res.status(200).json({
+        success: true,
+        message: 'User deleted successfully'
       });
     }
 
