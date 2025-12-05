@@ -23,7 +23,7 @@
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
         { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=()" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://*.supabase.co https://*.supabase.in; frame-ancestors 'self'; base-uri 'self';" }
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; img-src 'self' data: https://*.clerk.com https://*.clerk.accounts.dev; style-src 'self' 'unsafe-inline' https://*.clerk.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://*.clerk.accounts.dev; connect-src 'self' https://*.supabase.co https://*.supabase.in https://*.clerk.com https://*.clerk.accounts.dev https://api.clerk.com wss://*.clerk.com; frame-src https://*.clerk.com https://*.clerk.accounts.dev; frame-ancestors 'self'; base-uri 'self';" }
       ]
     }
   ]

@@ -42,7 +42,7 @@ export default function DashboardDemo() {
         
         <div style={{ display: 'flex', gap: '8px' }}>
           <button 
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/', { state: { from: 'dashboard' } })}
             style={{
               display: 'flex',
               alignItems: 'center',

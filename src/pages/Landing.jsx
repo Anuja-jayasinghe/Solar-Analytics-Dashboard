@@ -1,13 +1,18 @@
-import React, { useContext, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Zap, TrendingUp, BarChart3, Leaf, Github, Linkedin, Globe } from 'lucide-react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Zap, TrendingUp, BarChart3, Leaf, Github, Linkedin, Globe, LogOut, User } from 'lucide-react';
 import { AuthContext } from '../contexts/AuthContext';
 
 const Landing = () => {
   const navigate = useNavigate();
-  const { session, dashboardAccess, isAdmin, loading } = useContext(AuthContext);
+  const location = useLocation();
+  const { session, dashboardAccess, isAdmin, loading, user, signOut } = useContext(AuthContext);
+  const hasRedirected = useRef(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef(null);
 
   // Auto-redirect logged-in users to their respective dashboard
+  // But only on first load, not when user manually navigates to landing page
   useEffect(() => {
     console.log('🏠 Landing: Redirect check', {
       loading,
@@ -21,8 +26,21 @@ const Landing = () => {
       return;
     }
 
-    if (session) {
+    // Only redirect once on initial load (not when user navigates back)
+    if (session && !hasRedirected.current) {
+      // Check if user came from a redirect (not manual navigation)
+      // If they came from a dashboard route, don't redirect again
+      const state = location.state;
+      const isReturningFromDashboard = state?.from === 'dashboard';
+      
+      if (isReturningFromDashboard) {
+        console.log('🔓 Landing: User returning from dashboard, showing landing page');
+        return;
+      }
+
       console.log('✅ Landing: User is logged in, redirecting...');
+      hasRedirected.current = true;
+      
       if (dashboardAccess === 'real') {
         console.log('➡️ Redirecting to /dashboard (Real user or Admin)');
         navigate('/dashboard', { replace: true });
@@ -33,7 +51,33 @@ const Landing = () => {
     } else {
       console.log('🔓 Landing: User not logged in, showing landing page');
     }
-  }, [session, dashboardAccess, isAdmin, loading, navigate]);
+  }, [session, dashboardAccess, isAdmin, loading, navigate, location.state]);
+
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    if (showProfileMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showProfileMenu]);
+
+  const handleLogout = async () => {
+    setShowProfileMenu(false);
+    await signOut();
+    navigate('/', { state: { from: 'dashboard' } });
+  };
+
+  const handleSwitchAccount = async () => {
+    setShowProfileMenu(false);
+    await signOut();
+    navigate('/login');
+  };
 
   const features = [
     {
@@ -70,12 +114,197 @@ const Landing = () => {
           <span style={styles.logoText}>Solar Analytics</span>
         </div>
         <div style={styles.headerLinks}>
-          <button 
-            onClick={() => navigate('/login')}
-            style={styles.headerButton}
-          >
-            Login
-          </button>
+          {session && user ? (
+            // Profile Menu for logged-in users
+            <div style={{ position: 'relative' }} ref={profileMenuRef}>
+              <button
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                style={{
+                  ...styles.headerButton,
+                  background: 'rgba(255, 122, 0, 0.2)',
+                  border: '1px solid var(--accent)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  background: 'var(--accent)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#000',
+                  fontSize: '12px',
+                  fontWeight: 'bold'
+                }}>
+                  {user?.email?.[0]?.toUpperCase() || 'U'}
+                </div>
+                <span style={{ fontSize: '13px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user?.email}
+                </span>
+              </button>
+
+              {/* Profile Dropdown Menu */}
+              {showProfileMenu && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '8px',
+                  background: 'var(--card-bg)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                  zIndex: 1000,
+                  minWidth: '280px',
+                  overflow: 'hidden'
+                }}>
+                  {/* User Info Section */}
+                  <div style={{
+                    padding: '16px',
+                    background: 'rgba(255, 122, 0, 0.1)',
+                    borderBottom: '1px solid var(--border-color)'
+                  }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Email</div>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', wordBreak: 'break-word' }}>
+                      {user?.email}
+                    </div>
+                  </div>
+
+                  {/* Access Level Section */}
+                  <div style={{
+                    padding: '16px',
+                    borderBottom: '1px solid var(--border-color)'
+                  }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Access Level</div>
+                    <div style={{
+                      display: 'inline-block',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      background: dashboardAccess === 'real' ? '#28a745' : '#ffc107',
+                      color: dashboardAccess === 'real' ? 'white' : '#000'
+                    }}>
+                      {dashboardAccess === 'real' ? '🔓 Real Dashboard' : '📊 Demo Dashboard'}
+                    </div>
+                  </div>
+
+                  {/* Role Section */}
+                  {isAdmin && (
+                    <div style={{
+                      padding: '16px',
+                      borderBottom: '1px solid var(--border-color)',
+                      background: 'rgba(220, 53, 69, 0.05)'
+                    }}>
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Role</div>
+                      <div style={{
+                        display: 'inline-block',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        background: '#dc3545',
+                        color: 'white'
+                      }}>
+                        👨‍💼 Admin
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div style={{ padding: '8px' }}>
+                    {isAdmin && (
+                      <button
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          navigate('/admin/dashboard');
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          background: 'transparent',
+                          color: '#dc3545',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          textAlign: 'left',
+                          transition: 'background 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => e.target.style.background = 'rgba(220, 53, 69, 0.1)'}
+                        onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                      >
+                        ⚙️ Admin Dashboard
+                      </button>
+                    )}
+
+                    <button
+                      onClick={handleSwitchAccount}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        background: 'transparent',
+                        color: 'var(--accent)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        transition: 'background 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.target.style.background = 'rgba(255, 122, 0, 0.1)'}
+                      onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                    >
+                      <User size={16} />
+                      Switch Account
+                    </button>
+
+                    <button
+                      onClick={handleLogout}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        background: 'transparent',
+                        color: '#721c24',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        transition: 'background 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.target.style.background = 'rgba(114, 28, 36, 0.1)'}
+                      onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                    >
+                      <LogOut size={16} />
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            // Login button for non-logged-in users
+            <button 
+              onClick={() => navigate('/login')}
+              style={styles.headerButton}
+            >
+              Login
+            </button>
+          )}
         </div>
       </header>
 

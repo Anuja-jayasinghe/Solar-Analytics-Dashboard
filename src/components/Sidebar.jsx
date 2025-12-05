@@ -88,7 +88,7 @@ function Sidebar({ onDevToolsToggle }) {
   const handleLogout = async () => {
     await signOut();
     closeSidebar();
-    navigate('/');
+    navigate('/', { state: { from: 'dashboard' } });
   };
 
   return (
