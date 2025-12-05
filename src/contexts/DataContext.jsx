@@ -145,7 +145,14 @@ export const DataProvider = ({ children }) => {
     try {
       if (key === 'charts') {
         const { data: alignedData, error: rpcError } = await supabase.rpc('get_monthly_comparison');
-        if (rpcError) throw rpcError;
+        if (rpcError) {
+          console.error('[DataContext] Supabase RPC error fetching charts:', {
+            message: rpcError.message,
+            code: rpcError.code,
+            status: rpcError.status
+          });
+          throw rpcError;
+        }
         const processedData = alignedData.map(d => ({ 
           month: d.month_label, 
           period: d.period_label, // Billing period e.g., "Oct 05 - Nov 04"
@@ -163,7 +170,13 @@ export const DataProvider = ({ children }) => {
 
         // Fetch live data
         const { data: liveData, error: liveError } = await supabase.functions.invoke('solis-live-data');
-        if (liveError) throw liveError;
+        if (liveError) {
+          console.error('[DataContext] Supabase error fetching live data:', {
+            message: liveError.message,
+            status: liveError.status
+          });
+          throw liveError;
+        }
         setLivePowerData(liveData);
         
         // Fetch tariff from settings
@@ -172,7 +185,14 @@ export const DataProvider = ({ children }) => {
           .select('setting_value')
           .eq('setting_name', 'rate_per_kwh')
           .limit(1);
-        if (settingError) throw settingError;
+        if (settingError) {
+          console.error('[DataContext] Supabase error fetching tariff:', {
+            message: settingError.message,
+            code: settingError.code,
+            status: settingError.status
+          });
+          throw settingError;
+        }
         
         const tariff = parseFloat(settingData?.[0]?.setting_value) || 37; 
 
@@ -193,7 +213,16 @@ export const DataProvider = ({ children }) => {
       
       else if (key === 'totalEarnings') {
         const { data, error } = await supabase.from('ceb_data').select('earnings');
-        if (error) throw error;
+        if (error) {
+          console.error('[DataContext] Supabase error fetching totalEarnings:', {
+            message: error.message,
+            code: error.code,
+            status: error.status,
+            details: error.details,
+            hint: error.hint
+          });
+          throw error;
+        }
         const total = data.reduce((sum, record) => sum + (record.earnings || 0), 0);
         const result = { total };
         setTotalEarningsData(result);
@@ -223,6 +252,13 @@ export const DataProvider = ({ children }) => {
           
           const formatDate = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
           billingPeriodLabel = `${formatDate(billDate)} – ${formatDate(today)}`;
+        } else if (billError && billError.code !== 'PGRST116') { // PGRST116 = no rows found
+          console.error('[DataContext] Supabase error fetching bill date:', {
+            message: billError.message,
+            code: billError.code,
+            status: billError.status
+          });
+          throw billError;
         } else {
           // Fallback to first-of-month if no CEB bill found
           startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
@@ -236,7 +272,14 @@ export const DataProvider = ({ children }) => {
           .gte('summary_date', startDate)
           .lte('summary_date', endDate);
         
-        if (error) throw error;
+        if (error) {
+          console.error('[DataContext] Supabase error fetching monthly generation:', {
+            message: error.message,
+            code: error.code,
+            status: error.status
+          });
+          throw error;
+        }
         
         const total = data.reduce((sum, record) => sum + (parseFloat(record.total_generation_kwh) || 0), 0);
         const result = { total, billingPeriodLabel, startDate, billId };
