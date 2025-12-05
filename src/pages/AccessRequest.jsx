@@ -43,8 +43,8 @@ export default function AccessRequest() {
           </>
         )}
         <ul style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-          <li>Email: <a href="mailto:anujajay.com@gmail.com" style={{ color: 'var(--accent)' }}>anujajay.com@gmail.com</a></li>
-          <li>LinkedIn: <a href="http://linkedin.com/in/anujajayasinghe" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>anujajayasinghe</a></li>
+          <li>Email: <a href="mailto:anujajayasinhe@gmail.com" style={{ color: 'var(--accent)' }}>anujajayasinhe@gmail.com</a></li>
+          <li>LinkedIn: <a href="https://www.linkedin.com/in/anuja-jayasinghe" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>anujajayasinghe</a></li>
           <li>Website: <a href="https://anujajay.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>anujajay.com</a></li>
         </ul>
 
