@@ -40,13 +40,20 @@ function AppContent() {
   const devtoolsEnabled = (import.meta?.env?.VITE_ENABLE_DEVTOOLS ?? 'true') === 'true';
 
   useEffect(() => {
-    verifySupabaseConnection().then((result) => {
-      if (result.ok) {
-        console.log("[Supabase]", result.message, result.details);
-      } else {
-        console.error("[Supabase]", result.message);
-      }
-    });
+    // Verify Supabase connection - don't block app if it fails
+    try {
+      verifySupabaseConnection().then((result) => {
+        if (result.ok) {
+          console.log("[Supabase]", result.message, result.details);
+        } else {
+          console.warn("[Supabase]", result.message);
+        }
+      }).catch((err) => {
+        console.warn("[Supabase] Connection check failed:", err.message);
+      });
+    } catch (err) {
+      console.warn("[Supabase] Connection check error:", err.message);
+    }
   }, []);
 
   function RequireAdmin({ children }) {

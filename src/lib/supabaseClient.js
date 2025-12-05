@@ -22,17 +22,32 @@ if (!supabaseUrl || !supabaseKey) {
   })
 }
 
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseKey || 'placeholder-key',
-  {
-    auth: {
-      // Ensure redirects work for local development
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true,
-      // Use current origin for redirects (localhost in dev, production in prod)
-      flowType: 'pkce'
+let supabaseInstance = null;
+
+try {
+  supabaseInstance = createClient(
+    supabaseUrl || 'https://placeholder.supabase.co',
+    supabaseKey || 'placeholder-key',
+    {
+      auth: {
+        // Ensure redirects work for local development
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+        // Use current origin for redirects (localhost in dev, production in prod)
+        flowType: 'pkce'
+      }
     }
-  }
-)
+  );
+} catch (err) {
+  console.error('❌ Failed to initialize Supabase client:', err.message);
+  // Create a dummy client to prevent crashes
+  supabaseInstance = {
+    from: () => ({ select: () => Promise.reject(new Error('Supabase not initialized')) }),
+    rpc: () => Promise.reject(new Error('Supabase not initialized')),
+    functions: { invoke: () => Promise.reject(new Error('Supabase not initialized')) },
+    auth: { getSession: () => Promise.reject(new Error('Supabase not initialized')) }
+  };
+}
+
+export const supabase = supabaseInstance;
