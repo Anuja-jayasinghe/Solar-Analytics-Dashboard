@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useContext } from "react-router-dom";
 import { AuthContext } from "../contexts/AuthContext";
+import ErrorBoundary from "../components/shared/ErrorBoundary";
 import CebDataManagement from "../components/admin/CebDataManagement"; 
 import AdminManagement from "../components/admin/AdminManagement";
 import UserAccessManagement from "../components/admin/UserAccessManagement";
@@ -157,7 +158,9 @@ function AdminDashboard() {
             padding: "2rem"
           }}
         >
-          {renderContent()}
+          <ErrorBoundary>
+            {renderContent()}
+          </ErrorBoundary>
         </div>
       </div>
     </div>
