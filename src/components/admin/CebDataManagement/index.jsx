@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabaseClient";
-import useTablePagination from "../../hooks/useTablePagination";
-import SkeletonLoader from "../shared/SkeletonLoader";
-import ConfirmDialog from "../shared/ConfirmDialog";
+import { supabase } from "../../../lib/supabaseClient";
+import useTablePagination from "../../../hooks/useTablePagination";
+import SkeletonLoader from "../../shared/SkeletonLoader";
+import ConfirmDialog from "../../shared/ConfirmDialog";
 import CebForm from "./CebForm";
 import CebTable from "./CebTable";
 

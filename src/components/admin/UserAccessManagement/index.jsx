@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/clerk-react';
-import useTablePagination from '../../hooks/useTablePagination';
-import { applyAllFilters, getAdminStats } from '../../lib/adminPagination';
-import SkeletonLoader from '../shared/SkeletonLoader';
-import ConfirmDialog from '../shared/ConfirmDialog';
+import useTablePagination from '../../../hooks/useTablePagination';
+import { applyAllFilters, getAdminStats } from '../../../lib/adminPagination';
+import SkeletonLoader from '../../shared/SkeletonLoader';
+import ConfirmDialog from '../../shared/ConfirmDialog';
 import UserFilters from './UserFilters';
 import UserTable from './UserTable';
 import BulkOperations from './BulkOperations';

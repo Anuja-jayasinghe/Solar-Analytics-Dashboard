@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/clerk-react';
-import useTablePagination from '../../hooks/useTablePagination';
-import SkeletonLoader from '../shared/SkeletonLoader';
-import ConfirmDialog from '../shared/ConfirmDialog';
+import useTablePagination from '../../../hooks/useTablePagination';
+import SkeletonLoader from '../../shared/SkeletonLoader';
+import ConfirmDialog from '../../shared/ConfirmDialog';
 import AdminSearch from './AdminSearch';
 import AdminUsersList from './AdminUsersList';
 import RegularUsersList from './RegularUsersList';
