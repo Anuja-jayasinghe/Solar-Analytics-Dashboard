@@ -6,7 +6,7 @@ import { AuthContext } from '../../contexts/AuthContext';
 const Dashboard = lazy(() => import('../Dashboard'));
 
 export default function DashboardReal() {
-  const { session, user, loading } = useContext(AuthContext);
+  const { session, user, loading, dashboardAccess } = useContext(AuthContext);
   const navigate = useNavigate();
 
   // Show loading state while checking authentication
@@ -72,6 +72,45 @@ export default function DashboardReal() {
             }}
           >
             Try Demo Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user has real dashboard access
+  if (dashboardAccess !== 'real') {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        gap: '20px',
+        padding: '20px',
+        textAlign: 'center'
+      }}>
+        <div style={{ fontSize: '48px' }}>🚫</div>
+        <h2 style={{ margin: '0', color: 'var(--text-primary)' }}>Access Denied</h2>
+        <p style={{ margin: '0', color: 'var(--text-secondary)', maxWidth: '500px' }}>
+          You need "Real Dashboard" access to view this page. Please contact an administrator to request access.
+        </p>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+          <button 
+            onClick={() => navigate('/demodashbaard')}
+            style={{
+              padding: '12px 24px',
+              background: 'var(--accent)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: '500'
+            }}
+          >
+            Go to Demo Dashboard
           </button>
         </div>
       </div>
