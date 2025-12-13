@@ -66,6 +66,7 @@ export default function UserAccessManagement() {
     setError('');
     try {
       const token = await fetchAuthToken();
+      if (!token) throw new Error('No auth token');
       const response = await fetch('/api/admin/users', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -85,6 +86,7 @@ export default function UserAccessManagement() {
   const updateAccess = async (userId, newAccess) => {
     try {
       const token = await fetchAuthToken();
+      if (!token) throw new Error('No auth token');
       const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'PATCH',
         headers: {
