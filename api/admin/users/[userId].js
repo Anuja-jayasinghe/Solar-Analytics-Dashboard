@@ -22,6 +22,12 @@ export default async function handler(req, res) {
     return;
   }
 
+  console.log('🔍 User API Request:', {
+    method: req.method,
+    userId: req.query?.userId,
+    hasBody: !!req.body,
+    bodyKeys: req.body ? Object.keys(req.body) : []
+  });
 
   try {
     // Verify admin session and role
