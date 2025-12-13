@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../contexts/AuthContext";
 import ErrorBoundary from "../components/shared/ErrorBoundary";
 import CebDataManagement from "../components/admin/CebDataManagement"; 
-import AdminManagement from "../components/admin/AdminManagement";
-import UserAccessManagement from "../components/admin/UserAccessManagement";
+import UserManagement from "../components/admin/UserManagement";
 
 function AdminDashboard() {
   const [tab, setTab] = useState("users");
@@ -15,18 +14,15 @@ function AdminDashboard() {
     switch (tab) {
       case "ceb":
         return <CebDataManagement />;
-      case "admins":
-        return <AdminManagement />;
       case "users":
-        return <UserAccessManagement />;
+        return <UserManagement />;
       default:
         return null;
     }
   };
 
   const tabs = [
-    { id: "users", label: "👥 User Access", desc: "Manage dashboard access levels" },
-    { id: "admins", label: "🔐 Admin Roles", desc: "Promote/demote admin users" },
+    { id: "users", label: "👥 User Management", desc: "Manage users, roles & access" },
     { id: "ceb", label: "📊 CEB Data", desc: "Manage CEB data entry" },
   ];
 
