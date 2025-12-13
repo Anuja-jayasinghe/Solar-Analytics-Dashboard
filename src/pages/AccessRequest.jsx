@@ -5,7 +5,85 @@ import DemoAccessBanner from '../components/DemoAccessBanner';
 
 export default function AccessRequest() {
   const navigate = useNavigate();
-  const { dashboardAccess } = useContext(AuthContext);
+  const { dashboardAccess, session, user, loading } = useContext(AuthContext);
+
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        color: 'var(--accent)'
+      }}>
+        Loading...
+      </div>
+    );
+  }
+
+  // If not logged in, show login prompt
+  if (!session || !user) {
+    return (
+      <div style={{ padding: '2rem', maxWidth: '1100px', margin: '0 auto' }}>
+        <h1 style={{
+          color: 'var(--accent)',
+          marginBottom: '1rem',
+          fontSize: '2rem',
+          fontWeight: 800,
+          marginTop: '70px'
+        }}>🔒 Login Required</h1>
+
+        <div style={{
+          background: 'var(--card-bg)',
+          border: '1px solid var(--card-border)',
+          borderRadius: '12px',
+          padding: '1.25rem',
+          boxShadow: '0 4px 20px var(--card-shadow)'
+        }}>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+            You need to be logged in to request access to the real dashboard.
+          </p>
+          
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => navigate('/login')}
+              style={{
+                background: 'var(--accent)',
+                color: '#0c0c0c',
+                border: 'none',
+                padding: '12px 20px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontSize: '16px'
+              }}
+            >
+              🔐 Login
+            </button>
+            <button
+              onClick={() => navigate('/demodashbaard')}
+              style={{
+                background: 'var(--hover-bg)',
+                color: 'var(--text-color)',
+                border: '1px solid var(--glass-border)',
+                padding: '12px 20px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 700
+              }}
+            >
+              📊 View Demo Dashboard
+            </button>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '1.25rem', color: 'var(--text-muted)' }}>
+          Tip: You can explore the demo dashboard without logging in, but you'll need an account to access real solar data.
+        </div>
+      </div>
+    );
+  }
 
   const hasRealAccess = dashboardAccess === 'real';
   const isDemo = dashboardAccess === 'demo';
