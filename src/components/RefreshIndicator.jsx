@@ -3,7 +3,6 @@ import { useData } from '../hooks/useData';
 import { FileWarning } from 'lucide-react';
 
 const RefreshIndicator = () => {
-  const { loading, lastUpdate, isStale } = useData();
   const { loading, lastUpdate, isStale, connectionStatus } = useData();
   const isAnyLoading = Object.values(loading).some(Boolean);
   const mostRecentUpdate = lastUpdate.live || lastUpdate.charts || Date.now();
