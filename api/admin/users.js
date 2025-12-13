@@ -32,11 +32,14 @@ export default async function handler(req, res) {
     if (!adminUser) return; // Response already sent
 
     // Get all users from Clerk
-    const userList = await clerkClient.users.getUserList({
+    const response = await clerkClient.users.getUserList({
       limit: 100,
       orderBy: '-created_at'
     });
 
+    // getUserList returns { data: User[], totalCount: number }
+    const userList = response.data || response;
+    
     const users = userList.map(user => ({
       id: user.id,
       email: user.emailAddresses[0]?.emailAddress,
