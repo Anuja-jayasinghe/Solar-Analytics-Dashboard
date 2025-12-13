@@ -50,10 +50,13 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ users, total: users.length });
   } catch (error) {
-    console.error('Admin API Error:', error);
+    console.error('Admin API Error:', {
+      message: error?.message,
+      stack: error?.stack
+    });
     return res.status(500).json({ 
       error: 'Internal server error',
-      message: error.message 
+      message: error?.message || 'Unknown error'
     });
   }
 }

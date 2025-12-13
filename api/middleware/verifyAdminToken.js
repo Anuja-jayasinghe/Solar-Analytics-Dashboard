@@ -4,6 +4,7 @@ import { clerkClient } from '@clerk/clerk-sdk-node';
 export async function verifyAdminToken(req, res) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.error('verifyAdminToken: missing bearer token');
     res.status(401).json({ error: 'Unauthorized - No token provided' });
     return null;
   }
@@ -16,7 +17,7 @@ export async function verifyAdminToken(req, res) {
       const session = await clerkClient.sessions.verifySession(token);
       userId = session?.userId;
     } catch (e) {
-      // ignore and fall through to JWT verify
+      console.warn('verifyAdminToken: session verify failed, will try JWT', e?.message);
     }
 
     // 2) Try verifying as a JWT (e.g., template token) if a template name is configured
@@ -28,7 +29,7 @@ export async function verifyAdminToken(req, res) {
         });
         userId = verified.sub;
       } catch (e) {
-        // still invalid
+        console.warn('verifyAdminToken: JWT verify (template) failed', e?.message);
       }
     }
 
@@ -38,11 +39,12 @@ export async function verifyAdminToken(req, res) {
         const verified = await clerkClient.verifyToken(token);
         userId = verified.sub;
       } catch (e) {
-        // still invalid
+        console.warn('verifyAdminToken: JWT verify (default) failed', e?.message);
       }
     }
 
     if (!userId) {
+      console.error('verifyAdminToken: unable to verify token');
       res.status(401).json({ error: 'Unauthorized - Invalid token' });
       return null;
     }
