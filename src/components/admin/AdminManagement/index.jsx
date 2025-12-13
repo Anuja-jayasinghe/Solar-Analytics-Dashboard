@@ -50,6 +50,13 @@ export default function AdminManagement() {
     fetchUsers();
   }, []);
 
+  // Get an auth token that backend can verify. Prefer a JWT template if configured.
+  const fetchAuthToken = async () => {
+    // Try a custom template (e.g., 'supabase') first, then default token
+    const token = await getToken({ template: 'supabase' }) || await getToken();
+    return token;
+  };
+
   // Clear success message after 3 seconds
   useEffect(() => {
     if (successMessage) {
@@ -62,7 +69,7 @@ export default function AdminManagement() {
     setLoading(true);
     setError('');
     try {
-      const token = await getToken();
+      const token = await fetchAuthToken();
       const response = await fetch('/api/admin/users', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -105,7 +112,7 @@ export default function AdminManagement() {
     setError('');
 
     try {
-      const token = await getToken();
+      const token = await fetchAuthToken();
       const newRole = action === 'promote' ? 'admin' : 'user';
 
       const response = await fetch(`/api/admin/users/${userId}`, {
