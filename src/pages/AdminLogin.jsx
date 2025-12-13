@@ -1,141 +1,180 @@
-import React, { useEffect, useState, useContext } from "react";
-import { supabase } from "../lib/supabaseClient";
+import React, { useEffect, useContext } from "react";
+import { SignIn, useUser } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../contexts/AuthContext";
 
 export default function AdminLogin() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { isAdmin, session } = useContext(AuthContext);
+  const { isAdmin, session, loading, dashboardAccess, signOut } = useContext(AuthContext);
+  const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
 
   useEffect(() => {
-    // Use the session and isAdmin from AuthContext instead of managing our own state
-    if (session?.user) {
-      setUser(session.user);
-      // Only auto-redirect if user is admin, otherwise let them see the login page
-      if (isAdmin) {
-        navigate("/admin/dashboard");
+    // Auto-redirect based on user role and access level
+    if (!loading && clerkLoaded && session?.user) {
+      console.log('🔐 AdminLogin Debug:', {
+        isAdmin,
+        dashboardAccess,
+        email: session.user.email,
+        metadata: clerkUser?.publicMetadata
+      });
+      
+      if (dashboardAccess === 'real') {
+        // Real users and admins go to real dashboard
+        console.log('✅ Redirecting to /dashboard (Real user or Admin)');
+        navigate("/dashboard", { replace: true });
+      } else {
+        // Demo users go to demo dashboard
+        console.log('✅ Redirecting to /demodashbaard (Demo user)');
+        navigate("/demodashbaard", { replace: true });
       }
-    } else {
-      setUser(null);
     }
-    setLoading(false);
-  }, [session, isAdmin, navigate]);
+  }, [session, isAdmin, dashboardAccess, loading, navigate, clerkUser, clerkLoaded]);
 
-  async function signInWithGoogle() {
-    const origin = window.location.origin;
-    console.log('🔐 Admin Login: Attempting Google OAuth with redirect:', `${origin}/admin/dashboard`);
-    
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { 
-        redirectTo: `${origin}/admin/dashboard`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        }
-      },
-    });
-    
-    if (error) {
-      console.error('❌ OAuth Error:', error);
-      alert(`Login failed: ${error.message}`);
-    }
+  // Show loading while redirecting if already logged in
+  if (clerkLoaded && clerkUser && !loading && session) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        color: 'var(--accent)'
+      }}>
+        Redirecting...
+      </div>
+    );
   }
 
-  if (loading) return <p>Loading...</p>;
-
-  return (
-    <div style={{ padding: 20, maxWidth: 400, margin: '2rem auto' }}>
-      <h2>Admin Login</h2>
-      {user && !isAdmin ? (
+  // Show account management options only if not authenticated yet (this shouldn't normally show)
+  if (clerkLoaded && clerkUser && !loading && !session) {
+    return (
+      <div style={{ padding: 20, maxWidth: 500, margin: '2rem auto' }}>
         <div style={{ 
-          padding: '1rem', 
-          background: '#fff3cd', 
-          border: '1px solid #ffeaa7', 
-          borderRadius: '4px',
-          marginBottom: '1rem'
+          padding: '1.5rem', 
+          background: 'var(--card-bg)', 
+          border: '1px solid var(--border-color)', 
+          borderRadius: '8px',
+          marginBottom: '1rem',
+          textAlign: 'center'
         }}>
-          <p style={{ margin: 0, color: "#856404" }}>
-            <strong>Logged in as:</strong> {user.email}
+          <div style={{ fontSize: '48px', marginBottom: '1rem' }}>👋</div>
+          <h2 style={{ margin: '0 0 1rem 0', color: "var(--text-primary)" }}>Already Logged In</h2>
+          <p style={{ margin: 0, color: "var(--text-secondary)" }}>
+            <strong>Logged in as:</strong> {clerkUser.primaryEmailAddress?.emailAddress}
           </p>
-          <p style={{ margin: '0.5rem 0 0 0', color: "#856404" }}>
-            This account is not authorized as an admin.
+          <p style={{ margin: '0.5rem 0', color: "var(--text-secondary)" }}>
+            {isAdmin ? '🔑 Admin Account' : '👤 User Account'}
           </p>
-          <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => supabase.auth.signOut()}
-              style={{ 
-                background: "#dc3545", 
-                color: "#fff", 
-                padding: "8px 16px", 
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-                fontSize: "14px"
-              }}
-            >
-              🚪 Sign Out
-            </button>
-            <button
-              onClick={() => {
-                supabase.auth.signOut();
-                // Small delay to ensure sign out completes
-                setTimeout(() => {
-                  window.location.reload();
-                }, 100);
-              }}
-              style={{ 
-                background: "#007bff", 
-                color: "#fff", 
-                padding: "8px 16px", 
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-                fontSize: "14px"
-              }}
-            >
-              🔄 Try Different Account
-            </button>
-          </div>
         </div>
-      ) : (
-        <div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <button
-            onClick={signInWithGoogle}
+            onClick={async () => {
+              await signOut();
+              navigate('/');
+            }}
             style={{ 
-              background: "#ff7a00", 
+              background: "var(--accent)", 
               color: "#fff", 
-              padding: "10px 20px", 
-              border: "none", 
-              borderRadius: "4px", 
+              padding: "12px 24px", 
+              border: "none",
+              borderRadius: "8px",
               cursor: "pointer",
-              marginBottom: "1rem",
-              width: "100%"
+              fontSize: "16px",
+              fontWeight: "500"
             }}
           >
-            Sign in with Google
+            🚪 Logout
           </button>
-          {user && (
-            <button
-              onClick={() => supabase.auth.signOut()}
-              style={{ 
-                background: "#6c757d", 
-                color: "#fff", 
-                padding: "8px 16px", 
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-                fontSize: "14px",
-                width: "100%"
-              }}
-            >
-              🚪 Sign Out
-            </button>
-          )}
+          <button
+            onClick={async () => {
+              await signOut();
+              window.location.reload(); // Force page reload to show login form
+            }}
+            style={{ 
+              background: "var(--card-bg)", 
+              color: "var(--text-primary)", 
+              padding: "12px 24px", 
+              border: "1px solid var(--border-color)",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "16px",
+              fontWeight: "500"
+            }}
+          >
+            🔄 Switch Account
+          </button>
+          <button
+            onClick={() => navigate('/')}
+            style={{ 
+              background: "transparent", 
+              color: "var(--text-secondary)", 
+              padding: "12px 24px", 
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "16px",
+              fontWeight: "500"
+            }}
+          >
+            ← Back to Home
+          </button>
         </div>
-      )}
+      </div>
+    );
+  }
+
+  if (loading || !clerkLoaded) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        color: 'var(--accent)'
+      }}>
+        Loading...
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column',
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      minHeight: '100vh',
+      padding: '20px',
+      background: 'var(--bg-color)'
+    }}>
+      <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
+        <h1 style={{ color: 'var(--accent)', fontSize: '2rem', margin: '0 0 0.5rem 0' }}>
+          Login
+        </h1>
+        <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
+          Sign in to access your dashboard
+        </p>
+      </div>
+      
+      <SignIn 
+        appearance={{
+          elements: {
+            rootBox: {
+              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+              borderRadius: '12px'
+            },
+            card: {
+              background: 'var(--card-bg)',
+              boxShadow: 'none'
+            }
+          }
+        }}
+        routing="path"
+        path="/login"
+        signUpUrl="/signup"
+        afterSignInUrl="/"
+        redirectUrl="/"
+      />
     </div>
   );
 }

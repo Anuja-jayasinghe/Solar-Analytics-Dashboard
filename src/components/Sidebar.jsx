@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useContext } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { ThemeContext } from "./ThemeContext";
-import { ComputerIcon } from "lucide-react";
+import { AuthContext } from "../contexts/AuthContext";
+import { ComputerIcon, LogOut } from "lucide-react";
 
 // --- SVG Icons ---
 const DashboardIcon = ({ className }) => (
@@ -50,6 +51,8 @@ const LockIcon = ({ className }) => (
 function Sidebar({ onDevToolsToggle }) {
   const devtoolsEnabled = (import.meta?.env?.VITE_ENABLE_DEVTOOLS ?? 'true') === 'true';
   const { theme, setTheme } = useContext(ThemeContext);
+  const { session, signOut } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [showAdminPopup, setShowAdminPopup] = useState(false);
@@ -80,6 +83,12 @@ function Sidebar({ onDevToolsToggle }) {
   const handleAdminAccess = () => {
     setShowAdminPopup(true);
     closeSidebar();
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    closeSidebar();
+    navigate('/', { state: { from: 'dashboard' } });
   };
 
   return (
@@ -443,6 +452,19 @@ function Sidebar({ onDevToolsToggle }) {
           >
             <LockIcon/>
           </button>
+          
+          {session && (
+            <button 
+              onClick={handleLogout}
+              title="Logout"
+              aria-label="Logout"
+              style={{
+                marginTop: 'auto'
+              }}
+            >
+              <LogOut />
+            </button>
+          )}
         </nav>
         
         {!isMobile && devtoolsEnabled && <div className="devtools-divider" />}
@@ -537,7 +559,7 @@ function Sidebar({ onDevToolsToggle }) {
               <span
                 onClick={() => {
                   setShowAdminPopup(false);
-                  window.location.href = '/admin';
+                  window.location.href = '/admin/dashboard';
                 }}
                 style={{
                   color: "#666",

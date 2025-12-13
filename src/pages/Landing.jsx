@@ -1,35 +1,104 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Zap, TrendingUp, BarChart3, Leaf, Shield, Github } from 'lucide-react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Zap, TrendingUp, BarChart3, Leaf, Github, Linkedin, Globe, LogOut, User } from 'lucide-react';
+import { AuthContext } from '../contexts/AuthContext';
 
 const Landing = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { session, dashboardAccess, isAdmin, loading, user, signOut } = useContext(AuthContext);
+  const hasRedirected = useRef(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef(null);
+
+  // Auto-redirect logged-in users to their respective dashboard
+  // But only on first load, not when user manually navigates to landing page
+  useEffect(() => {
+    console.log('🏠 Landing: Redirect check', {
+      loading,
+      hasSession: !!session,
+      dashboardAccess,
+      isAdmin
+    });
+
+    if (loading) {
+      console.log('⏳ Landing: Still loading, skipping redirect');
+      return;
+    }
+
+    // Only redirect once on initial load (not when user navigates back)
+    if (session && !hasRedirected.current) {
+      // Check if user came from a redirect (not manual navigation)
+      // If they came from a dashboard route, don't redirect again
+      const state = location.state;
+      const isReturningFromDashboard = state?.from === 'dashboard';
+      
+      if (isReturningFromDashboard) {
+        console.log('🔓 Landing: User returning from dashboard, showing landing page');
+        return;
+      }
+
+      console.log('✅ Landing: User is logged in, redirecting...');
+      hasRedirected.current = true;
+      
+      if (dashboardAccess === 'real') {
+        console.log('➡️ Redirecting to /dashboard (Real user or Admin)');
+        navigate('/dashboard', { replace: true });
+      } else {
+        console.log('➡️ Redirecting to /demodashbaard (Demo user)');
+        navigate('/demodashbaard', { replace: true });
+      }
+    } else {
+      console.log('🔓 Landing: User not logged in, showing landing page');
+    }
+  }, [session, dashboardAccess, isAdmin, loading, navigate, location.state]);
+
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    if (showProfileMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showProfileMenu]);
+
+  const handleLogout = async () => {
+    setShowProfileMenu(false);
+    await signOut();
+    navigate('/', { state: { from: 'dashboard' } });
+  };
+
+  const handleSwitchAccount = async () => {
+    setShowProfileMenu(false);
+    await signOut();
+    navigate('/login');
+  };
 
   const features = [
     {
       icon: <Zap />,
       title: 'Real-Time Monitoring',
-      description: 'Track your solar power generation live with 5-minute refresh intervals'
+      description: 'Track solar power generation live with automated data refresh'
     },
     {
       icon: <TrendingUp />,
-      title: 'Earnings Tracking',
-      description: 'Monitor your solar earnings and compare with potential values'
+      title: 'Earnings Analysis',
+      description: 'Compare actual vs potential earnings with detailed breakdowns'
     },
     {
       icon: <BarChart3 />,
       title: 'Interactive Charts',
-      description: 'Visualize daily, monthly, and billing period data with beautiful charts'
+      description: 'Visualize daily, monthly, and billing period trends'
     },
     {
       icon: <Leaf />,
       title: 'Environmental Impact',
-      description: 'See your CO₂ savings and equivalent trees planted'
-    },
-    {
-      icon: <Shield />,
-      title: 'Secure & Private',
-      description: 'Your data is protected with modern authentication'
+      description: 'Track CO₂ savings and equivalent trees planted'
     }
   ];
 
@@ -44,40 +113,224 @@ const Landing = () => {
           <Zap style={styles.logoIcon} />
           <span style={styles.logoText}>Solar Analytics</span>
         </div>
-        <button 
-          onClick={() => navigate('/dashboard')}
-          style={styles.headerButton}
-        >
-          Dashboard
-        </button>
+        <div style={styles.headerLinks}>
+          {session && user ? (
+            // Profile Menu for logged-in users
+            <div style={{ position: 'relative' }} ref={profileMenuRef}>
+              <button
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                style={{
+                  ...styles.headerButton,
+                  background: 'rgba(255, 122, 0, 0.2)',
+                  border: '1px solid var(--accent)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  background: 'var(--accent)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#000',
+                  fontSize: '12px',
+                  fontWeight: 'bold'
+                }}>
+                  {user?.email?.[0]?.toUpperCase() || 'U'}
+                </div>
+                <span style={{ fontSize: '13px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user?.email}
+                </span>
+              </button>
+
+              {/* Profile Dropdown Menu */}
+              {showProfileMenu && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '8px',
+                  background: 'var(--card-bg)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                  zIndex: 1000,
+                  minWidth: '280px',
+                  overflow: 'hidden'
+                }}>
+                  {/* User Info Section */}
+                  <div style={{
+                    padding: '16px',
+                    background: 'rgba(255, 122, 0, 0.1)',
+                    borderBottom: '1px solid var(--border-color)'
+                  }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Email</div>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', wordBreak: 'break-word' }}>
+                      {user?.email}
+                    </div>
+                  </div>
+
+                  {/* Access Level Section */}
+                  <div style={{
+                    padding: '16px',
+                    borderBottom: '1px solid var(--border-color)'
+                  }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Access Level</div>
+                    <div style={{
+                      display: 'inline-block',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      background: dashboardAccess === 'real' ? '#28a745' : '#ffc107',
+                      color: dashboardAccess === 'real' ? 'white' : '#000'
+                    }}>
+                      {dashboardAccess === 'real' ? '🔓 Real Dashboard' : '📊 Demo Dashboard'}
+                    </div>
+                  </div>
+
+                  {/* Role Section */}
+                  {isAdmin && (
+                    <div style={{
+                      padding: '16px',
+                      borderBottom: '1px solid var(--border-color)',
+                      background: 'rgba(220, 53, 69, 0.05)'
+                    }}>
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Role</div>
+                      <div style={{
+                        display: 'inline-block',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        background: '#dc3545',
+                        color: 'white'
+                      }}>
+                        👨‍💼 Admin
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div style={{ padding: '8px' }}>
+                    {isAdmin && (
+                      <button
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          navigate('/admin/dashboard');
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          background: 'transparent',
+                          color: '#dc3545',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          textAlign: 'left',
+                          transition: 'background 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => e.target.style.background = 'rgba(220, 53, 69, 0.1)'}
+                        onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                      >
+                        ⚙️ Admin Dashboard
+                      </button>
+                    )}
+
+                    <button
+                      onClick={handleSwitchAccount}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        background: 'transparent',
+                        color: 'var(--accent)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        transition: 'background 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.target.style.background = 'rgba(255, 122, 0, 0.1)'}
+                      onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                    >
+                      <User size={16} />
+                      Switch Account
+                    </button>
+
+                    <button
+                      onClick={handleLogout}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        background: 'transparent',
+                        color: '#721c24',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        transition: 'background 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.target.style.background = 'rgba(114, 28, 36, 0.1)'}
+                      onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                    >
+                      <LogOut size={16} />
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            // Login button for non-logged-in users
+            <button 
+              onClick={() => navigate('/login')}
+              style={styles.headerButton}
+            >
+              Login
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Hero Section */}
       <section style={styles.hero}>
         <div style={styles.heroContent}>
           <h1 style={styles.heroTitle}>
-            Monitor Your Solar Power
-            <span style={styles.heroTitleAccent}> In Real-Time</span>
+            Personal Solar Analytics
+            <span style={styles.heroTitleAccent}> Dashboard</span>
           </h1>
           <p style={styles.heroSubtitle}>
-            A personal project built to track solar panel performance, earnings, and environmental impact—eliminating spreadsheet chaos with a modern, real-time dashboard.
+            A personal project built to solve a real problem: tracking my solar panel performance, earnings, and environmental impact—without the spreadsheet chaos.
           </p>
           <div style={styles.heroCTA}>
             <button 
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/login')}
               style={styles.primaryButton}
             >
-              View Dashboard
+              Get Started
             </button>
-            <a 
-              href="https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard"
-              target="_blank"
-              rel="noopener noreferrer"
+            <button 
+              onClick={() => navigate('/demodashbaard')}
               style={styles.secondaryButton}
             >
-              <Github style={{ width: 20, height: 20 }} />
-              <span>View on GitHub</span>
-            </a>
+              Explore Demo
+            </button>
           </div>
         </div>
         
@@ -116,9 +369,9 @@ const Landing = () => {
 
       {/* Features Grid */}
       <section style={styles.features}>
-        <h2 style={styles.sectionTitle}>Built to Solve Real Problems</h2>
+        <h2 style={styles.sectionTitle}>Why I Built This</h2>
         <p style={styles.sectionSubtitle}>
-          What started as a personal need became a comprehensive solar monitoring solution
+          Started as a weekend project to monitor my home solar system. Ended up building a full analytics platform.
         </p>
         <div style={styles.featuresGrid}>
           {features.map((feature, index) => (
@@ -146,9 +399,9 @@ const Landing = () => {
 
       {/* Tech Stack */}
       <section style={styles.techSection}>
-        <h2 style={styles.sectionTitle}>Built With Modern Tech</h2>
+        <h2 style={styles.sectionTitle}>Built With</h2>
         <div style={styles.techGrid}>
-          {['React 19', 'Vite', 'Supabase', 'Recharts', 'Chakra UI', 'Lucide Icons'].map((tech, i) => (
+          {['React 19', 'Vite', 'Supabase', 'Recharts', 'Vercel'].map((tech, i) => (
             <div key={i} style={styles.techBadge}>
               {tech}
             </div>
@@ -159,9 +412,9 @@ const Landing = () => {
       {/* CTA Section */}
       <section style={styles.ctaSection}>
         <div style={styles.ctaContent}>
-          <h2 style={styles.ctaTitle}>Ready to Track Your Solar Power?</h2>
+          <h2 style={styles.ctaTitle}>Ready to Explore?</h2>
           <p style={styles.ctaSubtitle}>
-            Start monitoring your solar investment today
+            Check out the live dashboard or try the demo version
           </p>
           <button 
             onClick={() => navigate('/dashboard')}
@@ -175,9 +428,18 @@ const Landing = () => {
       {/* Footer */}
       <footer style={styles.footer}>
         <p style={styles.footerText}>
-          Built with ☀️ by Anuja Jayasinghe • A Personal Project
+          Built with 💖 by <strong>Anuja Jayasinghe</strong> • A Personal Project
         </p>
         <div style={styles.footerLinks}>
+          <a 
+            href="https://anujajay.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={styles.footerLink}
+          >
+            <Globe style={{ width: 20, height: 20 }} />
+            <span>Website</span>
+          </a>
           <a 
             href="https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard"
             target="_blank"
@@ -185,6 +447,16 @@ const Landing = () => {
             style={styles.footerLink}
           >
             <Github style={{ width: 20, height: 20 }} />
+            <span>GitHub</span>
+          </a>
+          <a 
+            href="http://linkedin.com/in/anujajayasinghe"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={styles.footerLink}
+          >
+            <Linkedin style={{ width: 20, height: 20 }} />
+            <span>LinkedIn</span>
           </a>
         </div>
       </footer>
@@ -242,15 +514,31 @@ const styles = {
     WebkitTextFillColor: 'transparent',
   },
   headerButton: {
-    padding: '0.5rem 1.5rem',
-    background: 'transparent',
-    border: '2px solid var(--accent)',
+    padding: '0.5rem 1.25rem',
+    background: 'var(--accent)',
+    border: 'none',
     borderRadius: '8px',
-    color: 'var(--accent)',
-    fontSize: '1rem',
+    color: '#fff',
+    fontSize: '0.95rem',
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
+  },
+  headerButtonOutline: {
+    padding: '0.5rem 1.25rem',
+    background: 'transparent',
+    border: '1.5px solid var(--accent)',
+    borderRadius: '8px',
+    color: 'var(--accent)',
+    fontSize: '0.95rem',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+  },
+  headerLinks: {
+    display: 'flex',
+    gap: '0.75rem',
+    flexWrap: 'wrap',
   },
   hero: {
     display: 'grid',
@@ -514,10 +802,16 @@ const styles = {
   },
   footerLinks: {
     display: 'flex',
-    gap: '1rem',
+    gap: '1.5rem',
+    flexWrap: 'wrap',
   },
   footerLink: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.45rem',
     color: 'var(--text-secondary)',
+    textDecoration: 'none',
+    fontSize: '0.95rem',
     transition: 'color 0.3s ease',
     cursor: 'pointer',
   },

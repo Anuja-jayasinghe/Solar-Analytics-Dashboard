@@ -17,7 +17,7 @@ const EnvironmentalImpact = lazy(() => import("../components/dashboard/Environme
 const SystemTrends = lazy(() => import("../components/dashboard/SystemTrends"));
 
 function Dashboard() {
-  return (
+  const content = (
     <div style={pageStyle}>
       <RefreshIndicator />
       <ErrorBanner />
@@ -60,6 +60,8 @@ function Dashboard() {
       </div>
     </div>
   );
+
+  return content;
 }
 
 // --- Styles ---

@@ -1,6 +1,7 @@
 // App.js
 import React, { useState, useEffect, useContext, Suspense, lazy } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { ClerkProvider } from "@clerk/clerk-react";
 import { ThemeProvider } from "./components/ThemeContext";
 import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 import { DataProvider } from "./contexts/DataContext";
@@ -13,10 +14,22 @@ import { Analytics } from "@vercel/analytics/react"
 import MaintenancePage from "./pages/MaintenancePage";
 import ErrorBoundary from "./components/ErrorBoundary";
 
+// Clerk configuration
+const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const USE_CLERK_AUTH = import.meta.env.VITE_USE_CLERK_AUTH === 'true';
+
 // Lazy load pages for better code splitting
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Settings = lazy(() => import("./pages/Settings"));
+const Landing = lazy(() => import("./pages/Landing"));
+// Demo/Real separated pages
+const DashboardDemo = lazy(() => import("./pages/demo/DashboardDemo"));
+const SettingsDemo = lazy(() => import("./pages/demo/SettingsDemo"));
+const DashboardReal = lazy(() => import("./pages/real/DashboardReal"));
+const SettingsReal = lazy(() => import("./pages/real/SettingsReal"));
+const AccessRequest = lazy(() => import("./pages/AccessRequest"));
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
+const Signup = lazy(() => import("./pages/Signup"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -27,13 +40,20 @@ function AppContent() {
   const devtoolsEnabled = (import.meta?.env?.VITE_ENABLE_DEVTOOLS ?? 'true') === 'true';
 
   useEffect(() => {
-    verifySupabaseConnection().then((result) => {
-      if (result.ok) {
-        console.log("[Supabase]", result.message, result.details);
-      } else {
-        console.error("[Supabase]", result.message);
-      }
-    });
+    // Verify Supabase connection - don't block app if it fails
+    try {
+      verifySupabaseConnection().then((result) => {
+        if (result.ok) {
+          console.log("[Supabase]", result.message, result.details);
+        } else {
+          console.warn("[Supabase]", result.message);
+        }
+      }).catch((err) => {
+        console.warn("[Supabase] Connection check failed:", err.message);
+      });
+    } catch (err) {
+      console.warn("[Supabase] Connection check error:", err.message);
+    }
   }, []);
 
   function RequireAdmin({ children }) {
@@ -46,8 +66,12 @@ function AppContent() {
   return (
     <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'var(--accent)' }}>Loading...</div>}>
       <Routes>
-        {/* Admin routes - standalone layout */}
-        <Route path="/admin" element={<AdminLogin />} />
+        {/* Landing page - standalone, no sidebar */}
+        <Route path="/" element={<Landing />} />
+
+        {/* Auth routes - standalone layout */}
+        <Route path="/login" element={<AdminLogin />} />
+        <Route path="/signup" element={<Signup />} />
         <Route
           path="/admin/dashboard"
           element={
@@ -56,6 +80,7 @@ function AppContent() {
             </RequireAdmin>
           }
         />
+        <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="/admin/*" element={<NotFound />} />
 
         {/* Main app routes - with sidebar and navbar */}
@@ -79,9 +104,16 @@ function AppContent() {
                 <div className="page-container">
                   <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh', color: 'var(--accent)' }}>Loading page...</div>}>
                     <Routes>
-                      <Route index element={<Dashboard />} />
-                      <Route path="dashboard" element={<Dashboard />} />
-                      <Route path="settings" element={<Settings />} />
+                      {/* Real routes */}
+                      <Route index element={<DashboardReal />} />
+                      <Route path="dashboard" element={<DashboardReal />} />
+                      <Route path="settings" element={<SettingsReal />} />
+                      <Route path="access" element={<AccessRequest />} />
+
+                      {/* Demo routes (as requested) */}
+                      <Route path="demodashbaard" element={<DashboardDemo />} />
+                      <Route path="demosettings" element={<SettingsDemo />} />
+
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </Suspense>
@@ -125,7 +157,9 @@ function App() {
   if (IS_MAINTENANCE){
     return <MaintenancePage/>
   }
-  return (
+
+  // ClerkProvider must be at the top level to ensure all hooks work
+  const clerkWrappedApp = (
     <ErrorBoundary>
       <AuthProvider>
         <ThemeProvider>
@@ -143,6 +177,18 @@ function App() {
       </AuthProvider>
     </ErrorBoundary>
   );
+
+  // Wrap with ClerkProvider if feature flag is enabled
+  if (USE_CLERK_AUTH && CLERK_PUBLISHABLE_KEY) {
+    return (
+      <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+        {clerkWrappedApp}
+      </ClerkProvider>
+    );
+  }
+
+  // Otherwise, use Supabase auth (default)
+  return clerkWrappedApp;
 }
 
 export default App;

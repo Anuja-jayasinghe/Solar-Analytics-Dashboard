@@ -10,6 +10,11 @@ const DailyTargetTracker = () => {
   const [waveOffset2, setWaveOffset2] = useState(0);
 
   useEffect(() => {
+    const demoMode = (import.meta?.env?.VITE_DEMO_TEST_MODE ?? 'false') === 'true';
+    if (demoMode) {
+      setTarget(40); // 40 kWh demo target (realistic for 6-8kW system)
+      return;
+    }
     const fetchTarget = async () => {
       try {
         const { data: setting } = await supabase

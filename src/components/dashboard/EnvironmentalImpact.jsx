@@ -12,6 +12,11 @@ const EnvironmentalImpact = () => {
     async function loadLifetimeGeneration() {
       setLoading(true);
       try {
+        const demoMode = (import.meta?.env?.VITE_DEMO_TEST_MODE ?? 'false') === 'true';
+        if (demoMode) {
+          setTotalGeneration(28456); // kWh demo total (matches 28.456 MWh)
+          return;
+        }
         const { data, error } = await supabase
           .from("inverter_data_daily_summary")
           .select("total_generation_kwh");
