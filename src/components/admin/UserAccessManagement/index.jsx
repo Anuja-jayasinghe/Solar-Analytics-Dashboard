@@ -43,6 +43,12 @@ export default function UserAccessManagement() {
     fetchUsers();
   }, []);
 
+  // Get an auth token that backend can verify. Prefer a JWT template if configured.
+  const fetchAuthToken = async () => {
+    const token = await getToken({ template: 'supabase' }) || await getToken();
+    return token;
+  };
+
   // Clear success message after 3 seconds
   useEffect(() => {
     if (successMessage) {
@@ -55,7 +61,7 @@ export default function UserAccessManagement() {
     setLoading(true);
     setError('');
     try {
-      const token = await getToken();
+      const token = await fetchAuthToken();
       const response = await fetch('/api/admin/users', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -74,7 +80,7 @@ export default function UserAccessManagement() {
 
   const updateAccess = async (userId, newAccess) => {
     try {
-      const token = await getToken();
+      const token = await fetchAuthToken();
       const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'PATCH',
         headers: {

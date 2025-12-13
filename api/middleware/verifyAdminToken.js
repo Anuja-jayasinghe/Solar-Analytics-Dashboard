@@ -9,14 +9,35 @@ export async function verifyAdminToken(req, res) {
   }
   const token = authHeader.substring(7);
   try {
-    // Verify the session token with Clerk
-    const session = await clerkClient.sessions.verifySession(token);
-    if (!session || !session.userId) {
-      res.status(401).json({ error: 'Unauthorized - Invalid session' });
+    let userId = null;
+
+    // 1) Try verifying as a session token
+    try {
+      const session = await clerkClient.sessions.verifySession(token);
+      userId = session?.userId;
+    } catch (e) {
+      // ignore and fall through to JWT verify
+    }
+
+    // 2) Try verifying as a JWT (e.g., template token)
+    if (!userId) {
+      try {
+        const verified = await clerkClient.verifyToken(token, {
+          template: process.env.CLERK_JWT_TEMPLATE_NAME || undefined
+        });
+        userId = verified.sub;
+      } catch (e) {
+        // still invalid
+      }
+    }
+
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized - Invalid token' });
       return null;
     }
+
     // Fetch the user and check admin role
-    const user = await clerkClient.users.getUser(session.userId);
+    const user = await clerkClient.users.getUser(userId);
     if (user.publicMetadata?.role !== 'admin') {
       res.status(403).json({ error: 'Forbidden - Admins only' });
       return null;
