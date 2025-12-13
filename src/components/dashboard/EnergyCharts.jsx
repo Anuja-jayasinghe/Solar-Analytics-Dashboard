@@ -320,7 +320,7 @@ const spinner = {
 };
 const retryButton = {
   background: "rgba(0, 234, 255, 0.2)",
-  color: "#fff",
+  color: "var(--text-color)",
   border: "1px solid rgba(0, 234, 255, 0.4)",
   borderRadius: "6px",
   padding: "0.4rem 0.8rem",
@@ -333,18 +333,18 @@ const keyframesCSS = `@keyframes spin { 0% { transform: rotate(0deg); } 100% { t
 
 // --- Tooltip Styles ---
 const tooltipStyle = {
-  background: 'rgba(10, 10, 12, 0.85)',
+  background: 'var(--card-bg-solid)',
   backdropFilter: 'blur(5px)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
+  border: '1px solid var(--card-border)',
   borderRadius: '6px',
   padding: '0.5rem 0.75rem',
   fontSize: '0.9rem',
-  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+  boxShadow: '0 4px 12px var(--card-shadow)',
 };
 const tooltipLabelStyle = {
   margin: 0,
   padding: 0,
-  color: '#a0aec0',
+  color: 'var(--text-secondary)',
   fontSize: '0.75rem',
   textTransform: 'uppercase',
   marginBottom: '4px',
@@ -354,7 +354,7 @@ const tooltipValueStyle = {
   padding: 0,
   fontWeight: 'bold',
   fontSize: '1rem',
-  color: '#fff',
+  color: 'var(--text-color)',
   marginBottom: '8px',
 };
 

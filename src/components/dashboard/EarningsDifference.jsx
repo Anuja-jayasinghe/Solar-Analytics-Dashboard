@@ -88,8 +88,8 @@ const EarningsDifference = () => {
               <path d="M 10 90 A 80 80 0 0 1 190 90" fill="none" stroke="rgba(255, 255, 255, 1)" strokeWidth="10" strokeLinecap="round" />
               <path d="M 10 90 A 80 80 0 0 1 190 90" fill="none" stroke="url(#gaugeGradient)" strokeWidth="10" strokeLinecap="round" />
               <g style={{ transform: `rotate(${needleRotation}deg)`, transformOrigin: 'center 90px', transition: 'transform 0.7s ease-out' }}>
-                <path d="M 100 20 L 97 90 L 103 90 Z" fill="#fff" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
-                <circle cx="100" cy="90" r="5" fill="#a0aec0" stroke="#1a1a1a" strokeWidth="2" />
+                <path d="M 100 20 L 97 90 L 103 90 Z" fill="var(--text-color)" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
+                <circle cx="100" cy="90" r="5" fill="var(--border-color)" stroke="var(--text-color)" strokeWidth="2" />
               </g>
             </svg>
           </div>
@@ -127,7 +127,7 @@ const styles = {
     color: 'var(--accent)', fontWeight: 'bold', fontSize: '1.1rem',
     textAlign: 'center', margin: '0 0 1rem 0',
   },
-  loadingText: { color: '#a0aec0', textAlign: 'center', margin: 'auto' },
+  loadingText: { color: 'var(--text-secondary)', textAlign: 'center', margin: 'auto' },
   valuesContainer: {
     display: 'flex', justifyContent: 'space-around', alignItems: 'center',
     paddingBottom: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)',
@@ -144,7 +144,7 @@ const styles = {
     position: 'relative',
   },
   summaryContainer: { textAlign: 'center', marginTop: 'auto' },
-  summaryLabel: { color: '#a0aec0', fontSize: '0.8rem', textTransform: 'uppercase', margin: 0 },
+  summaryLabel: { color: 'var(--text-secondary)', fontSize: '0.8rem', textTransform: 'uppercase', margin: 0 },
   summaryValue: {
     fontSize: '1.75rem', fontWeight: 'bold', margin: '0.25rem 0 0 0', textShadow: '0 0 10px currentColor',
   },

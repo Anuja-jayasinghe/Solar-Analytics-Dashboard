@@ -73,7 +73,7 @@ const CurrentPower = () => {
         <path 
           d={arcPath} 
           fill="none" 
-          stroke="rgba(255,255,255,0.1)" 
+          stroke="var(--border-color)" 
           strokeWidth="12" 
           strokeLinecap="round" 
         />
@@ -99,10 +99,10 @@ const CurrentPower = () => {
         >
           <path 
             d="M 100 30 L 98 100 L 102 100 Z" 
-            fill="#fff"
-            style={{ filter: "drop-shadow(0 0 4px rgba(255,255,255,0.5))" }}
+            fill="var(--text-color)"
+            style={{ filter: "drop-shadow(0 0 4px var(--accent))" }}
           />
-          <circle cx="100" cy="100" r="6" fill="#888" stroke="#333" strokeWidth="2" />
+          <circle cx="100" cy="100" r="6" fill="var(--border-color)" stroke="var(--text-color)" strokeWidth="2" />
         </g>
         
         <text x="100" y="120" textAnchor="middle" className="dial-value-text" style={{ pointerEvents: 'none' }}>{displayPower.toFixed(1)}</text>
@@ -113,12 +113,12 @@ const CurrentPower = () => {
 
       <style>{`
         .current-power-dial {
-          background: linear-gradient(145deg, rgba(20,20,22,0.8), rgba(12,12,14,0.85));
+          background: var(--card-bg-solid);
           border-radius: clamp(12px, 3vw, 24px); 
           padding: clamp(1rem, 3vw, 1.5rem); 
           text-align: center;
-          backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1);
-          box-shadow: 0 8px 32px rgba(0,255,255,0.1), inset 0 1px 1px rgba(255,255,255,0.05);
+          backdrop-filter: blur(12px); border: 1px solid var(--card-border);
+          box-shadow: 0 8px 32px var(--card-shadow);
           width: 100%;
           min-height: clamp(300px, 40vh, 370px);
           height: 100%;
@@ -149,7 +149,7 @@ const CurrentPower = () => {
         .status-indicator::after {
           content: attr(data-tooltip);
           position: absolute; bottom: 150%; left: 50%; transform: translateX(-50%);
-          background: rgba(10, 10, 12, 0.85); color: #ffffffff; padding: 0.3rem 0.6rem;
+          background: var(--card-bg-solid); color: var(--text-color); padding: 0.3rem 0.6rem;
           border-radius: 6px; font-size: 0.8rem; white-space: nowrap;
           backdrop-filter: blur(5px); border: 1px solid rgba(255, 255, 255, 0.1);
           opacity: 0; visibility: hidden; transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
@@ -166,15 +166,15 @@ const CurrentPower = () => {
         .dial-value-text { 
           font-size: clamp(2rem, 7vw, 2.8rem); 
           font-weight: bold; 
-          fill: #fff; 
-          text-shadow: 0 0 18px rgba(255,255,255,0.6); 
+          fill: var(--text-color); 
+          text-shadow: 0 0 18px var(--accent); 
         }
         .dial-unit-text { 
           font-size: clamp(0.7rem, 2vw, 0.8rem); 
-          fill: #a0aec0; 
+          fill: var(--text-secondary); 
         }
         .dial-footer-text { 
-          color: #a0aec0; 
+          color: var(--text-secondary); 
           font-size: clamp(1rem, 3vw, 1.25rem); 
           margin-top: clamp(-1rem, -2vw, -1.30rem); 
         }

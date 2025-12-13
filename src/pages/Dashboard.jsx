@@ -67,6 +67,7 @@ function Dashboard() {
 // --- Styles ---
 const pageStyle = {
   padding: "clamp(0.75rem, 3vw, 2rem)",
+  paddingTop: "70px",
   color: "#fff",
   maxWidth: "1300px",
   margin: "auto",
@@ -74,7 +75,9 @@ const pageStyle = {
   width: "100%",
   boxSizing: "border-box",
   position: "relative",
-  zIndex: 200,
+  zIndex: 1,
+  minHeight: "100vh",
+  height: "100%"
 };
 
 const headerStyle = {
@@ -91,7 +94,7 @@ const highlightSection = {
   gap: "clamp(1rem, 2vw, 1.5rem)",
   marginBottom: "clamp(1rem, 3vw, 2rem)",
   position: "relative",
-  zIndex: 201,
+  zIndex: 1,
 };
 
 const highlightCards = {
@@ -115,7 +118,7 @@ const mainCharts = {
   boxShadow: "0 0 25px var(--card-shadow)",
   overflow: "hidden",
   position: "relative",
-  zIndex: 201,
+  zIndex: 1,
 };
 
 const gridStyle = {
@@ -126,7 +129,7 @@ const gridStyle = {
   alignItems: "stretch",
   width: "100%",
   position: "relative",
-  zIndex: 201,
+  zIndex: 1,
 };
 
 export default Dashboard;

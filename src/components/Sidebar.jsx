@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { ThemeContext } from "./ThemeContext";
 import { AuthContext } from "../contexts/AuthContext";
-import { ComputerIcon, LogOut } from "lucide-react";
+import { ComputerIcon, LogOut, User } from "lucide-react";
 
 // --- SVG Icons ---
 const DashboardIcon = ({ className }) => (
@@ -51,11 +51,13 @@ const LockIcon = ({ className }) => (
 function Sidebar({ onDevToolsToggle }) {
   const devtoolsEnabled = (import.meta?.env?.VITE_ENABLE_DEVTOOLS ?? 'true') === 'true';
   const { theme, setTheme } = useContext(ThemeContext);
-  const { session, signOut } = useContext(AuthContext);
+  const { session, signOut, user } = useContext(AuthContext);
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [showAdminPopup, setShowAdminPopup] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -66,6 +68,20 @@ function Sidebar({ onDevToolsToggle }) {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showUserMenu]);
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
@@ -100,22 +116,151 @@ function Sidebar({ onDevToolsToggle }) {
           top: 0,
           left: 60,
           right: 0,
-          height: '60px',
-          background: 'var(--bg-color)',
+          height: '50px',
+          background: 'var(--navbar-bg)',
           display: 'flex',
           alignItems: 'center',
-          paddingLeft:'1rem',
-          paddingTop:'0.5rem',
-          zIndex: 100
+          justifyContent: 'space-between',
+          paddingLeft:'1.5rem',
+          paddingRight:'1.5rem',
+          zIndex: 900,
+          borderBottom: '1px solid var(--border-color)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
         }}>
           <h1 style={{ 
             color: "var(--accent)", 
-            fontSize: "2rem", 
+            fontSize: "1.5rem", 
             fontWeight: "bold",
-            margin: 0
+            margin: 0,
+            letterSpacing: '-0.5px'
           }}>
             SolarEdge
           </h1>
+          
+          {/* Profile Button */}
+          {user && (
+            <div style={{ position: 'relative' }} ref={menuRef}>
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                style={{
+                  height: '38px',
+                  padding: '0 14px',
+                  borderRadius: '20px',
+                  background: showUserMenu ? 'var(--accent)' : 'rgba(255,122,0,0.1)',
+                  border: '1px solid rgba(255,122,0,0.3)',
+                  color: showUserMenu ? '#fff' : 'var(--text-color)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  boxShadow: showUserMenu ? '0 4px 12px rgba(255,122,0,0.3)' : 'none'
+                }}
+                onMouseEnter={(e) => {
+                  if (!showUserMenu) {
+                    e.currentTarget.style.background = 'rgba(255,122,0,0.15)';
+                    e.currentTarget.style.borderColor = 'rgba(255,122,0,0.4)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!showUserMenu) {
+                    e.currentTarget.style.background = 'rgba(255,122,0,0.1)';
+                    e.currentTarget.style.borderColor = 'rgba(255,122,0,0.3)';
+                  }
+                }}
+              >
+                <User size={18} />
+                <span style={{ 
+                  maxWidth: '150px', 
+                  overflow: 'hidden', 
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {user.email?.split('@')[0] || 'User'}
+                </span>
+              </button>
+              
+              {showUserMenu && (
+                <div style={{
+                  position: 'absolute',
+                  top: '46px',
+                  right: '0',
+                  width: '280px',
+                  background: 'var(--navbar-bg)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '12px',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                  overflow: 'hidden',
+                  zIndex: 1000,
+                  animation: 'slideDown 0.2s ease-out'
+                }}>
+                  <div style={{
+                    padding: '20px',
+                    borderBottom: '1px solid var(--border-color)',
+                    background: 'rgba(255,122,0,0.05)'
+                  }}>
+                    <div style={{ 
+                      fontSize: '15px', 
+                      fontWeight: '600', 
+                      color: 'var(--text-color)',
+                      marginBottom: '4px',
+                      wordBreak: 'break-word'
+                    }}>
+                      {user.email}
+                    </div>
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: 'var(--text-secondary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <span style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        background: 'var(--success-color)',
+                        display: 'inline-block'
+                      }}></span>
+                      Real Dashboard Access
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    style={{
+                      width: '100%',
+                      padding: '14px 20px',
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--error-color)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      transition: 'all 0.2s ease',
+                      textAlign: 'left'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'var(--error-color)';
+                      e.currentTarget.style.color = 'white';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = 'var(--error-color)';
+                    }}
+                  >
+                    <LogOut size={16} />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

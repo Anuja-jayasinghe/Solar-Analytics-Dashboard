@@ -57,7 +57,7 @@ const cardStyle = {
   flex: 1,
   padding: "clamp(0.75rem, 2vw, 1.2rem)",
   borderRadius: "clamp(10px, 2vw, 14px)",
-  color: "#fff",
+  color: "var(--text-color)",
   backdropFilter: "blur(12px)",
   textAlign: "center",
   transition: "transform 0.3s ease, boxShadow 0.3s ease",
