@@ -54,9 +54,15 @@ export default async function handler(req, res) {
       message: error?.message,
       stack: error?.stack
     });
+
+    // Surface detailed debug info to help diagnose 500s (do not include secrets)
     return res.status(500).json({ 
       error: 'Internal server error',
-      message: error?.message || 'Unknown error'
+      message: error?.message || 'Unknown error',
+      debug: {
+        hasClerkSecret: Boolean(process.env.CLERK_SECRET_KEY),
+        clerkTemplate: process.env.CLERK_JWT_TEMPLATE_NAME || null
+      }
     });
   }
 }

@@ -45,7 +45,14 @@ export async function verifyAdminToken(req, res) {
 
     if (!userId) {
       console.error('verifyAdminToken: unable to verify token');
-      res.status(401).json({ error: 'Unauthorized - Invalid token' });
+      res.status(401).json({
+        error: 'Unauthorized - Invalid token',
+        debug: {
+          hasClerkSecret: Boolean(process.env.CLERK_SECRET_KEY),
+          template: process.env.CLERK_JWT_TEMPLATE_NAME || null,
+          message: 'Token could not be verified as session or JWT'
+        }
+      });
       return null;
     }
 

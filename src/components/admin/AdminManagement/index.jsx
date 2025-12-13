@@ -78,7 +78,10 @@ export default function AdminManagement() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+      if (!response.ok) {
+        const body = await safeReadBody(response);
+        throw new Error(`API Error: ${response.status} ${JSON.stringify(body)}`);
+      }
 
       const data = await response.json();
       setAllUsers(data.users || []);
@@ -129,7 +132,10 @@ export default function AdminManagement() {
         body: JSON.stringify({ role: newRole })
       });
 
-      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+      if (!response.ok) {
+        const body = await safeReadBody(response);
+        throw new Error(`API Error: ${response.status} ${JSON.stringify(body)}`);
+      }
 
       setSuccessMessage(
         `User ${action === 'promote' ? 'promoted to' : 'removed from'} admin role successfully`
@@ -266,6 +272,19 @@ export default function AdminManagement() {
       />
     </div>
   );
+}
+
+// Safely read JSON body; fallback to text
+async function safeReadBody(response) {
+  try {
+    return await response.json();
+  } catch (e) {
+    try {
+      return await response.text();
+    } catch (err) {
+      return 'Unable to read body';
+    }
+  }
 }
 
 // Stat Card Component
