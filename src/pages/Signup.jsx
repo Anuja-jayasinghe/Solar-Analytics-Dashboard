@@ -37,7 +37,7 @@ export default function Signup() {
             }
           }
         }}
-        routing="path"
+        routing="virtual"
         path="/signup"
         signInUrl="/login"
         afterSignUpUrl="/access"
