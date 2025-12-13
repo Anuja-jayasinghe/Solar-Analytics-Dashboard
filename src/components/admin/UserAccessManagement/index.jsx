@@ -71,7 +71,10 @@ export default function UserAccessManagement() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      if (!response.ok) throw new Error(`Failed to fetch users: ${response.status}`);
+      if (!response.ok) {
+        const body = await safeReadBody(response);
+        throw new Error(`Failed to fetch users: ${response.status} ${JSON.stringify(body)}`);
+      }
 
       const data = await response.json();
       setAllUsers(data.users || []);
@@ -96,7 +99,10 @@ export default function UserAccessManagement() {
         body: JSON.stringify({ dashboardAccess: newAccess })
       });
 
-      if (!response.ok) throw new Error(`Failed to update access: ${response.status}`);
+      if (!response.ok) {
+        const body = await safeReadBody(response);
+        throw new Error(`Failed to update access: ${response.status} ${JSON.stringify(body)}`);
+      }
 
       setAllUsers(allUsers.map(u => u.id === userId ? { ...u, dashboardAccess: newAccess } : u));
       return true;
@@ -300,6 +306,19 @@ export default function UserAccessManagement() {
       />
     </div>
   );
+}
+
+// Safely read JSON body; fallback to text
+async function safeReadBody(response) {
+  try {
+    return await response.json();
+  } catch (e) {
+    try {
+      return await response.text();
+    } catch (err) {
+      return 'Unable to read body';
+    }
+  }
 }
 
 // Stat Card Component
