@@ -173,8 +173,8 @@ const DailyTargetTracker = () => {
           {/* Main container */}
           <circle 
             cx="120" cy="120" r="105" 
-            fill="rgba(28, 30, 33, 0.4)" 
-            stroke="rgba(0, 255, 240, 0.3)" 
+            fill="var(--hover-bg)" 
+            stroke="var(--card-border)" 
             strokeWidth="2" 
           />
 
@@ -301,12 +301,12 @@ const DailyTargetTracker = () => {
 
 const styles = {
   container: {
-    background: 'linear-gradient(145deg, rgba(20,20,22,0.8), rgba(12,12,14,0.85))',
+    background: 'var(--card-bg-solid)',
     borderRadius: 'clamp(12px, 3vw, 24px)', 
     padding: 'clamp(1rem, 3vw, 1.5rem)', 
     backdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    boxShadow: '0 8px 32px rgba(0,255,255,0.1), inset 0 1px 1px rgba(255,255,255,0.05)',
+    border: '1px solid var(--card-border)',
+    boxShadow: '0 8px 32px var(--card-shadow)',
     width: '100%',
     minHeight: 'clamp(300px, 40vh, 370px)',
     height: '100%',
@@ -332,8 +332,8 @@ const styles = {
   percentText: {
     fontSize: 'clamp(1.75rem, 5vw, 2.25rem)', 
     fontWeight: '700', 
-    fill: '#ffffff',
-    textShadow: '0 0 15px rgba(255,255,255,0.5)',
+    fill: 'var(--text-color)',
+    textShadow: '0 0 15px var(--accent)',
   },
   stats: {
     display: 'flex', 
@@ -357,24 +357,24 @@ const styles = {
     letterSpacing: '0.05em',
   },
   statValue: { 
-    color: '#ffffff', 
+    color: 'var(--text-color)', 
     fontSize: 'clamp(1rem, 3vw, 1.125rem)', 
     fontWeight: '700' 
   },
   unit: { 
     fontSize: 'clamp(0.75rem, 2vw, 0.875rem)', 
-    color: '#a0aec0' 
+    color: 'var(--text-secondary)' 
   },
   divider: { 
     width: '1px', 
     height: '2rem', 
-    backgroundColor: 'rgba(255, 255, 255, 0.1)' 
+    backgroundColor: 'var(--border-color)' 
   },
   progressBarOuter: {
     width: '100%', 
     height: '0.375rem', 
     borderRadius: '9999px',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+    backgroundColor: 'var(--border-color)', 
     overflow: 'hidden',
   },
   progressBarInner: {

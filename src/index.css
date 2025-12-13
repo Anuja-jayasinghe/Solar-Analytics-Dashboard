@@ -32,30 +32,30 @@
 
 /* Light Theme overrides */
 body.light-theme {
-  --bg-color: #ffffff;
-  --text-color: #1a1a1a;
-  --sidebar-bg: #f8f9fa;
+  --bg-color: #f5f7fa;
+  --text-color: #1a202c;
+  --sidebar-bg: #ffffff;
   --navbar-bg: #ffffff;
-  --border-color: #e5e7eb;
-  --hover-bg: #f3f4f6;
+  --border-color: #cbd5e0;
+  --hover-bg: #edf2f7;
   
   /* Light theme specific colors */
-  --card-bg: rgba(255,255,255,0.8);
-  --card-bg-solid: rgba(248,249,250,0.95);
-  --card-border: rgba(255,122,0,0.3);
-  --card-shadow: rgba(0,0,0,0.1);
-  --text-secondary: #6b7280;
-  --text-muted: #9ca3af;
+  --card-bg: rgba(255,255,255,0.95);
+  --card-bg-solid: #ffffff;
+  --card-border: rgba(255,122,0,0.5);
+  --card-shadow: rgba(0,0,0,0.15);
+  --text-secondary: #4a5568;
+  --text-muted: #718096;
   --success-color: #10b981;
   --warning-color: #f59e0b;
   --info-color: #3b82f6;
-  --glass-bg: rgba(255,255,255,0.9);
-  --glass-border: rgba(0,0,0,0.1);
-  --chart-grid: rgba(0,0,0,0.1);
-  --chart-text: #6b7280;
-  --chart-hover-bg: rgba(0,0,0,0.05);
-  --chart-tooltip-bg: rgba(255,255,255,0.95);
-  --chart-tooltip-border: rgba(255,122,0,0.3);
+  --glass-bg: rgba(255,255,255,0.95);
+  --glass-border: rgba(0,0,0,0.15);
+  --chart-grid: rgba(0,0,0,0.12);
+  --chart-text: #4a5568;
+  --chart-hover-bg: rgba(0,0,0,0.08);
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: rgba(255,122,0,0.5);
 }
 
 body {
@@ -68,6 +68,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
   overflow-x: hidden;
+  overflow-y: auto;
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -131,6 +132,18 @@ body {
 @keyframes shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+/* Dropdown slide animation */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Route transitions */
