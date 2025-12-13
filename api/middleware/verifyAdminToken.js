@@ -19,11 +19,12 @@ export async function verifyAdminToken(req, res) {
       // ignore and fall through to JWT verify
     }
 
-    // 2) Try verifying as a JWT (e.g., template token)
-    if (!userId) {
+    // 2) Try verifying as a JWT (e.g., template token) if a template name is configured
+    const templateName = process.env.CLERK_JWT_TEMPLATE_NAME;
+    if (!userId && templateName) {
       try {
         const verified = await clerkClient.verifyToken(token, {
-          template: process.env.CLERK_JWT_TEMPLATE_NAME || undefined
+          template: templateName
         });
         userId = verified.sub;
       } catch (e) {

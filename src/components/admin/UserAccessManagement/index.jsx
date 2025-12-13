@@ -43,10 +43,14 @@ export default function UserAccessManagement() {
     fetchUsers();
   }, []);
 
-  // Get an auth token that backend can verify. Prefer a JWT template if configured.
+  // Get an auth token that backend can verify. Prefer template only if provided via env.
   const fetchAuthToken = async () => {
-    const token = await getToken({ template: 'supabase' }) || await getToken();
-    return token;
+    const template = import.meta.env.VITE_CLERK_JWT_TEMPLATE_NAME;
+    if (template) {
+      const token = await getToken({ template });
+      if (token) return token;
+    }
+    return await getToken();
   };
 
   // Clear success message after 3 seconds
