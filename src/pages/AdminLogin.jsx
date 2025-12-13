@@ -170,7 +170,6 @@ export default function AdminLogin() {
           }
         }}
         routing="virtual"
-        path="/login"
         signUpUrl="/signup"
         afterSignInUrl="/"
         redirectUrl="/"
