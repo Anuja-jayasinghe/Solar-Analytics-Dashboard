@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useContext, Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { ClerkProvider } from "@clerk/clerk-react";
+import ToastManager from './components/shared/ToastManager';
 import { ThemeProvider } from "./components/ThemeContext";
 import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 import { DataProvider } from "./contexts/DataContext";
