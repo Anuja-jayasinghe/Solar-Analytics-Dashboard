@@ -73,6 +73,11 @@ export default async function handler(req, res) {
 
       const { role, dashboardAccess } = req.body;
 
+      // Validate input
+      if (!role && !dashboardAccess) {
+        return res.status(400).json({ error: 'No updates provided' });
+      }
+
       // Get current user metadata
       const user = await clerkClient.users.getUser(userId);
       const currentMetadata = user.publicMetadata || {};
@@ -82,11 +87,11 @@ export default async function handler(req, res) {
         ...currentMetadata
       };
 
-      if (role) {
+      if (role !== undefined) {
         updatedMetadata.role = role;
       }
 
-      if (dashboardAccess) {
+      if (dashboardAccess !== undefined) {
         updatedMetadata.dashboardAccess = dashboardAccess;
       }
 
