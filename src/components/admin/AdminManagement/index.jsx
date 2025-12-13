@@ -73,6 +73,7 @@ export default function AdminManagement() {
     setError('');
     try {
       const token = await fetchAuthToken();
+      if (!token) throw new Error('No auth token');
       const response = await fetch('/api/admin/users', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -116,6 +117,7 @@ export default function AdminManagement() {
 
     try {
       const token = await fetchAuthToken();
+      if (!token) throw new Error('No auth token');
       const newRole = action === 'promote' ? 'admin' : 'user';
 
       const response = await fetch(`/api/admin/users/${userId}`, {

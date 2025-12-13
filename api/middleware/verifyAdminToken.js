@@ -32,6 +32,16 @@ export async function verifyAdminToken(req, res) {
       }
     }
 
+    // 3) Try verifying as a standard session JWT (no template)
+    if (!userId) {
+      try {
+        const verified = await clerkClient.verifyToken(token);
+        userId = verified.sub;
+      } catch (e) {
+        // still invalid
+      }
+    }
+
     if (!userId) {
       res.status(401).json({ error: 'Unauthorized - Invalid token' });
       return null;
