@@ -74,6 +74,89 @@ body {
   -ms-user-select: none;
 }
 
+/* Button ripple styles */
+.btn {
+  position: relative;
+  overflow: hidden;
+}
+.ripple-effect {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple 600ms ease-out;
+  background: rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+}
+@keyframes ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Toast notifications */
+.toast-container {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+}
+.toast {
+  background: var(--card-bg-solid);
+  border: 1px solid var(--card-border);
+  color: var(--text-color);
+  box-shadow: 0 8px 20px var(--card-shadow);
+  border-radius: 10px;
+  padding: 12px 16px;
+  min-width: 260px;
+  transform: translateX(120%);
+  animation: toast-in 300ms ease-out forwards;
+}
+.toast.success { border-color: var(--success-color); }
+.toast.error { border-color: var(--error-color); }
+.toast.info { border-color: var(--info-color); }
+@keyframes toast-in {
+  to { transform: translateX(0); }
+}
+
+/* Shimmer skeleton */
+.skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1200ms ease-in-out infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Route transitions */
+.route-fade-enter { opacity: 0; }
+.route-fade-enter-active { opacity: 1; transition: opacity 250ms ease; }
+.route-fade-exit { opacity: 1; }
+.route-fade-exit-active { opacity: 0; transition: opacity 200ms ease; }
+
+/* Live pulse dot */
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+.live-dot.live {
+  background: var(--accent);
+  box-shadow: 0 0 0 0 rgba(255, 122, 0, 0.7);
+  animation: pulse 1.6s infinite;
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 122, 0, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 122, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 122, 0, 0); }
+}
+
 .app-container {
   display: flex;
   height: 100vh;

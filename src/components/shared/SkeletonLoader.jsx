@@ -1,3 +1,23 @@
+export function ChartSkeleton() {
+  return (
+    <div className="skeleton" style={{
+      height: '320px',
+      background: 'var(--card-bg)',
+      borderRadius: '12px',
+      border: '1px solid var(--border-color)'
+    }} />
+  );
+}
+export function CardSkeleton() {
+  return (
+    <div className="skeleton" style={{
+      height: '180px',
+      background: 'var(--card-bg)',
+      borderRadius: '12px',
+      border: '1px solid var(--border-color)'
+    }} />
+  );
+}
 import React from 'react';
 
 /**
