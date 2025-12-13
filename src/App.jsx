@@ -166,6 +166,7 @@ function App() {
           <ErrorBoundary>
             <DataProvider>
               <Router>
+                <ToastManager />
                 <Analytics/>
                 <ErrorBoundary>
                   <AppContent />

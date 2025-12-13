@@ -4,7 +4,7 @@ import { FileWarning } from 'lucide-react';
 
 const RefreshIndicator = () => {
   const { loading, lastUpdate, isStale } = useData();
-  
+  const { loading, lastUpdate, isStale, connectionStatus } = useData();
   const isAnyLoading = Object.values(loading).some(Boolean);
   const mostRecentUpdate = lastUpdate.live || lastUpdate.charts || Date.now();
   
@@ -26,16 +26,13 @@ const RefreshIndicator = () => {
           <div style={spinnerStyle} />
         </div>
       )}
-      <div style={infoStyle}>
-        <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>
-          Last updated: {formatTimestamp(mostRecentUpdate)}
+      <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span className={refreshing ? 'live-dot live' : 'live-dot'} aria-label={refreshing ? 'Live updating' : 'Idle'} />
+        Last updated {formatTimestamp(mostRecentUpdate)}
+        <span style={{ fontSize: '12px', padding: '2px 6px', borderRadius: '6px', border: '1px solid var(--border-color)', color: connectionStatus === 'connected' ? 'var(--success-color)' : 'var(--error-color)' }}>
+          {connectionStatus === 'connected' ? 'Connected' : 'Disconnected'}
         </span>
-        {isStale && (
-          <span style={staleWarningStyle} title="Data is older than 10 minutes">
-            <biohazard/> Stale
-          </span>
-        )}
-      </div>
+      </span>
     </div>
   );
 };

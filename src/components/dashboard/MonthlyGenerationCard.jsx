@@ -1,5 +1,6 @@
 // src/components/MonthlyGenerationCard.jsx
 import React, { useEffect, useState } from "react";
+import NumberTicker from "../ui/NumberTicker";
 import { useData } from "../../hooks/useData"; // Adjust path as needed
 
 
@@ -43,7 +44,9 @@ const MonthlyGenerationCard = () => {
         Monthly Generation Total
       </h3>
       <p style={{ ...valueStyle, color: "var(--accent)" }}>
-        {isLoading ? "..." : `${formattedValue} ${unit}`}
+        {isLoading ? "..." : (<>
+          <NumberTicker value={displayValue} format={(v) => v.toLocaleString(undefined, { maximumFractionDigits: 3 })} /> {unit}
+        </>)}
       </p>
       {formattedStartDate && (
         <p style={startDateOnlyStyle}>Start: {formattedStartDate}</p>

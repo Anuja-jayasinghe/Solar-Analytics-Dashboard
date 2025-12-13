@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Copy } from 'lucide-react';
 import { useData } from '../hooks/useData';
+import { useToast } from './shared/ToastManager';
 
 const ErrorBanner = () => {
   const { errors } = useData();
@@ -50,6 +51,13 @@ const ErrorBanner = () => {
       case 'auth':
         return 'Authentication Issue';
       case 'rate-limit':
+        const toast = useToast();
+
+        useEffect(() => {
+          if (errors) {
+            toast.error(typeof errors === 'string' ? errors : 'An error occurred while fetching data');
+          }
+        }, [errors]);
         return 'Rate Limit Exceeded';
       case 'server':
         return 'Server Error';

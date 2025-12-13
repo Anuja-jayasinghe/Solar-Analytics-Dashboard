@@ -5,6 +5,7 @@ import UserStats from './UserStats';
 import SearchBar from './SearchBar';
 import ConfirmDialog from '../../shared/ConfirmDialog';
 import SkeletonLoader from '../../shared/SkeletonLoader';
+import { useToast } from '../../shared/ToastManager';
 
 /**
  * Unified User Management Component
@@ -12,6 +13,7 @@ import SkeletonLoader from '../../shared/SkeletonLoader';
  */
 export default function UserManagement() {
   const { getToken } = useAuth();
+  const toast = useToast();
   const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -60,6 +62,7 @@ export default function UserManagement() {
 
       if (!response.ok) {
         const body = await safeReadBody(response);
+        toast.error(`Failed to fetch users (${response.status})`);
         throw new Error(`Failed to fetch users: ${response.status} ${JSON.stringify(body)}`);
       }
 
@@ -118,6 +121,7 @@ export default function UserManagement() {
 
       if (!response.ok) {
         const responseBody = await safeReadBody(response);
+        toast.error(`Update failed (${response.status})`);
         throw new Error(`Failed to update: ${response.status} ${JSON.stringify(responseBody)}`);
       }
 
@@ -126,10 +130,12 @@ export default function UserManagement() {
           ? `User ${newValue === 'admin' ? 'promoted to admin' : 'demoted to user'}`
           : `Dashboard access updated to ${newValue}`
       );
+      toast.success(action === 'role' ? 'Role updated' : 'Access updated');
       fetchUsers();
     } catch (err) {
       console.error('Error updating user:', err);
       setError(`Failed to update user. ${err.message}`);
+      toast.error('Failed to update user');
     } finally {
       setLoading(false);
     }
