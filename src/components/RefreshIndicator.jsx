@@ -26,7 +26,7 @@ const RefreshIndicator = () => {
         </div>
       )}
       <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span className={refreshing ? 'live-dot live' : 'live-dot'} aria-label={refreshing ? 'Live updating' : 'Idle'} />
+        <span className={isAnyLoading ? 'live-dot live' : 'live-dot'} aria-label={isAnyLoading ? 'Live updating' : 'Idle'} />
         Last updated {formatTimestamp(mostRecentUpdate)}
         <span style={{ fontSize: '12px', padding: '2px 6px', borderRadius: '6px', border: '1px solid var(--border-color)', color: connectionStatus === 'connected' ? 'var(--success-color)' : 'var(--error-color)' }}>
           {connectionStatus === 'connected' ? 'Connected' : 'Disconnected'}
