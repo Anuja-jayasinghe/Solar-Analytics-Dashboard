@@ -14,6 +14,7 @@ export const DataProvider = ({ children }) => {
   const [totalEarningsData, setTotalEarningsData] = useState({ total: 0 });
   const [monthlyGenerationData, setMonthlyGenerationData] = useState({ total: 0 });
   const [inverterPotentialValue, setInverterPotentialValue] = useState({ total: 0 }); 
+  const [gridCapacity, setGridCapacity] = useState(40);
 
   // Loading and error states
   const [loading, setLoading] = useState({ 
@@ -194,7 +195,28 @@ export const DataProvider = ({ children }) => {
           throw settingError;
         }
         
-        const tariff = parseFloat(settingData?.[0]?.setting_value) || 37; 
+        const tariff = parseFloat(settingData?.[0]?.setting_value) || 37;
+
+        // Fetch solar grid capacity (kW) from settings; fall back to 40 kW
+        try {
+          const { data: capacityData, error: capacityError } = await supabase
+            .from('system_settings')
+            .select('setting_value')
+            .eq('setting_name', 'solar_grid_capacity')
+            .limit(1);
+          if (capacityError) {
+            console.warn('[DataContext] Supabase error fetching solar_grid_capacity:', {
+              message: capacityError.message,
+              code: capacityError.code,
+              status: capacityError.status
+            });
+          }
+          const capacity = parseFloat(capacityData?.[0]?.setting_value);
+          setGridCapacity(Number.isFinite(capacity) ? capacity : 40);
+        } catch (capErr) {
+          console.warn('[DataContext] Failed to fetch solar_grid_capacity; using default 40 kW', capErr);
+          setGridCapacity(40);
+        }
 
         // Convert MWh to kWh
         const totalGen_MWh = liveData?.totalGeneration?.value || 0;
@@ -489,6 +511,7 @@ export const DataProvider = ({ children }) => {
     totalEarningsData, 
     monthlyGenerationData,
     inverterPotentialValue,
+    gridCapacity,
     loading, 
     errors, 
     refreshData,

@@ -96,7 +96,8 @@ const Settings = () => {
     
     const defaultSettings = [
       { setting_name: 'theme', setting_value: 'dark', description: 'Application theme (dark, light, orange)' },
-      { setting_name: 'rate_per_kwh', setting_value: '50', description: 'Default rate per kWh in LKR for calculations' }
+      { setting_name: 'rate_per_kwh', setting_value: '50', description: 'Default rate per kWh in LKR for calculations' },
+      { setting_name: 'solar_grid_capacity', setting_value: '40', description: 'Solar system capacity in kW for live dial' }
     ];
 
     try {
@@ -220,6 +221,24 @@ const Settings = () => {
                 min="0"
                 step="0.01"
                 placeholder="Enter rate per kWh"
+              />
+            ) : setting.setting_name === 'solar_grid_capacity' ? (
+              <input
+                type="number"
+                value={setting.setting_value}
+                onChange={(e) => handleChange(setting.id, e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  borderRadius: "6px",
+                  background: "var(--card-bg-solid)",
+                  color: "var(--text-color)",
+                  border: "1px solid var(--border-color)",
+                  marginBottom: "0.5rem"
+                }}
+                min="0"
+                step="0.1"
+                placeholder="Enter solar grid capacity (kW)"
               />
             ) : (
               <input
