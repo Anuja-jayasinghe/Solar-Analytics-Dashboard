@@ -3,7 +3,7 @@ import { useData } from "../../hooks/useData";
 import { Zap, Hourglass } from "lucide-react";
 
 const CurrentPower = () => {
-  const { livePowerData, loading, lastUpdate } = useData();
+  const { livePowerData, loading, lastUpdate, gridCapacity } = useData();
 
   const power = livePowerData?.currentPower?.value || 0;
   const status = livePowerData?.status || "Offline";
@@ -11,7 +11,7 @@ const CurrentPower = () => {
   // Calculate staleness (live data is most time-sensitive - 5 min refresh)
   const isStale = lastUpdate.live && (Date.now() - lastUpdate.live) > 10 * 60 * 1000;
 
-  const maxPower = 40;
+  const maxPower = Number.isFinite(gridCapacity) ? gridCapacity : 40;
 
   const displayPower = power;
   const displayNeedleRotation = -135 + Math.min(displayPower / maxPower, 1) * 270;
