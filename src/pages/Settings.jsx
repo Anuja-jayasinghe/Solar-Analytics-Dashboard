@@ -4,6 +4,7 @@ import { ThemeContext } from '../components/ThemeContext';
 import { AuthContext } from '../contexts/AuthContext';
 import DemoAccessBanner from '../components/DemoAccessBanner';
 import DemoBlockModal from '../components/DemoBlockModal';
+import { useData } from '../hooks/useData';
 
 const Settings = () => {
   const [settings, setSettings] = useState([]);
@@ -12,6 +13,7 @@ const Settings = () => {
   const { theme, setTheme } = useContext(ThemeContext);
   const { dashboardAccess, hasRealAccess } = useContext(AuthContext);
   const [blockOpen, setBlockOpen] = useState(false);
+  const { refreshData } = useData();
 
   useEffect(() => {
     fetchSettings();
@@ -87,6 +89,13 @@ const Settings = () => {
       }
       // Clear message after 3 seconds
       setTimeout(() => setMessage(''), 3000);
+
+      // Refresh live data to pick up updated settings (capacity, tariff)
+      try {
+        refreshData('live');
+      } catch (err) {
+        console.warn('Failed to refresh live data after settings save', err);
+      }
     }
   };
 
