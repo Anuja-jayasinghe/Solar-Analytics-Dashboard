@@ -4,7 +4,9 @@ import { solisFetch } from '../src/lib/solisAuth.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+// Keep ~30 days hot; older rows get archived before pruning
 const RETENTION_DAYS = 30;
+const ARCHIVE_TABLE = 'inverter_data_live_archive';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
@@ -66,6 +68,38 @@ async function pruneOldLiveData() {
     .lt('data_timestamp', cutoff.toISOString());
 }
 
+// Copy rows older than retention from hot table into archive before pruning
+async function archiveOldLiveData() {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - RETENTION_DAYS);
+
+  const { data: oldRows, error: fetchErr } = await supabase
+    .from('inverter_data_live')
+    .select('*')
+    .lt('data_timestamp', cutoff.toISOString());
+
+  if (fetchErr) {
+    console.error('Failed to fetch rows for archiving:', fetchErr.message);
+    throw fetchErr;
+  }
+
+  if (!oldRows?.length) {
+    console.log('No rows to archive');
+    return;
+  }
+
+  const { error: archiveErr } = await supabase
+    .from(ARCHIVE_TABLE)
+    .upsert(oldRows, { onConflict: 'inverter_sn,data_timestamp' });
+
+  if (archiveErr) {
+    console.error('Failed to archive rows:', archiveErr.message);
+    throw archiveErr;
+  }
+
+  console.log(`Archived ${oldRows.length} row(s) to ${ARCHIVE_TABLE}`);
+}
+
 export default async function handler(req, res) {
   try {
     const inverters = await getInverterList();
@@ -77,6 +111,8 @@ export default async function handler(req, res) {
     const isNightlyRun = currentUTCHour === 18; // 18:00 UTC = 11:30 PM LK
     if (isNightlyRun) {
       await summarizeDailyData(inverters);
+      // Archive before pruning to keep a permanent history
+      await archiveOldLiveData();
       await pruneOldLiveData();
     }
 
