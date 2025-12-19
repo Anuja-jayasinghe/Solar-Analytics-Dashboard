@@ -68,36 +68,32 @@ async function pruneOldLiveData() {
     .lt('data_timestamp', cutoff.toISOString());
 }
 
-// Copy rows older than retention from hot table into archive before pruning
-async function archiveOldLiveData() {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - RETENTION_DAYS);
-
-  const { data: oldRows, error: fetchErr } = await supabase
+// Copy ALL rows from hot table into archive (archive is single source of truth)
+async function archiveAllLiveData() {
+  const { data: allRows, error: fetchErr } = await supabase
     .from('inverter_data_live')
-    .select('*')
-    .lt('data_timestamp', cutoff.toISOString());
+    .select('*');
 
   if (fetchErr) {
     console.error('Failed to fetch rows for archiving:', fetchErr.message);
     throw fetchErr;
   }
 
-  if (!oldRows?.length) {
+  if (!allRows?.length) {
     console.log('No rows to archive');
     return;
   }
 
   const { error: archiveErr } = await supabase
     .from(ARCHIVE_TABLE)
-    .upsert(oldRows, { onConflict: 'inverter_sn,data_timestamp' });
+    .upsert(allRows, { onConflict: 'inverter_sn,data_timestamp' });
 
   if (archiveErr) {
     console.error('Failed to archive rows:', archiveErr.message);
     throw archiveErr;
   }
 
-  console.log(`Archived ${oldRows.length} row(s) to ${ARCHIVE_TABLE}`);
+  console.log(`Archived ${allRows.length} row(s) to ${ARCHIVE_TABLE}`);
 }
 
 export default async function handler(req, res) {
@@ -106,13 +102,15 @@ export default async function handler(req, res) {
     if (inverters.length === 0) return res.status(200).json({ ok: true, message: 'No inverters found' });
 
     await fetchAndStoreLiveData(inverters);
+    
+    // Always archive ALL live data to keep archive as single source of truth
+    await archiveAllLiveData();
 
     const currentUTCHour = new Date().getUTCHours();
     const isNightlyRun = currentUTCHour === 18; // 18:00 UTC = 11:30 PM LK
     if (isNightlyRun) {
       await summarizeDailyData(inverters);
-      // Archive before pruning to keep a permanent history
-      await archiveOldLiveData();
+      // Prune old rows from hot table (archive already has them)
       await pruneOldLiveData();
     }
 
