@@ -36,6 +36,9 @@ try {
         detectSessionInUrl: true,
         // Use current origin for redirects (localhost in dev, production in prod)
         flowType: 'pkce'
+      },
+      realtime: {
+        enabled: false
       }
     }
   );
