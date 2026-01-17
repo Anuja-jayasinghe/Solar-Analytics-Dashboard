@@ -53,21 +53,10 @@ function Sidebar({ onDevToolsToggle }) {
   const { theme, setTheme } = useContext(ThemeContext);
   const { session, signOut, user } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [isMobile, setIsMobile] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
+
   const [showAdminPopup, setShowAdminPopup] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef(null);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -83,14 +72,6 @@ function Sidebar({ onDevToolsToggle }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showUserMenu]);
 
-  const toggleSidebar = () => {
-    setIsOpen(!isOpen);
-  };
-
-  const closeSidebar = () => {
-    setIsOpen(false);
-  };
-
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
@@ -98,257 +79,15 @@ function Sidebar({ onDevToolsToggle }) {
 
   const handleAdminAccess = () => {
     setShowAdminPopup(true);
-    closeSidebar();
   };
 
   const handleLogout = async () => {
     await signOut();
-    closeSidebar();
     navigate('/', { state: { from: 'dashboard' } });
   };
 
   return (
     <>
-      {/* Desktop title bar */}
-      {!isMobile && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 60,
-          right: 0,
-          height: '50px',
-          background: 'var(--navbar-bg)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingLeft:'1.5rem',
-          paddingRight:'1.5rem',
-          zIndex: 900,
-          borderBottom: '1px solid var(--border-color)',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-        }}>
-          <h1 style={{ 
-            color: "var(--accent)", 
-            fontSize: "1.5rem", 
-            fontWeight: "bold",
-            margin: 0,
-            letterSpacing: '-0.5px'
-          }}>
-            SolarEdge
-          </h1>
-          
-          {/* Profile Button */}
-          {user && (
-            <div style={{ position: 'relative' }} ref={menuRef}>
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                style={{
-                  height: '38px',
-                  padding: '0 14px',
-                  borderRadius: '20px',
-                  background: showUserMenu ? 'var(--accent)' : 'rgba(255,122,0,0.1)',
-                  border: '1px solid rgba(255,122,0,0.3)',
-                  color: showUserMenu ? '#fff' : 'var(--text-color)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  boxShadow: showUserMenu ? '0 4px 12px rgba(255,122,0,0.3)' : 'none'
-                }}
-                onMouseEnter={(e) => {
-                  if (!showUserMenu) {
-                    e.currentTarget.style.background = 'rgba(255,122,0,0.15)';
-                    e.currentTarget.style.borderColor = 'rgba(255,122,0,0.4)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!showUserMenu) {
-                    e.currentTarget.style.background = 'rgba(255,122,0,0.1)';
-                    e.currentTarget.style.borderColor = 'rgba(255,122,0,0.3)';
-                  }
-                }}
-              >
-                <User size={18} />
-                <span style={{ 
-                  maxWidth: '150px', 
-                  overflow: 'hidden', 
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}>
-                  {user.email?.split('@')[0] || 'User'}
-                </span>
-              </button>
-              
-              {showUserMenu && (
-                <div style={{
-                  position: 'absolute',
-                  top: '46px',
-                  right: '0',
-                  width: '280px',
-                  background: 'var(--navbar-bg)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '12px',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-                  overflow: 'hidden',
-                  zIndex: 1000,
-                  animation: 'slideDown 0.2s ease-out'
-                }}>
-                  <div style={{
-                    padding: '20px',
-                    borderBottom: '1px solid var(--border-color)',
-                    background: 'rgba(255,122,0,0.05)'
-                  }}>
-                    <div style={{ 
-                      fontSize: '15px', 
-                      fontWeight: '600', 
-                      color: 'var(--text-color)',
-                      marginBottom: '4px',
-                      wordBreak: 'break-word'
-                    }}>
-                      {user.email}
-                    </div>
-                    <div style={{ 
-                      fontSize: '12px', 
-                      color: 'var(--text-secondary)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}>
-                      <span style={{
-                        width: '6px',
-                        height: '6px',
-                        borderRadius: '50%',
-                        background: 'var(--success-color)',
-                        display: 'inline-block'
-                      }}></span>
-                      Real Dashboard Access
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleLogout}
-                    style={{
-                      width: '100%',
-                      padding: '14px 20px',
-                      background: 'transparent',
-                      border: 'none',
-                      color: 'var(--error-color)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      transition: 'all 0.2s ease',
-                      textAlign: 'left'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'var(--error-color)';
-                      e.currentTarget.style.color = 'white';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = 'var(--error-color)';
-                    }}
-                  >
-                    <LogOut size={16} />
-                    <span>Logout</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Mobile hamburger and title */}
-      {isMobile && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '60px',
-          background: 'var(--navbar-bg)',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 1rem',
-          gap: '0.75rem',
-          zIndex: 999,
-          transition: 'opacity 0.3s ease',
-          opacity: isOpen ? 0 : 1,
-          pointerEvents: isOpen ? 'none' : 'auto'
-        }}>
-          <button 
-            className="hamburger"
-            onClick={toggleSidebar}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '0.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px',
-              minWidth: '44px',
-              minHeight: '44px',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}
-          >
-            <span style={{
-              width: '4px',
-              height: '3px',
-              background: 'var(--accent)',
-              borderRadius: '2px',
-              transition: 'all 0.3s ease'
-            }}></span>
-            <span style={{
-              width: '24px',
-              height: '3px',
-              background: 'var(--accent)',
-              borderRadius: '2px',
-              transition: 'all 0.3s ease'
-            }}></span>
-            <span style={{
-              width: '24px',
-              height: '3px',
-              background: 'var(--accent)',
-              borderRadius: '2px',
-              transition: 'all 0.3s ease'
-            }}></span>
-          </button>
-          <h1 style={{ 
-            color: "var(--accent)", 
-            fontSize: "1.5rem", 
-            fontWeight: "bold",
-            margin: 0
-          }}>
-            SolarEdge
-          </h1>
-        </div>
-      )}
-
-      {/* Mobile overlay */}
-      {isMobile && isOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.7)',
-            zIndex: 1000,
-            backdropFilter: 'blur(5px)'
-          }}
-          onClick={closeSidebar}
-        />
-      )}
-
       <style>{`
         .sidebar {
           width: 60px;
@@ -366,32 +105,11 @@ function Sidebar({ onDevToolsToggle }) {
           transition: transform 0.3s ease;
         }
         
-        .sidebar.mobile {
-          width: 100%;
-          height: auto;
-          position: relative;
-          flex-direction: row;
-          padding: 0.5rem;
-          border-right: none;
-          border-bottom: 1px solid var(--border-color);
-          transform: translateY(0);
-        }
-        
-        .sidebar.mobile.closed {
-          transform: translateY(-100%);
-        }
-        
         .sidebar-nav {
           display: flex;
           flex-direction: column;
           gap: 1rem;
           margin-top: 2rem;
-        }
-        
-        .sidebar.mobile .sidebar-nav {
-          flex-direction: row;
-          margin-top: 0;
-          gap: 0.5rem;
         }
         
         .sidebar-nav a {
@@ -479,127 +197,191 @@ function Sidebar({ onDevToolsToggle }) {
             box-shadow: 0 4px 20px rgba(0,122,255,0.6);
           }
         }
-        
-        .sidebar.mobile .devtools-divider {
-          display: none;
-        }
-        
-        .sidebar.mobile .devtools-button {
-          margin-left: auto;
-        }
-        
-        .sidebar.mobile .sidebar-logo {
-          margin-bottom: 0;
-          margin-right: 1rem;
-        }
-        
-        .hamburger {
-          display: none;
-          flex-direction: column;
-          cursor: pointer;
-          padding: 0.5rem;
-          background: none;
-          border: none;
-          color: var(--text-color);
-          z-index: 1002;
-        }
-        
-        .hamburger span {
-          width: 25px;
-          height: 3px;
-          background-color: var(--text-color);
-          margin: 3px 0;
-          transition: 0.3s;
-          border-radius: 2px;
-        }
-        
-        .hamburger.active span:nth-child(1) {
-          transform: rotate(-45deg) translate(-5px, 6px);
-        }
-        
-        .hamburger.active span:nth-child(2) {
-          opacity: 0;
-        }
-        
-        .hamburger.active span:nth-child(3) {
-          transform: rotate(45deg) translate(-5px, -6px);
-        }
-        
-        @media (max-width: 768px) {
-          .hamburger {
-            display: flex;
-          }
-          
-          .sidebar {
-            width: 280px;
-            height: 100vh;
-            position: fixed;
-            flex-direction: column;
-            padding: 1rem 0;
-            border-right: 1px solid var(--border-color);
-            border-bottom: none;
-            left: 0;
-            top: 0;
-            transition: transform 0.3s ease;
-            overflow-y: auto;
-            z-index: 1001;
-          }
-          
-          .sidebar.closed {
-            transform: translateX(-100%);
-          }
-          
-          .sidebar-nav {
-            flex-direction: column;
-            margin-top: 2rem;
-            gap: 1rem;
-          }
-          
-          .sidebar-logo {
-            margin-bottom: 2rem;
-            margin-right: 0;
-          }
-
-          .sidebar-nav a,
-          .sidebar-nav button {
-            width: 48px;
-            height: 48px;
-          }
-        }
       `}</style>
-      
-      <div className={`sidebar ${isMobile ? 'mobile' : ''} ${isMobile && !isOpen ? 'closed' : ''}`}>
-        {!isMobile && (
-          <div className="sidebar-logo">
-            <img src="/favicon.svg" alt="SolarEdge" width={30} height={30} />
+
+      {/* Desktop title bar */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 60,
+        right: 0,
+        height: '50px',
+        background: 'var(--navbar-bg)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingLeft: '1.5rem',
+        paddingRight: '1.5rem',
+        zIndex: 900,
+        borderBottom: '1px solid var(--border-color)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+      }}>
+        <h1 style={{
+          color: "var(--accent)",
+          fontSize: "1.5rem",
+          fontWeight: "bold",
+          margin: 0,
+          letterSpacing: '-0.5px'
+        }}>
+          SolarEdge
+        </h1>
+
+        {/* Profile Button */}
+        {user && (
+          <div style={{ position: 'relative' }} ref={menuRef}>
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              style={{
+                height: '38px',
+                padding: '0 14px',
+                borderRadius: '20px',
+                background: showUserMenu ? 'var(--accent)' : 'rgba(255,122,0,0.1)',
+                border: '1px solid rgba(255,122,0,0.3)',
+                color: showUserMenu ? '#fff' : 'var(--text-color)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                fontSize: '14px',
+                fontWeight: '500',
+                boxShadow: showUserMenu ? '0 4px 12px rgba(255,122,0,0.3)' : 'none'
+              }}
+              onMouseEnter={(e) => {
+                if (!showUserMenu) {
+                  e.currentTarget.style.background = 'rgba(255,122,0,0.15)';
+                  e.currentTarget.style.borderColor = 'rgba(255,122,0,0.4)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!showUserMenu) {
+                  e.currentTarget.style.background = 'rgba(255,122,0,0.1)';
+                  e.currentTarget.style.borderColor = 'rgba(255,122,0,0.3)';
+                }
+              }}
+            >
+              <User size={18} />
+              <span style={{
+                maxWidth: '150px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}>
+                {user.email?.split('@')[0] || 'User'}
+              </span>
+            </button>
+
+            {showUserMenu && (
+              <div style={{
+                position: 'absolute',
+                top: '46px',
+                right: '0',
+                width: '280px',
+                background: 'var(--navbar-bg)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '12px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                overflow: 'hidden',
+                zIndex: 1000,
+                animation: 'slideDown 0.2s ease-out'
+              }}>
+                <div style={{
+                  padding: '20px',
+                  borderBottom: '1px solid var(--border-color)',
+                  background: 'rgba(255,122,0,0.05)'
+                }}>
+                  <div style={{
+                    fontSize: '15px',
+                    fontWeight: '600',
+                    color: 'var(--text-color)',
+                    marginBottom: '4px',
+                    wordBreak: 'break-word'
+                  }}>
+                    {user.email}
+                  </div>
+                  <div style={{
+                    fontSize: '12px',
+                    color: 'var(--text-secondary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <span style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      background: 'var(--success-color)',
+                      display: 'inline-block'
+                    }}></span>
+                    Real Dashboard Access
+                  </div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    width: '100%',
+                    padding: '14px 20px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--error-color)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    transition: 'all 0.2s ease',
+                    textAlign: 'left'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--error-color)';
+                    e.currentTarget.style.color = 'white';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = 'var(--error-color)';
+                  }}
+                >
+                  <LogOut size={16} />
+                  <span>Logout</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
+      </div>
+
+      <div className="sidebar">
+        <div className="sidebar-logo">
+          <img src="/favicon.svg" alt="SolarEdge" width={30} height={30} />
+        </div>
         <nav className="sidebar-nav">
-          <NavLink to="/" end onClick={closeSidebar} title="Dashboard">
+          <NavLink to="/" end title="Dashboard">
             <DashboardIcon />
           </NavLink>
-          <NavLink to="/settings" onClick={closeSidebar} title="Settings">
+          <NavLink to="/settings" title="Settings">
             <SettingsIcon />
           </NavLink>
-          
-          <button 
-            onClick={toggleTheme} 
+
+          <button
+            onClick={toggleTheme}
             title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
             aria-label="Toggle theme"
           >
             {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
           </button>
-          
-          <button 
+
+          <button
             onClick={handleAdminAccess}
             title="Admin Access"
             aria-label="Admin access"
           >
-            <LockIcon/>
+            <LockIcon />
           </button>
-          
+
           {session && (
-            <button 
+            <button
               onClick={handleLogout}
               title="Logout"
               aria-label="Logout"
@@ -611,19 +393,18 @@ function Sidebar({ onDevToolsToggle }) {
             </button>
           )}
         </nav>
-        
-        {!isMobile && devtoolsEnabled && <div className="devtools-divider" />}
+
+        {devtoolsEnabled && <div className="devtools-divider" />}
         {devtoolsEnabled && (
           <button
             className="devtools-button"
             onClick={() => {
               if (onDevToolsToggle) onDevToolsToggle();
-              if (isMobile) closeSidebar();
             }}
             title="Toggle Dev Tools"
             aria-label="Toggle Dev Tools"
           >
-            <ComputerIcon/>
+            <ComputerIcon />
           </button>
         )}
       </div>
@@ -665,35 +446,35 @@ function Sidebar({ onDevToolsToggle }) {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>🚫</div>
-            <h2 style={{ 
-              marginBottom: "1rem", 
+            <h2 style={{
+              marginBottom: "1rem",
               color: "var(--accent)",
               fontSize: "1.8rem",
               textShadow: "0 2px 4px rgba(0,0,0,0.5)"
             }}>
               🛡️ RESTRICTED ACCESS! 🛡️
             </h2>
-            <p style={{ 
-              marginBottom: "1.5rem", 
+            <p style={{
+              marginBottom: "1.5rem",
               fontSize: "1.1rem",
               lineHeight: "1.6",
               color: "#e0e0e0"
             }}>
-              🎭 <strong>Nice try, sneaky one!</strong> 🎭<br/>
-              This area is for <span style={{ color: "var(--accent)", fontWeight: "bold" }}>ADMIN WIZARDS</span> only!<br/>
-              <br/>
-              🔮 You need special admin powers to enter this mystical realm!<br/>
-              💫 Contact your system administrator for the secret handshake!<br/>
-              <br/>
+              🎭 <strong>Nice try, sneaky one!</strong> 🎭<br />
+              This area is for <span style={{ color: "var(--accent)", fontWeight: "bold" }}>ADMIN WIZARDS</span> only!<br />
+              <br />
+              🔮 You need special admin powers to enter this mystical realm!<br />
+              💫 Contact your system administrator for the secret handshake!<br />
+              <br />
               <em style={{ color: "#888" }}>Or maybe you're just curious... we like that! 😉</em>
             </p>
-            
-            <div style={{ 
+
+            <div style={{
               marginBottom: "1.5rem",
               textAlign: "center"
             }}>
-              <p style={{ 
-                fontSize: "0.8rem", 
+              <p style={{
+                fontSize: "0.8rem",
                 color: "#666",
                 margin: "0 0 0.3rem 0",
                 fontStyle: "italic",
