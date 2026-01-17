@@ -200,22 +200,7 @@ function Sidebar({ onDevToolsToggle }) {
       `}</style>
 
       {/* Desktop title bar */}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 60,
-        right: 0,
-        height: '50px',
-        background: 'var(--navbar-bg)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingLeft: '1.5rem',
-        paddingRight: '1.5rem',
-        zIndex: 900,
-        borderBottom: '1px solid var(--border-color)',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-      }}>
+      <div className="app-header">
         <h1 style={{
           color: "var(--accent)",
           fontSize: "1.5rem",

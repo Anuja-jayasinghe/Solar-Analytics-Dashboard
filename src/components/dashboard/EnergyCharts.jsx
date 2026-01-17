@@ -11,7 +11,7 @@ const EnergyCharts = () => {
     triggerOnce: true,
     threshold: 0.1,
   });
-  
+
   const { energyChartsData: data, loading, errors, refreshData } = useData();
   const [ruler, setRuler] = useState(() => {
     const saved = localStorage.getItem('chart_ruler_value');
@@ -54,8 +54,8 @@ const EnergyCharts = () => {
           <p style={tooltipLabelStyle}>Billing Period:</p>
           {/* Use the 'period' field from the payload */}
           <p style={tooltipValueStyle}>{payload[0].payload.period}</p>
-          
-          <div style={{marginTop: '8px'}}>
+
+          <div style={{ marginTop: '8px' }}>
             <p style={{ margin: '4px 0 0', padding: 0, color: '#00c2a8' }}>
               {`Inverter: ${payload[0].value.toFixed(2)} kWh`}
             </p>
@@ -68,13 +68,13 @@ const EnergyCharts = () => {
     }
     return null;
   };
-  
+
   return (
-    <div className="chart-container" style={chartBox} ref={ref}>
+    <div className="chart-container" ref={ref}>
       <style>{keyframesCSS}</style>
-      <div style={chartHeader}>
+      <div className="chart-header">
         <h2 style={{ margin: 0 }}>Monthly Energy Summary</h2>
-        <div style={rulerControls}>
+        <div style={rulerControls} className="desktop-show">
           <label htmlFor="rulerSlider" style={rulerLabel}>Ruler</label>
           <button
             onClick={() => setShowRuler((v) => !v)}
@@ -124,98 +124,152 @@ const EnergyCharts = () => {
         </div>
       ) : error && data.length === 0 ? (
         <div style={messageContainer}>
-          <p style={{color: '#f56565'}}>Failed to load data.</p>
+          <p style={{ color: '#f56565' }}>Failed to load data.</p>
           <button onClick={() => refreshData('charts')} style={retryButton}>Try Again</button>
         </div>
       ) : data.length === 0 ? (
         <div style={messageContainer}><p>No energy data available</p></div>
       ) : (
         <>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={data} isAnimationActive={inView}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.2} stroke="var(--chart-grid)" />
-              {/* XAxis now uses the simple 'month' label */}
-              <XAxis 
-                dataKey="month" 
-                stroke="var(--chart-text)" 
-                fontSize={12} 
-                tickLine={false} 
-                axisLine={false}
-                angle={0} // No longer need to tilt
-                textAnchor="middle"
-                height={30}
-                interval={0}
-              />
-              <YAxis stroke="var(--chart-text)" fontSize={12} domain={[yMin, yMax]} />
-              <Tooltip 
-                content={<CustomTooltip />}
-                cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
-              />
-              <Legend wrapperStyle={{ color: 'var(--text-color)', paddingTop: '20px' }} />
-              {/* Horizontal Ruler Line */}
-              {showRuler && (
-                <ReferenceLine y={clampRuler(ruler)} stroke="#22c55e" strokeDasharray="6 6" label={{ value: `${clampRuler(ruler)} kWh`, position: 'right', fill: '#22c55e' }} />
-              )}
-              <Bar 
-                dataKey="inverter" 
-                fill="#00c2a8" 
-                name="Inverter (kWh)"
-                style={{ filter: 'drop-shadow(0 2px 4px rgba(0, 194, 168, 0.3))' }}
-              />
-              <Bar 
-                dataKey="ceb" 
-                fill="#ff7a00" 
-                name="CEB (kWh)"
-                style={{ filter: 'drop-shadow(0 2px 4px rgba(255, 122, 0, 0.3))' }}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          {/* --- MOBILE VIEW: Horizontal Cards (Carousel) --- */}
+          <div className="mobile-show">
+            <p style={swipeHintStyle}>Swipe for history &rarr;</p>
+            <div style={listContainerStyle}>
+              {data.map((item, index) => (
+                <div key={index} style={listItemStyle}>
+                  <div style={listItemHeader}>
+                    <span style={monthBadgeStyle}>{item.month}</span>
+                    <span style={periodStyle}>{item.period}</span>
+                  </div>
 
-          <ResponsiveContainer width="100%" height={350} style={{ marginTop: "2rem" }}>
-            <LineChart data={data} isAnimationActive={inView}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.2} stroke="var(--chart-grid)" />
-              {/* XAxis now uses the simple 'month' label */}
-              <XAxis 
-                dataKey="month" 
-                stroke="var(--chart-text)" 
-                fontSize={12} 
-                tickLine={false} 
-                axisLine={false}
-                angle={0} // No longer need to tilt
-                textAnchor="middle"
-                height={30}
-                interval={0}
-              />
-              <YAxis stroke="var(--chart-text)" fontSize={12} domain={[yMin, yMax]} />
-              <Tooltip 
-                content={<CustomTooltip />}
-                cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
-              />
-              <Legend wrapperStyle={{ color: 'var(--text-color)', paddingTop: '20px' }} />
-              {/* Horizontal Ruler Line */}
-              {showRuler && (
-                <ReferenceLine y={clampRuler(ruler)} stroke="#22c55e" strokeDasharray="6 6" label={{ value: `${clampRuler(ruler)} kWh`, position: 'right', fill: '#22c55e' }} />
-              )}
-              <Line 
-                type="monotone" 
-                dataKey="inverter" 
-                name="Inverter (kWh)"
-                stroke="#00c2a8" 
-                strokeWidth={3}
-                dot={{ fill: '#00c2a8', strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6, stroke: '#00c2a8', strokeWidth: 2, fill: 'var(--card-bg-solid)' }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="ceb" 
-                name="CEB (kWh)"
-                stroke="#ff7a00" 
-                strokeWidth={3}
-                dot={{ fill: '#ff7a00', strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6, stroke: '#ff7a00', strokeWidth: 2, fill: 'var(--card-bg-solid)' }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+                  <div style={listItemContent}>
+                    {/* Inverter Row */}
+                    <div style={dataRowStyle}>
+                      <div style={labelGroup}>
+                        <div style={{ ...dotStyle, background: '#00c2a8' }}></div>
+                        <span style={labelStyle}>Inverter</span>
+                      </div>
+                      <span style={valueStyle}>{Number(item.inverter).toFixed(1)} <small>kWh</small></span>
+                    </div>
+                    {/* Progress Bar for Inverter */}
+                    <div style={progressBg}>
+                      <div style={{
+                        ...progressFill,
+                        background: '#00c2a8',
+                        width: `${Math.min((item.inverter / yMax) * 100, 100)}%`
+                      }}></div>
+                    </div>
+
+                    {/* CEB Row */}
+                    <div style={{ ...dataRowStyle, marginTop: '12px' }}>
+                      <div style={labelGroup}>
+                        <div style={{ ...dotStyle, background: '#ff7a00' }}></div>
+                        <span style={labelStyle}>CEB</span>
+                      </div>
+                      <span style={valueStyle}>{Number(item.ceb).toFixed(1)} <small>kWh</small></span>
+                    </div>
+                    {/* Progress Bar for CEB */}
+                    <div style={progressBg}>
+                      <div style={{
+                        ...progressFill,
+                        background: '#ff7a00',
+                        width: `${Math.min((item.ceb / yMax) * 100, 100)}%`
+                      }}></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* --- DESKTOP VIEW: Charts --- */}
+          <div className="desktop-show">
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart data={data} isAnimationActive={inView}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.2} stroke="var(--chart-grid)" />
+                {/* XAxis now uses the simple 'month' label */}
+                <XAxis
+                  dataKey="month"
+                  stroke="var(--chart-text)"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  angle={0} // No longer need to tilt
+                  textAnchor="middle"
+                  height={30}
+                  interval={0}
+                />
+                <YAxis stroke="var(--chart-text)" fontSize={12} domain={[yMin, yMax]} />
+                <Tooltip
+                  content={<CustomTooltip />}
+                  cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+                />
+                <Legend wrapperStyle={{ color: 'var(--text-color)', paddingTop: '20px', fontSize: '14px' }} iconSize={20} />
+                {/* Horizontal Ruler Line */}
+                {showRuler && (
+                  <ReferenceLine y={clampRuler(ruler)} stroke="#22c55e" strokeDasharray="6 6" label={{ value: `${clampRuler(ruler)} kWh`, position: 'right', fill: '#22c55e' }} />
+                )}
+                <Bar
+                  dataKey="inverter"
+                  fill="#00c2a8"
+                  name="Inverter (kWh)"
+                  style={{ filter: 'drop-shadow(0 2px 4px rgba(0, 194, 168, 0.3))' }}
+                />
+                <Bar
+                  dataKey="ceb"
+                  fill="#ff7a00"
+                  name="CEB (kWh)"
+                  style={{ filter: 'drop-shadow(0 2px 4px rgba(255, 122, 0, 0.3))' }}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+
+            <ResponsiveContainer width="100%" height={350} style={{ marginTop: "2rem" }}>
+              <LineChart data={data} isAnimationActive={inView}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.2} stroke="var(--chart-grid)" />
+                {/* XAxis now uses the simple 'month' label */}
+                <XAxis
+                  dataKey="month"
+                  stroke="var(--chart-text)"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  angle={0} // No longer need to tilt
+                  textAnchor="middle"
+                  height={30}
+                  interval={0}
+                />
+                <YAxis stroke="var(--chart-text)" fontSize={12} domain={[yMin, yMax]} />
+                <Tooltip
+                  content={<CustomTooltip />}
+                  cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+                />
+                <Legend wrapperStyle={{ color: 'var(--text-color)', paddingTop: '20px', fontSize: '14px' }} iconSize={20} />
+                {/* Horizontal Ruler Line */}
+                {showRuler && (
+                  <ReferenceLine y={clampRuler(ruler)} stroke="#22c55e" strokeDasharray="6 6" label={{ value: `${clampRuler(ruler)} kWh`, position: 'right', fill: '#22c55e' }} />
+                )}
+                <Line
+                  type="monotone"
+                  dataKey="inverter"
+                  name="Inverter (kWh)"
+                  stroke="#00c2a8"
+                  strokeWidth={3}
+                  dot={{ fill: '#00c2a8', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, stroke: '#00c2a8', strokeWidth: 2, fill: 'var(--card-bg-solid)' }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="ceb"
+                  name="CEB (kWh)"
+                  stroke="#ff7a00"
+                  strokeWidth={3}
+                  dot={{ fill: '#ff7a00', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, stroke: '#ff7a00', strokeWidth: 2, fill: 'var(--card-bg-solid)' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </>
       )}
     </div>
@@ -223,76 +277,53 @@ const EnergyCharts = () => {
 };
 
 // --- Styles (from your original component) ---
-const chartBox = {
-  background: "var(--card-bg)",
-  borderRadius: "clamp(12px, 3vw, 24px)",
-  padding: "clamp(0.75rem, 2vw, 1.5rem)",
-  boxShadow: "0 8px 32px rgba(0,255,255,0.1), inset 0 1px 1px rgba(255,255,255,0.05)",
-  backdropFilter: 'blur(12px)',
-  border: '1px solid rgba(255,255,255,0.1)',
-  color: 'var(--text-color, #fff)',
-  height: 'auto', 
-  minHeight: 'clamp(300px, 50vh, 400px)',
-  flex: 2,
-  overflow: 'hidden',
-};
-const chartHeader = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: "1rem",
-  color: 'var(--accent, #00eaff)',
-  textShadow: '0 0 10px var(--accent, #00eaff)',
-  flexWrap: 'wrap',
-  gap: '0.75rem',
-};
-const rulerControls = { 
-  display: 'flex', 
-  alignItems: 'center', 
-  gap: '8px', 
+const rulerControls = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
   flexWrap: 'wrap',
   justifyContent: 'center'
 };
-const rulerLabel = { 
-  fontSize: 'clamp(0.7rem, 2vw, 0.8rem)', 
+const rulerLabel = {
+  fontSize: 'clamp(0.7rem, 2vw, 0.8rem)',
   color: 'var(--text-color, #ccd)',
   whiteSpace: 'nowrap'
 };
-const rulerSlider = { 
-  width: 'clamp(100px, 30vw, 160px)', 
+const rulerSlider = {
+  width: 'clamp(100px, 30vw, 160px)',
   accentColor: 'var(--accent, #00eaff)',
   touchAction: 'none'
 };
-const rulerValueBadge = { 
-  fontSize: 'clamp(0.7rem, 2vw, 0.8rem)', 
-  color: '#22c55e', 
-  background: 'rgba(34,197,94,0.1)', 
-  border: '1px solid rgba(34,197,94,0.3)', 
-  padding: '4px 8px', 
+const rulerValueBadge = {
+  fontSize: 'clamp(0.7rem, 2vw, 0.8rem)',
+  color: '#22c55e',
+  background: 'rgba(34,197,94,0.1)',
+  border: '1px solid rgba(34,197,94,0.3)',
+  padding: '4px 8px',
   borderRadius: 6,
   whiteSpace: 'nowrap',
   minWidth: '90px',
   textAlign: 'center',
   display: 'inline-block'
 };
-const resetBtn = { 
-  background: 'transparent', 
-  border: '1px solid rgba(255,255,255,0.2)', 
-  color: 'var(--text-color, #ccd)', 
-  borderRadius: 6, 
-  padding: '6px 10px', 
-  cursor: 'pointer', 
+const resetBtn = {
+  background: 'transparent',
+  border: '1px solid rgba(255,255,255,0.2)',
+  color: 'var(--text-color, #ccd)',
+  borderRadius: 6,
+  padding: '6px 10px',
+  cursor: 'pointer',
   fontSize: 'clamp(0.7rem, 2vw, 0.75rem)',
   minHeight: '36px'
 };
-const toggleBtn = { 
-  background: 'transparent', 
-  border: '1px solid rgba(255,255,255,0.1)', 
-  color: 'var(--text-secondary, #888)', 
-  borderRadius: 6, 
-  padding: '6px 10px', 
-  cursor: 'pointer', 
-  fontSize: 'clamp(0.75rem, 2vw, 0.85rem)', 
+const toggleBtn = {
+  background: 'transparent',
+  border: '1px solid rgba(255,255,255,0.1)',
+  color: 'var(--text-secondary, #888)',
+  borderRadius: 6,
+  padding: '6px 10px',
+  cursor: 'pointer',
+  fontSize: 'clamp(0.75rem, 2vw, 0.85rem)',
   lineHeight: 1,
   minHeight: '36px',
   opacity: 0.6,
@@ -306,7 +337,7 @@ const messageContainer = {
   flexDirection: "column",
   alignItems: "center",
   justifyContent: "center",
-  height: "550px", 
+  height: "550px",
   color: "var(--text-color, #a0aec0)",
 };
 const spinner = {
@@ -356,6 +387,111 @@ const tooltipValueStyle = {
   fontSize: '1rem',
   color: 'var(--text-color)',
   marginBottom: '8px',
+};
+
+// --- List View Styles (Mobile) ---
+const swipeHintStyle = {
+  textAlign: 'right',
+  color: 'var(--text-secondary)',
+  fontSize: '0.75rem',
+  marginBottom: '4px',
+  opacity: 0.8,
+  paddingRight: '4px',
+};
+
+const listContainerStyle = {
+  display: 'flex',
+  flexDirection: 'row',
+  gap: '12px',
+  overflowX: 'auto',
+  paddingBottom: '12px',
+  scrollSnapType: 'x mandatory',
+  WebkitOverflowScrolling: 'touch',
+  paddingRight: '1rem',
+};
+
+const listItemStyle = {
+  background: 'rgba(255,255,255,0.03)',
+  border: '1px solid var(--border-color)',
+  borderRadius: '12px',
+  padding: '16px',
+  minWidth: '280px',
+  maxWidth: '85vw',
+  scrollSnapAlign: 'start',
+  flexShrink: 0,
+};
+
+const listItemHeader = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: '12px',
+  borderBottom: '1px solid rgba(255,255,255,0.05)',
+  paddingBottom: '8px',
+};
+
+const monthBadgeStyle = {
+  background: 'var(--accent)',
+  color: '#000',
+  fontWeight: 'bold',
+  padding: '2px 8px',
+  borderRadius: '4px',
+  fontSize: '0.85rem',
+};
+
+const periodStyle = {
+  color: 'var(--text-secondary)',
+  fontSize: '0.75rem',
+};
+
+const listItemContent = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '8px',
+};
+
+const dataRowStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: '4px',
+};
+
+const labelGroup = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+};
+
+const dotStyle = {
+  width: '8px',
+  height: '8px',
+  borderRadius: '50%',
+};
+
+const labelStyle = {
+  fontSize: '0.9rem',
+  color: 'var(--text-color)',
+};
+
+const valueStyle = {
+  fontSize: '1rem',
+  fontWeight: '600',
+  color: 'var(--text-color)',
+};
+
+const progressBg = {
+  width: '100%',
+  height: '6px',
+  background: 'rgba(255,255,255,0.1)',
+  borderRadius: '3px',
+  overflow: 'hidden',
+};
+
+const progressFill = {
+  height: '100%',
+  borderRadius: '3px',
+  transition: 'width 1s ease',
 };
 
 export default EnergyCharts;
