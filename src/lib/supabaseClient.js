@@ -38,7 +38,21 @@ try {
         flowType: 'pkce'
       },
       realtime: {
-        enabled: false
+        // Completely disable WebSocket connections by using a dummy transport
+        transport: class {
+          constructor() {}
+          send() {}
+          close() {}
+          set onopen(cb) {}
+          set onmessage(cb) {}
+          set onerror(cb) {}
+          set onclose(cb) {}
+          addEventListener() {}
+          removeEventListener() {}
+        },
+        params: {
+          eventsPerSecond: 0
+        }
       }
     }
   );
