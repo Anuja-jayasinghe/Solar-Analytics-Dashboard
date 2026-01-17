@@ -34,6 +34,8 @@ const Signup = lazy(() => import("./pages/Signup"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
+import BottomNav from "./components/BottomNav";
+
 function AppContent() {
   const { isAdmin, loading, session } = useContext(AuthContext);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -59,13 +61,13 @@ function AppContent() {
 
   function RequireAdmin({ children }) {
     const navigate = useNavigate();
-    
+
     if (loading) {
       return (
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
           height: '100vh',
           color: 'var(--accent)',
           fontSize: '18px'
@@ -74,10 +76,10 @@ function AppContent() {
         </div>
       );
     }
-    
+
     if (!session) {
       return (
-        <div style={{ 
+        <div style={{
           minHeight: '100vh',
           display: 'flex',
           flexDirection: 'column',
@@ -96,16 +98,16 @@ function AppContent() {
             boxShadow: '0 8px 32px var(--card-shadow)'
           }}>
             <div style={{ fontSize: '64px', marginBottom: '1rem' }}>🔐</div>
-            <h1 style={{ 
-              color: 'var(--accent)', 
+            <h1 style={{
+              color: 'var(--accent)',
               marginBottom: '1rem',
               fontSize: '28px',
               fontWeight: '700'
             }}>
               Authentication Required
             </h1>
-            <p style={{ 
-              color: 'var(--text-secondary)', 
+            <p style={{
+              color: 'var(--text-secondary)',
               marginBottom: '2rem',
               fontSize: '16px',
               lineHeight: '1.6'
@@ -154,10 +156,10 @@ function AppContent() {
         </div>
       );
     }
-    
+
     if (!isAdmin) {
       return (
-        <div style={{ 
+        <div style={{
           minHeight: '100vh',
           display: 'flex',
           flexDirection: 'column',
@@ -176,16 +178,16 @@ function AppContent() {
             boxShadow: '0 8px 32px var(--card-shadow)'
           }}>
             <div style={{ fontSize: '64px', marginBottom: '1rem' }}>🚫</div>
-            <h1 style={{ 
-              color: 'var(--error-color)', 
+            <h1 style={{
+              color: 'var(--error-color)',
               marginBottom: '1rem',
               fontSize: '28px',
               fontWeight: '700'
             }}>
               Access Denied
             </h1>
-            <p style={{ 
-              color: 'var(--text-secondary)', 
+            <p style={{
+              color: 'var(--text-secondary)',
               marginBottom: '1.5rem',
               fontSize: '16px',
               lineHeight: '1.6'
@@ -203,8 +205,8 @@ function AppContent() {
             }}>
               <strong style={{ color: 'var(--error-color)' }}>Logged in as:</strong> {session?.user?.email}
             </div>
-            <p style={{ 
-              color: 'var(--text-muted)', 
+            <p style={{
+              color: 'var(--text-muted)',
               fontSize: '14px',
               marginBottom: '2rem'
             }}>
@@ -276,7 +278,7 @@ function AppContent() {
         </div>
       );
     }
-    
+
     return children;
   }
 
@@ -300,24 +302,36 @@ function AppContent() {
         <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="/admin/*" element={<NotFound />} />
 
-        {/* Main app routes - with sidebar and navbar */}
+        {/* Main app routes - with sidebar and bottom nav */}
         <Route
           path="/*"
           element={
             <div className="app-container" style={{ display: "flex" }}>
-              <Sidebar 
-                isCollapsed={isCollapsed} 
+              <Sidebar
+                isCollapsed={isCollapsed}
                 setIsCollapsed={setIsCollapsed}
                 onDevToolsToggle={devtoolsEnabled ? (() => setDevToolsOpen((v) => !v)) : undefined}
               />
               <div
                 className="main-content"
                 style={{
-                  marginLeft: "60px",
+                  marginLeft: "0",
                   flexGrow: 1,
                   transition: "margin-left 0.3s ease",
+                  paddingBottom: "80px" /* Space for BottomNav */
                 }}
               >
+                {/* CSS handles the desktop margin-left, we keep it 0 inline to let CSS take over or dynamically setting it? 
+                    Actually, let's use a class or keep inline style but rely on media query override 
+                */}
+                <style>{`
+                  @media (min-width: 769px) {
+                    .main-content {
+                      margin-left: 60px !important;
+                      padding-bottom: 0 !important;
+                    }
+                  }
+                `}</style>
                 <div className="page-container">
                   <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh', color: 'var(--accent)' }}>Loading page...</div>}>
                     <Routes>
@@ -340,6 +354,7 @@ function AppContent() {
                 )}
               </div>
               <GoToTopButton />
+              <BottomNav />
             </div>
           }
         />
@@ -357,7 +372,7 @@ function App() {
     const handleUnhandledRejection = (event) => {
       console.error('Unhandled promise rejection:', event.reason);
     };
-    
+
     const handleError = (event) => {
       console.error('Window error:', event.error);
     };
@@ -371,8 +386,8 @@ function App() {
     };
   }, []);
 
-  if (IS_MAINTENANCE){
-    return <MaintenancePage/>
+  if (IS_MAINTENANCE) {
+    return <MaintenancePage />
   }
 
   // ClerkProvider must be at the top level to ensure all hooks work
@@ -384,7 +399,7 @@ function App() {
             <DataProvider>
               <Router>
                 <ToastManager />
-                <Analytics/>
+                <Analytics />
                 <ErrorBoundary>
                   <AppContent />
                 </ErrorBoundary>

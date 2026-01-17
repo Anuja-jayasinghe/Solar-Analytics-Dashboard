@@ -18,41 +18,43 @@ const SystemTrends = lazy(() => import("../components/dashboard/SystemTrends"));
 
 function Dashboard() {
   const content = (
-    <div style={pageStyle}>
-      <RefreshIndicator />
+    <div className="dashboard-page">
+      <div className="mobile-hidden">
+        <RefreshIndicator />
+      </div>
       <ErrorBanner />
       <AuthErrorModal />
 
       {/* --- Upper Highlight Section --- */}
-      <div style={highlightSection}>
+      <div className="highlight-section">
         {/* Stats cards below - side by side */}
-        <div style={statsRow}>
+        <div className="stats-row">
           <MonthlyGenerationCard />
           <TotalGenerationCard />
           <TotalEarningsCard />
         </div>
-        
+
         {/* Live components first - side by side */}
-        <div style={highlightCards}>
+        <div className="highlight-cards">
           <DailyTargetTracker />
           <PeakPowerDial />
         </div>
       </div>
 
       {/* --- Main Energy Analytics --- */}
-      <div style={mainCharts}>
+      <div className="main-charts">
         <Suspense fallback={<ChartSkeleton />}>
           <EnergyCharts />
         </Suspense>
       </div>
 
       {/* --- Secondary Section --- */}
-      <div style={gridStyle}>
+      <div className="secondary-grid">
         <Suspense fallback={<CardSkeleton />}>
           <EarningsBreakdown />
         </Suspense>
         <Suspense fallback={<CardSkeleton />}>
-          <EnvironmentalImpact/>
+          <EnvironmentalImpact />
         </Suspense>
         <Suspense fallback={<CardSkeleton />}>
           <SystemTrends />
@@ -64,72 +66,7 @@ function Dashboard() {
   return content;
 }
 
-// --- Styles ---
-const pageStyle = {
-  padding: "clamp(0.75rem, 3vw, 2rem)",
-  paddingTop: "70px",
-  color: "#fff",
-  maxWidth: "1300px",
-  margin: "auto",
-  fontFamily: "Inter, sans-serif",
-  width: "100%",
-  boxSizing: "border-box",
-  position: "relative",
-  zIndex: 1,
-  minHeight: "100vh",
-  height: "100%"
-};
-
-const headerStyle = {
-  color: "var(--accent)",
-  marginBottom: "1.5rem",
-  textShadow: "0 0 12px rgba(255,122,0,0.4)",
-  fontWeight: "700",
-  fontSize: "1.8rem",
-};
-
-const highlightSection = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "clamp(1rem, 2vw, 1.5rem)",
-  marginBottom: "clamp(1rem, 3vw, 2rem)",
-  position: "relative",
-  zIndex: 1,
-};
-
-const highlightCards = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 350px), 1fr))",
-  gap: "clamp(1rem, 2vw, 1.5rem)",
-};
-
-const statsRow = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))",
-  gap: "clamp(1rem, 2vw, 1.5rem)",
-};
-
-const mainCharts = {
-  marginTop: "clamp(0.75rem, 2vw, 1rem)",
-  background: "var(--card-bg)",
-  borderRadius: "12px",
-  backdropFilter: "blur(10px)",
-  padding: "clamp(0.75rem, 2vw, 1rem)",
-  boxShadow: "0 0 25px var(--card-shadow)",
-  overflow: "hidden",
-  position: "relative",
-  zIndex: 1,
-};
-
-const gridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 250px), 1fr))",
-  gap: "clamp(1rem, 2vw, 1.5rem)",
-  marginTop: "clamp(1rem, 3vw, 2rem)",
-  alignItems: "stretch",
-  width: "100%",
-  position: "relative",
-  zIndex: 1,
-};
+// --- Styles replaced by CSS classes ---
+// check index.css for .dashboard-page, .highlight-section, etc.
 
 export default Dashboard;
