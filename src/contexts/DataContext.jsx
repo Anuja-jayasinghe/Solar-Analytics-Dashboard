@@ -13,15 +13,18 @@ export const DataProvider = ({ children }) => {
   const [livePowerData, setLivePowerData] = useState(null);
   const [totalEarningsData, setTotalEarningsData] = useState({ total: 0 });
   const [monthlyGenerationData, setMonthlyGenerationData] = useState({ total: 0 });
-  const [inverterPotentialValue, setInverterPotentialValue] = useState({ total: 0 }); 
+  const [inverterPotentialValue, setInverterPotentialValue] = useState({ total: 0 });
   const [gridCapacity, setGridCapacity] = useState(40);
 
+  // Filter states
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
   // Loading and error states
-  const [loading, setLoading] = useState({ 
-    charts: true, live: true, totalEarnings: true, monthlyGen: true, inverterValue: true 
+  const [loading, setLoading] = useState({
+    charts: true, live: true, totalEarnings: true, monthlyGen: true, inverterValue: true
   });
-  const [errors, setErrors] = useState({ 
-    charts: null, live: null, totalEarnings: null, monthlyGen: null, inverterValue: null 
+  const [errors, setErrors] = useState({
+    charts: null, live: null, totalEarnings: null, monthlyGen: null, inverterValue: null
   });
 
   // Metadata states
@@ -61,7 +64,7 @@ export const DataProvider = ({ children }) => {
     if (message.includes('timeout') || message.includes('network')) {
       return { type: 'transient', shouldRetry: true, action: 'exponential-backoff' };
     }
-    
+
     // Default: treat as transient
     return { type: 'unknown', shouldRetry: true, action: 'exponential-backoff' };
   };
@@ -104,15 +107,23 @@ export const DataProvider = ({ children }) => {
 
     const delay = getRetryDelay(retryState.attempts - 1);
     retryState.nextRetry = Date.now() + delay;
-    
-    console.log(`[DataContext] Scheduling retry ${retryState.attempts}/3 for ${key} in ${delay/1000}s`);
-    
+
+    console.log(`[DataContext] Scheduling retry ${retryState.attempts}/3 for ${key} in ${delay / 1000}s`);
+
     setTimeout(() => {
       console.log(`[DataContext] Retrying ${key} (attempt ${retryState.attempts})`);
       // Call fetchData directly - no circular dependency since it's in setTimeout
       fetchDataRef.current(key);
     }, delay);
   };
+
+  // Refresh charts when selectedYear changes
+  useEffect(() => {
+    // Only fetch if fetchData is available (after mount)
+    if (fetchDataRef.current) {
+      fetchDataRef.current('charts', true);
+    }
+  }, [selectedYear]);
 
   const fetchData = useCallback(async (key, skipCache = false) => {
     if (!key) return;
@@ -130,7 +141,7 @@ export const DataProvider = ({ children }) => {
         }
         else if (key === 'totalEarnings') setTotalEarningsData(cached);
         else if (key === 'monthlyGen') setMonthlyGenerationData(cached);
-        
+
         // Mark as not loading since we have cached data
         setLoading((prev) => ({ ...prev, [key]: false, inverterValue: key === 'live' ? false : prev.inverterValue }));
       } else {
@@ -145,26 +156,78 @@ export const DataProvider = ({ children }) => {
 
     try {
       if (key === 'charts') {
-        const { data: alignedData, error: rpcError } = await supabase.rpc('get_monthly_comparison');
-        if (rpcError) {
-          console.error('[DataContext] Supabase RPC error fetching charts:', {
-            message: rpcError.message,
-            code: rpcError.code,
-            status: rpcError.status
-          });
-          throw rpcError;
+        const year = selectedYear || new Date().getFullYear();
+        const start = `${year}-01-01`;
+        const end = `${year}-12-31`;
+
+        // Parallel fetch for Inverter and CEB
+        const [dailyRes, cebRes] = await Promise.all([
+          supabase
+            .from('inverter_data_daily_summary')
+            .select('summary_date, total_generation_kwh')
+            .gte('summary_date', start)
+            .lte('summary_date', end),
+          supabase
+            .from('ceb_data')
+            .select('bill_date, units_exported')
+            .gte('bill_date', start)
+            .lte('bill_date', end)
+        ]);
+
+        if (dailyRes.error) {
+          console.error('[DataContext] Error fetching inverter data:', dailyRes.error);
+          throw dailyRes.error;
         }
-        const processedData = alignedData.map(d => ({ 
-          month: d.month_label, 
-          period: d.period_label, // Billing period e.g., "Oct 05 - Nov 04"
-          inverter: d.inverter_kwh, 
-          ceb: d.ceb_kwh 
+        if (cebRes.error) {
+          console.error('[DataContext] Error fetching CEB data:', cebRes.error);
+          throw cebRes.error;
+        }
+
+        // Aggregate by Month (0-11)
+        const months = Array.from({ length: 12 }, (_, i) => ({
+          monthIndex: i,
+          monthName: new Date(year, i, 1).toLocaleString('default', { month: 'short' }),
+          inverter: 0,
+          ceb: 0
         }));
+
+        dailyRes.data.forEach(day => {
+          if (day.summary_date) {
+            const parts = day.summary_date.split('-');
+            if (parts.length >= 2) {
+              // Parse month from string (1-indexed to 0-indexed)
+              const m = parseInt(parts[1], 10) - 1;
+              if (m >= 0 && m < 12) {
+                months[m].inverter += parseFloat(day.total_generation_kwh || 0);
+              }
+            }
+          }
+        });
+
+        cebRes.data.forEach(bill => {
+          if (bill.bill_date) {
+            const parts = bill.bill_date.split('-');
+            if (parts.length >= 2) {
+              const m = parseInt(parts[1], 10) - 1;
+              if (m >= 0 && m < 12) {
+                months[m].ceb += parseFloat(bill.units_exported || 0);
+              }
+            }
+          }
+        });
+
+        const processedData = months.map(m => ({
+          month: m.monthName,
+          period: `${m.monthName} ${year}`,
+          inverter: m.inverter,
+          ceb: m.ceb
+        }));
+
         setEnergyChartsData(processedData);
         cacheService.set(key, 'data', processedData);
         setLastUpdate(prev => ({ ...prev, [key]: Date.now() }));
-      } 
-      
+      }
+
       else if (key === 'live') {
         setLoading(prev => ({ ...prev, inverterValue: true }));
         setErrors(prev => ({ ...prev, inverterValue: null }));
@@ -179,7 +242,7 @@ export const DataProvider = ({ children }) => {
           throw liveError;
         }
         setLivePowerData(liveData);
-        
+
         // Fetch tariff from settings
         const { data: settingData, error: settingError } = await supabase
           .from('system_settings')
@@ -194,7 +257,7 @@ export const DataProvider = ({ children }) => {
           });
           throw settingError;
         }
-        
+
         const tariff = parseFloat(settingData?.[0]?.setting_value) || 37;
 
         // Fetch solar grid capacity (kW) from settings; fall back to 40 kW
@@ -221,7 +284,7 @@ export const DataProvider = ({ children }) => {
         // Convert MWh to kWh
         const totalGen_MWh = liveData?.totalGeneration?.value || 0;
         const totalGen_kWh = totalGen_MWh * 1000;
-        
+
         // Calculate potential value
         const potentialValue = totalGen_kWh * tariff;
         setInverterPotentialValue({ total: potentialValue });
@@ -229,10 +292,10 @@ export const DataProvider = ({ children }) => {
         // Cache both live data and calculated potential
         cacheService.set(key, 'data', { liveData, inverterPotentialValue: { total: potentialValue } });
         setLastUpdate(prev => ({ ...prev, [key]: Date.now(), inverterValue: Date.now() }));
-        
+
         setLoading(prev => ({ ...prev, live: false, inverterValue: false }));
       }
-      
+
       else if (key === 'totalEarnings') {
         const { data, error } = await supabase.from('ceb_data').select('earnings');
         if (error) {
@@ -251,7 +314,7 @@ export const DataProvider = ({ children }) => {
         cacheService.set(key, 'data', result);
         setLastUpdate(prev => ({ ...prev, [key]: Date.now() }));
       }
-      
+
       else if (key === 'monthlyGen') {
         // Fetch latest CEB bill date
         const { data: latestBill, error: billError } = await supabase
@@ -260,18 +323,18 @@ export const DataProvider = ({ children }) => {
           .order('bill_date', { ascending: false })
           .limit(1)
           .single();
-        
+
         let startDate, endDate, billingPeriodLabel, billId;
         const today = new Date();
-        
+
         if (latestBill && !billError) {
           // Use latest CEB bill date as start of period
           const billDate = new Date(latestBill.bill_date);
           billId = latestBill.id;
-          
+
           startDate = billDate.toISOString().split('T')[0]; // YYYY-MM-DD format
           endDate = today.toISOString().split('T')[0];
-          
+
           const formatDate = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
           billingPeriodLabel = `${formatDate(billDate)} – ${formatDate(today)}`;
         } else if (billError && billError.code !== 'PGRST116') { // PGRST116 = no rows found
@@ -287,13 +350,13 @@ export const DataProvider = ({ children }) => {
           endDate = today.toISOString().split('T')[0];
           billingPeriodLabel = today.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
         }
-        
+
         const { data, error } = await supabase
           .from('inverter_data_daily_summary')
           .select('total_generation_kwh')
           .gte('summary_date', startDate)
           .lte('summary_date', endDate);
-        
+
         if (error) {
           console.error('[DataContext] Supabase error fetching monthly generation:', {
             message: error.message,
@@ -302,10 +365,10 @@ export const DataProvider = ({ children }) => {
           });
           throw error;
         }
-        
+
         const total = data.reduce((sum, record) => sum + (parseFloat(record.total_generation_kwh) || 0), 0);
         const result = { total, billingPeriodLabel, startDate, billId };
-        
+
         setMonthlyGenerationData(result);
         cacheService.set(key, 'data', result);
         setLastUpdate(prev => ({ ...prev, [key]: Date.now() }));
@@ -318,24 +381,24 @@ export const DataProvider = ({ children }) => {
       retryState.consecutiveFailures = 0;
       retryState.circuitOpen = false;
       retryState.nextRetry = null;
-      
+
     } catch (err) {
       console.error(`Error in DataContext fetching ${key}:`, err);
-      
+
       // Classify error and determine action
       const errorClass = classifyError(err);
-      
+
       // Keep showing cached data on error; just mark error
       const errorMessage = err.message || 'Unknown error';
       if (key === 'live') {
-        setErrors((prev) => ({ 
-          ...prev, 
+        setErrors((prev) => ({
+          ...prev,
           live: { message: errorMessage, type: errorClass.type, time: Date.now() },
           inverterValue: { message: errorMessage, type: errorClass.type, time: Date.now() }
         }));
       } else {
-        setErrors((prev) => ({ 
-          ...prev, 
+        setErrors((prev) => ({
+          ...prev,
           [key]: { message: errorMessage, type: errorClass.type, time: Date.now() }
         }));
       }
@@ -349,7 +412,7 @@ export const DataProvider = ({ children }) => {
         setLoading((prev) => ({ ...prev, [key]: false }));
       }
     }
-  }, []);
+  }, [selectedYear]);
 
   // Store fetchData in ref for retry mechanism
   fetchDataRef.current = fetchData;
@@ -429,12 +492,12 @@ export const DataProvider = ({ children }) => {
   // Handle visibility and network changes with debouncing
   useEffect(() => {
     let visibilityTimeout = null;
-    
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         // Debounce to prevent multiple rapid refreshes
         if (visibilityTimeout) clearTimeout(visibilityTimeout);
-        
+
         visibilityTimeout = setTimeout(() => {
           console.log('[DataContext] Tab visible, refreshing data');
           // Use requestAnimationFrame to batch updates
@@ -479,7 +542,7 @@ export const DataProvider = ({ children }) => {
     const checkStale = setInterval(() => {
       const now = Date.now();
       const staleThreshold = 10 * 60 * 1000; // 10 minutes
-      const anyStale = Object.values(lastUpdate).some(timestamp => 
+      const anyStale = Object.values(lastUpdate).some(timestamp =>
         timestamp && (now - timestamp > staleThreshold)
       );
       setIsStale(anyStale);
@@ -551,14 +614,16 @@ export const DataProvider = ({ children }) => {
   }, []);
 
   const value = {
-    energyChartsData, 
-    livePowerData, 
-    totalEarningsData, 
+    energyChartsData,
+    livePowerData,
+    totalEarningsData,
     monthlyGenerationData,
     inverterPotentialValue,
     gridCapacity,
-    loading, 
-    errors, 
+    selectedYear,
+    setSelectedYear,
+    loading,
+    errors,
     refreshData,
     refreshAll,
     lastUpdate,

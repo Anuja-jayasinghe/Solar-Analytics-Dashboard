@@ -12,7 +12,8 @@ const EnergyCharts = () => {
     threshold: 0.1,
   });
 
-  const { energyChartsData: data, loading, errors, refreshData } = useData();
+  const { energyChartsData: data, loading, errors, refreshData, selectedYear, setSelectedYear } = useData();
+  const [viewMode, setViewMode] = useState('carousel'); // 'carousel' | 'chart'
   const [ruler, setRuler] = useState(() => {
     const saved = localStorage.getItem('chart_ruler_value');
     return saved ? Number(saved) : 3700;
@@ -21,6 +22,8 @@ const EnergyCharts = () => {
     const saved = localStorage.getItem('chart_ruler_visible');
     return saved ? saved === 'true' : true;
   });
+
+  /* Removed years useMemo */
 
   const clampRuler = (val) => Math.min(Math.max(val, 0), 7000);
 
@@ -74,6 +77,49 @@ const EnergyCharts = () => {
       <style>{keyframesCSS}</style>
       <div className="chart-header">
         <h2 style={{ margin: 0 }}>Monthly Energy Summary</h2>
+
+        {/* Year Navigator */}
+        <div style={yearNavStyle}>
+          <button
+            onClick={() => setSelectedYear(selectedYear - 1)}
+            style={navBtn}
+            title="Previous Year"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+
+          <span style={yearText}>{selectedYear}</span>
+
+          <button
+            onClick={() => setSelectedYear(selectedYear + 1)}
+            disabled={selectedYear >= new Date().getFullYear()}
+            style={{ ...navBtn, opacity: selectedYear >= new Date().getFullYear() ? 0.3 : 1, cursor: selectedYear >= new Date().getFullYear() ? 'default' : 'pointer' }}
+            title="Next Year"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+        </div>
+
+        {/* Mobile View Toggle */}
+        <div className="mobile-show" style={{ marginLeft: 'auto' }}>
+          <button
+            onClick={() => setViewMode(prev => prev === 'carousel' ? 'chart' : 'carousel')}
+            style={mobileToggleBtn}
+          >
+            {viewMode === 'carousel' ? (
+              <>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                Graph View
+              </>
+            ) : (
+              <>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                List View
+              </>
+            )}
+          </button>
+        </div>
+
         <div style={rulerControls} className="desktop-show">
           <label htmlFor="rulerSlider" style={rulerLabel}>Ruler</label>
           <button
@@ -130,56 +176,99 @@ const EnergyCharts = () => {
       ) : data.length === 0 ? (
         <div style={messageContainer}><p>No energy data available</p></div>
       ) : (
-        <>
-          {/* --- MOBILE VIEW: Horizontal Cards (Carousel) --- */}
-          <div className="mobile-show">
-            <p style={swipeHintStyle}>Swipe for history &rarr;</p>
-            <div style={listContainerStyle}>
-              {data.map((item, index) => (
-                <div key={index} style={listItemStyle}>
-                  <div style={listItemHeader}>
-                    <span style={monthBadgeStyle}>{item.month}</span>
-                    <span style={periodStyle}>{item.period}</span>
-                  </div>
-
-                  <div style={listItemContent}>
-                    {/* Inverter Row */}
-                    <div style={dataRowStyle}>
-                      <div style={labelGroup}>
-                        <div style={{ ...dotStyle, background: '#00c2a8' }}></div>
-                        <span style={labelStyle}>Inverter</span>
-                      </div>
-                      <span style={valueStyle}>{Number(item.inverter).toFixed(1)} <small>kWh</small></span>
-                    </div>
-                    {/* Progress Bar for Inverter */}
-                    <div style={progressBg}>
-                      <div style={{
-                        ...progressFill,
-                        background: '#00c2a8',
-                        width: `${Math.min((item.inverter / yMax) * 100, 100)}%`
-                      }}></div>
-                    </div>
-
-                    {/* CEB Row */}
-                    <div style={{ ...dataRowStyle, marginTop: '12px' }}>
-                      <div style={labelGroup}>
-                        <div style={{ ...dotStyle, background: '#ff7a00' }}></div>
-                        <span style={labelStyle}>CEB</span>
-                      </div>
-                      <span style={valueStyle}>{Number(item.ceb).toFixed(1)} <small>kWh</small></span>
-                    </div>
-                    {/* Progress Bar for CEB */}
-                    <div style={progressBg}>
-                      <div style={{
-                        ...progressFill,
-                        background: '#ff7a00',
-                        width: `${Math.min((item.ceb / yMax) * 100, 100)}%`
-                      }}></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+        <div style={{ opacity: isLoading ? 0.5 : 1, transition: 'opacity 0.2s', position: 'relative' }}>
+          {isLoading && (
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 10, pointerEvents: 'none'
+            }}>
+              <div style={{ ...spinner, width: '30px', height: '30px', borderWidth: '2px', borderTopWidth: '2px' }}></div>
             </div>
+          )}
+          {/* --- MOBILE VIEW: Dynamic Content --- */}
+          <div className="mobile-show">
+            {viewMode === 'carousel' ? (
+              <>
+                <p style={swipeHintStyle}>Swipe for history &rarr;</p>
+                <div style={listContainerStyle}>
+                  {data.map((item, index) => (
+                    <div key={index} style={listItemStyle}>
+                      <div style={listItemHeader}>
+                        <span style={monthBadgeStyle}>{item.month}</span>
+                        <span style={periodStyle}>{item.period}</span>
+                      </div>
+
+                      <div style={listItemContent}>
+                        {/* Inverter Row */}
+                        <div style={dataRowStyle}>
+                          <div style={labelGroup}>
+                            <div style={{ ...dotStyle, background: '#00c2a8' }}></div>
+                            <span style={labelStyle}>Inverter</span>
+                          </div>
+                          <span style={valueStyle}>{Number(item.inverter).toFixed(1)} <small>kWh</small></span>
+                        </div>
+                        {/* Progress Bar for Inverter */}
+                        <div style={progressBg}>
+                          <div style={{
+                            ...progressFill,
+                            background: '#00c2a8',
+                            width: `${Math.min((item.inverter / yMax) * 100, 100)}%`
+                          }}></div>
+                        </div>
+
+                        {/* CEB Row */}
+                        <div style={{ ...dataRowStyle, marginTop: '12px' }}>
+                          <div style={labelGroup}>
+                            <div style={{ ...dotStyle, background: '#ff7a00' }}></div>
+                            <span style={labelStyle}>CEB</span>
+                          </div>
+                          <span style={valueStyle}>{Number(item.ceb).toFixed(1)} <small>kWh</small></span>
+                        </div>
+                        {/* Progress Bar for CEB */}
+                        <div style={progressBg}>
+                          <div style={{
+                            ...progressFill,
+                            background: '#ff7a00',
+                            width: `${Math.min((item.ceb / yMax) * 100, 100)}%`
+                          }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              /* Mobile Comparison Chart */
+              /* Mobile Comparison Chart (Optimized) */
+              <div style={{ height: '250px', width: '100%', marginTop: '10px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data} margin={{ top: 10, right: 0, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.1} vertical={false} />
+                    <XAxis
+                      dataKey="month"
+                      tickFormatter={(val) => val.slice(0, 3)}
+                      fontSize={10}
+                      axisLine={false}
+                      tickLine={false}
+                      stroke="var(--text-secondary)"
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis
+                      fontSize={10}
+                      axisLine={false}
+                      tickLine={false}
+                      stroke="var(--text-secondary)"
+                      domain={[0, 'auto']}
+                      width={30}
+                    />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                    <Bar dataKey="inverter" fill="#00c2a8" radius={[2, 2, 0, 0]} barSize={32} />
+                    <Bar dataKey="ceb" fill="#ff7a00" radius={[2, 2, 0, 0]} barSize={32} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
 
           {/* --- DESKTOP VIEW: Charts --- */}
@@ -270,13 +359,56 @@ const EnergyCharts = () => {
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
 };
 
 // --- Styles (from your original component) ---
+const yearNavStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  background: 'rgba(255,255,255,0.05)',
+  borderRadius: '8px',
+  padding: '4px',
+  marginLeft: '1rem',
+  border: '1px solid rgba(255,255,255,0.1)'
+};
+
+const navBtn = {
+  background: 'transparent',
+  border: 'none',
+  color: 'var(--text-color)',
+  padding: '4px 8px',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: '4px',
+};
+
+const yearText = {
+  fontSize: '0.9rem',
+  fontWeight: '600',
+  color: 'var(--text-color)',
+  margin: '0 8px',
+  minWidth: '40px',
+  textAlign: 'center'
+};
+
+const mobileToggleBtn = {
+  background: 'rgba(255,255,255,0.1)',
+  border: '1px solid rgba(255,255,255,0.2)',
+  color: 'var(--text-color)',
+  borderRadius: '6px',
+  padding: '6px 12px',
+  fontSize: '0.8rem',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+};
+
 const rulerControls = {
   display: 'flex',
   alignItems: 'center',
