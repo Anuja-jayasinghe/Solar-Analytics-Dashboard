@@ -3,9 +3,12 @@
 ## 🔎 Logic Documentation (New)
 
 ### **I want business logic rules in one place**
-→ Read: `LOGIC_REGISTRY.md`
-- Canonical, verified project logic entries
+→ Read: `logic-registry/README.md`
+- Simple registry of approved logic files
 - Current entry: CEB vs inverter monthly alignment
+
+→ Read: `logic-registry/LR-001-ceb-vs-inverter-monthly-alignment.md`
+- Full details for the current logic entry
 
 ### **I want pre-implementation correction details**
 → Read: `development/CEB_INVERTER_ALIGNMENT_CORRECTION_REPORT.md`
