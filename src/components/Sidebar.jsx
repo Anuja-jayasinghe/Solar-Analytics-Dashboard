@@ -129,6 +129,19 @@ function Sidebar({ onDevToolsToggle }) {
           color: white;
         }
 
+        .sidebar-nav a.active {
+          background-color: transparent;
+          color: var(--accent);
+        }
+
+        .sidebar-nav a.active svg {
+          color: var(--accent);
+        }
+
+        .sidebar-nav a.active:hover {
+          background-color: rgba(255, 122, 0, 0.12);
+        }
+
         .sidebar-nav button {
           display: flex;
           align-items: center;
