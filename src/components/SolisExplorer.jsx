@@ -392,10 +392,12 @@ const SolisExplorer = ({ open, onClose }) => {
           right: 20px;
           width: 900px;
           max-height: 85vh;
-          background: var(--card-bg-solid);
-          border: 1px solid var(--card-border);
-          border-radius: 12px;
-          box-shadow: 0 8px 24px var(--card-shadow);
+          background: rgba(20, 20, 25, 0.85);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 16px;
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
           display: flex;
           flex-direction: column;
           z-index: 10000;
@@ -405,27 +407,27 @@ const SolisExplorer = ({ open, onClose }) => {
 
         .solis-explorer-header {
           padding: 16px 20px;
-          border-bottom: 1px solid var(--card-border);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
           display: flex;
           justify-content: space-between;
           align-items: center;
-          background: linear-gradient(135deg, rgba(255, 122, 0, 0.1) 0%, rgba(0, 194, 168, 0.05) 100%);
+          background: rgba(0, 0, 0, 0.2);
         }
 
         .solis-explorer-header h3 {
           margin: 0;
           font-size: 16px;
           font-weight: 600;
-          color: var(--text-color);
+          color: var(--accent);
           display: flex;
           align-items: center;
           gap: 8px;
         }
 
         .solis-explorer-close {
-          background: none;
-          border: none;
-          font-size: 20px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          font-size: 18px;
           cursor: pointer;
           color: var(--text-secondary);
           padding: 0;
@@ -434,13 +436,14 @@ const SolisExplorer = ({ open, onClose }) => {
           display: flex;
           align-items: center;
           justify-content: center;
-          border-radius: 6px;
-          transition: all 0.2s;
+          border-radius: 8px;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .solis-explorer-close:hover {
-          background: var(--hover-bg);
-          color: var(--text-color);
+          background: rgba(255, 68, 68, 0.2);
+          color: #ff4444;
+          border-color: rgba(255, 68, 68, 0.4);
         }
 
         .solis-explorer-body {
@@ -456,7 +459,7 @@ const SolisExplorer = ({ open, onClose }) => {
           display: flex;
           flex-direction: column;
           gap: 16px;
-          border-right: 1px solid var(--card-border);
+          border-right: 1px solid rgba(255, 255, 255, 0.05);
           padding-right: 20px;
         }
 
@@ -476,14 +479,14 @@ const SolisExplorer = ({ open, onClose }) => {
 
         .solis-explorer-endpoint-btn {
           padding: 12px;
-          border: 1px solid var(--card-border);
-          background: var(--card-bg);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          background: rgba(0, 0, 0, 0.2);
           color: var(--text-color);
           border-radius: 8px;
           cursor: pointer;
           font-size: 12px;
           font-weight: 500;
-          transition: all 0.2s;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           text-align: left;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -491,15 +494,16 @@ const SolisExplorer = ({ open, onClose }) => {
         }
 
         .solis-explorer-endpoint-btn:hover {
-          background: var(--hover-bg);
-          border-color: var(--accent);
+          background: rgba(255, 255, 255, 0.05);
+          border-color: rgba(255, 255, 255, 0.15);
         }
 
         .solis-explorer-endpoint-btn.active {
-          background: linear-gradient(135deg, rgba(255, 122, 0, 0.2) 0%, rgba(0, 194, 168, 0.1) 100%);
+          background: var(--accent);
           border-color: var(--accent);
-          color: var(--accent);
+          color: #000;
           font-weight: 600;
+          box-shadow: 0 4px 12px rgba(255, 122, 0, 0.3);
         }
 
         .solis-explorer-right-panel {
@@ -532,19 +536,20 @@ const SolisExplorer = ({ open, onClose }) => {
 
         .solis-explorer-param-input {
           padding: 10px 12px;
-          border: 1px solid var(--card-border);
-          background: var(--card-bg);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(0, 0, 0, 0.25);
           color: var(--text-color);
-          border-radius: 6px;
-          font-size: 12px;
-          font-family: monospace;
-          transition: all 0.2s;
+          border-radius: 8px;
+          font-size: 13px;
+          font-family: inherit;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .solis-explorer-param-input:focus {
           outline: none;
           border-color: var(--accent);
-          background: var(--hover-bg);
+          background: rgba(0, 0, 0, 0.4);
+          box-shadow: 0 0 0 2px rgba(255, 122, 0, 0.2);
         }
 
         .solis-explorer-actions {
@@ -554,28 +559,30 @@ const SolisExplorer = ({ open, onClose }) => {
 
         .solis-explorer-button {
           flex: 1;
-          padding: 10px 16px;
-          border: 1px solid var(--card-border);
-          background: linear-gradient(135deg, rgba(255, 122, 0, 0.2) 0%, rgba(0, 194, 168, 0.1) 100%);
-          color: var(--accent);
-          border-radius: 6px;
-          font-size: 12px;
-          font-weight: 600;
+          padding: 12px 16px;
+          border: none;
+          background: var(--accent);
+          color: #000;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 700;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           text-transform: uppercase;
           letter-spacing: 0.5px;
+          box-shadow: 0 4px 15px rgba(255, 122, 0, 0.3);
         }
 
         .solis-explorer-button:hover:not(:disabled) {
-          background: linear-gradient(135deg, rgba(255, 122, 0, 0.3) 0%, rgba(0, 194, 168, 0.15) 100%);
-          border-color: var(--accent);
-          transform: translateY(-1px);
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(255, 122, 0, 0.4);
         }
 
         .solis-explorer-button:disabled {
           opacity: 0.5;
           cursor: not-allowed;
+          box-shadow: none;
+          transform: none;
         }
 
         .solis-explorer-response-section {
@@ -583,16 +590,16 @@ const SolisExplorer = ({ open, onClose }) => {
           display: flex;
           flex-direction: column;
           min-height: 300px;
-          background: var(--card-bg);
-          border: 1px solid var(--card-border);
-          border-radius: 8px;
+          background: rgba(0, 0, 0, 0.3);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 12px;
           overflow: hidden;
         }
 
         .solis-explorer-response-header {
           padding: 12px 16px;
-          background: var(--hover-bg);
-          border-bottom: 1px solid var(--card-border);
+          background: rgba(0, 0, 0, 0.2);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
           display: flex;
           justify-content: space-between;
           align-items: center;
@@ -615,34 +622,37 @@ const SolisExplorer = ({ open, onClose }) => {
 
         .solis-explorer-meta-status-ok {
           color: var(--success-color);
+          font-weight: 600;
         }
 
         .solis-explorer-meta-status-error {
           color: var(--error-color);
+          font-weight: 600;
         }
 
         .solis-explorer-json-toggle {
           padding: 6px 12px;
           font-size: 11px;
-          background: var(--card-border);
-          border: 1px solid var(--card-border);
-          border-radius: 4px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 6px;
           cursor: pointer;
           font-family: inherit;
           color: var(--text-secondary);
-          transition: all 0.2s;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .solis-explorer-json-toggle:hover {
-          color: var(--accent);
-          border-color: var(--accent);
+          color: var(--text-color);
+          background: rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.2);
         }
 
         .solis-explorer-response-content {
           flex: 1;
           overflow-y: auto;
-          padding: 12px 16px;
-          font-size: 12px;
+          padding: 16px;
+          font-size: 13px;
         }
 
         .solis-explorer-placeholder {
@@ -658,38 +668,40 @@ const SolisExplorer = ({ open, onClose }) => {
 
         .solis-explorer-error {
           color: var(--error-color);
-          background: rgba(255, 68, 68, 0.1);
+          background: rgba(255, 68, 68, 0.05);
           padding: 12px;
-          border-radius: 6px;
+          border-radius: 8px;
           margin: 12px 0;
           border-left: 3px solid var(--error-color);
         }
 
         .solis-explorer-table {
           width: 100%;
-          border-collapse: collapse;
-          font-size: 11px;
+          border-collapse: separate;
+          border-spacing: 0;
+          font-size: 12px;
         }
 
         .solis-explorer-table th {
-          background: var(--hover-bg);
-          padding: 8px;
+          background: rgba(255, 255, 255, 0.02);
+          padding: 10px;
           text-align: left;
-          border-bottom: 1px solid var(--card-border);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
           font-weight: 600;
-          color: var(--accent);
+          color: var(--text-secondary);
           text-transform: uppercase;
           letter-spacing: 0.3px;
         }
 
         .solis-explorer-table td {
-          padding: 8px;
-          border-bottom: 1px solid var(--card-border);
+          padding: 10px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.03);
           word-break: break-word;
+          color: var(--text-color);
         }
 
-        .solis-explorer-table tr:hover {
-          background: var(--hover-bg);
+        .solis-explorer-table tr:hover td {
+          background: rgba(255, 255, 255, 0.02);
         }
 
         .solis-explorer-detail-section {
@@ -700,16 +712,17 @@ const SolisExplorer = ({ open, onClose }) => {
           font-weight: 600;
           color: var(--accent);
           margin: 8px 0 6px 0;
-          font-size: 11px;
+          font-size: 12px;
           text-transform: uppercase;
           letter-spacing: 0.3px;
         }
 
         .solis-explorer-detail-field {
           display: flex;
-          padding: 4px 0;
-          font-size: 11px;
+          padding: 6px 0;
+          font-size: 12px;
           gap: 12px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.02);
         }
 
         .solis-explorer-detail-label {
@@ -727,20 +740,20 @@ const SolisExplorer = ({ open, onClose }) => {
 
         .solis-explorer-badge {
           display: inline-block;
-          padding: 3px 8px;
-          border-radius: 4px;
-          font-size: 10px;
+          padding: 4px 10px;
+          border-radius: 6px;
+          font-size: 11px;
           font-weight: 600;
-          background: rgba(0, 194, 168, 0.2);
-          color: var(--accent-secondary);
-          border: 1px solid rgba(0, 194, 168, 0.4);
+          background: rgba(255, 122, 0, 0.1);
+          color: var(--accent);
+          border: 1px solid rgba(255, 122, 0, 0.2);
         }
 
         .solis-explorer-spinner {
           display: inline-block;
           width: 16px;
           height: 16px;
-          border: 2px solid var(--card-border);
+          border: 2px solid rgba(255, 255, 255, 0.2);
           border-top-color: var(--accent);
           border-radius: 50%;
           animation: spin 0.8s linear infinite;
@@ -784,7 +797,7 @@ const SolisExplorer = ({ open, onClose }) => {
           .solis-explorer-left-panel {
             flex: 0 0 auto;
             border-right: none;
-            border-bottom: 1px solid var(--card-border);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             padding-right: 0;
             padding-bottom: 16px;
           }
@@ -800,16 +813,17 @@ const SolisExplorer = ({ open, onClose }) => {
         }
 
         ::-webkit-scrollbar-track {
-          background: var(--card-bg);
+          background: rgba(0, 0, 0, 0.1);
+          border-radius: 3px;
         }
 
         ::-webkit-scrollbar-thumb {
-          background: var(--card-border);
+          background: rgba(255, 255, 255, 0.15);
           border-radius: 3px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-          background: var(--accent);
+          background: rgba(255, 255, 255, 0.3);
         }
       `}</style>
 
