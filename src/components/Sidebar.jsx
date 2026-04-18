@@ -170,8 +170,8 @@ function Sidebar({ onDevToolsToggle }) {
         }
 
         .sidebar-nav button:hover {
-          background-color: var(--accent);
-          color: white;
+          background-color: transparent;
+          color: var(--accent);
         }
         
         .sidebar-logo {
