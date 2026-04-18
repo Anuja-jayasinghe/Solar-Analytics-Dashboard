@@ -70,55 +70,59 @@ const RefreshIndicator = () => {
     <div 
       style={{
         ...containerStyle,
-        width: isCollapsed ? '40px' : 'auto',
-        cursor: 'pointer',
-        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-        transform: isCollapsed ? 'translateX(0)' : 'translateX(0)',
+        width: '36px',
+        height: isCollapsed ? '36px' : 'auto',
+        justifyContent: isCollapsed ? 'center' : 'flex-start',
+        transform: 'translateY(-50%)',
         overflow: 'hidden'
       }}
       onClick={() => setIsCollapsed(!isCollapsed)}
       title={isCollapsed ? 'Click to expand' : 'Click to collapse'}
     >
-      {isAnyLoading && !isCollapsed && (
-        <div style={{
-          ...spinnerContainerStyle,
-          animation: 'fadeIn 0.3s ease-in'
-        }}>
-          <div style={spinnerStyle} />
-        </div>
-      )}
-      
       {isCollapsed ? (
-        <ChevronLeft 
-          size={20} 
-          style={{ 
-            color: 'var(--text-secondary)',
-            animation: 'rotateIn 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
-          }} 
-        />
+        <span className={isAnyLoading ? 'live-dot live' : 'live-dot'} style={{ margin: 0 }} aria-label={isAnyLoading ? 'Live updating' : 'Idle'} />
       ) : (
         <>
-          <span style={{ 
-            color: 'var(--text-secondary)', 
+          {isAnyLoading ? (
+            <div style={{
+              ...spinnerContainerStyle,
+              animation: 'fadeIn 0.3s ease-in',
+              marginBottom: '4px'
+            }}>
+              <div style={spinnerStyle} />
+            </div>
+          ) : (
+            <span className="live-dot" style={{ margin: '4px 0' }} aria-label="Idle" />
+          )}
+
+          <div style={{ 
             display: 'flex', 
+            flexDirection: 'column',
             alignItems: 'center', 
             gap: '8px',
-            animation: 'slideInFromRight 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+            animation: 'fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
           }}>
-            <span className={isAnyLoading ? 'live-dot live' : 'live-dot'} aria-label={isAnyLoading ? 'Live updating' : 'Idle'} />
-            Last updated {formatTimestamp(mostRecentUpdate)}
-            <span style={{ fontSize: '12px', padding: '2px 6px', borderRadius: '6px', border: '1px solid var(--border-color)', color: isOnline ? 'var(--success-color)' : 'var(--error-color)' }}>
-              {isOnline ? 'Online' : 'Offline'}
+            <span style={{ 
+              writingMode: 'vertical-rl',
+              textOrientation: 'mixed',
+              color: 'var(--text-secondary)',
+              fontSize: '11px',
+              letterSpacing: '0.5px',
+              textTransform: 'uppercase',
+              margin: '8px 0'
+            }}>
+              UPDATE {formatTimestamp(mostRecentUpdate)}
             </span>
-          </span> 
-          <ChevronRight 
-            size={16} 
-            style={{ 
-              color: 'var(--text-muted)', 
-              marginLeft: '4px',
-              animation: 'pulse 2s ease-in-out infinite'
-            }} 
-          />
+            
+            <div style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: isOnline ? 'var(--success-color)' : 'var(--error-color)',
+              boxShadow: isOnline ? '0 0 6px var(--success-color)' : '0 0 6px var(--error-color)',
+              marginBottom: '4px'
+            }} title={isOnline ? 'Online' : 'Offline'} />
+          </div>
         </>
       )}
     </div>
@@ -127,18 +131,21 @@ const RefreshIndicator = () => {
 
 const containerStyle = {
   position: 'fixed',
-  top: 98,
-  right:25,
-  zIndex: 800,
+  top: '50%',
+  right: '15px',
+  zIndex: 900,
   display: 'flex',
+  flexDirection: 'column',
   alignItems: 'center',
-  gap: '0.5rem',
-  background: 'var(--card-bg-solid)',
-  backdropFilter: 'blur(10px)',
-  border: '1px solid var(--card-border)',
-  borderRadius: '8px',
-  padding: '0.4rem 0.75rem',
-  boxShadow: '0 4px 12px var(--card-shadow)',
+  background: 'rgba(20, 20, 25, 0.65)',
+  backdropFilter: 'blur(16px)',
+  WebkitBackdropFilter: 'blur(16px)',
+  border: '1px solid rgba(255, 255, 255, 0.08)',
+  borderRadius: '30px',
+  padding: '12px 6px',
+  boxShadow: '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+  cursor: 'pointer',
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
 };
 
 const spinnerContainerStyle = {
@@ -147,8 +154,8 @@ const spinnerContainerStyle = {
 };
 
 const spinnerStyle = {
-  width: '14px',
-  height: '14px',
+  width: '12px',
+  height: '12px',
   border: '2px solid var(--text-muted)',
   borderTopColor: 'var(--accent)',
   borderRadius: '50%',
