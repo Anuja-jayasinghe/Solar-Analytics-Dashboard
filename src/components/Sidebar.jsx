@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ThemeContext } from "./ThemeContext";
 import { AuthContext } from "../contexts/AuthContext";
 import { ComputerIcon, LogOut, User } from "lucide-react";
@@ -53,6 +53,7 @@ function Sidebar({ onDevToolsToggle }) {
   const { theme, setTheme } = useContext(ThemeContext);
   const { session, signOut, user } = useContext(AuthContext);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [showAdminPopup, setShowAdminPopup] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -85,6 +86,13 @@ function Sidebar({ onDevToolsToggle }) {
     await signOut();
     navigate('/', { state: { from: 'dashboard' } });
   };
+
+  const isDashboardRoute =
+    location.pathname === '/' ||
+    location.pathname === '/dashboard' ||
+    location.pathname.startsWith('/dashboard/') ||
+    location.pathname === '/demodashbaard' ||
+    location.pathname.startsWith('/demodashbaard/');
 
   return (
     <>
@@ -123,10 +131,9 @@ function Sidebar({ onDevToolsToggle }) {
           transition: background-color 0.2s ease, color 0.2s ease;
         }
         
-        .sidebar-nav a:hover,
-        .sidebar-nav a.active {
-          background-color: var(--accent);
-          color: white;
+        .sidebar-nav a:hover {
+          background-color: transparent;
+          color: var(--accent);
         }
 
         .sidebar-nav a.active {
@@ -134,12 +141,13 @@ function Sidebar({ onDevToolsToggle }) {
           color: var(--accent);
         }
 
+        .sidebar-nav a:hover svg,
         .sidebar-nav a.active svg {
           color: var(--accent);
         }
 
         .sidebar-nav a.active:hover {
-          background-color: rgba(255, 122, 0, 0.12);
+          background-color: transparent;
         }
 
         .sidebar-nav button {
@@ -355,7 +363,12 @@ function Sidebar({ onDevToolsToggle }) {
           <img src="/favicon.svg" alt="SolarEdge" width={30} height={30} />
         </div>
         <nav className="sidebar-nav">
-          <NavLink to="/" end title="Dashboard">
+          <NavLink
+            to="/"
+            end
+            title="Dashboard"
+            className={({ isActive }) => (isActive || isDashboardRoute ? 'active' : undefined)}
+          >
             <DashboardIcon />
           </NavLink>
           <NavLink to="/settings" title="Settings">
