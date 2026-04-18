@@ -1,9 +1,14 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { formatResponse } from '../lib/solisResponseFormatters';
+import solisExplorerFallbackEndpoints from '../lib/solisExplorerFallbackEndpoints';
+
+function getLocalEndpointsFallback() {
+  return solisExplorerFallbackEndpoints;
+}
 
 const SolisExplorer = ({ open, onClose }) => {
-  const [selectedEndpoint, setSelectedEndpoint] = useState(null);
   const [endpoints, setEndpoints] = useState([]);
+  const [selectedEndpoint, setSelectedEndpoint] = useState(null);
   const [params, setParams] = useState({});
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState(null);
@@ -11,23 +16,52 @@ const SolisExplorer = ({ open, onClose }) => {
   const [formatted, setFormatted] = useState(null);
   const [rawJsonVisible, setRawJsonVisible] = useState(false);
   const [durationMs, setDurationMs] = useState(null);
+  const [endpointsLoading, setEndpointsLoading] = useState(true);
+  const [endpointsError, setEndpointsError] = useState(null);
+  const [usingLocalFallback, setUsingLocalFallback] = useState(false);
+  const [fallbackMessage, setFallbackMessage] = useState('');
   const panelRef = useRef(null);
 
   // Fetch endpoint list on mount
   useEffect(() => {
     const fetchEndpoints = async () => {
       try {
+        setEndpointsLoading(true);
+        setEndpointsError(null);
+        setUsingLocalFallback(false);
+        setFallbackMessage('');
         const res = await fetch('/api/solis/explore-endpoints');
+        const body = await res.text();
+        let data;
+        try {
+          data = JSON.parse(body);
+        } catch (parseError) {
+          const fallbackEndpoints = getLocalEndpointsFallback();
+          setEndpoints(fallbackEndpoints);
+          setUsingLocalFallback(true);
+          setFallbackMessage('API endpoint is not returning JSON in local dev. Using local endpoint list fallback.');
+          setEndpointsError(null);
+          return;
+        }
+
         if (res.ok) {
-          const data = await res.json();
           setEndpoints(data.endpoints || []);
-          if (data.endpoints?.length > 0) {
-            setSelectedEndpoint(data.endpoints[0].key);
-            setParams(data.endpoints[0].sampleParams || {});
-          }
+        } else {
+          const fallbackEndpoints = getLocalEndpointsFallback();
+          setEndpoints(fallbackEndpoints);
+          setUsingLocalFallback(true);
+          setFallbackMessage(data.error || 'Failed to fetch endpoints from API. Using local endpoint list fallback.');
+          setEndpointsError(null);
         }
       } catch (e) {
         console.error('Failed to fetch endpoints:', e);
+        const fallbackEndpoints = getLocalEndpointsFallback();
+        setEndpoints(fallbackEndpoints);
+        setUsingLocalFallback(true);
+        setFallbackMessage((e.message || 'Network error') + ' Using local endpoint list fallback.');
+        setEndpointsError(null);
+      } finally {
+        setEndpointsLoading(false);
       }
     };
 
@@ -67,7 +101,13 @@ const SolisExplorer = ({ open, onClose }) => {
         }),
       });
 
-      const data = await res.json();
+      const body = await res.text();
+      let data;
+      try {
+        data = JSON.parse(body);
+      } catch {
+        throw new Error('API endpoint returned non-JSON response. In local dev, run Vercel API server and set Vite proxy for /api.');
+      }
       setDurationMs(Date.now() - startTime);
 
       if (!res.ok) {
@@ -118,38 +158,42 @@ const SolisExplorer = ({ open, onClose }) => {
   if (!open) return null;
 
   return (
-    <>
+    <div ref={panelRef} className="solis-explorer-panel">
       <style>{`
         .solis-explorer-panel {
           position: fixed;
           bottom: 20px;
           right: 20px;
-          width: 700px;
+          width: 900px;
           max-height: 85vh;
-          background: white;
-          border: 1px solid #e0e0e0;
-          border-radius: 8px;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          background: var(--card-bg-solid);
+          border: 1px solid var(--card-border);
+          border-radius: 12px;
+          box-shadow: 0 8px 24px var(--card-shadow);
           display: flex;
           flex-direction: column;
           z-index: 10000;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
+          overflow: hidden;
         }
 
         .solis-explorer-header {
-          padding: 16px;
-          border-bottom: 1px solid #e0e0e0;
+          padding: 16px 20px;
+          border-bottom: 1px solid var(--card-border);
           display: flex;
           justify-content: space-between;
           align-items: center;
-          background: #f8f9fa;
+          background: linear-gradient(135deg, rgba(255, 122, 0, 0.1) 0%, rgba(0, 194, 168, 0.05) 100%);
         }
 
         .solis-explorer-header h3 {
           margin: 0;
-          font-size: 14px;
+          font-size: 16px;
           font-weight: 600;
-          color: #333;
+          color: var(--text-color);
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
 
         .solis-explorer-close {
@@ -157,127 +201,215 @@ const SolisExplorer = ({ open, onClose }) => {
           border: none;
           font-size: 20px;
           cursor: pointer;
-          color: #666;
+          color: var(--text-secondary);
           padding: 0;
-          width: 24px;
-          height: 24px;
+          width: 28px;
+          height: 28px;
           display: flex;
           align-items: center;
           justify-content: center;
+          border-radius: 6px;
+          transition: all 0.2s;
         }
 
         .solis-explorer-close:hover {
-          color: #000;
+          background: var(--hover-bg);
+          color: var(--text-color);
         }
 
         .solis-explorer-body {
           flex: 1;
           overflow-y: auto;
           display: flex;
-          flex-direction: column;
+          gap: 20px;
+          padding: 20px;
         }
 
-        .solis-explorer-section {
-          padding: 16px;
-          border-bottom: 1px solid #f0f0f0;
+        .solis-explorer-left-panel {
+          flex: 0 0 35%;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          border-right: 1px solid var(--card-border);
+          padding-right: 20px;
         }
 
         .solis-explorer-section-title {
           font-size: 12px;
-          font-weight: 600;
-          color: #666;
+          font-weight: 700;
+          color: var(--accent);
           text-transform: uppercase;
-          margin-bottom: 8px;
           letter-spacing: 0.5px;
         }
 
-        .solis-explorer-select {
-          width: 100%;
-          padding: 8px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          font-size: 13px;
-          font-family: inherit;
-          background: white;
-        }
-
-        .solis-explorer-params {
+        .solis-explorer-endpoints-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 8px;
         }
 
+        .solis-explorer-endpoint-btn {
+          padding: 12px;
+          border: 1px solid var(--card-border);
+          background: var(--card-bg);
+          color: var(--text-color);
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: 500;
+          transition: all 0.2s;
+          text-align: left;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .solis-explorer-endpoint-btn:hover {
+          background: var(--hover-bg);
+          border-color: var(--accent);
+        }
+
+        .solis-explorer-endpoint-btn.active {
+          background: linear-gradient(135deg, rgba(255, 122, 0, 0.2) 0%, rgba(0, 194, 168, 0.1) 100%);
+          border-color: var(--accent);
+          color: var(--accent);
+          font-weight: 600;
+        }
+
+        .solis-explorer-right-panel {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          min-height: 0;
+        }
+
+        .solis-explorer-params-section {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
         .solis-explorer-param-group {
           display: flex;
           flex-direction: column;
+          gap: 6px;
         }
 
         .solis-explorer-param-label {
           font-size: 12px;
-          color: #666;
-          margin-bottom: 4px;
-          font-weight: 500;
+          color: var(--text-secondary);
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
         }
 
         .solis-explorer-param-input {
-          padding: 6px 8px;
-          border: 1px solid #ddd;
-          border-radius: 3px;
+          padding: 10px 12px;
+          border: 1px solid var(--card-border);
+          background: var(--card-bg);
+          color: var(--text-color);
+          border-radius: 6px;
           font-size: 12px;
           font-family: monospace;
+          transition: all 0.2s;
+        }
+
+        .solis-explorer-param-input:focus {
+          outline: none;
+          border-color: var(--accent);
+          background: var(--hover-bg);
         }
 
         .solis-explorer-actions {
           display: flex;
           gap: 8px;
-          margin-top: 8px;
         }
 
         .solis-explorer-button {
           flex: 1;
-          padding: 8px 12px;
-          border: none;
-          border-radius: 4px;
+          padding: 10px 16px;
+          border: 1px solid var(--card-border);
+          background: linear-gradient(135deg, rgba(255, 122, 0, 0.2) 0%, rgba(0, 194, 168, 0.1) 100%);
+          color: var(--accent);
+          border-radius: 6px;
           font-size: 12px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
-          font-family: inherit;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
-        .solis-explorer-button-primary {
-          background: #0066cc;
-          color: white;
+        .solis-explorer-button:hover:not(:disabled) {
+          background: linear-gradient(135deg, rgba(255, 122, 0, 0.3) 0%, rgba(0, 194, 168, 0.15) 100%);
+          border-color: var(--accent);
+          transform: translateY(-1px);
         }
 
-        .solis-explorer-button-primary:hover:not(:disabled) {
-          background: #0052a3;
-        }
-
-        .solis-explorer-button-primary:disabled {
-          background: #ccc;
+        .solis-explorer-button:disabled {
+          opacity: 0.5;
           cursor: not-allowed;
         }
 
-        .solis-explorer-response {
+        .solis-explorer-response-section {
           flex: 1;
           display: flex;
           flex-direction: column;
-          min-height: 0;
+          min-height: 300px;
+          background: var(--card-bg);
+          border: 1px solid var(--card-border);
+          border-radius: 8px;
+          overflow: hidden;
         }
 
         .solis-explorer-response-header {
           padding: 12px 16px;
-          background: #f8f9fa;
-          border-bottom: 1px solid #e0e0e0;
+          background: var(--hover-bg);
+          border-bottom: 1px solid var(--card-border);
           display: flex;
           justify-content: space-between;
           align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
         }
 
         .solis-explorer-response-meta {
           font-size: 11px;
-          color: #666;
+          color: var(--text-secondary);
+          display: flex;
+          gap: 12px;
+        }
+
+        .solis-explorer-meta-item {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .solis-explorer-meta-status-ok {
+          color: var(--success-color);
+        }
+
+        .solis-explorer-meta-status-error {
+          color: var(--error-color);
+        }
+
+        .solis-explorer-json-toggle {
+          padding: 6px 12px;
+          font-size: 11px;
+          background: var(--card-border);
+          border: 1px solid var(--card-border);
+          border-radius: 4px;
+          cursor: pointer;
+          font-family: inherit;
+          color: var(--text-secondary);
+          transition: all 0.2s;
+        }
+
+        .solis-explorer-json-toggle:hover {
+          color: var(--accent);
+          border-color: var(--accent);
         }
 
         .solis-explorer-response-content {
@@ -287,35 +419,51 @@ const SolisExplorer = ({ open, onClose }) => {
           font-size: 12px;
         }
 
+        .solis-explorer-placeholder {
+          color: var(--text-muted);
+          text-align: center;
+          padding: 40px 20px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          gap: 8px;
+        }
+
         .solis-explorer-error {
-          color: #d32f2f;
-          background: #ffebee;
+          color: var(--error-color);
+          background: rgba(255, 68, 68, 0.1);
           padding: 12px;
-          border-radius: 4px;
-          margin: 12px 16px;
+          border-radius: 6px;
+          margin: 12px 0;
+          border-left: 3px solid var(--error-color);
         }
 
         .solis-explorer-table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 12px;
-        }
-
-        .solis-explorer-table th,
-        .solis-explorer-table td {
-          padding: 6px 8px;
-          text-align: left;
-          border-bottom: 1px solid #e0e0e0;
+          font-size: 11px;
         }
 
         .solis-explorer-table th {
-          background: #f5f5f5;
+          background: var(--hover-bg);
+          padding: 8px;
+          text-align: left;
+          border-bottom: 1px solid var(--card-border);
           font-weight: 600;
-          color: #333;
+          color: var(--accent);
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+        }
+
+        .solis-explorer-table td {
+          padding: 8px;
+          border-bottom: 1px solid var(--card-border);
+          word-break: break-word;
         }
 
         .solis-explorer-table tr:hover {
-          background: #fafafa;
+          background: var(--hover-bg);
         }
 
         .solis-explorer-detail-section {
@@ -324,62 +472,72 @@ const SolisExplorer = ({ open, onClose }) => {
 
         .solis-explorer-detail-section-title {
           font-weight: 600;
-          color: #333;
+          color: var(--accent);
           margin: 8px 0 6px 0;
-          font-size: 12px;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
         }
 
         .solis-explorer-detail-field {
           display: flex;
           padding: 4px 0;
-          font-size: 12px;
+          font-size: 11px;
+          gap: 12px;
         }
 
         .solis-explorer-detail-label {
-          font-weight: 500;
-          color: #666;
+          font-weight: 600;
+          color: var(--text-secondary);
           width: 140px;
           flex-shrink: 0;
         }
 
         .solis-explorer-detail-value {
-          color: #333;
+          color: var(--text-color);
           word-break: break-word;
-          font-family: monospace;
+          flex: 1;
         }
 
         .solis-explorer-badge {
           display: inline-block;
-          padding: 2px 6px;
-          border-radius: 3px;
-          font-size: 11px;
-          font-weight: 600;
-          background: #e3f2fd;
-          color: #1976d2;
-        }
-
-        .solis-explorer-json-toggle {
-          padding: 4px 8px;
-          font-size: 11px;
-          background: #f0f0f0;
-          border: 1px solid #ddd;
-          border-radius: 3px;
-          cursor: pointer;
-          font-family: inherit;
-        }
-
-        .solis-explorer-json-block {
-          background: #f5f5f5;
-          border: 1px solid #ddd;
+          padding: 3px 8px;
           border-radius: 4px;
-          padding: 8px;
-          overflow-x: auto;
-          font-family: 'Courier New', monospace;
-          font-size: 11px;
-          white-space: pre-wrap;
-          word-break: break-word;
-          max-height: 300px;
-          overflow-y: auto;
+          font-size: 10px;
+          font-weight: 600;
+          background: rgba(0, 194, 168, 0.2);
+          color: var(--accent-secondary);
+          border: 1px solid rgba(0, 194, 168, 0.4);
+        }
+
+        .solis-explorer-spinner {
+          display: inline-block;
+          width: 16px;
+          height: 16px;
+          border: 2px solid var(--card-border);
+          border-top-color: var(--accent);
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        .solis-explorer-endpoints-loading {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          color: var(--text-secondary);
+          font-size: 12px;
+        }
+
+        @media (max-width: 1200px) {
+          .solis-explorer-panel {
+            width: calc(100vw - 40px);
+            max-height: 80vh;
+          }
         }
 
         @media (max-width: 768px) {
@@ -391,57 +549,108 @@ const SolisExplorer = ({ open, onClose }) => {
             max-height: calc(100vh - 30px);
           }
 
-          .solis-explorer-params {
-            grid-template-columns: 1fr;
+          .solis-explorer-body {
+            flex-direction: column;
+            gap: 16px;
+            padding: 16px;
           }
+
+          .solis-explorer-left-panel {
+            flex: 0 0 auto;
+            border-right: none;
+            border-bottom: 1px solid var(--card-border);
+            padding-right: 0;
+            padding-bottom: 16px;
+          }
+
+          .solis-explorer-endpoints-grid {
+            grid-template-columns: 1fr 1fr 1fr;
+          }
+        }
+
+        ::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+          background: var(--card-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+          background: var(--card-border);
+          border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+          background: var(--accent);
         }
       `}</style>
 
-      <div ref={panelRef} className="solis-explorer-panel">
-        {/* Header */}
-        <div className="solis-explorer-header">
-          <h3>🔍 SolisCloud Explorer</h3>
-          <button className="solis-explorer-close" onClick={onClose}>×</button>
-        </div>
+      {/* Header */}
+      <div className="solis-explorer-header">
+        <h3>🔍 SolisCloud Explorer</h3>
+        <button className="solis-explorer-close" onClick={onClose}>×</button>
+      </div>
 
-        {/* Body */}
-        <div className="solis-explorer-body">
-          {/* Endpoint Selection */}
-          <div className="solis-explorer-section">
-            <div className="solis-explorer-section-title">Endpoint</div>
-            <select
-              value={selectedEndpoint || ''}
-              onChange={(e) => setSelectedEndpoint(e.target.value)}
-              className="solis-explorer-select"
-            >
-              <option value="">-- Select Endpoint --</option>
-              {Object.entries(endpointsByCategory).map(([category, eps]) => (
-                <optgroup label={category} key={category}>
-                  {eps.map((ep) => (
-                    <option key={ep.key} value={ep.key}>
-                      {ep.key} - {ep.description?.substring(0, 40)}
-                    </option>
+      {/* Body */}
+      <div className="solis-explorer-body">
+        {/* Left Panel - Endpoints List */}
+        <div className="solis-explorer-left-panel">
+          <div>
+            <div className="solis-explorer-section-title">Available Endpoints</div>
+            {endpointsLoading ? (
+              <div className="solis-explorer-endpoints-loading">
+                <span className="solis-explorer-spinner" />
+                Loading endpoints...
+              </div>
+            ) : endpointsError ? (
+              <div className="solis-explorer-error">
+                <strong>Error loading endpoints:</strong> {endpointsError}
+              </div>
+            ) : endpoints.length === 0 ? (
+              <div style={{ color: 'var(--text-muted)', fontSize: '12px', padding: '16px 0' }}>
+                No endpoints available
+              </div>
+            ) : (
+              <>
+                {usingLocalFallback && (
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '12px', padding: '8px 0 12px' }}>
+                    {fallbackMessage || 'Local fallback list loaded.'}
+                  </div>
+                )}
+                <div className="solis-explorer-endpoints-grid">
+                  {endpoints.map((ep) => (
+                    <button
+                      key={ep.key}
+                      className={`solis-explorer-endpoint-btn ${selectedEndpoint === ep.key ? 'active' : ''}`}
+                      onClick={() => setSelectedEndpoint(ep.key)}
+                      title={ep.description}
+                    >
+                      {ep.key}
+                    </button>
                   ))}
-                </optgroup>
-              ))}
-            </select>
-            {selectedEndpointConfig && (
-              <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#666' }}>
-                {selectedEndpointConfig.description}
-              </p>
+                </div>
+              </>
             )}
           </div>
+        </div>
 
-          {/* Parameters */}
+        {/* Right Panel - Parameters & Response */}
+        <div className="solis-explorer-right-panel">
+          {/* Parameters Section */}
           {selectedEndpointConfig && (
-            <div className="solis-explorer-section">
-              <div className="solis-explorer-section-title">Parameters</div>
-              <div className="solis-explorer-params">
+            <div className="solis-explorer-params-section">
+              <div>
+                <div className="solis-explorer-section-title">{selectedEndpointConfig.category} - {selectedEndpointConfig.description}</div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 {Object.entries(selectedEndpointConfig.params).map(([key, def]) => (
                   <div key={key} className="solis-explorer-param-group">
                     <label className="solis-explorer-param-label">
                       {key}
-                      {def.required && <span style={{ color: 'red' }}>*</span>}
+                      {def.required && <span style={{ color: 'var(--error-color)' }}> *</span>}
                     </label>
                     <input
                       type="text"
@@ -456,52 +665,77 @@ const SolisExplorer = ({ open, onClose }) => {
 
               <div className="solis-explorer-actions">
                 <button
-                  className="solis-explorer-button solis-explorer-button-primary"
+                  className="solis-explorer-button"
                   onClick={executeCall}
                   disabled={loading}
                 >
-                  {loading ? 'Loading...' : 'Execute →'}
+                  {loading ? (
+                    <>
+                      <span className="solis-explorer-spinner" /> Fetching...
+                    </>
+                  ) : (
+                    'Execute →'
+                  )}
                 </button>
               </div>
             </div>
           )}
 
-          {/* Response */}
-          {response && (
-            <div className="solis-explorer-response">
+          {/* Response Section */}
+          {response || error ? (
+            <div className="solis-explorer-response-section">
               <div className="solis-explorer-response-header">
-                <span className="solis-explorer-response-meta">
-                  {response.ok ? '✓ Success' : '✗ Error'} · {durationMs}ms
-                </span>
+                <div className="solis-explorer-response-meta">
+                  <div className="solis-explorer-meta-item">
+                    <span className={`solis-explorer-meta-status-${response?.ok ? 'ok' : 'error'}`}>
+                      {response?.ok ? '✓ Success' : '✗ Error'}
+                    </span>
+                  </div>
+                  {durationMs && (
+                    <div className="solis-explorer-meta-item">
+                      ⏱ {durationMs}ms
+                    </div>
+                  )}
+                  {response?.rateLimit && (
+                    <div className="solis-explorer-meta-item">
+                      🔄 {response.rateLimit.remaining} remaining
+                    </div>
+                  )}
+                </div>
                 <button
                   className="solis-explorer-json-toggle"
                   onClick={() => setRawJsonVisible(!rawJsonVisible)}
                 >
-                  {rawJsonVisible ? 'Formatted ↓' : 'Raw JSON ↓'}
+                  {rawJsonVisible ? '📄 Formatted' : '{}  JSON'}
                 </button>
               </div>
 
               <div className="solis-explorer-response-content">
+                {error && (
+                  <div className="solis-explorer-error">
+                    <strong>Error:</strong> {error}
+                  </div>
+                )}
                 {rawJsonVisible ? (
                   <div className="solis-explorer-json-block">
-                    {JSON.stringify(response.solisResponse, null, 2)}
+                    {JSON.stringify(response?.solisResponse, null, 2)}
                   </div>
                 ) : (
                   renderFormatted(formatted)
                 )}
               </div>
             </div>
-          )}
-
-          {/* Error */}
-          {error && (
-            <div className="solis-explorer-error">
-              <strong>Error:</strong> {error}
+          ) : (
+            <div className="solis-explorer-response-section">
+              <div className="solis-explorer-placeholder">
+                <span>📊</span>
+                <span>Select an endpoint and click Execute to view data</span>
+              </div>
             </div>
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
@@ -509,18 +743,18 @@ const SolisExplorer = ({ open, onClose }) => {
  * Render formatted response based on type
  */
 function renderFormatted(formatted) {
-  if (!formatted) return <p>No response</p>;
+  if (!formatted) return <p style={{ color: 'var(--text-muted)' }}>No response</p>;
 
   const { type, items = [], sections = [] } = formatted;
 
   if (type === 'empty') {
-    return <p style={{ color: '#999' }}>No data</p>;
+    return <p style={{ color: 'var(--text-muted)' }}>No data</p>;
   }
 
   if (type === 'paginated-list' || type === 'array-list') {
-    if (!items.length) return <p style={{ color: '#999' }}>No items</p>;
+    if (!items.length) return <p style={{ color: 'var(--text-muted)' }}>No items</p>;
 
-    const keys = Object.keys(items[0]).slice(0, 8);
+    const keys = Object.keys(items[0]).slice(0, 6);
     return (
       <>
         <table className="solis-explorer-table">
@@ -541,13 +775,13 @@ function renderFormatted(formatted) {
             ))}
           </tbody>
         </table>
-        {items.length > 50 && <p style={{ marginTop: '8px', color: '#999', fontSize: '11px' }}>... and {items.length - 50} more items</p>}
+        {items.length > 50 && <p style={{ marginTop: '8px', color: 'var(--text-muted)', fontSize: '11px' }}>... and {items.length - 50} more items</p>}
       </>
     );
   }
 
   if (type === 'time-series-array' || type === 'time-series-single') {
-    if (!items.length) return <p style={{ color: '#999' }}>No series data</p>;
+    if (!items.length) return <p style={{ color: 'var(--text-muted)' }}>No series data</p>;
 
     return (
       <table className="solis-explorer-table">
@@ -583,7 +817,7 @@ function renderFormatted(formatted) {
                     <span className="solis-explorer-badge">{field.value}</span>
                   ) : (
                     <>
-                      {field.value} {field.unit && <span style={{ color: '#999' }}>{field.unit}</span>}
+                      {field.value} {field.unit && <span style={{ color: 'var(--text-secondary)' }}>{field.unit}</span>}
                     </>
                   )}
                 </div>
@@ -595,7 +829,7 @@ function renderFormatted(formatted) {
     );
   }
 
-  return <p style={{ color: '#999' }}>Unknown format type: {type}</p>;
+  return <p style={{ color: 'var(--text-muted)' }}>Unknown format type: {type}</p>;
 }
 
 export default SolisExplorer;
