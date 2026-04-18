@@ -364,19 +364,6 @@ function Sidebar({ onDevToolsToggle }) {
           >
             <LockIcon />
           </button>
-
-          {session && (
-            <button
-              onClick={handleLogout}
-              title="Logout"
-              aria-label="Logout"
-              style={{
-                marginTop: 'auto'
-              }}
-            >
-              <LogOut />
-            </button>
-          )}
         </nav>
 
         {devtoolsEnabled && <div className="devtools-divider" />}
