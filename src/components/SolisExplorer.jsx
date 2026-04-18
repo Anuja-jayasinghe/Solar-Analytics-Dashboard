@@ -389,7 +389,7 @@ const SolisExplorer = ({ open, onClose }) => {
         .solis-explorer-panel {
           position: fixed;
           bottom: 20px;
-          right: 20px;
+          left: 80px; /* Position next to the sidebar (60px + 20px gap) */
           width: 900px;
           max-height: 85vh;
           background: rgba(20, 20, 25, 0.85);
@@ -403,6 +403,14 @@ const SolisExplorer = ({ open, onClose }) => {
           z-index: 10000;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
           overflow: hidden;
+          /* Connect visually to sidebar trigger */
+          transform-origin: bottom left;
+          animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes popIn {
+          0% { opacity: 0; transform: scale(0.95) translateX(-10px); }
+          100% { opacity: 1; transform: scale(1) translateX(0); }
         }
 
         .solis-explorer-header {
