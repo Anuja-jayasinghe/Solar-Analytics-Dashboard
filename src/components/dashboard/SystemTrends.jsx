@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { supabase } from "../../lib/supabaseClient";
+import { useData } from "../../hooks/useData";
 
 const SystemTrends = () => {
   const [chartData, setChartData] = useState([]);
@@ -9,28 +10,33 @@ const SystemTrends = () => {
   const [daysInPeriod, setDaysInPeriod] = useState(0);
   const [showXAxisLabels, setShowXAxisLabels] = useState(false);
 
+  // Use DataContext for consistent billing period info
+  const { monthlyGenerationData, loading: contextLoading } = useData();
+
   useEffect(() => {
     async function loadTrends() {
       setLoading(true);
       try {
         const demoMode = (import.meta?.env?.VITE_DEMO_TEST_MODE ?? 'false') === 'true';
         if (demoMode) {
+          // ... demo logic remains same ... 
+          // (omitting for brevity, but in real replace I must include it or user logic will break. 
+          // Actually, the user's demo logic was inline. I should preserve it or use DemoDataContext if I can.
+          // For now, I will just correct the Real Mode logic in the else block)
+
+          // RE-INSERTING DEMO LOGIC TO PRESERVE IT
           const today = new Date();
           const start = new Date(today);
-          start.setDate(today.getDate() - 26); // Nov 5 to Dec 1 = 27 days
+          start.setDate(today.getDate() - 26);
           const formatISO = (d) => d.toISOString().split('T')[0];
           const formatShort = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
-
           const demoRows = [];
-          // Generate realistic daily patterns: higher in mid-month, varies by weather
           for (let i = 0; i <= 26; i++) {
             const d = new Date(start);
             d.setDate(start.getDate() + i);
-            // Simulate seasonal variation + random weather (20-45 kWh typical range)
-            const baseGen = 28 + Math.sin(i / 27 * Math.PI) * 8; // Peak mid-period
-            const weatherVariation = (Math.random() - 0.3) * 10; // Random clouds/sun
+            const baseGen = 28 + Math.sin(i / 27 * Math.PI) * 8;
+            const weatherVariation = (Math.random() - 0.3) * 10;
             const gen = Math.max(18, Math.min(45, baseGen + weatherVariation));
-            // Peak power proportional to generation (2.5-5.5 kW)
             const peak = 2.8 + (gen / 35) * 2.2 + (Math.random() - 0.5) * 0.8;
             demoRows.push({
               summary_date: formatISO(d),
@@ -40,7 +46,6 @@ const SystemTrends = () => {
               peak_power_kw: Number(peak.toFixed(2)),
             });
           }
-
           const billStart = new Date(start);
           const formatLong = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
           setBillingPeriod(`${formatLong(billStart)} – ${formatLong(today)}`);
@@ -48,40 +53,38 @@ const SystemTrends = () => {
           setChartData(demoRows);
           return;
         }
-        // Fetch latest CEB bill date to determine billing period start
-        const { data: latestBill, error: billError } = await supabase
-          .from('ceb_data')
-          .select('bill_date')
-          .order('bill_date', { ascending: false })
-          .limit(1)
-          .single();
-        
+
+        // REAL MODE: Use DataContext start date if available
+        let startDate, endDate, label;
         const today = new Date();
-        let startDate, endDate;
-        
-        if (latestBill && !billError) {
-          // Use latest CEB bill date as start of billing period
-          const billDate = new Date(latestBill.bill_date);
-          startDate = billDate.toISOString().split('T')[0];
-          endDate = today.toISOString().split('T')[0];
-          
-          const formatDate = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-          setBillingPeriod(`${formatDate(billDate)} – ${formatDate(today)}`);
-          
-          // Calculate days in period
-          const diffTime = Math.abs(today - billDate);
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-          setDaysInPeriod(diffDays);
-        } else {
-          // Fallback to first-of-month if no CEB bill found
-          startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-          endDate = today.toISOString().split('T')[0];
-          setBillingPeriod(today.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }));
-          setDaysInPeriod(today.getDate());
+
+        // Wait for context to load initial check
+        if (!monthlyGenerationData && contextLoading.monthlyGen) {
+          // If context is still loading, wait (effect will re-run when dependency changes)
+          return;
         }
 
-        // Fetch daily summaries for billing period
-        console.log(`[SystemTrends] Fetching data from ${startDate} to ${endDate}`);
+        if (monthlyGenerationData?.startDate) {
+          startDate = monthlyGenerationData.startDate;
+          label = monthlyGenerationData.billingPeriodLabel;
+        } else {
+          // Fallback if context is missing (though it shouldn't be if loaded)
+          // Use first of month
+          startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+          label = today.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+        }
+
+        endDate = today.toISOString().split('T')[0];
+        setBillingPeriod(label);
+
+        // Calculate days
+        const startObj = new Date(startDate);
+        const diffTime = Math.abs(today - startObj);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        setDaysInPeriod(diffDays);
+
+        // Fetch daily summaries for this period
+        // Note: startDate from DataContext is already "Latest Bill + 1 Day", so no overlap.
         const { data, error } = await supabase
           .from("inverter_data_daily_summary")
           .select("summary_date, total_generation_kwh, peak_power_kw")
@@ -90,10 +93,8 @@ const SystemTrends = () => {
           .order("summary_date", { ascending: true });
 
         if (error) throw error;
-        
-        console.log(`[SystemTrends] Fetched ${data?.length || 0} rows from database`);
-        
-        // Aggregate by date (in case of multiple inverters)
+
+        // Aggregate by date
         const aggregatedData = {};
         data.forEach(row => {
           const date = row.summary_date;
@@ -101,11 +102,9 @@ const SystemTrends = () => {
             aggregatedData[date] = { generation: 0, peakPower: 0 };
           }
           aggregatedData[date].generation += row.total_generation_kwh || 0;
-          // Use max peak power if multiple inverters
           aggregatedData[date].peakPower = Math.max(aggregatedData[date].peakPower, row.peak_power_kw || 0);
         });
 
-        // Format for chart
         const formattedData = Object.keys(aggregatedData).map(date => ({
           summary_date: date,
           date: new Date(date).toLocaleDateString('en-GB', { day: '2-digit' }),
@@ -114,7 +113,6 @@ const SystemTrends = () => {
           peak_power_kw: aggregatedData[date].peakPower,
         }));
 
-        console.log(`[SystemTrends] Chart will display ${formattedData.length} days`);
         setChartData(formattedData);
       } catch (err) {
         console.error("Error fetching trend data:", err);
@@ -123,32 +121,33 @@ const SystemTrends = () => {
       }
     }
     loadTrends();
-  }, []);
+  }, [monthlyGenerationData, contextLoading]); // Re-run when context data updates
 
   // Calculate billing period stats
   const { totalGeneration, dailyAverage, bestDay, maxPeak } = useMemo(() => {
     if (!chartData || chartData.length === 0) {
       return { totalGeneration: 0, dailyAverage: 0, bestDay: { value: 0, date: '' }, maxPeak: { value: 0, date: '' } };
     }
-    
+
+    // We calculate total from the chart data, which now matches the context's date range
     const total = chartData.reduce((sum, d) => sum + (d.daily_generation_kwh || 0), 0);
     const average = chartData.length > 0 ? total / chartData.length : 0;
-    
+
     const best = chartData.reduce((max, d) => {
-      return (d.daily_generation_kwh || 0) > max.value 
+      return (d.daily_generation_kwh || 0) > max.value
         ? { value: d.daily_generation_kwh, date: d.fullDate }
         : max;
     }, { value: 0, date: '' });
-    
+
     const peak = chartData.reduce((max, d) => {
       return (d.peak_power_kw || 0) > max.value
         ? { value: d.peak_power_kw, date: d.fullDate }
         : max;
     }, { value: 0, date: '' });
-    
-    return { 
-      totalGeneration: total, 
-      dailyAverage: average, 
+
+    return {
+      totalGeneration: total,
+      dailyAverage: average,
       bestDay: best,
       maxPeak: peak
     };
@@ -185,7 +184,7 @@ const SystemTrends = () => {
           </p>
         )}
       </div>
-      <div 
+      <div
         style={styles.chartContainer}
         onMouseEnter={() => setShowXAxisLabels(true)}
         onMouseLeave={() => setShowXAxisLabels(false)}
@@ -196,8 +195,8 @@ const SystemTrends = () => {
         )}
         {!loading && chartData.length > 0 && (
           <ResponsiveContainer width="100%" height={190}>
-            <AreaChart 
-              data={chartData} 
+            <AreaChart
+              data={chartData}
               margin={{ top: 20, right: 12, left: 0, bottom: 5 }}
             >
               <defs>
@@ -223,7 +222,7 @@ const SystemTrends = () => {
                   const show = showXAxisLabels && dayNum % 3 === 0;
                   return show ? value : '';
                 }}
-                style={{fill:'var(--accent)'}}
+                style={{ fill: 'var(--accent)' }}
               />
               <YAxis
                 stroke="var(--accent)"
@@ -231,11 +230,11 @@ const SystemTrends = () => {
                 tickLine={false}
                 axisLine={false}
                 width={45}
-              label={{ value: 'kW/kWh', angle: -90, position: 'insideLeft', offset: 5, style: { fill: 'var(--text-secondary)', fontSize: 12, fontWeight: 'bold' } }}
+                label={{ value: 'kW/kWh', angle: -90, position: 'insideLeft', offset: 5, style: { fill: 'var(--text-secondary)', fontSize: 12, fontWeight: 'bold' } }}
               />
-              <Legend 
-                verticalAlign="top" 
-                height={20} 
+              <Legend
+                verticalAlign="top"
+                height={20}
                 formatter={(value) => {
                   if (value === 'daily_generation_kwh') return 'Generation (kWh)';
                   if (value === 'peak_power_kw') return 'Peak Power (kW)';
@@ -244,15 +243,15 @@ const SystemTrends = () => {
                 wrapperStyle={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}
               />
               <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--accent)', strokeWidth: 1 }} />
-              <Area 
-                type="monotone" 
-                dataKey="daily_generation_kwh" 
-                stroke="var(--accent)" 
+              <Area
+                type="monotone"
+                dataKey="daily_generation_kwh"
+                stroke="var(--accent)"
                 strokeWidth={2}
                 fill="url(#generationFill)"
                 activeDot={{ r: 4, stroke: 'var(--accent)', strokeWidth: 1 }}
               />
-              <Area 
+              <Area
                 type="monotone"
                 dataKey="peak_power_kw"
                 stroke="#4CAF50"
@@ -303,7 +302,7 @@ const styles = {
     height: '360px',
     width: '90%',
     margin: 0,
-    display: 'flex', 
+    display: 'flex',
     overflow: 'hidden',
     flexDirection: 'column',
   },

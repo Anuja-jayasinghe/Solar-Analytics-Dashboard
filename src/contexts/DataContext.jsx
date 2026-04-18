@@ -14,6 +14,7 @@ export const DataProvider = ({ children }) => {
   const [totalEarningsData, setTotalEarningsData] = useState({ total: 0 });
   const [monthlyGenerationData, setMonthlyGenerationData] = useState({ total: 0 });
   const [inverterPotentialValue, setInverterPotentialValue] = useState({ total: 0 });
+  const [environmentalImpact, setEnvironmentalImpact] = useState({ co2Avoided: 0, treesPlanted: 0 }); // New state
   const [gridCapacity, setGridCapacity] = useState(40);
 
   // Filter states
@@ -21,10 +22,10 @@ export const DataProvider = ({ children }) => {
 
   // Loading and error states
   const [loading, setLoading] = useState({
-    charts: true, live: true, totalEarnings: true, monthlyGen: true, inverterValue: true
+    charts: true, live: true, totalEarnings: true, monthlyGen: true, inverterValue: true, environmentalImpact: true // Added environmentalImpact
   });
   const [errors, setErrors] = useState({
-    charts: null, live: null, totalEarnings: null, monthlyGen: null, inverterValue: null
+    charts: null, live: null, totalEarnings: null, monthlyGen: null, inverterValue: null, environmentalImpact: null // Added environmentalImpact
   });
 
   // Metadata states
@@ -138,12 +139,13 @@ export const DataProvider = ({ children }) => {
         else if (key === 'live') {
           setLivePowerData(cached.liveData);
           setInverterPotentialValue(cached.inverterPotentialValue);
+          setEnvironmentalImpact(cached.environmentalImpact || { co2Avoided: 0, treesPlanted: 0 });
         }
         else if (key === 'totalEarnings') setTotalEarningsData(cached);
         else if (key === 'monthlyGen') setMonthlyGenerationData(cached);
 
         // Mark as not loading since we have cached data
-        setLoading((prev) => ({ ...prev, [key]: false, inverterValue: key === 'live' ? false : prev.inverterValue }));
+        setLoading((prev) => ({ ...prev, [key]: false, inverterValue: key === 'live' ? false : prev.inverterValue, environmentalImpact: key === 'live' ? false : prev.environmentalImpact }));
       } else {
         // No cache, show loading
         setLoading((prev) => ({ ...prev, [key]: true }));
@@ -157,21 +159,32 @@ export const DataProvider = ({ children }) => {
     try {
       if (key === 'charts') {
         const year = selectedYear || new Date().getFullYear();
-        const start = `${year}-01-01`;
-        const end = `${year}-12-31`;
+        const chartStart = `${year}-01-01`;
+        const chartEnd = `${year}-12-31`;
 
-        // Parallel fetch for Inverter and CEB
+        // For CEB data: We want bills that cover Jan-Dec of the selected year.
+        // Assuming billing is roughly monthly and comes subsequent to the month:
+        // Jan Generation -> Feb Bill
+        // Dec Generation -> Jan Bill (Next Year)
+        // So fetch range for bills: roughly Feb 1st (Year) to Jan 31st (Year + 1)
+        // Fetch bills for the selected year plus padding to determine periods
+        // We need the bill from Dec of prev year to know start of Jan period
+        // And bills up to Jan of next year
+        const billQueryStart = `${year - 1}-12-01`;
+        const billQueryEnd = `${year + 1}-01-31`;
+
         const [dailyRes, cebRes] = await Promise.all([
           supabase
             .from('inverter_data_daily_summary')
             .select('summary_date, total_generation_kwh')
-            .gte('summary_date', start)
-            .lte('summary_date', end),
+            .gte('summary_date', `${year}-01-01`) // Fetch full year generation
+            .lte('summary_date', `${year}-12-31`),
           supabase
             .from('ceb_data')
             .select('bill_date, units_exported')
-            .gte('bill_date', start)
-            .lte('bill_date', end)
+            .gte('bill_date', billQueryStart)
+            .lte('bill_date', billQueryEnd)
+            .order('bill_date', { ascending: true })
         ]);
 
         if (dailyRes.error) {
@@ -183,45 +196,90 @@ export const DataProvider = ({ children }) => {
           throw cebRes.error;
         }
 
-        // Aggregate by Month (0-11)
-        const months = Array.from({ length: 12 }, (_, i) => ({
-          monthIndex: i,
-          monthName: new Date(year, i, 1).toLocaleString('default', { month: 'short' }),
-          inverter: 0,
-          ceb: 0
-        }));
+        // Helper to format dates
+        const formatDateShort = (dateStr) => {
+          const d = new Date(dateStr);
+          return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        };
 
-        dailyRes.data.forEach(day => {
-          if (day.summary_date) {
-            const parts = day.summary_date.split('-');
-            if (parts.length >= 2) {
-              // Parse month from string (1-indexed to 0-indexed)
-              const m = parseInt(parts[1], 10) - 1;
-              if (m >= 0 && m < 12) {
-                months[m].inverter += parseFloat(day.total_generation_kwh || 0);
-              }
+        const allBills = cebRes.data || [];
+
+        // Structure to hold aggregated data for the selected year (Jan - Dec columns)
+        // We map each "Month" column to a specific Bill found in that year sequence
+        // Logic: A bill with date Feb 5, 2024 -> Represents "Jan" generation period
+        // So we look for bills falling roughly in the window that covers the year.
+
+        const processedData = Array.from({ length: 12 }, (_, i) => {
+          const monthIndex = i; // 0=Jan, 11=Dec
+          const estimatedBillMonth = monthIndex + 1; // Jan gen -> Feb bill (index 1)
+
+          // Find the bill that corresponds to this generation month
+          // We look for a bill where (Month of Bill) == (Month Index + 1) roughly
+          // Or more simply: match the bill where we shifted logic: 
+          // Bill in Feb 2024 -> Month 0 (Jan)
+
+          // Filter bills to find one that belongs to this slot
+          // Target Bill Month: (i + 1) % 12
+          // Target Bill Year: year + (i + 1 > 11 ? 1 : 0)
+
+          const targetBillDateMonth = (i + 1) % 12;
+          const targetBillDateYear = year + (Math.floor((i + 1) / 12));
+
+          const bill = allBills.find(b => {
+            const d = new Date(b.bill_date);
+            return d.getMonth() === targetBillDateMonth && d.getFullYear() === targetBillDateYear;
+          });
+
+          let inverterTotal = 0;
+          let periodLabel = "";
+          let cebValue = 0;
+
+          if (bill) {
+            cebValue = parseFloat(bill.units_exported || 0);
+
+            // Determine Period Range
+            // End Date = Bill Date (exclusive? usually bill date is the reading date, so inclusive)
+            // Start Date = Previous Bill Date + 1 day
+            const endDate = bill.bill_date;
+
+            // Find previous bill
+            const currentBillIndex = allBills.findIndex(b => b.bill_date === bill.bill_date);
+            const prevBill = currentBillIndex > 0 ? allBills[currentBillIndex - 1] : null;
+
+            let startDate;
+            if (prevBill) {
+              const prevDate = new Date(prevBill.bill_date);
+              prevDate.setDate(prevDate.getDate() + 1);
+              startDate = prevDate.toISOString().split('T')[0];
+            } else {
+              // Fallback: 30 days prior
+              const d = new Date(endDate);
+              d.setDate(d.getDate() - 30);
+              startDate = d.toISOString().split('T')[0];
             }
-          }
-        });
 
-        cebRes.data.forEach(bill => {
-          if (bill.bill_date) {
-            const parts = bill.bill_date.split('-');
-            if (parts.length >= 2) {
-              const m = parseInt(parts[1], 10) - 1;
-              if (m >= 0 && m < 12) {
-                months[m].ceb += parseFloat(bill.units_exported || 0);
+            periodLabel = `${formatDateShort(startDate)} – ${formatDateShort(endDate)}`;
+
+            // Sum daily generation within [startDate, endDate]
+            dailyRes.data.forEach(day => {
+              if (day.summary_date >= startDate && day.summary_date <= endDate) {
+                inverterTotal += parseFloat(day.total_generation_kwh || 0);
               }
-            }
-          }
-        });
+            });
 
-        const processedData = months.map(m => ({
-          month: m.monthName,
-          period: `${m.monthName} ${year}`,
-          inverter: m.inverter,
-          ceb: m.ceb
-        }));
+          } else {
+            // No bill found for this slot (e.g. future month)
+            periodLabel = "Pending";
+          }
+
+          return {
+            month: new Date(year, i, 1).toLocaleString('default', { month: 'short' }),
+            period: periodLabel,
+            inverter: inverterTotal,
+            ceb: cebValue,
+            periodLabel: periodLabel // Explicitly for tooltip
+          };
+        });
 
         setEnergyChartsData(processedData);
         cacheService.set(key, 'data', processedData);
@@ -281,6 +339,29 @@ export const DataProvider = ({ children }) => {
           setGridCapacity(40);
         }
 
+        // Fetch Environmental Impact Constants (defaults: CO2=0.984, Trees=220)
+        let co2Factor = 0.984;
+        let treeFactor = 220;
+
+        try {
+          const { data: envData, error: envError } = await supabase
+            .from('system_settings')
+            .select('setting_name, setting_value')
+            .in('setting_name', ['env_co2_factor', 'env_tree_factor']);
+
+          if (!envError && envData) {
+            envData.forEach(item => {
+              const val = parseFloat(item.setting_value);
+              if (Number.isFinite(val)) {
+                if (item.setting_name === 'env_co2_factor') co2Factor = val;
+                if (item.setting_name === 'env_tree_factor') treeFactor = val;
+              }
+            });
+          }
+        } catch (envErr) {
+          console.warn('[DataContext] Failed to fetch environmental impact constants', envErr);
+        }
+
         // Convert MWh to kWh
         const totalGen_MWh = liveData?.totalGeneration?.value || 0;
         const totalGen_kWh = totalGen_MWh * 1000;
@@ -289,11 +370,20 @@ export const DataProvider = ({ children }) => {
         const potentialValue = totalGen_kWh * tariff;
         setInverterPotentialValue({ total: potentialValue });
 
-        // Cache both live data and calculated potential
-        cacheService.set(key, 'data', { liveData, inverterPotentialValue: { total: potentialValue } });
-        setLastUpdate(prev => ({ ...prev, [key]: Date.now(), inverterValue: Date.now() }));
+        // Calculate Environmental Impact
+        const co2Avoided = totalGen_kWh * co2Factor;
+        const treesPlanted = co2Avoided / treeFactor;
+        setEnvironmentalImpact({ co2Avoided, treesPlanted });
 
-        setLoading(prev => ({ ...prev, live: false, inverterValue: false }));
+        // Cache both live data and calculated potential
+        cacheService.set(key, 'data', {
+          liveData,
+          inverterPotentialValue: { total: potentialValue },
+          environmentalImpact: { co2Avoided, treesPlanted }
+        });
+        setLastUpdate(prev => ({ ...prev, [key]: Date.now(), inverterValue: Date.now(), environmentalImpact: Date.now() }));
+
+        setLoading(prev => ({ ...prev, live: false, inverterValue: false, environmentalImpact: false }));
       }
 
       else if (key === 'totalEarnings') {
@@ -328,15 +418,23 @@ export const DataProvider = ({ children }) => {
         const today = new Date();
 
         if (latestBill && !billError) {
-          // Use latest CEB bill date as start of period
+          // Use latest CEB bill date + 1 day as start of period to avoid overlap
           const billDate = new Date(latestBill.bill_date);
           billId = latestBill.id;
 
-          startDate = billDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+          // Add 1 day
+          const startDateObj = new Date(billDate);
+          startDateObj.setDate(billDate.getDate() + 1);
+
+          startDate = startDateObj.toISOString().split('T')[0]; // YYYY-MM-DD format
           endDate = today.toISOString().split('T')[0];
 
-          const formatDate = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-          billingPeriodLabel = `${formatDate(billDate)} – ${formatDate(today)}`;
+          // Format for label: "Feb 06 – Today"
+          const formatDate = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+          const formatYear = (d) => d.toLocaleDateString('en-GB', { year: 'numeric' });
+
+          // Display logic for label
+          billingPeriodLabel = `${formatDate(startDateObj)} – ${formatDate(today)} ${formatYear(today)}`;
         } else if (billError && billError.code !== 'PGRST116') { // PGRST116 = no rows found
           console.error('[DataContext] Supabase error fetching bill date:', {
             message: billError.message,
@@ -619,6 +717,7 @@ export const DataProvider = ({ children }) => {
     totalEarningsData,
     monthlyGenerationData,
     inverterPotentialValue,
+    environmentalImpact, // Export environmentalImpact
     gridCapacity,
     selectedYear,
     setSelectedYear,

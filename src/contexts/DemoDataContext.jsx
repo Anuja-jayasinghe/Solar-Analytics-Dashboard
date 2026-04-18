@@ -46,6 +46,11 @@ export const DemoDataProvider = ({ children }) => {
 
   const totalEarningsData = useMemo(() => ({ total: 989234 }), []); // Slightly less than potential
 
+  const environmentalImpact = useMemo(() => ({
+    co2Avoided: 27993.5, // 28,456 * 0.984
+    treesPlanted: 127.2 // 27993.5 / 220
+  }), []);
+
   const monthlyGenerationData = useMemo(() => ({
     total: 2617.8,
     billingPeriodLabel: 'Nov 05 – Dec 01',
@@ -59,6 +64,7 @@ export const DemoDataProvider = ({ children }) => {
     totalEarnings: false,
     monthlyGen: false,
     inverterValue: false,
+    environmentalImpact: false,
   }), []);
 
   const errors = useMemo(() => ({
@@ -67,6 +73,7 @@ export const DemoDataProvider = ({ children }) => {
     totalEarnings: null,
     monthlyGen: null,
     inverterValue: null,
+    environmentalImpact: null,
   }), []);
 
   const value = {
@@ -75,10 +82,11 @@ export const DemoDataProvider = ({ children }) => {
     totalEarningsData,
     monthlyGenerationData,
     inverterPotentialValue,
+    environmentalImpact,
     loading,
     errors,
-    refreshData: () => {},
-    refreshAll: () => {},
+    refreshData: () => { },
+    refreshAll: () => { },
     lastUpdate: { live: Date.now(), charts: Date.now(), totalEarnings: Date.now(), monthlyGen: Date.now() },
     isStale: false,
   };

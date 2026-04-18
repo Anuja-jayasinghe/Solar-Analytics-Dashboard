@@ -1,56 +1,26 @@
-import React, { useEffect, useState, useMemo } from "react";
-import { supabase } from '../../lib/supabaseClient';
-
-const CO2_PER_KWH = 0.984; // kg
-const CO2_ABSORBED_BY_TREE_10_YEARS = 220; // kg
+import React from "react";
+import { useData } from "../../hooks/useData";
 
 const EnvironmentalImpact = () => {
-  const [totalGeneration, setTotalGeneration] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const { environmentalImpact, loading } = useData();
 
-  useEffect(() => {
-    async function loadLifetimeGeneration() {
-      setLoading(true);
-      try {
-        const demoMode = (import.meta?.env?.VITE_DEMO_TEST_MODE ?? 'false') === 'true';
-        if (demoMode) {
-          setTotalGeneration(28456); // kWh demo total (matches 28.456 MWh)
-          return;
-        }
-        const { data, error } = await supabase
-          .from("inverter_data_daily_summary")
-          .select("total_generation_kwh");
-        if (error) throw error;
-        const lifetimeKwh = data.reduce((sum, row) => sum + (row.total_generation_kwh || 0), 0);
-        setTotalGeneration(lifetimeKwh);
-      } catch (err) {
-        console.error("Error fetching lifetime generation data:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadLifetimeGeneration();
-  }, []);
-
-  const { co2Avoided, treesPlanted } = useMemo(() => {
-    const totalCo2 = totalGeneration * CO2_PER_KWH;
-    const equivalentTrees = totalCo2 / CO2_ABSORBED_BY_TREE_10_YEARS;
-    return { co2Avoided: totalCo2, treesPlanted: equivalentTrees };
-  }, [totalGeneration]);
+  // Extract data from context
+  const { co2Avoided, treesPlanted } = environmentalImpact || { co2Avoided: 0, treesPlanted: 0 };
+  const isLoading = loading.environmentalImpact;
 
   return (
     <div style={styles.container}>
       <style>{keyframesCSS}</style>
       <h2 style={styles.title}>Environmental Impact</h2>
-      
-      {loading ? (
+
+      {isLoading ? (
         <p style={styles.loadingText}>Calculating Impact...</p>
       ) : (
         <>
           <div style={styles.iconContainer}>
             <svg style={styles.iconSvg} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <defs><filter id="iconGlow"><feGaussianBlur stdDeviation="1.5" result="coloredBlur" /><feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge></filter></defs>
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#48bb78" filter="url(#iconGlow)"/>
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#48bb78" filter="url(#iconGlow)" />
             </svg>
           </div>
           <div style={styles.statsContainer}>
