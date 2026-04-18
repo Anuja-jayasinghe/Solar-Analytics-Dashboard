@@ -4,6 +4,182 @@ import { cacheService } from './cacheService'
 const schema = import.meta.env.VITE_SUPABASE_SCHEMA || 'public'
 const cebTable = import.meta.env.VITE_SUPABASE_TABLE_CEB || 'ceb_data'
 const inverterTable = import.meta.env.VITE_SUPABASE_TABLE_INVERTER || 'inverter_data'
+const shortMonthFormatter = new Intl.DateTimeFormat('en', { month: 'short' })
+
+function toDateOnly(value) {
+  const date = value instanceof Date ? new Date(value.getTime()) : new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  date.setHours(0, 0, 0, 0)
+  return date
+}
+
+function formatShortDate(value) {
+  const date = toDateOnly(value)
+  if (!date) return 'Unknown'
+  return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+}
+
+function addDays(value, days) {
+  const date = toDateOnly(value)
+  if (!date) return null
+  date.setDate(date.getDate() + days)
+  return date
+}
+
+function isSameOrAfter(date, compare) {
+  const left = toDateOnly(date)
+  const right = toDateOnly(compare)
+  if (!left || !right) return false
+  return left.getTime() >= right.getTime()
+}
+
+function isSameOrBefore(date, compare) {
+  const left = toDateOnly(date)
+  const right = toDateOnly(compare)
+  if (!left || !right) return false
+  return left.getTime() <= right.getTime()
+}
+
+function sumDailyGeneration(rows, startDate, endDate) {
+  if (!startDate || !endDate) return null
+  return rows.reduce((sum, row) => {
+    if (isSameOrAfter(row.summary_date, startDate) && isSameOrBefore(row.summary_date, endDate)) {
+      return sum + Number(row.total_generation_kwh || 0)
+    }
+    return sum
+  }, 0)
+}
+
+function buildAlignedEnergyComparisonRows(year, dailyRows, cebRows, today = new Date()) {
+  const selectedYear = Number(year) || today.getFullYear()
+  const currentYear = today.getFullYear()
+  const currentMonthIndex = today.getMonth()
+  const normalizedToday = toDateOnly(today)
+  const sortedBills = [...(cebRows || [])].sort((a, b) => new Date(a.bill_date) - new Date(b.bill_date))
+
+  return Array.from({ length: 12 }, (_, monthIndex) => {
+    const monthDate = new Date(selectedYear, monthIndex, 1)
+    const monthStart = toDateOnly(monthDate)
+    const monthEnd = toDateOnly(new Date(selectedYear, monthIndex + 1, 0))
+    const monthLabel = shortMonthFormatter.format(monthDate)
+
+    const mappedBillMonth = (monthIndex + 1) % 12
+    const mappedBillYear = selectedYear + (monthIndex === 11 ? 1 : 0)
+    const bill = sortedBills.find((entry) => {
+      const billDate = toDateOnly(entry.bill_date)
+      return billDate
+        && billDate.getMonth() === mappedBillMonth
+        && billDate.getFullYear() === mappedBillYear
+    }) || null
+
+    const isCurrentMonth = selectedYear === currentYear && monthIndex === currentMonthIndex
+    const isFutureMonth = selectedYear > currentYear || (selectedYear === currentYear && monthIndex > currentMonthIndex)
+
+    if (bill) {
+      const billDate = toDateOnly(bill.bill_date)
+      const currentBillIndex = sortedBills.findIndex((entry) => entry.bill_date === bill.bill_date)
+      const previousBill = currentBillIndex > 0 ? sortedBills[currentBillIndex - 1] : null
+      const periodStart = previousBill ? addDays(previousBill.bill_date, 1) : addDays(billDate, -30)
+      const periodEnd = billDate
+      const inverter = sumDailyGeneration(dailyRows, periodStart, periodEnd)
+
+      return {
+        month: monthLabel,
+        period: `${formatShortDate(periodStart)} – ${formatShortDate(periodEnd)}`,
+        inverter,
+        ceb: Number(bill.units_exported || 0),
+        periodLabel: `${formatShortDate(periodStart)} – ${formatShortDate(periodEnd)}`,
+        status: 'finalized',
+        periodStart: periodStart ? periodStart.toISOString().split('T')[0] : null,
+        periodEnd: periodEnd ? periodEnd.toISOString().split('T')[0] : null,
+        billDate: bill.bill_date
+      }
+    }
+
+    if (isCurrentMonth) {
+      const latestBill = sortedBills.length > 0 ? sortedBills[sortedBills.length - 1] : null
+      const latestBillDate = latestBill ? toDateOnly(latestBill.bill_date) : null
+      const provisionalStart = latestBillDate ? addDays(latestBillDate, 1) : monthStart
+      const periodStart = provisionalStart && monthStart && provisionalStart.getTime() > monthStart.getTime() ? provisionalStart : monthStart
+      const periodEnd = normalizedToday && monthEnd && normalizedToday.getTime() < monthEnd.getTime() ? normalizedToday : monthEnd
+      const inverter = sumDailyGeneration(dailyRows, periodStart, periodEnd)
+
+      return {
+        month: monthLabel,
+        period: `${formatShortDate(periodStart)} – ${formatShortDate(periodEnd)}`,
+        inverter,
+        ceb: null,
+        periodLabel: `${formatShortDate(periodStart)} – ${formatShortDate(periodEnd)}`,
+        status: 'provisional',
+        periodStart: periodStart ? periodStart.toISOString().split('T')[0] : null,
+        periodEnd: periodEnd ? periodEnd.toISOString().split('T')[0] : null,
+        billDate: null
+      }
+    }
+
+    if (isFutureMonth) {
+      return {
+        month: monthLabel,
+        period: 'Pending',
+        inverter: null,
+        ceb: null,
+        periodLabel: 'Pending',
+        status: 'pending',
+        periodStart: null,
+        periodEnd: null,
+        billDate: null
+      }
+    }
+
+    const inverter = sumDailyGeneration(dailyRows, monthStart, monthEnd)
+
+    return {
+      month: monthLabel,
+      period: `${formatShortDate(monthStart)} – ${formatShortDate(monthEnd)}`,
+      inverter,
+      ceb: null,
+      periodLabel: `${formatShortDate(monthStart)} – ${formatShortDate(monthEnd)}`,
+      status: 'missing_bill',
+      periodStart: monthStart ? monthStart.toISOString().split('T')[0] : null,
+      periodEnd: monthEnd ? monthEnd.toISOString().split('T')[0] : null,
+      billDate: null
+    }
+  })
+}
+
+export async function getAlignedEnergyComparisonData(year = new Date().getFullYear(), forceRefresh = false) {
+  const selectedYear = Number(year) || new Date().getFullYear()
+  const cacheKey = `energy_comparison_${selectedYear}`
+
+  if (!forceRefresh && cacheService.has('monthly', cacheKey)) {
+    return cacheService.get('monthly', cacheKey)
+  }
+
+  const dailyStart = `${selectedYear - 1}-12-01`
+  const dailyEnd = `${selectedYear + 1}-01-31`
+
+  const [{ data: dailyRows, error: dailyError }, { data: cebRows, error: cebError }] = await Promise.all([
+    supabase
+      .from('inverter_data_daily_summary')
+      .select('summary_date, total_generation_kwh')
+      .gte('summary_date', dailyStart)
+      .lte('summary_date', dailyEnd)
+      .order('summary_date', { ascending: true }),
+    supabase
+      .from('ceb_data')
+      .select('bill_date, units_exported')
+      .gte('bill_date', dailyStart)
+      .lte('bill_date', dailyEnd)
+      .order('bill_date', { ascending: true })
+  ])
+
+  if (dailyError) throw new Error(`Aligned inverter data fetch failed: ${dailyError.message}`)
+  if (cebError) throw new Error(`Aligned CEB data fetch failed: ${cebError.message}`)
+
+  const result = buildAlignedEnergyComparisonRows(selectedYear, dailyRows || [], cebRows || [], new Date())
+  cacheService.set('monthly', cacheKey, result)
+  return result
+}
 
 function monthKeyFromDateString(dateStr) {
   const d = new Date(dateStr)
@@ -235,60 +411,7 @@ export async function getDashboardSummary(forceRefresh = false) {
  * Get energy charts data with caching
  */
 export async function getEnergyChartsData(forceRefresh = false) {
-  const cacheKey = 'energy_charts';
-  
-  // Return cached data if available and not forcing refresh
-  if (!forceRefresh && cacheService.has('monthly', cacheKey)) {
-    return cacheService.get('monthly', cacheKey);
-  }
-
-  try {
-    const [{ data: inv }, { data: ceb }] = await Promise.all([
-      supabase
-        .from("inverter_data_monthly_summary")
-        .select("summary_month, total_generation_kwh"),
-      supabase
-        .from("ceb_data")
-        .select("bill_date, units_exported")
-    ]);
-
-    const merged = inv.map((i) => {
-      const month = i.summary_month;
-      const cebMonth = ceb.find((c) =>
-        c.bill_date?.startsWith(month)
-      );
-      return {
-        month,
-        inverter: i.total_generation_kwh,
-        ceb: cebMonth?.units_exported || 0,
-      };
-    });
-    
-    // Sort data by year and month in ascending order
-    const sortedData = merged.sort((a, b) => {
-      const [yearA, monthA] = a.month.split('-').map(Number);
-      const [yearB, monthB] = b.month.split('-').map(Number);
-      
-      if (yearA !== yearB) {
-        return yearA - yearB;
-      }
-      return monthA - monthB;
-    });
-
-    // Cache the result
-    cacheService.set('monthly', cacheKey, sortedData);
-    
-    return sortedData;
-  } catch (error) {
-    console.error('Error fetching energy charts data:', error);
-    // Return cached data if available, even if expired
-    const cached = cacheService.get('monthly', cacheKey);
-    if (cached) {
-      console.warn('Using cached energy charts data due to fetch error');
-      return cached;
-    }
-    throw error;
-  }
+  return getAlignedEnergyComparisonData(new Date().getFullYear(), forceRefresh)
 }
 
 /**

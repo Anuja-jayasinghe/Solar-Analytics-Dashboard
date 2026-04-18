@@ -26,6 +26,11 @@ const EnergyCharts = () => {
   /* Removed years useMemo */
 
   const clampRuler = (val) => Math.min(Math.max(val, 0), 7000);
+  const formatKwhValue = (value) => {
+    if (value === null || value === undefined) return 'Pending';
+    return `${Number(value).toFixed(1)} kWh`;
+  };
+  const renderCompactValue = (value) => (value === null || value === undefined ? 'Pending' : `${Number(value).toFixed(1)} kWh`);
 
   useEffect(() => {
     localStorage.setItem('chart_ruler_value', String(clampRuler(ruler)));
@@ -52,19 +57,33 @@ const EnergyCharts = () => {
   // Now displays the detailed 'period' from the data payload
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
+      const inverterEntry = payload.find((entry) => entry.dataKey === 'inverter');
+      const cebEntry = payload.find((entry) => entry.dataKey === 'ceb');
+      const periodLabel = payload[0]?.payload?.period || payload[0]?.payload?.periodLabel || 'Pending';
+      const status = payload[0]?.payload?.status;
+
       return (
         <div style={tooltipStyle}>
           <p style={tooltipLabelStyle}>Billing Period:</p>
           {/* Use the 'period' field from the payload */}
-          <p style={tooltipValueStyle}>{payload[0].payload.period}</p>
+          <p style={tooltipValueStyle}>{periodLabel}</p>
+          {status && status !== 'finalized' && (
+            <p style={{ ...tooltipValueStyle, marginTop: '4px', opacity: 0.8 }}>
+              {status === 'provisional' ? 'Provisional inverter total' : status === 'missing_bill' ? 'Monthly fallback period' : 'CEB bill pending'}
+            </p>
+          )}
 
           <div style={{ marginTop: '8px' }}>
-            <p style={{ margin: '4px 0 0', padding: 0, color: '#00c2a8' }}>
-              {`Inverter: ${payload[0].value.toFixed(2)} kWh`}
-            </p>
-            <p style={{ margin: '4px 0 0', padding: 0, color: '#ff7a00' }}>
-              {`CEB: ${payload[1].value.toFixed(2)} kWh`}
-            </p>
+            {inverterEntry && (
+              <p style={{ margin: '4px 0 0', padding: 0, color: '#00c2a8' }}>
+                {`Inverter: ${formatKwhValue(inverterEntry.value)}`}
+              </p>
+            )}
+            {cebEntry && (
+              <p style={{ margin: '4px 0 0', padding: 0, color: '#ff7a00' }}>
+                {`CEB: ${formatKwhValue(cebEntry.value)}`}
+              </p>
+            )}
           </div>
         </div>
       );
@@ -206,7 +225,7 @@ const EnergyCharts = () => {
                             <div style={{ ...dotStyle, background: '#00c2a8' }}></div>
                             <span style={labelStyle}>Inverter</span>
                           </div>
-                          <span style={valueStyle}>{Number(item.inverter).toFixed(1)} <small>kWh</small></span>
+                          <span style={valueStyle}>{renderCompactValue(item.inverter)}</span>
                         </div>
                         {/* Progress Bar for Inverter */}
                         <div style={progressBg}>
@@ -223,7 +242,7 @@ const EnergyCharts = () => {
                             <div style={{ ...dotStyle, background: '#ff7a00' }}></div>
                             <span style={labelStyle}>CEB</span>
                           </div>
-                          <span style={valueStyle}>{Number(item.ceb).toFixed(1)} <small>kWh</small></span>
+                          <span style={valueStyle}>{renderCompactValue(item.ceb)}</span>
                         </div>
                         {/* Progress Bar for CEB */}
                         <div style={progressBg}>

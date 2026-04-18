@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { cacheService } from '../lib/cacheService';
 import { supabase } from '../lib/supabaseClient';
+import { getAlignedEnergyComparisonData } from '../lib/dataService';
 
 
 // Create the context
@@ -159,128 +160,7 @@ export const DataProvider = ({ children }) => {
     try {
       if (key === 'charts') {
         const year = selectedYear || new Date().getFullYear();
-        const chartStart = `${year}-01-01`;
-        const chartEnd = `${year}-12-31`;
-
-        // For CEB data: We want bills that cover Jan-Dec of the selected year.
-        // Assuming billing is roughly monthly and comes subsequent to the month:
-        // Jan Generation -> Feb Bill
-        // Dec Generation -> Jan Bill (Next Year)
-        // So fetch range for bills: roughly Feb 1st (Year) to Jan 31st (Year + 1)
-        // Fetch bills for the selected year plus padding to determine periods
-        // We need the bill from Dec of prev year to know start of Jan period
-        // And bills up to Jan of next year
-        const billQueryStart = `${year - 1}-12-01`;
-        const billQueryEnd = `${year + 1}-01-31`;
-
-        const [dailyRes, cebRes] = await Promise.all([
-          supabase
-            .from('inverter_data_daily_summary')
-            .select('summary_date, total_generation_kwh')
-            .gte('summary_date', `${year}-01-01`) // Fetch full year generation
-            .lte('summary_date', `${year}-12-31`),
-          supabase
-            .from('ceb_data')
-            .select('bill_date, units_exported')
-            .gte('bill_date', billQueryStart)
-            .lte('bill_date', billQueryEnd)
-            .order('bill_date', { ascending: true })
-        ]);
-
-        if (dailyRes.error) {
-          console.error('[DataContext] Error fetching inverter data:', dailyRes.error);
-          throw dailyRes.error;
-        }
-        if (cebRes.error) {
-          console.error('[DataContext] Error fetching CEB data:', cebRes.error);
-          throw cebRes.error;
-        }
-
-        // Helper to format dates
-        const formatDateShort = (dateStr) => {
-          const d = new Date(dateStr);
-          return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
-        };
-
-        const allBills = cebRes.data || [];
-
-        // Structure to hold aggregated data for the selected year (Jan - Dec columns)
-        // We map each "Month" column to a specific Bill found in that year sequence
-        // Logic: A bill with date Feb 5, 2024 -> Represents "Jan" generation period
-        // So we look for bills falling roughly in the window that covers the year.
-
-        const processedData = Array.from({ length: 12 }, (_, i) => {
-          const monthIndex = i; // 0=Jan, 11=Dec
-          const estimatedBillMonth = monthIndex + 1; // Jan gen -> Feb bill (index 1)
-
-          // Find the bill that corresponds to this generation month
-          // We look for a bill where (Month of Bill) == (Month Index + 1) roughly
-          // Or more simply: match the bill where we shifted logic: 
-          // Bill in Feb 2024 -> Month 0 (Jan)
-
-          // Filter bills to find one that belongs to this slot
-          // Target Bill Month: (i + 1) % 12
-          // Target Bill Year: year + (i + 1 > 11 ? 1 : 0)
-
-          const targetBillDateMonth = (i + 1) % 12;
-          const targetBillDateYear = year + (Math.floor((i + 1) / 12));
-
-          const bill = allBills.find(b => {
-            const d = new Date(b.bill_date);
-            return d.getMonth() === targetBillDateMonth && d.getFullYear() === targetBillDateYear;
-          });
-
-          let inverterTotal = 0;
-          let periodLabel = "";
-          let cebValue = 0;
-
-          if (bill) {
-            cebValue = parseFloat(bill.units_exported || 0);
-
-            // Determine Period Range
-            // End Date = Bill Date (exclusive? usually bill date is the reading date, so inclusive)
-            // Start Date = Previous Bill Date + 1 day
-            const endDate = bill.bill_date;
-
-            // Find previous bill
-            const currentBillIndex = allBills.findIndex(b => b.bill_date === bill.bill_date);
-            const prevBill = currentBillIndex > 0 ? allBills[currentBillIndex - 1] : null;
-
-            let startDate;
-            if (prevBill) {
-              const prevDate = new Date(prevBill.bill_date);
-              prevDate.setDate(prevDate.getDate() + 1);
-              startDate = prevDate.toISOString().split('T')[0];
-            } else {
-              // Fallback: 30 days prior
-              const d = new Date(endDate);
-              d.setDate(d.getDate() - 30);
-              startDate = d.toISOString().split('T')[0];
-            }
-
-            periodLabel = `${formatDateShort(startDate)} – ${formatDateShort(endDate)}`;
-
-            // Sum daily generation within [startDate, endDate]
-            dailyRes.data.forEach(day => {
-              if (day.summary_date >= startDate && day.summary_date <= endDate) {
-                inverterTotal += parseFloat(day.total_generation_kwh || 0);
-              }
-            });
-
-          } else {
-            // No bill found for this slot (e.g. future month)
-            periodLabel = "Pending";
-          }
-
-          return {
-            month: new Date(year, i, 1).toLocaleString('default', { month: 'short' }),
-            period: periodLabel,
-            inverter: inverterTotal,
-            ceb: cebValue,
-            periodLabel: periodLabel // Explicitly for tooltip
-          };
-        });
-
+        const processedData = await getAlignedEnergyComparisonData(year, skipCache);
         setEnergyChartsData(processedData);
         cacheService.set(key, 'data', processedData);
         setLastUpdate(prev => ({ ...prev, [key]: Date.now() }));

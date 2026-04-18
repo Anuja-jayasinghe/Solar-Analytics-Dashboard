@@ -1,5 +1,17 @@
 # 📖 Local Clerk Authentication - Complete Documentation Index
 
+## 🔎 Logic Documentation (New)
+
+### **I want business logic rules in one place**
+→ Read: `LOGIC_REGISTRY.md`
+- Canonical, verified project logic entries
+- Current entry: CEB vs inverter monthly alignment
+
+### **I want pre-implementation correction details**
+→ Read: `development/CEB_INVERTER_ALIGNMENT_CORRECTION_REPORT.md`
+- Gap analysis of current behavior vs expected behavior
+- Exact code areas to correct before implementation
+
 ## 🎯 Where to Start
 
 ### **I want to get started RIGHT NOW** ⚡
