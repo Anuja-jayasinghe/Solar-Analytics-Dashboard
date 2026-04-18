@@ -8,7 +8,7 @@ import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 import { DataProvider } from "./contexts/DataContext";
 import Sidebar from "./components/Sidebar";
 import GoToTopButton from "./components/GoToTopButton";
-import DevToolsPanel from "./components/DevToolsPanel";
+import SolisExplorer from "./components/SolisExplorer";
 import "./index.css";
 import { verifySupabaseConnection } from "./lib/verifySupabaseConnection";
 import { Analytics } from "@vercel/analytics/react"
@@ -350,7 +350,7 @@ function AppContent() {
                   </Suspense>
                 </div>
                 {devtoolsEnabled && (
-                  <DevToolsPanel open={devToolsOpen} onClose={() => setDevToolsOpen(false)} />
+                  <SolisExplorer open={devToolsOpen} onClose={() => setDevToolsOpen(false)} />
                 )}
               </div>
               <GoToTopButton />
