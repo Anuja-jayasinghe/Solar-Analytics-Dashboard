@@ -931,6 +931,13 @@ export default function SolisExplorer({ open, onClose }) {
           font-weight: 600;
         }
 
+        .btn-refresh-source {
+          width: 96px;
+          min-width: 96px;
+          text-align: center;
+          white-space: nowrap;
+        }
+
         .btn-primary {
           border-color: rgba(255, 122, 0, 0.55);
           background: rgba(255, 122, 0, 0.18);
@@ -1250,7 +1257,7 @@ export default function SolisExplorer({ open, onClose }) {
                       <td>{formatTimestamp(src.lastUpdate)}</td>
                       <td>
                         <button
-                          className="btn"
+                          className="btn btn-refresh-source"
                           onClick={() => refreshData(src.refreshKey)}
                           disabled={Boolean(src.loading)}
                         >

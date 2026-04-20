@@ -111,12 +111,6 @@ LOCAL_CLERK_DELIVERED.md
 ├─ Success indicators
 └─ Next actions
 
-INVERTER_HEALTH_PANEL_SPEC.md
-├─ What the inverter panel should show
-├─ How uptime and alarms are derived
-├─ Verified API evidence
-└─ Empty-state and date-format rules
-
 THIS_FILE (Documentation Index)
 ├─ Where to find everything
 ├─ Reading paths
@@ -208,12 +202,6 @@ THIS_FILE (Documentation Index)
 → LOCAL_CLERK_DEVELOPMENT.md
 → COPY_PASTE_INTEGRATION.md
 → Implement
-```
-
-### "I need the inverter panel spec"
-```
-→ INVERTER_HEALTH_PANEL_SPEC.md
-   (Panel purpose, behavior, data sources, uptime logic, alarm rules)
 ```
 
 ### "I'm troubleshooting issues"
