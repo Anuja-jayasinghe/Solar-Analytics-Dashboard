@@ -73,138 +73,6 @@ function buildPrefilledParams(endpoint, existingParams = {}) {
   return prefilled;
 }
 
-function generateMockSolisResponse(endpointKey, params, formatterKey) {
-  const now = Date.now();
-  const today = formatDate(new Date());
-  const currentMonth = formatMonth(new Date());
-
-  if (formatterKey === 'timeSeriesFormatter' || endpointKey === 'inverterDay' || endpointKey === 'inverterMonth' || endpointKey === 'stationDay') {
-    const isMonth = endpointKey === 'inverterMonth';
-    const items = Array.from({ length: isMonth ? 12 : 24 }, (_, i) => {
-      if (isMonth) {
-        return {
-          date: `${params?.month || currentMonth}-${String(i + 1).padStart(2, '0')}`,
-          dateStr: `${String(i + 1).padStart(2, '0')}`,
-          energy: Number((2 + Math.random() * 8).toFixed(2)),
-          energyStr: 'kWh',
-        };
-      }
-
-      return {
-        time: `${String(i).padStart(2, '0')}:00`,
-        timeStr: `${String(i).padStart(2, '0')}:00`,
-        power: Number((Math.random() * 12).toFixed(2)),
-        powerStr: 'kW',
-      };
-    });
-
-    return { success: true, data: items };
-  }
-
-  if (formatterKey === 'inverterDetailFormatter') {
-    return {
-      success: true,
-      data: {
-        id: params?.id || '1298491919448631809',
-        sn: params?.sn || '120B40198150131',
-        state: 1,
-        dataTimestamp: now,
-        eToday: 23.8,
-        etodayStr: 'kWh',
-        eMonth: 412.4,
-        eMonthStr: 'kWh',
-        eYear: 2980.6,
-        eYearStr: 'kWh',
-        eTotal: 12450.9,
-        etotalStr: 'kWh',
-        pac: 3.2,
-        pacStr: 'kW',
-      },
-    };
-  }
-
-  if (formatterKey === 'stationDetailFormatter') {
-    return {
-      success: true,
-      data: {
-        id: params?.id || '1298491919448631809',
-        stationName: 'Demo Station',
-        addr: 'Local Dev Mode',
-        state: 1,
-        dataTimestamp: now,
-        dayEnergy: 88.1,
-        dayEnergyStr: 'kWh',
-        monthEnergy: 1460.2,
-        monthEnergyStr: 'kWh',
-        allEnergy: 78400.5,
-        allEnergyStr: 'kWh',
-        powerStationAvoidedCo2: 31890,
-        powerStationAvoidedCo2UnitString: 'kg',
-      },
-    };
-  }
-
-  if (formatterKey === 'alarmListFormatter' || endpointKey === 'alarmList') {
-    return {
-      success: true,
-      data: {
-        page: {
-          current: Number(params?.pageNo || 1),
-          size: Number(params?.pageSize || 10),
-          total: 2,
-          records: [
-            {
-              id: 'A-1001',
-              alarmCode: 'E031',
-              alarmName: 'Grid Over Voltage',
-              alarmLevel: 2,
-              state: 0,
-              alarmTime: `${today} 10:05:00`,
-              alarmDeviceSn: params?.alarmDeviceSn || params?.sn || '120B40198150131',
-            },
-            {
-              id: 'A-1002',
-              alarmCode: 'W102',
-              alarmName: 'Communication Delay',
-              alarmLevel: 1,
-              state: 1,
-              alarmTime: `${today} 13:40:00`,
-              alarmDeviceSn: params?.alarmDeviceSn || params?.sn || '120B40198150131',
-            },
-          ],
-        },
-      },
-    };
-  }
-
-  return {
-    success: true,
-    data: {
-      page: {
-        current: Number(params?.pageNo || 1),
-        size: Number(params?.pageSize || 10),
-        total: 2,
-        records: [
-          {
-            id: params?.id || '1298491919448631809',
-            sn: params?.sn || '120B40198150131',
-            stationId: params?.stationId || '1298491919448631809',
-            status: 'online',
-            lastUpdate: now,
-          },
-          {
-            id: '1298491919448631810',
-            sn: '120B40198150132',
-            stationId: params?.stationId || '1298491919448631809',
-            status: 'online',
-            lastUpdate: now,
-          },
-        ],
-      },
-    },
-  };
-}
-
 const SolisExplorer = ({ open, onClose }) => {
   const [endpoints, setEndpoints] = useState([]);
   const [selectedEndpoint, setSelectedEndpoint] = useState(null);
@@ -219,8 +87,6 @@ const SolisExplorer = ({ open, onClose }) => {
   const [endpointsError, setEndpointsError] = useState(null);
   const [usingLocalFallback, setUsingLocalFallback] = useState(false);
   const [fallbackMessage, setFallbackMessage] = useState('');
-  const [localExecutionFallback, setLocalExecutionFallback] = useState(false);
-  const [executionNotice, setExecutionNotice] = useState('');
   const panelRef = useRef(null);
 
   // Fetch endpoint list on mount
@@ -290,8 +156,6 @@ const SolisExplorer = ({ open, onClose }) => {
 
     setLoading(true);
     setError(null);
-    setLocalExecutionFallback(false);
-    setExecutionNotice('');
     const startTime = Date.now();
 
     try {
@@ -310,19 +174,7 @@ const SolisExplorer = ({ open, onClose }) => {
       try {
         data = JSON.parse(body);
       } catch {
-        const mockSolisResponse = generateMockSolisResponse(selectedEndpoint, params, endpointConfig?.formatterKey);
-        const fallbackResponse = {
-          ok: true,
-          source: 'local-mock',
-          message: 'Using local mock response because API is not available in local dev.',
-          solisResponse: mockSolisResponse,
-        };
-        setDurationMs(Date.now() - startTime);
-        setLocalExecutionFallback(true);
-        setExecutionNotice('API unavailable in local dev. Showing mock response.');
-        setResponse(fallbackResponse);
-        setFormatted(formatResponse(mockSolisResponse, endpointConfig?.formatterKey));
-        return;
+        throw new Error('API endpoint returned non-JSON response. Start your backend API and retry.');
       }
       setDurationMs(Date.now() - startTime);
 
@@ -336,20 +188,10 @@ const SolisExplorer = ({ open, onClose }) => {
         setFormatted(fmt);
       }
     } catch (err) {
-      const endpointConfig = endpoints.find((e) => e.key === selectedEndpoint);
-      const mockSolisResponse = generateMockSolisResponse(selectedEndpoint, params, endpointConfig?.formatterKey);
-      const fallbackResponse = {
-        ok: true,
-        source: 'local-mock',
-        message: 'Using local mock response because API request failed in local dev.',
-        solisResponse: mockSolisResponse,
-      };
       setDurationMs(Date.now() - startTime);
-      setLocalExecutionFallback(true);
-      setExecutionNotice((err?.message || 'API request failed') + ' Showing mock response.');
-      setError(null);
-      setResponse(fallbackResponse);
-      setFormatted(formatResponse(mockSolisResponse, endpointConfig?.formatterKey));
+      setError(err.message || 'API request failed');
+      setResponse(null);
+      setFormatted(null);
     } finally {
       setLoading(false);
     }
@@ -936,7 +778,7 @@ const SolisExplorer = ({ open, onClose }) => {
                 <div className="solis-explorer-response-meta">
                   <div className="solis-explorer-meta-item">
                     <span className={`solis-explorer-meta-status-${response?.ok ? 'ok' : 'error'}`}>
-                      {response?.ok ? (localExecutionFallback ? '✓ Mock Success' : '✓ Success') : '✗ Error'}
+                      {response?.ok ? '✓ Success' : '✗ Error'}
                     </span>
                   </div>
                   {durationMs && (
@@ -959,11 +801,6 @@ const SolisExplorer = ({ open, onClose }) => {
               </div>
 
               <div className="solis-explorer-response-content">
-                {localExecutionFallback && executionNotice && (
-                  <div style={{ color: 'var(--text-secondary)', marginBottom: '10px', fontSize: '11px' }}>
-                    {executionNotice}
-                  </div>
-                )}
                 {error && (
                   <div className="solis-explorer-error">
                     <strong>Error:</strong> {error}
