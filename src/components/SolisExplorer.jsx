@@ -828,6 +828,13 @@ export default function SolisExplorer({ open, onClose }) {
           letter-spacing: 0.4px;
         }
 
+        .col-lag {
+          width: 88px;
+          min-width: 88px;
+          white-space: nowrap;
+          font-variant-numeric: tabular-nums;
+        }
+
         .ledger-row {
           cursor: pointer;
         }
@@ -1241,7 +1248,7 @@ export default function SolisExplorer({ open, onClose }) {
                   <tr>
                     <th>Source</th>
                     <th>Status</th>
-                    <th>Lag</th>
+                    <th className="col-lag">Lag</th>
                     <th>Last Update</th>
                     <th>Action</th>
                   </tr>
@@ -1253,7 +1260,7 @@ export default function SolisExplorer({ open, onClose }) {
                       <td>
                         <span className={`status status-${src.status.tone}`}>{src.status.label}</span>
                       </td>
-                      <td>{formatLag(src.lagMs)}</td>
+                      <td className="col-lag">{formatLag(src.lagMs)}</td>
                       <td>{formatTimestamp(src.lastUpdate)}</td>
                       <td>
                         <button
