@@ -23,6 +23,15 @@ function formatTimestamp(ts) {
   return new Date(ts).toLocaleString();
 }
 
+function formatDuration(ms) {
+  const n = Number(ms);
+  if (!Number.isFinite(n) || n <= 0) return 'N/A';
+  if (n < 1000) return `${n} ms`;
+  if (n < 60000) return `${Math.round(n / 1000)} s`;
+  if (n < 3600000) return `${Math.round(n / 60000)} min`;
+  return `${(n / 3600000).toFixed(1)} h`;
+}
+
 function statusFromSource(source, now) {
   if (source.loading) {
     return { code: 'loading', label: 'Loading', tone: 'info' };
@@ -94,6 +103,7 @@ function toNumber(value) {
 export default function SolisExplorer({ open, onClose }) {
   const panelRef = useRef(null);
   const [activeTab, setActiveTab] = useState('pipeline');
+  const [expandedLedgerKey, setExpandedLedgerKey] = useState(null);
   const [inverterLoading, setInverterLoading] = useState(false);
   const [inverterError, setInverterError] = useState(null);
   const [inverterData, setInverterData] = useState({
@@ -367,12 +377,15 @@ export default function SolisExplorer({ open, onClose }) {
 
       if (!bucket.has(key)) {
         bucket.set(key, {
+          key,
           code,
           name,
           level,
           totalCount: 0,
           openCount: 0,
           lastSeen: 0,
+          latestState: '-',
+          sample: null,
         });
       }
 
@@ -381,6 +394,11 @@ export default function SolisExplorer({ open, onClose }) {
       row.openCount += isOpen ? 1 : 0;
       row.lastSeen = Math.max(row.lastSeen, ts);
       row.level = Math.max(row.level, level);
+
+      if (!row.sample || ts >= deriveAlarmTimestamp(row.sample)) {
+        row.sample = alarm;
+        row.latestState = resolveAlarmState(alarm.state);
+      }
     });
 
     return Array.from(bucket.values())
@@ -611,6 +629,41 @@ export default function SolisExplorer({ open, onClose }) {
           color: var(--text-secondary);
           text-transform: uppercase;
           letter-spacing: 0.4px;
+        }
+
+        .ledger-row {
+          cursor: pointer;
+        }
+
+        .ledger-row:hover {
+          background: rgba(255, 255, 255, 0.03);
+        }
+
+        .ledger-row.is-open {
+          background: rgba(255, 122, 0, 0.08);
+        }
+
+        .ledger-detail-cell {
+          padding: 0;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .ledger-details {
+          padding: 10px 12px;
+          background: rgba(255, 255, 255, 0.02);
+          display: grid;
+          grid-template-columns: repeat(2, minmax(180px, 1fr));
+          gap: 8px 14px;
+          font-size: 11px;
+        }
+
+        .ledger-meta {
+          color: var(--text-secondary);
+        }
+
+        .ledger-meta strong {
+          color: var(--text-color);
+          font-weight: 600;
         }
 
         .status {
@@ -1015,14 +1068,37 @@ export default function SolisExplorer({ open, onClose }) {
                         </thead>
                         <tbody>
                           {alarmLedger.map((alarm, idx) => (
-                            <tr key={`ledger-${idx}`}>
-                              <td>{alarm.code}</td>
-                              <td>{alarm.name}</td>
-                              <td>{alarm.level ?? '-'}</td>
-                              <td>{alarm.totalCount}</td>
-                              <td>{alarm.openCount}</td>
-                              <td>{alarm.lastSeen ? formatTimestamp(alarm.lastSeen) : 'N/A'}</td>
-                            </tr>
+                            <React.Fragment key={`ledger-${idx}`}>
+                              <tr
+                                className={`ledger-row ${expandedLedgerKey === alarm.key ? 'is-open' : ''}`}
+                                onClick={() => setExpandedLedgerKey((prev) => (prev === alarm.key ? null : alarm.key))}
+                              >
+                                <td>{alarm.code}</td>
+                                <td>{alarm.name}</td>
+                                <td>{alarm.level ?? '-'}</td>
+                                <td>{alarm.totalCount}</td>
+                                <td>{alarm.openCount}</td>
+                                <td>{alarm.lastSeen ? formatTimestamp(alarm.lastSeen) : 'N/A'}</td>
+                              </tr>
+                              {expandedLedgerKey === alarm.key && (
+                                <tr>
+                                  <td className="ledger-detail-cell" colSpan={6}>
+                                    <div className="ledger-details">
+                                      <div className="ledger-meta"><strong>Alarm message:</strong> {alarm.sample?.alarmMsg || 'Not provided by API'}</div>
+                                      <div className="ledger-meta"><strong>Advice:</strong> {alarm.sample?.advice || 'Not provided by API'}</div>
+                                      <div className="ledger-meta"><strong>Latest state:</strong> {alarm.latestState}</div>
+                                      <div className="ledger-meta"><strong>Device SN:</strong> {alarm.sample?.alarmDeviceSn || 'N/A'}</div>
+                                      <div className="ledger-meta"><strong>Machine:</strong> {alarm.sample?.machine || 'N/A'} ({alarm.sample?.model || 'N/A'})</div>
+                                      <div className="ledger-meta"><strong>Station:</strong> {alarm.sample?.stationName || 'N/A'}</div>
+                                      <div className="ledger-meta"><strong>Started:</strong> {formatTimestamp(deriveAlarmTimestamp({ alarmBeginTime: alarm.sample?.alarmBeginTime }))}</div>
+                                      <div className="ledger-meta"><strong>Ended:</strong> {formatTimestamp(deriveAlarmTimestamp({ alarmEndTime: alarm.sample?.alarmEndTime }))}</div>
+                                      <div className="ledger-meta"><strong>Duration:</strong> {formatDuration(alarm.sample?.alarmLong)}</div>
+                                      <div className="ledger-meta"><strong>Code description:</strong> Not provided by current Solis API endpoints/datasheet</div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
                           ))}
                         </tbody>
                       </table>
