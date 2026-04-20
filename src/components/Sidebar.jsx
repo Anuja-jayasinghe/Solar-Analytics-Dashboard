@@ -49,12 +49,12 @@ const LockIcon = ({ className }) => (
 );
 
 const DevToolsIcon = ({ className }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="4" y="5" width="16" height="13" rx="2" />
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="4.5" y="5.5" width="15" height="12" rx="2" />
     <path d="M8 19h8" />
-    <path d="M10 16l-3-3 3-3" />
-    <path d="M14 10l3 3-3 3" />
-    <circle cx="18" cy="8" r="1.2" fill="currentColor" stroke="none" />
+    <path d="M10 9.5l-2.5 2.5L10 14.5" />
+    <path d="M14 9.5l2.5 2.5L14 14.5" />
+    <circle cx="17.5" cy="8" r="1" fill="currentColor" stroke="none" />
   </svg>
 );
 
@@ -215,6 +215,7 @@ function Sidebar({ onDevToolsToggle }) {
         .devtools-button svg {
           width: 24px;
           height: 24px;
+          overflow: visible;
         }
         
         .devtools-button:hover {
