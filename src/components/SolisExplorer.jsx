@@ -354,6 +354,44 @@ export default function SolisExplorer({ open, onClose }) {
       .slice(0, 30);
   }, [inverterData.alarms]);
 
+  const alarmLedger = useMemo(() => {
+    const bucket = new Map();
+
+    inverterData.alarms.forEach((alarm) => {
+      const code = String(alarm.alarmCode || '-');
+      const name = resolveAlarmName(alarm);
+      const key = `${code}__${name}`;
+      const ts = deriveAlarmTimestamp(alarm);
+      const level = Number(alarm.alarmLevel || 1);
+      const isOpen = String(alarm.state) !== '2';
+
+      if (!bucket.has(key)) {
+        bucket.set(key, {
+          code,
+          name,
+          level,
+          totalCount: 0,
+          openCount: 0,
+          lastSeen: 0,
+        });
+      }
+
+      const row = bucket.get(key);
+      row.totalCount += 1;
+      row.openCount += isOpen ? 1 : 0;
+      row.lastSeen = Math.max(row.lastSeen, ts);
+      row.level = Math.max(row.level, level);
+    });
+
+    return Array.from(bucket.values())
+      .sort((a, b) => {
+        if (b.openCount !== a.openCount) return b.openCount - a.openCount;
+        if (b.lastSeen !== a.lastSeen) return b.lastSeen - a.lastSeen;
+        return b.totalCount - a.totalCount;
+      })
+      .slice(0, 12);
+  }, [inverterData.alarms]);
+
   const performanceTimeline = useMemo(() => {
     const entries = inverterData.daySeries
       .map((point) => {
@@ -944,7 +982,7 @@ export default function SolisExplorer({ open, onClose }) {
                 </div>
               )}
 
-              {(hasPerformanceData || hasAlarmData) && (
+              {(hasPerformanceData || alarmLedger.length > 0) && (
                 <div className="split-grid">
                   {hasPerformanceData && (
                     <div className="panel-card">
@@ -961,7 +999,7 @@ export default function SolisExplorer({ open, onClose }) {
                     </div>
                   )}
 
-                  {hasAlarmData && (
+                  {alarmLedger.length > 0 && (
                     <div className="panel-card">
                       <h4>Alarm Ledger</h4>
                       <table className="table">
@@ -970,16 +1008,20 @@ export default function SolisExplorer({ open, onClose }) {
                             <th>Code</th>
                             <th>Name</th>
                             <th>Level</th>
-                            <th>State</th>
+                            <th>Total</th>
+                            <th>Open</th>
+                            <th>Last Seen</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {inverterData.alarms.slice(0, 12).map((alarm, idx) => (
+                          {alarmLedger.map((alarm, idx) => (
                             <tr key={`ledger-${idx}`}>
-                              <td>{alarm.alarmCode || '-'}</td>
-                              <td>{resolveAlarmName(alarm)}</td>
-                              <td>{alarm.alarmLevel ?? '-'}</td>
-                              <td>{resolveAlarmState(alarm.state)}</td>
+                              <td>{alarm.code}</td>
+                              <td>{alarm.name}</td>
+                              <td>{alarm.level ?? '-'}</td>
+                              <td>{alarm.totalCount}</td>
+                              <td>{alarm.openCount}</td>
+                              <td>{alarm.lastSeen ? formatTimestamp(alarm.lastSeen) : 'N/A'}</td>
                             </tr>
                           ))}
                         </tbody>
