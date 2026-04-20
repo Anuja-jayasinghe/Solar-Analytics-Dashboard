@@ -259,6 +259,13 @@ export default function SolisExplorer({ open, onClose }) {
     };
   }, [sourceRows]);
 
+  const hasAnyPipelineContent = useMemo(
+    () => sourceRows.some((source) => Boolean(source.lastUpdate || source.error)),
+    [sourceRows],
+  );
+
+  const showPipelineSkeleton = sourceRows.some((source) => source.loading) && !hasAnyPipelineContent;
+
   const incidents = useMemo(() => {
     const rows = [];
 
@@ -724,6 +731,42 @@ export default function SolisExplorer({ open, onClose }) {
         .metric-card.metric-card-skeleton {
           border-color: rgba(255, 122, 0, 0.18);
           background: linear-gradient(180deg, rgba(255, 122, 0, 0.08), rgba(255, 255, 255, 0.02));
+        }
+
+        .pipeline-row-skeleton {
+          display: grid;
+          gap: 8px;
+          padding: 12px;
+        }
+
+        .pipeline-row-skeleton .skeleton-line {
+          height: 10px;
+          border-radius: 999px;
+          background: linear-gradient(90deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.07));
+          background-size: 220% 100%;
+          animation: skeletonSweep 1.2s ease-in-out infinite;
+        }
+
+        .pipeline-row-skeleton .skeleton-line.short { width: 42%; }
+        .pipeline-row-skeleton .skeleton-line.mid { width: 66%; }
+        .pipeline-row-skeleton .skeleton-line.long { width: 88%; }
+
+        .pipeline-row-skeleton + .pipeline-row-skeleton {
+          border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .pipeline-skeleton-table {
+          border-radius: 0 0 12px 12px;
+          overflow: hidden;
+        }
+
+        @keyframes skeletonSweep {
+          0% {
+            background-position: 200% 0;
+          }
+          100% {
+            background-position: -200% 0;
+          }
         }
 
         .skeleton-badge {
@@ -1470,101 +1513,164 @@ export default function SolisExplorer({ open, onClose }) {
 
       {activeTab === 'pipeline' && (
         <div className="pipeline-body">
-          <div className="pipeline-metrics">
-            <div className="metric-card">
-              <div className="metric-label">Availability</div>
-              <div className="metric-value">{metrics.availabilityPct}%</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-label">Freshness SLA</div>
-              <div className="metric-value">{metrics.freshnessPct}%</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-label">Active Incidents</div>
-              <div className="metric-value">{metrics.activeIncidents}</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-label">Avg Lag</div>
-              <div className="metric-value">{formatLag(metrics.avgLag)}</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-label">Worst Lag</div>
-              <div className="metric-value">{formatLag(metrics.maxLag)}</div>
-            </div>
-          </div>
-
-          <div className="pipeline-grid">
-            <div className="panel-card">
-              <h4>Source Status Matrix</h4>
-              <div className="source-desktop-table table-wrap">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Source</th>
-                      <th>Status</th>
-                      <th className="col-lag">Lag</th>
-                      <th>Last Update</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sourceRows.map((src) => (
-                      <tr key={src.key}>
-                        <td>{src.label}</td>
-                        <td>
-                          <span className={`status status-${src.status.tone}`}>{src.status.label}</span>
-                        </td>
-                        <td className="col-lag"><span className="source-lag-chip source-lag-chip-wide">{formatLag(src.lagMs)}</span></td>
-                        <td>{formatTimestamp(src.lastUpdate)}</td>
-                        <td>
-                          <button
-                            className="btn btn-refresh-source"
-                            onClick={() => refreshData(src.refreshKey)}
-                            disabled={Boolean(src.loading)}
-                          >
-                            {src.loading ? 'Refreshing' : 'Refresh'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          {showPipelineSkeleton ? (
+            <>
+              <div className="pipeline-metrics">
+                <div className="metric-card metric-card-skeleton">
+                  <div className="metric-label">Availability</div>
+                  <div className="skeleton-badge">Summarizing</div>
+                  <div className="signal-bars"><span style={{ height: 9 }} /><span style={{ height: 14 }} /><span style={{ height: 18 }} /><span style={{ height: 23 }} /></div>
+                </div>
+                <div className="metric-card metric-card-skeleton">
+                  <div className="metric-label">Freshness SLA</div>
+                  <div className="skeleton-badge">Checking Sources</div>
+                  <div className="signal-bars"><span style={{ height: 8 }} /><span style={{ height: 13 }} /><span style={{ height: 16 }} /><span style={{ height: 21 }} /></div>
+                </div>
+                <div className="metric-card metric-card-skeleton">
+                  <div className="metric-label">Active Incidents</div>
+                  <div className="skeleton-badge">Scanning</div>
+                  <div className="signal-bars"><span style={{ height: 10 }} /><span style={{ height: 12 }} /><span style={{ height: 17 }} /><span style={{ height: 22 }} /></div>
+                </div>
+                <div className="metric-card metric-card-skeleton">
+                  <div className="metric-label">Avg Lag</div>
+                  <div className="skeleton-badge">Measuring</div>
+                  <div className="signal-bars"><span style={{ height: 7 }} /><span style={{ height: 11 }} /><span style={{ height: 15 }} /><span style={{ height: 19 }} /></div>
+                </div>
+                <div className="metric-card metric-card-skeleton">
+                  <div className="metric-label">Worst Lag</div>
+                  <div className="skeleton-badge">Measuring</div>
+                  <div className="signal-bars"><span style={{ height: 7 }} /><span style={{ height: 11 }} /><span style={{ height: 15 }} /><span style={{ height: 19 }} /></div>
+                </div>
               </div>
-              <div className="source-mobile-list">
-                {sourceRows.map((src) => (
-                  <div className="source-mobile-item" key={`mobile-${src.key}`}>
-                    <div className="source-mobile-head">
-                      <span className="source-mobile-name">{src.label}</span>
-                    </div>
-                    <div className="source-mobile-meta">
-                      <span className={`status status-${src.status.tone}`}>{src.status.label}</span>
-                      <span><strong>Lag:</strong> <span className="source-lag-chip">{formatLag(src.lagMs)}</span></span>
-                      <span><strong>Update:</strong> {formatTimestamp(src.lastUpdate)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
 
-            <div className="panel-card">
-              <h4>Incident Feed</h4>
-              {incidents.length === 0 ? (
-                <div className="empty">No active incidents. Pipeline appears stable.</div>
-              ) : (
-                <ul className="incident-list">
-                  {incidents.map((incident, idx) => (
-                    <li key={`${incident.source}-${idx}`} className="incident-item">
-                      <div className="incident-head">
-                        <span className="incident-source">{incident.source}</span>
-                        <span className="incident-time">{formatTimestamp(incident.time)}</span>
+              <div className="pipeline-grid">
+                <div className="panel-card">
+                  <h4>Source Status Matrix</h4>
+                  <div className="pipeline-skeleton-table">
+                    {[0, 1, 2, 3].map((row) => (
+                      <div className="pipeline-row-skeleton" key={`pipeline-skeleton-${row}`}>
+                        <div className="skeleton-line mid" />
+                        <div className="skeleton-line short" />
+                        <div className="skeleton-line long" />
                       </div>
-                      <div className="incident-msg">{incident.message}</div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="panel-card">
+                  <h4>Incident Feed</h4>
+                  <div className="pipeline-row-skeleton">
+                    <div className="skeleton-line short" />
+                    <div className="skeleton-line long" />
+                    <div className="skeleton-line mid" />
+                  </div>
+                  <div className="pipeline-row-skeleton">
+                    <div className="skeleton-line short" />
+                    <div className="skeleton-line long" />
+                    <div className="skeleton-line mid" />
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="pipeline-metrics">
+                <div className="metric-card">
+                  <div className="metric-label">Availability</div>
+                  <div className="metric-value">{metrics.availabilityPct}%</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Freshness SLA</div>
+                  <div className="metric-value">{metrics.freshnessPct}%</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Active Incidents</div>
+                  <div className="metric-value">{metrics.activeIncidents}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Avg Lag</div>
+                  <div className="metric-value">{formatLag(metrics.avgLag)}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Worst Lag</div>
+                  <div className="metric-value">{formatLag(metrics.maxLag)}</div>
+                </div>
+              </div>
+
+              <div className="pipeline-grid">
+                <div className="panel-card">
+                  <h4>Source Status Matrix</h4>
+                  <div className="source-desktop-table table-wrap">
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>Source</th>
+                          <th>Status</th>
+                          <th className="col-lag">Lag</th>
+                          <th>Last Update</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sourceRows.map((src) => (
+                          <tr key={src.key}>
+                            <td>{src.label}</td>
+                            <td>
+                              <span className={`status status-${src.status.tone}`}>{src.status.label}</span>
+                            </td>
+                            <td className="col-lag"><span className="source-lag-chip source-lag-chip-wide">{formatLag(src.lagMs)}</span></td>
+                            <td>{formatTimestamp(src.lastUpdate)}</td>
+                            <td>
+                              <button
+                                className="btn btn-refresh-source"
+                                onClick={() => refreshData(src.refreshKey)}
+                                disabled={Boolean(src.loading)}
+                              >
+                                {src.loading ? 'Refreshing' : 'Refresh'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="source-mobile-list">
+                    {sourceRows.map((src) => (
+                      <div className="source-mobile-item" key={`mobile-${src.key}`}>
+                        <div className="source-mobile-head">
+                          <span className="source-mobile-name">{src.label}</span>
+                        </div>
+                        <div className="source-mobile-meta">
+                          <span className={`status status-${src.status.tone}`}>{src.status.label}</span>
+                          <span><strong>Lag:</strong> <span className="source-lag-chip">{formatLag(src.lagMs)}</span></span>
+                          <span><strong>Update:</strong> {formatTimestamp(src.lastUpdate)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="panel-card">
+                  <h4>Incident Feed</h4>
+                  {incidents.length === 0 ? (
+                    <div className="empty">No active incidents. Pipeline appears stable.</div>
+                  ) : (
+                    <ul className="incident-list">
+                      {incidents.map((incident, idx) => (
+                        <li key={`${incident.source}-${idx}`} className="incident-item">
+                          <div className="incident-head">
+                            <span className="incident-source">{incident.source}</span>
+                            <span className="incident-time">{formatTimestamp(incident.time)}</span>
+                          </div>
+                          <div className="incident-msg">{incident.message}</div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
         </div>
       )}

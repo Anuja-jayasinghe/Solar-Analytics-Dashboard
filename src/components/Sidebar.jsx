@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ThemeContext } from "./ThemeContext";
 import { AuthContext } from "../contexts/AuthContext";
-import { ComputerIcon, LogOut, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 
 // --- SVG Icons ---
 const DashboardIcon = ({ className }) => (
@@ -45,6 +45,16 @@ const LockIcon = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+
+const DevToolsIcon = ({ className }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="4" y="5" width="16" height="13" rx="2" />
+    <path d="M8 19h8" />
+    <path d="M10 16l-3-3 3-3" />
+    <path d="M14 10l3 3-3 3" />
+    <circle cx="18" cy="8" r="1.2" fill="currentColor" stroke="none" />
   </svg>
 );
 
@@ -193,29 +203,32 @@ function Sidebar({ onDevToolsToggle }) {
           justify-content: center;
           width: 48px;
           height: 48px;
-          background: linear-gradient(135deg, var(--accent), var(--accent-dark, #0070f3));
-          color: white;
-          border: 2px solid rgba(255,255,255,0.1);
-          border-radius: 12px;
+          background: transparent;
+          color: var(--text-color);
+          border: none;
+          border-radius: 0.5rem;
           cursor: pointer;
           transition: all 0.3s ease;
-          box-shadow: 0 4px 12px rgba(0,122,255,0.3);
-          font-size: 1.25rem;
           animation: pulse 3s ease-in-out infinite;
+        }
+
+        .devtools-button svg {
+          width: 24px;
+          height: 24px;
         }
         
         .devtools-button:hover {
-          transform: scale(1.1);
-          box-shadow: 0 6px 20px rgba(0,122,255,0.5);
-          border-color: rgba(255,255,255,0.3);
+          background-color: transparent;
+          color: var(--accent);
+          transform: scale(1.05);
         }
         
         @keyframes pulse {
           0%, 100% {
-            box-shadow: 0 4px 12px rgba(0,122,255,0.3);
+            opacity: 1;
           }
           50% {
-            box-shadow: 0 4px 20px rgba(0,122,255,0.6);
+            opacity: 0.9;
           }
         }
       `}</style>
@@ -402,7 +415,7 @@ function Sidebar({ onDevToolsToggle }) {
             title="Toggle Dev Tools"
             aria-label="Toggle Dev Tools"
           >
-            <ComputerIcon />
+            <DevToolsIcon />
           </button>
         )}
       </div>
