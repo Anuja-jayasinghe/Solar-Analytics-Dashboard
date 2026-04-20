@@ -1301,10 +1301,6 @@ export default function SolisExplorer({ open, onClose }) {
                   <div className="metric-label">Unresolved Alarms</div>
                   <div className="metric-value">{inverterMetrics.unresolvedAlarms}</div>
                 </div>
-                <div className="metric-card">
-                  <div className="metric-label">Avg Uptime (7d)</div>
-                  <div className="metric-value">{uptimeMetrics.avgUptime}%</div>
-                </div>
               </>
             )}
           </div>
@@ -1315,7 +1311,6 @@ export default function SolisExplorer({ open, onClose }) {
               {hasUptimeData ? (
                 <>
                   <div className="uptime-summary">
-                    <span className="uptime-chip">Avg Uptime: {uptimeMetrics.avgUptime}%</span>
                     <span className="uptime-chip">Fully Off Days: {uptimeMetrics.offDays}</span>
                     <span className="uptime-chip">Intermittent Days: {uptimeMetrics.intermittentDays}</span>
                   </div>
