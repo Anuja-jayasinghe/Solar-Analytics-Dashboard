@@ -632,6 +632,20 @@ export default function SolisExplorer({ open, onClose }) {
           background: linear-gradient(90deg, rgba(255, 122, 0, 0.18), rgba(0, 194, 168, 0.08));
         }
 
+        .pipeline-header-right {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .pipeline-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+
         .pipeline-title {
           font-size: 16px;
           font-weight: 700;
@@ -682,10 +696,12 @@ export default function SolisExplorer({ open, onClose }) {
         }
 
         .pipeline-body {
-          padding: 14px 16px 16px;
+          padding: 14px 16px 28px;
           overflow: auto;
           display: grid;
           gap: 14px;
+          scroll-padding-bottom: 28px;
+          scrollbar-gutter: stable both-edges;
         }
 
         .inverter-body {
@@ -898,7 +914,8 @@ export default function SolisExplorer({ open, onClose }) {
           display: flex;
           gap: 8px;
           justify-content: flex-end;
-          padding: 10px 0 0;
+          padding: 12px 0 6px;
+          margin-bottom: 8px;
           align-items: center;
           flex-wrap: wrap;
         }
@@ -1134,6 +1151,20 @@ export default function SolisExplorer({ open, onClose }) {
           .split-grid {
             grid-template-columns: 1fr;
           }
+
+          .pipeline-body {
+            padding-bottom: 22px;
+            scroll-padding-bottom: 22px;
+          }
+
+          .pipeline-header {
+            align-items: flex-start;
+          }
+
+          .pipeline-header-right {
+            flex-direction: column;
+            align-items: flex-end;
+          }
         }
       `}</style>
 
@@ -1142,7 +1173,17 @@ export default function SolisExplorer({ open, onClose }) {
           <div className="pipeline-title">Operations & Inverter Diagnostics</div>
           <div className="pipeline-subtitle">Pipeline SLOs, alarm intelligence, and inverter health timeline</div>
         </div>
-        <button className="pipeline-close" onClick={onClose} aria-label="Close panel">x</button>
+        <div className="pipeline-header-right">
+          <div className="pipeline-header-actions">
+            <span className={`status status-${isStale ? 'warning' : 'success'}`}>
+              {isStale ? 'Global stale state detected' : 'Global data freshness healthy'}
+            </span>
+            <button className="btn btn-primary" onClick={() => refreshAll()}>
+              Refresh All Pipelines
+            </button>
+          </div>
+          <button className="pipeline-close" onClick={onClose} aria-label="Close panel">x</button>
+        </div>
       </div>
 
       <div className="tabs">
@@ -1242,14 +1283,6 @@ export default function SolisExplorer({ open, onClose }) {
             </div>
           </div>
 
-          <div className="actions">
-            <span className={`status status-${isStale ? 'warning' : 'success'}`}>
-              {isStale ? 'Global stale state detected' : 'Global data freshness healthy'}
-            </span>
-            <button className="btn btn-primary" onClick={() => refreshAll()}>
-              Refresh All Pipelines
-            </button>
-          </div>
         </div>
       )}
 
