@@ -161,7 +161,12 @@ const SolisExplorer = ({ open, onClose }) => {
       setDurationMs(Date.now() - startTime);
 
       if (!res.ok) {
-        setError(data.error || 'API call failed');
+        const errorParts = [data.error || `API call failed (${res.status})`];
+        if (data.message) errorParts.push(data.message);
+        if (Array.isArray(data.details) && data.details.length > 0) {
+          errorParts.push(data.details.join(', '));
+        }
+        setError(errorParts.join(' | '));
         setResponse(null);
         setFormatted(null);
       } else {
