@@ -7,8 +7,9 @@ export default function handler(req, res) {
   // Only allow in development or from same origin
   const isLocal = req.headers.host?.includes('localhost');
   const isVercel = req.headers.host?.includes('vercel.app');
+  const isCustomDomain = req.headers.host?.includes('solaredge.anujajay.com');
   
-  if (!isLocal && !isVercel) {
+  if (!isLocal && !isVercel && !isCustomDomain) {
     return res.status(403).json({ error: 'Forbidden' });
   }
 
@@ -24,6 +25,8 @@ export default function handler(req, res) {
     SUPABASE_URL: process.env.SUPABASE_URL ? '✅ SET' : '❌ MISSING',
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY ? '✅ SET' : '❌ MISSING',
     SOLIS_API_ID: process.env.SOLIS_API_ID ? '✅ SET' : '❌ MISSING',
+    SOLIS_API_SECRET: process.env.SOLIS_API_SECRET ? '✅ SET' : '❌ MISSING',
+    SOLIS_API_URL: process.env.SOLIS_API_URL ? '✅ SET' : '❌ MISSING',
   };
 
   return res.status(200).json({
