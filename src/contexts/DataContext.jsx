@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { cacheService } from '../lib/cacheService';
 import { supabase } from '../lib/supabaseClient';
 import { getAlignedEnergyComparisonData } from '../lib/dataService';
+import { formatDateRangeDDMMYYYY } from '../lib/dateFormatter';
 
 
 // Create the context
@@ -309,12 +310,8 @@ export const DataProvider = ({ children }) => {
           startDate = startDateObj.toISOString().split('T')[0]; // YYYY-MM-DD format
           endDate = today.toISOString().split('T')[0];
 
-          // Format for label: "Feb 06 – Today"
-          const formatDate = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
-          const formatYear = (d) => d.toLocaleDateString('en-GB', { year: 'numeric' });
-
           // Display logic for label
-          billingPeriodLabel = `${formatDate(startDateObj)} – ${formatDate(today)} ${formatYear(today)}`;
+          billingPeriodLabel = formatDateRangeDDMMYYYY(startDateObj, today, 'N/A');
         } else if (billError && billError.code !== 'PGRST116') { // PGRST116 = no rows found
           console.error('[DataContext] Supabase error fetching bill date:', {
             message: billError.message,
@@ -326,7 +323,8 @@ export const DataProvider = ({ children }) => {
           // Fallback to first-of-month if no CEB bill found
           startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
           endDate = today.toISOString().split('T')[0];
-          billingPeriodLabel = today.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+          const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+          billingPeriodLabel = formatDateRangeDDMMYYYY(monthStart, today, 'N/A');
         }
 
         const { data, error } = await supabase

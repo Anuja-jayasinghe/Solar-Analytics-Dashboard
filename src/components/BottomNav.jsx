@@ -14,7 +14,7 @@ import {
     X
 } from "lucide-react";
 
-export default function BottomNav() {
+export default function BottomNav({ onDevToolsToggle, canAccessOpsPanel = false }) {
     const { theme, setTheme } = useContext(ThemeContext);
     const { user, signOut } = useContext(AuthContext);
     const [showMenu, setShowMenu] = useState(false);
@@ -240,6 +240,19 @@ export default function BottomNav() {
                     {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
                     <span>Switch to {theme === 'dark' ? 'Light' : 'Dark'} Mode</span>
                 </button>
+
+                {canAccessOpsPanel && typeof onDevToolsToggle === 'function' && (
+                  <button
+                    className="drawer-item"
+                    onClick={() => {
+                      setShowMenu(false);
+                      onDevToolsToggle();
+                    }}
+                  >
+                    <LayoutDashboard size={20} color="var(--accent)" />
+                    <span>Operations Panel</span>
+                  </button>
+                )}
 
                 <button className="drawer-item" onClick={() => { setShowMenu(false); navigate('/admin/dashboard'); }}>
                     <ShieldAlert size={20} color="var(--accent)" />

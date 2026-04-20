@@ -2,6 +2,12 @@ import React, { useEffect, useState, useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { supabase } from "../../lib/supabaseClient";
 import { useData } from "../../hooks/useData";
+import { formatDateDDMMYYYY, formatDateRangeDDMMYYYY } from "../../lib/dateFormatter";
+
+const getDayLabel = (value) => {
+  const formatted = formatDateDDMMYYYY(value, null);
+  return formatted ? formatted.slice(0, 2) : '--';
+};
 
 const SystemTrends = () => {
   const [chartData, setChartData] = useState([]);
@@ -29,7 +35,6 @@ const SystemTrends = () => {
           const start = new Date(today);
           start.setDate(today.getDate() - 26);
           const formatISO = (d) => d.toISOString().split('T')[0];
-          const formatShort = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
           const demoRows = [];
           for (let i = 0; i <= 26; i++) {
             const d = new Date(start);
@@ -40,15 +45,14 @@ const SystemTrends = () => {
             const peak = 2.8 + (gen / 35) * 2.2 + (Math.random() - 0.5) * 0.8;
             demoRows.push({
               summary_date: formatISO(d),
-              date: d.toLocaleDateString('en-GB', { day: '2-digit' }),
-              fullDate: formatShort(d),
+              date: getDayLabel(d),
+              fullDate: formatDateDDMMYYYY(d, 'N/A'),
               daily_generation_kwh: Number(gen.toFixed(2)),
               peak_power_kw: Number(peak.toFixed(2)),
             });
           }
           const billStart = new Date(start);
-          const formatLong = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-          setBillingPeriod(`${formatLong(billStart)} – ${formatLong(today)}`);
+          setBillingPeriod(formatDateRangeDDMMYYYY(billStart, today, 'N/A'));
           setDaysInPeriod(27);
           setChartData(demoRows);
           return;
@@ -71,7 +75,7 @@ const SystemTrends = () => {
           // Fallback if context is missing (though it shouldn't be if loaded)
           // Use first of month
           startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-          label = today.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+          label = formatDateRangeDDMMYYYY(startDate, today, 'N/A');
         }
 
         endDate = today.toISOString().split('T')[0];
@@ -107,8 +111,8 @@ const SystemTrends = () => {
 
         const formattedData = Object.keys(aggregatedData).map(date => ({
           summary_date: date,
-          date: new Date(date).toLocaleDateString('en-GB', { day: '2-digit' }),
-          fullDate: new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+          date: getDayLabel(date),
+          fullDate: formatDateDDMMYYYY(date, 'N/A'),
           daily_generation_kwh: aggregatedData[date].generation,
           peak_power_kw: aggregatedData[date].peakPower,
         }));

@@ -1,905 +1,1974 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { formatResponse } from '../lib/solisResponseFormatters';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useData } from '../contexts/DataContext';
+import { formatDateDDMMYYYY } from '../lib/dateFormatter';
 
-function formatDate(date) {
-  return date.toISOString().slice(0, 10);
+const STALE_THRESHOLD_MS = 10 * 60 * 1000;
+
+const DATA_SOURCES = [
+  { key: 'live', label: 'Live Telemetry', refreshKey: 'live' },
+  { key: 'charts', label: 'Chart Aggregates', refreshKey: 'charts' },
+  { key: 'totalEarnings', label: 'Earnings Ledger', refreshKey: 'totalEarnings' },
+  { key: 'monthlyGen', label: 'Monthly Summary', refreshKey: 'monthlyGen' },
+];
+
+function formatLag(ms) {
+  if (!Number.isFinite(ms) || ms < 0) return 'N/A';
+  if (ms < 1000) return `${ms} ms`;
+  if (ms < 60000) return `${Math.round(ms / 1000)} s`;
+  if (ms < 3600000) return `${Math.round(ms / 60000)} min`;
+  return `${(ms / 3600000).toFixed(1)} h`;
 }
 
-function formatMonth(date) {
-  return date.toISOString().slice(0, 7);
+function formatTimestamp(ts) {
+  return formatDateDDMMYYYY(ts, 'Never');
 }
 
-function getPrefillValueByKey(paramKey) {
-  const today = new Date();
-  const sevenDaysAgo = new Date(today);
-  sevenDaysAgo.setDate(today.getDate() - 7);
+function formatDuration(ms) {
+  const n = Number(ms);
+  if (!Number.isFinite(n) || n <= 0) return 'N/A';
+  if (n < 1000) return `${n} ms`;
+  if (n < 60000) return `${Math.round(n / 1000)} s`;
+  if (n < 3600000) return `${Math.round(n / 60000)} min`;
+  return `${(n / 3600000).toFixed(1)} h`;
+}
 
-  const staticMap = {
-    id: '1298491919448631809',
-    sn: '120B40198150131',
-    stationId: '1298491919448631809',
-    nmiCode: 'NMI001',
-    pageNo: '1',
-    pageSize: '10',
-    timeZone: '8',
-    money: 'LKR',
-    state: '0',
-    alarmDeviceSn: '120B40198150131',
+function statusFromSource(source, now) {
+  if (source.loading) {
+    return { code: 'loading', label: 'Loading', tone: 'info' };
+  }
+  if (source.error) {
+    return { code: 'error', label: 'Failed', tone: 'error' };
+  }
+  if (!source.lastUpdate) {
+    return { code: 'unknown', label: 'No Data', tone: 'warning' };
+  }
+
+  const lag = now - source.lastUpdate;
+  if (lag > STALE_THRESHOLD_MS) {
+    return { code: 'stale', label: 'Stale', tone: 'warning' };
+  }
+
+  return { code: 'healthy', label: 'Healthy', tone: 'success' };
+}
+
+function toArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function deriveAlarmTimestamp(alarm) {
+  const raw =
+    alarm.alarmBeginTime ||
+    alarm.alarmEndTime ||
+    alarm.alarmTime ||
+    alarm.createTime ||
+    alarm.time ||
+    alarm.dataTimestamp ||
+    alarm.occurTime;
+  if (!raw) return 0;
+  if (typeof raw === 'number') {
+    return raw > 1e12 ? raw : raw * 1000;
+  }
+  if (/^\d+$/.test(String(raw))) {
+    const numeric = Number(raw);
+    return numeric > 1e12 ? numeric : numeric * 1000;
+  }
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function resolveAlarmName(alarm) {
+  return (
+    alarm.alarmName ||
+    alarm.alarmMsg ||
+    alarm.msg ||
+    alarm.message ||
+    (alarm.alarmCode ? `Alarm ${alarm.alarmCode}` : 'Alarm')
+  );
+}
+
+function resolveAlarmState(state) {
+  const map = {
+    '0': 'Pending',
+    '1': 'Processed',
+    '2': 'Resolved',
   };
-
-  if (paramKey === 'time' || paramKey === 'alarmEndTime') {
-    return formatDate(today);
-  }
-
-  if (paramKey === 'alarmBeginTime') {
-    return formatDate(sevenDaysAgo);
-  }
-
-  if (paramKey === 'month') {
-    return formatMonth(today);
-  }
-
-  return staticMap[paramKey] || '';
+  return map[String(state)] || String(state ?? '-');
 }
 
-function buildPrefilledParams(endpoint, existingParams = {}) {
-  if (!endpoint || !endpoint.params) return endpoint?.sampleParams || {};
+function toNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
 
-  const prefilled = {};
-  Object.entries(endpoint.params).forEach(([paramKey, paramDef]) => {
-    if (endpoint.sampleParams && endpoint.sampleParams[paramKey] !== undefined) {
-      prefilled[paramKey] = endpoint.sampleParams[paramKey];
-      return;
+function formatClockHHMM(ts) {
+  if (!ts) return '--:--';
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return '--:--';
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+function median(values) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) {
+    return (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+  return sorted[mid];
+}
+
+function buildUptimeForDay(dayIso, points) {
+  const rows = toArray(points)
+    .map((point) => {
+      const rawTs = point.dataTimestamp || point.time || point.date;
+      let ts;
+      if (typeof rawTs === 'number') {
+        ts = rawTs > 1e12 ? rawTs : rawTs * 1000;
+      } else if (/^\d+$/.test(String(rawTs || ''))) {
+        const numeric = Number(rawTs);
+        ts = numeric > 1e12 ? numeric : numeric * 1000;
+      } else if (typeof point.time === 'string' && /^\d{2}:\d{2}(:\d{2})?$/.test(point.time)) {
+        ts = Date.parse(`${dayIso}T${point.time}`);
+      } else {
+        ts = Date.parse(rawTs);
+      }
+      const power = toNumber(point.power ?? point.pac ?? point.value) ?? 0;
+      return Number.isFinite(ts) ? { ts, power } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.ts - b.ts);
+
+  if (!rows.length) {
+    return {
+      date: dayIso,
+      points: 0,
+      uptimePct: 0,
+      state: 'off',
+      firstSeen: null,
+      lastSeen: null,
+      periodLabel: '--:-- - --:--',
+    };
+  }
+
+  const firstSeen = rows[0].ts;
+  const lastSeen = rows[rows.length - 1].ts;
+  const intervals = [];
+  for (let i = 1; i < rows.length; i += 1) {
+    const delta = rows[i].ts - rows[i - 1].ts;
+    if (delta > 0 && delta < 30 * 60 * 1000) {
+      intervals.push(delta);
     }
+  }
 
-    if (paramDef.default !== undefined) {
-      prefilled[paramKey] = paramDef.default;
-      return;
-    }
+  const sampleInterval = median(intervals) || 5 * 60 * 1000;
+  const windowMs = Math.max(0, lastSeen - firstSeen);
+  const expectedPoints = Math.max(1, Math.round(windowMs / sampleInterval) + 1);
+  const uptimePct = Math.max(0, Math.min(100, Math.round((rows.length / expectedPoints) * 100)));
 
-    if (existingParams[paramKey]) {
-      prefilled[paramKey] = existingParams[paramKey];
-      return;
-    }
+  let state = 'on';
+  if (uptimePct < 80) state = 'mostly-off';
+  else if (uptimePct < 95) state = 'intermittent';
 
-    prefilled[paramKey] = getPrefillValueByKey(paramKey);
+  return {
+    date: dayIso,
+    points: rows.length,
+    uptimePct,
+    state,
+    firstSeen,
+    lastSeen,
+    periodLabel: `${formatClockHHMM(firstSeen)} - ${formatClockHHMM(lastSeen)}`,
+  };
+}
+
+export default function SolisExplorer({ open, onClose }) {
+  const panelRef = useRef(null);
+  const [activeTab, setActiveTab] = useState('pipeline');
+  const [expandedLedgerKey, setExpandedLedgerKey] = useState(null);
+  const [inverterLoading, setInverterLoading] = useState(false);
+  const [inverterError, setInverterError] = useState(null);
+  const [inverterData, setInverterData] = useState({
+    inverter: null,
+    detail: null,
+    alarms: [],
+    daySeries: [],
+    uptimeSeries: [],
+    updatedAt: null,
   });
 
-  return prefilled;
-}
+  const {
+    loading,
+    errors,
+    lastUpdate,
+    isStale,
+    refreshData,
+    refreshAll,
+  } = useData();
 
-const SolisExplorer = ({ open, onClose }) => {
-  const [endpoints, setEndpoints] = useState([]);
-  const [selectedEndpoint, setSelectedEndpoint] = useState(null);
-  const [params, setParams] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [response, setResponse] = useState(null);
-  const [error, setError] = useState(null);
-  const [formatted, setFormatted] = useState(null);
-  const [rawJsonVisible, setRawJsonVisible] = useState(false);
-  const [durationMs, setDurationMs] = useState(null);
-  const [endpointsLoading, setEndpointsLoading] = useState(true);
-  const [endpointsError, setEndpointsError] = useState(null);
-  const panelRef = useRef(null);
+  const now = Date.now();
 
-  // Fetch endpoint list on mount
-  useEffect(() => {
-    const fetchEndpoints = async () => {
-      try {
-        setEndpointsLoading(true);
-        setEndpointsError(null);
-        const res = await fetch('/api/solis/explore-endpoints');
-        const body = await res.text();
-        let data;
-        try {
-          data = JSON.parse(body);
-        } catch (parseError) {
-          setEndpoints([]);
-          setEndpointsError('Endpoint API returned non-JSON response.');
-          return;
-        }
+  const sourceRows = useMemo(() => {
+    return DATA_SOURCES.map((src) => {
+      const source = {
+        ...src,
+        loading: Boolean(loading?.[src.refreshKey]),
+        error: errors?.[src.refreshKey] || null,
+        lastUpdate: lastUpdate?.[src.refreshKey] || null,
+      };
 
-        if (res.ok) {
-          setEndpoints(data.endpoints || []);
-        } else {
-          setEndpointsError(data.error || 'Failed to fetch endpoints from API.');
-          setEndpoints([]);
-        }
-      } catch (e) {
-        console.error('Failed to fetch endpoints:', e);
-        setEndpointsError(e.message || 'Network error');
-        setEndpoints([]);
-      } finally {
-        setEndpointsLoading(false);
-      }
+      const status = statusFromSource(source, now);
+      const lagMs = source.lastUpdate ? now - source.lastUpdate : Number.NaN;
+
+      return {
+        ...source,
+        status,
+        lagMs,
+      };
+    });
+  }, [errors, lastUpdate, loading, now]);
+
+  const metrics = useMemo(() => {
+    const total = sourceRows.length;
+    const healthy = sourceRows.filter((s) => s.status.code === 'healthy').length;
+    const activeIncidents = sourceRows.filter((s) => s.status.code === 'error').length;
+
+    const withTimestamps = sourceRows.filter((s) => Number.isFinite(s.lagMs));
+    const fresh = withTimestamps.filter((s) => s.lagMs <= STALE_THRESHOLD_MS).length;
+
+    const freshnessPct = withTimestamps.length
+      ? Math.round((fresh / withTimestamps.length) * 100)
+      : 0;
+
+    const availabilityPct = total ? Math.round((healthy / total) * 100) : 0;
+
+    const avgLag = withTimestamps.length
+      ? Math.round(withTimestamps.reduce((sum, s) => sum + s.lagMs, 0) / withTimestamps.length)
+      : Number.NaN;
+
+    const maxLag = withTimestamps.length
+      ? Math.max(...withTimestamps.map((s) => s.lagMs))
+      : Number.NaN;
+
+    return {
+      availabilityPct,
+      freshnessPct,
+      activeIncidents,
+      avgLag,
+      maxLag,
     };
+  }, [sourceRows]);
 
-    if (open) {
-      fetchEndpoints();
-    }
-  }, [open]);
+  const hasAnyPipelineContent = useMemo(
+    () => sourceRows.some((source) => Boolean(source.lastUpdate || source.error)),
+    [sourceRows],
+  );
 
-  // Update params when endpoint changes
-  useEffect(() => {
-    if (selectedEndpoint && endpoints.length > 0) {
-      const endpoint = endpoints.find((e) => e.key === selectedEndpoint);
-      if (endpoint) {
-        setParams((prev) => buildPrefilledParams(endpoint, prev));
-        setResponse(null);
-        setFormatted(null);
-        setError(null);
+  const showPipelineSkeleton = sourceRows.some((source) => source.loading) && !hasAnyPipelineContent;
+
+  const incidents = useMemo(() => {
+    const rows = [];
+
+    sourceRows.forEach((src) => {
+      if (src.error) {
+        rows.push({
+          type: 'error',
+          source: src.label,
+          message: src.error.message || String(src.error),
+          time: src.error.time || src.lastUpdate || Date.now(),
+        });
+      } else if (src.status.code === 'stale') {
+        rows.push({
+          type: 'stale',
+          source: src.label,
+          message: `No fresh data for ${formatLag(src.lagMs)}`,
+          time: src.lastUpdate || Date.now(),
+        });
       }
-    }
-  }, [selectedEndpoint, endpoints]);
+    });
 
-  // Execute API call
-  const executeCall = async () => {
-    if (!selectedEndpoint) return;
+    return rows
+      .sort((a, b) => (b.time || 0) - (a.time || 0))
+      .slice(0, 8);
+  }, [sourceRows]);
 
-    setLoading(true);
-    setError(null);
-    const startTime = Date.now();
+  const runExplore = useCallback(async (endpointKey, params) => {
+    const response = await fetch('/api/solis/explore', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpointKey, params }),
+    });
+
+    const body = await response.text();
+    let parsed;
 
     try {
-      const endpointConfig = endpoints.find((e) => e.key === selectedEndpoint);
-      const res = await fetch('/api/solis/explore', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          endpointKey: selectedEndpoint,
-          params,
-        }),
+      parsed = JSON.parse(body);
+    } catch {
+      throw new Error(`Non-JSON response from ${endpointKey}`);
+    }
+
+    if (!response.ok || !parsed?.ok) {
+      const parts = [parsed?.error || `Request failed (${response.status})`];
+      if (parsed?.message) parts.push(parsed.message);
+      if (Array.isArray(parsed?.details) && parsed.details.length > 0) {
+        parts.push(parsed.details.join(', '));
+      }
+      throw new Error(parts.join(' | '));
+    }
+
+    return parsed.solisResponse;
+  }, []);
+
+  const fetchInverterInsights = useCallback(async () => {
+    setInverterLoading(true);
+    setInverterError(null);
+
+    try {
+      const inverterList = await runExplore('inverterList', { pageNo: '1', pageSize: '20' });
+      const records =
+        toArray(inverterList?.data?.page?.records).length > 0
+          ? toArray(inverterList?.data?.page?.records)
+          : toArray(inverterList?.data);
+
+      const inverter = records[0];
+      if (!inverter) {
+        throw new Error('No inverter found for the account.');
+      }
+
+      const inverterId = inverter.id || inverter.inverterId || inverter.deviceId || '';
+      const inverterSn = inverter.sn || inverter.inverterSn || inverter.deviceSn || '';
+      const stationId = inverter.stationId || inverter.powerStationId || '';
+
+      const today = new Date().toISOString().slice(0, 10);
+
+      const recentDates = Array.from({ length: 7 }, (_, idx) => {
+        const d = new Date();
+        d.setDate(d.getDate() - idx);
+        return d.toISOString().slice(0, 10);
       });
 
-      const body = await res.text();
-      let data;
-      try {
-        data = JSON.parse(body);
-      } catch {
-        throw new Error('API endpoint returned non-JSON response. Start your backend API and retry.');
-      }
-      setDurationMs(Date.now() - startTime);
+      const detailPromise = runExplore('inverterDetail', {
+        ...(inverterId ? { id: String(inverterId) } : {}),
+        ...(inverterSn ? { sn: String(inverterSn) } : {}),
+      }).catch(() => null);
 
-      if (!res.ok) {
-        const errorParts = [data.error || `API call failed (${res.status})`];
-        if (data.message) errorParts.push(data.message);
-        if (Array.isArray(data.details) && data.details.length > 0) {
-          errorParts.push(data.details.join(', '));
-        }
-        setError(errorParts.join(' | '));
-        setResponse(null);
-        setFormatted(null);
-      } else {
-        setResponse(data);
-        const fmt = formatResponse(data.solisResponse, endpointConfig?.formatterKey);
-        setFormatted(fmt);
-      }
-    } catch (err) {
-      setDurationMs(Date.now() - startTime);
-      setError(err.message || 'API request failed');
-      setResponse(null);
-      setFormatted(null);
+      const dayPromise = runExplore('inverterDay', {
+        ...(inverterSn ? { sn: String(inverterSn) } : {}),
+        ...(inverterId && !inverterSn ? { id: String(inverterId) } : {}),
+        time: today,
+        timeZone: '8',
+      }).catch(() => null);
+
+      const alarmsPromise = runExplore('alarmList', {
+        pageNo: '1',
+        pageSize: '30',
+        ...(stationId ? { stationId: String(stationId) } : {}),
+      }).catch(() => null);
+
+      const uptimePromises = recentDates.map((date) =>
+        runExplore('inverterDay', {
+          ...(inverterSn ? { sn: String(inverterSn) } : {}),
+          ...(inverterId && !inverterSn ? { id: String(inverterId) } : {}),
+          time: date,
+          timeZone: '8',
+        }).catch(() => null)
+      );
+
+      const [detailResp, dayResp, alarmsResp] = await Promise.all([
+        detailPromise,
+        dayPromise,
+        alarmsPromise,
+      ]);
+
+      const uptimeResponses = await Promise.all(uptimePromises);
+
+      const alarms = toArray(alarmsResp?.data?.page?.records).length > 0
+        ? toArray(alarmsResp?.data?.page?.records)
+        : toArray(alarmsResp?.data?.records);
+
+      const daySeries = toArray(dayResp?.data);
+      const uptimeSeries = recentDates
+        .map((date, idx) => buildUptimeForDay(date, uptimeResponses[idx]?.data))
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      setInverterData({
+        inverter,
+        detail: detailResp?.data || null,
+        alarms,
+        daySeries,
+        uptimeSeries,
+        updatedAt: Date.now(),
+      });
+    } catch (error) {
+      setInverterError(error.message || 'Failed to load inverter diagnostics');
+      setInverterData((prev) => ({ ...prev, updatedAt: Date.now() }));
     } finally {
-      setLoading(false);
+      setInverterLoading(false);
     }
-  };
+  }, [runExplore]);
 
-  // Close on outside click
   useEffect(() => {
-    if (!open) return;
-    const handleClick = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target)) {
+    if (!open || activeTab !== 'inverter') return;
+
+    if (!inverterData.updatedAt) {
+      fetchInverterInsights();
+      return;
+    }
+
+    const age = Date.now() - inverterData.updatedAt;
+    if (age > 5 * 60 * 1000) {
+      fetchInverterInsights();
+    }
+  }, [activeTab, fetchInverterInsights, inverterData.updatedAt, open]);
+
+  const inverterMetrics = useMemo(() => {
+    const detail = inverterData.detail || {};
+    const unresolvedAlarms = inverterData.alarms.filter((a) => String(a.state) !== '2').length;
+
+    const realtimePower =
+      toNumber(detail.pac) ??
+      toNumber(detail.power) ??
+      toNumber(inverterData.inverter?.pac) ??
+      null;
+
+    const todayEnergy =
+      toNumber(detail.eToday) ??
+      toNumber(detail.dayEnergy) ??
+      null;
+
+    const statusRaw = detail.state ?? detail.status ?? inverterData.inverter?.state;
+    const statusCode = Number(statusRaw);
+
+    let score = 100;
+    if (statusCode === 2) score -= 30;
+    if (statusCode === 3) score -= 40;
+    score -= Math.min(unresolvedAlarms * 8, 32);
+    score -= metrics.activeIncidents * 5;
+    if (isStale) score -= 10;
+    score = Math.max(0, Math.min(100, score));
+
+    const healthClass = score >= 80 ? 'success' : score >= 60 ? 'warning' : 'error';
+
+    return {
+      score,
+      healthClass,
+      unresolvedAlarms,
+      realtimePower,
+      todayEnergy,
+      statusCode,
+    };
+  }, [inverterData, isStale, metrics.activeIncidents]);
+
+  const alarmTimeline = useMemo(() => {
+    return inverterData.alarms
+      .map((alarm) => ({
+        type: 'alarm',
+        title: resolveAlarmName(alarm),
+        severity: Number(alarm.alarmLevel || 1),
+        status: String(alarm.state || ''),
+        source: alarm.alarmDeviceSn || alarm.deviceSn || 'Inverter',
+        time: deriveAlarmTimestamp(alarm),
+      }))
+      .filter((row) => row.time > 0)
+      .sort((a, b) => b.time - a.time)
+      .slice(0, 30);
+  }, [inverterData.alarms]);
+
+  const alarmLedger = useMemo(() => {
+    const bucket = new Map();
+
+    inverterData.alarms.forEach((alarm) => {
+      const code = String(alarm.alarmCode || '-');
+      const name = resolveAlarmName(alarm);
+      const key = `${code}__${name}`;
+      const ts = deriveAlarmTimestamp(alarm);
+      const level = Number(alarm.alarmLevel || 1);
+      const isOpen = String(alarm.state) !== '2';
+
+      if (!bucket.has(key)) {
+        bucket.set(key, {
+          key,
+          code,
+          name,
+          level,
+          totalCount: 0,
+          openCount: 0,
+          lastSeen: 0,
+          latestState: '-',
+          sample: null,
+        });
+      }
+
+      const row = bucket.get(key);
+      row.totalCount += 1;
+      row.openCount += isOpen ? 1 : 0;
+      row.lastSeen = Math.max(row.lastSeen, ts);
+      row.level = Math.max(row.level, level);
+
+      if (!row.sample || ts >= deriveAlarmTimestamp(row.sample)) {
+        row.sample = alarm;
+        row.latestState = resolveAlarmState(alarm.state);
+      }
+    });
+
+    return Array.from(bucket.values())
+      .sort((a, b) => {
+        if (b.openCount !== a.openCount) return b.openCount - a.openCount;
+        if (b.lastSeen !== a.lastSeen) return b.lastSeen - a.lastSeen;
+        return b.totalCount - a.totalCount;
+      })
+      .slice(0, 12);
+  }, [inverterData.alarms]);
+
+  const performanceTimeline = useMemo(() => {
+    const entries = inverterData.daySeries
+      .map((point) => {
+        const tsRaw = point.dataTimestamp || point.time || point.date;
+        const parsed = Date.parse(tsRaw);
+        if (!Number.isFinite(parsed)) return null;
+
+        const power = toNumber(point.power ?? point.pac ?? point.value);
+        return {
+          time: parsed,
+          power,
+          raw: point,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.time - a.time);
+
+    if (!entries.length) return [];
+
+    const latest = entries[0];
+    const maxPoint = entries.reduce((best, current) => ((current.power ?? -1) > (best.power ?? -1) ? current : best), entries[0]);
+    const lowPoint = entries.reduce((best, current) => ((current.power ?? Infinity) < (best.power ?? Infinity) ? current : best), entries[0]);
+
+    return [
+      {
+        type: 'performance',
+        title: `Latest power sample: ${latest.power ?? 'N/A'} kW`,
+        detail: 'Current telemetry point from inverterDay',
+        time: latest.time,
+      },
+      {
+        type: 'performance',
+        title: `Peak output today: ${maxPoint.power ?? 'N/A'} kW`,
+        detail: 'Highest power point in intraday curve',
+        time: maxPoint.time,
+      },
+      {
+        type: 'performance',
+        title: `Lowest output sample: ${lowPoint.power ?? 'N/A'} kW`,
+        detail: 'Lowest power point in intraday curve',
+        time: lowPoint.time,
+      },
+    ].sort((a, b) => b.time - a.time);
+  }, [inverterData.daySeries]);
+
+  const uptimeMetrics = useMemo(() => {
+    const days = inverterData.uptimeSeries || [];
+    if (!days.length) {
+      return {
+        avgUptime: 0,
+        offDays: 0,
+        intermittentDays: 0,
+      };
+    }
+
+    const avgUptime = Math.round(days.reduce((sum, d) => sum + (d.uptimePct || 0), 0) / days.length);
+    const offDays = days.filter((d) => d.state === 'off').length;
+    const intermittentDays = days.filter((d) => d.state === 'intermittent' || d.state === 'mostly-off').length;
+
+    return {
+      avgUptime,
+      offDays,
+      intermittentDays,
+    };
+  }, [inverterData.uptimeSeries]);
+
+  const hasInverterInfo = Boolean(inverterData.inverter || inverterData.detail);
+  const hasAlarmData = inverterData.alarms.length > 0;
+  const hasPerformanceData = performanceTimeline.length > 0;
+  const hasUptimeData = inverterData.uptimeSeries.length > 0;
+  const hasAnyInverterContent = hasInverterInfo || hasAlarmData || hasPerformanceData || hasUptimeData;
+  const showInverterSkeleton = inverterLoading && !hasAnyInverterContent;
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handleClickOutside = (event) => {
+      if (panelRef.current && !panelRef.current.contains(event.target)) {
         onClose?.();
       }
     };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [open, onClose]);
 
-  const selectedEndpointConfig = useMemo(() => {
-    return endpoints.find((e) => e.key === selectedEndpoint);
-  }, [selectedEndpoint, endpoints]);
-
-  // Group endpoints by category
-  const endpointsByCategory = useMemo(() => {
-    const grouped = {};
-    endpoints.forEach((ep) => {
-      if (!grouped[ep.category]) grouped[ep.category] = [];
-      grouped[ep.category].push(ep);
-    });
-    return grouped;
-  }, [endpoints]);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose, open]);
 
   if (!open) return null;
 
   return (
-    <div ref={panelRef} className="solis-explorer-panel">
+    <div ref={panelRef} className="pipeline-panel">
       <style>{`
-        .solis-explorer-panel {
+        .pipeline-panel {
           position: fixed;
           bottom: 20px;
-          left: 80px; /* Position next to the sidebar (60px + 20px gap) */
-          width: 900px;
+          left: 80px;
+          width: min(1040px, calc(100vw - 110px));
           max-height: 85vh;
-          background: rgba(20, 20, 25, 0.85);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
+          background: rgba(20, 20, 25, 0.9);
+          backdrop-filter: blur(16px);
           border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 16px;
-          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
           display: flex;
           flex-direction: column;
           z-index: 10000;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
           overflow: hidden;
-          /* Connect visually to sidebar trigger */
-          transform-origin: bottom left;
-          animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          color: var(--text-color);
         }
 
-        @keyframes popIn {
-          0% { opacity: 0; transform: scale(0.95) translateX(-10px); }
-          100% { opacity: 1; transform: scale(1) translateX(0); }
-        }
-
-        .solis-explorer-header {
-          padding: 16px 20px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        .pipeline-header {
           display: flex;
-          justify-content: space-between;
           align-items: center;
-          background: rgba(0, 0, 0, 0.2);
+          justify-content: space-between;
+          padding: 14px 18px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          background: linear-gradient(90deg, rgba(255, 122, 0, 0.18), rgba(0, 194, 168, 0.08));
         }
 
-        .solis-explorer-header h3 {
-          margin: 0;
-          font-size: 16px;
-          font-weight: 600;
-          color: var(--accent);
+        .pipeline-header-right {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .pipeline-header-actions {
           display: flex;
           align-items: center;
           gap: 8px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
         }
 
-        .solis-explorer-close {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          font-size: 18px;
-          cursor: pointer;
-          color: var(--text-secondary);
-          padding: 0;
-          width: 28px;
-          height: 28px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 8px;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .solis-explorer-close:hover {
-          background: rgba(255, 68, 68, 0.2);
-          color: #ff4444;
-          border-color: rgba(255, 68, 68, 0.4);
-        }
-
-        .solis-explorer-body {
-          flex: 1;
-          overflow-y: auto;
-          display: flex;
-          gap: 20px;
-          padding: 20px;
-        }
-
-        .solis-explorer-left-panel {
-          flex: 0 0 35%;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          border-right: 1px solid rgba(255, 255, 255, 0.05);
-          padding-right: 20px;
-        }
-
-        .solis-explorer-section-title {
-          font-size: 12px;
+        .pipeline-title {
+          font-size: 16px;
           font-weight: 700;
+          letter-spacing: 0.2px;
+        }
+
+        .pipeline-subtitle {
+          font-size: 12px;
+          color: var(--text-secondary);
+          margin-top: 2px;
+        }
+
+        .pipeline-close {
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          background: rgba(255, 255, 255, 0.06);
+          color: var(--text-secondary);
+          border-radius: 8px;
+          width: 30px;
+          height: 30px;
+          cursor: pointer;
+          font-size: 18px;
+          line-height: 1;
+        }
+
+        .tabs {
+          display: flex;
+          gap: 8px;
+          padding: 10px 16px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(0, 0, 0, 0.2);
+        }
+
+        .tab-btn {
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.03);
+          color: var(--text-secondary);
+          border-radius: 999px;
+          padding: 7px 14px;
+          font-size: 12px;
+          cursor: pointer;
+          font-weight: 600;
+        }
+
+        .tab-btn.active {
           color: var(--accent);
+          border-color: rgba(255, 122, 0, 0.45);
+          background: rgba(255, 122, 0, 0.12);
+        }
+
+        .pipeline-body {
+          padding: 14px 16px 28px;
+          overflow: auto;
+          display: grid;
+          gap: 14px;
+          scroll-padding-bottom: 28px;
+          scrollbar-gutter: stable both-edges;
+        }
+
+        .inverter-body {
+          min-height: 540px;
+        }
+
+        .pipeline-metrics {
+          display: grid;
+          grid-template-columns: repeat(5, minmax(120px, 1fr));
+          gap: 10px;
+        }
+
+        .metric-card {
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(255, 255, 255, 0.03);
+          border-radius: 12px;
+          padding: 10px;
+        }
+
+        .metric-card.metric-card-skeleton {
+          border-color: rgba(255, 122, 0, 0.18);
+          background: linear-gradient(180deg, rgba(255, 122, 0, 0.08), rgba(255, 255, 255, 0.02));
+        }
+
+        .pipeline-row-skeleton {
+          display: grid;
+          gap: 8px;
+          padding: 12px;
+        }
+
+        .pipeline-row-skeleton .skeleton-line {
+          height: 10px;
+          border-radius: 999px;
+          background: linear-gradient(90deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.07));
+          background-size: 220% 100%;
+          animation: skeletonSweep 1.2s ease-in-out infinite;
+        }
+
+        .pipeline-row-skeleton .skeleton-line.short { width: 42%; }
+        .pipeline-row-skeleton .skeleton-line.mid { width: 66%; }
+        .pipeline-row-skeleton .skeleton-line.long { width: 88%; }
+
+        .pipeline-row-skeleton + .pipeline-row-skeleton {
+          border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .pipeline-skeleton-table {
+          border-radius: 0 0 12px 12px;
+          overflow: hidden;
+        }
+
+        @keyframes skeletonSweep {
+          0% {
+            background-position: 200% 0;
+          }
+          100% {
+            background-position: -200% 0;
+          }
+        }
+
+        .skeleton-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 2px 8px;
+          border-radius: 999px;
+          border: 1px solid rgba(154, 209, 255, 0.3);
+          color: #9ad1ff;
+          font-size: 10px;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+          margin-top: 6px;
+        }
+
+        .signal-bars {
+          margin-top: 10px;
+          display: flex;
+          align-items: flex-end;
+          gap: 4px;
+          height: 24px;
+        }
+
+        .signal-bars span {
+          width: 5px;
+          border-radius: 999px;
+          background: linear-gradient(180deg, rgba(255, 122, 0, 0.75), rgba(255, 122, 0, 0.2));
+          animation: signalDrift 1.15s ease-in-out infinite;
+        }
+
+        .signal-bars span:nth-child(2) { animation-delay: 0.12s; }
+        .signal-bars span:nth-child(3) { animation-delay: 0.24s; }
+        .signal-bars span:nth-child(4) { animation-delay: 0.36s; }
+
+        @keyframes signalDrift {
+          0%,
+          100% {
+            opacity: 0.5;
+            transform: scaleY(0.9);
+          }
+          50% {
+            opacity: 1;
+            transform: scaleY(1.08);
+          }
+        }
+
+        .metric-label {
+          font-size: 11px;
+          color: var(--text-secondary);
           text-transform: uppercase;
           letter-spacing: 0.5px;
         }
 
-        .solis-explorer-endpoints-grid {
+        .metric-value {
+          margin-top: 4px;
+          font-size: 20px;
+          font-weight: 700;
+          color: var(--accent);
+        }
+
+        .pipeline-grid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1.25fr 1fr;
+          gap: 12px;
+        }
+
+        .panel-card {
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(255, 255, 255, 0.03);
+          border-radius: 12px;
+          overflow: hidden;
+        }
+
+        .panel-card h4 {
+          margin: 0;
+          padding: 10px 12px;
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          color: var(--text-secondary);
+        }
+
+        .table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 12px;
+        }
+
+        .table-wrap {
+          width: 100%;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        .source-mobile-list {
+          display: none;
+        }
+
+        .source-mobile-item {
+          padding: 10px 12px;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
           gap: 8px;
         }
 
-        .solis-explorer-endpoint-btn {
-          padding: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          background: rgba(0, 0, 0, 0.2);
+        .source-mobile-head {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
+          flex: 1 1 auto;
+          min-width: 0;
+        }
+
+        .source-mobile-name {
           color: var(--text-color);
-          border-radius: 8px;
-          cursor: pointer;
+          font-weight: 600;
           font-size: 12px;
-          font-weight: 500;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-          text-align: left;
+          min-width: 0;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
         }
 
-        .solis-explorer-endpoint-btn:hover {
-          background: rgba(255, 255, 255, 0.05);
-          border-color: rgba(255, 255, 255, 0.15);
+        .source-mobile-meta {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 11px;
+          color: var(--text-secondary);
+          flex: 0 0 auto;
+          white-space: nowrap;
         }
 
-        .solis-explorer-endpoint-btn.active {
-          background: var(--accent);
-          border-color: var(--accent);
-          color: #000;
+        .source-mobile-meta div {
+          min-width: 0;
+          word-break: break-word;
+        }
+
+        .source-lag-chip {
+          display: inline-flex;
+          align-items: center;
+          justify-content: flex-end;
+          width: 6.5ch;
+          min-width: 6.5ch;
+          font-variant-numeric: tabular-nums;
+          font-feature-settings: 'tnum' 1;
+          white-space: nowrap;
+        }
+
+        .source-lag-chip-wide {
+          width: 7.5ch;
+          min-width: 7.5ch;
+        }
+
+        .table th,
+        .table td {
+          text-align: left;
+          padding: 9px 10px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+          vertical-align: top;
+        }
+
+        .table th {
+          font-size: 11px;
+          color: var(--text-secondary);
+          text-transform: uppercase;
+          letter-spacing: 0.4px;
+        }
+
+        .col-lag {
+          width: 88px;
+          min-width: 88px;
+          white-space: nowrap;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .ledger-row {
+          cursor: pointer;
+        }
+
+        .ledger-row:hover {
+          background: rgba(255, 255, 255, 0.03);
+        }
+
+        .ledger-row.is-open {
+          background: rgba(255, 122, 0, 0.08);
+        }
+
+        .ledger-detail-cell {
+          padding: 0;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .ledger-details {
+          padding: 10px 12px;
+          background: rgba(255, 255, 255, 0.02);
+          display: grid;
+          grid-template-columns: repeat(2, minmax(180px, 1fr));
+          gap: 8px 14px;
+          font-size: 11px;
+        }
+
+        .ledger-meta {
+          color: var(--text-secondary);
+        }
+
+        .ledger-meta strong {
+          color: var(--text-color);
           font-weight: 600;
-          box-shadow: 0 4px 12px rgba(255, 122, 0, 0.3);
         }
 
-        .solis-explorer-right-panel {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          min-height: 0;
+        .status {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 11px;
+          font-weight: 700;
+          border-radius: 999px;
+          padding: 2px 8px;
+          border: 1px solid transparent;
         }
 
-        .solis-explorer-params-section {
+        .status::before {
+          content: '';
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          display: inline-block;
+        }
+
+        .status-success {
+          color: #43d48f;
+          border-color: rgba(67, 212, 143, 0.35);
+          background: rgba(67, 212, 143, 0.12);
+        }
+        .status-success::before { background: #43d48f; }
+
+        .status-warning {
+          color: #ffd166;
+          border-color: rgba(255, 209, 102, 0.35);
+          background: rgba(255, 209, 102, 0.12);
+        }
+        .status-warning::before { background: #ffd166; }
+
+        .status-error {
+          color: #ff6b6b;
+          border-color: rgba(255, 107, 107, 0.35);
+          background: rgba(255, 107, 107, 0.12);
+        }
+        .status-error::before { background: #ff6b6b; }
+
+        .status-info {
+          color: #9ad1ff;
+          border-color: rgba(154, 209, 255, 0.35);
+          background: rgba(154, 209, 255, 0.12);
+        }
+        .status-info::before { background: #9ad1ff; }
+
+        .actions {
           display: flex;
-          flex-direction: column;
+          gap: 8px;
+          justify-content: flex-end;
+          padding: 12px 0 6px;
+          margin-bottom: 8px;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+
+        .btn {
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          background: rgba(255, 255, 255, 0.06);
+          color: var(--text-color);
+          border-radius: 9px;
+          padding: 8px 12px;
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .btn-refresh-source {
+          width: auto;
+          min-width: 0;
+          text-align: center;
+          white-space: nowrap;
+          padding: 7px 11px 7px 10px;
+          border-radius: 999px;
+          background: linear-gradient(180deg, rgba(255, 141, 51, 0.22), rgba(255, 122, 0, 0.14));
+          border-color: rgba(255, 162, 89, 0.45);
+          color: #ffb273;
+          box-shadow: 0 0 0 1px rgba(255, 122, 0, 0.06) inset;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          text-transform: uppercase;
+          letter-spacing: 0.35px;
+        }
+
+        .btn-refresh-source::before {
+          content: '↻';
+          font-size: 13px;
+          line-height: 1;
+          color: #ffb273;
+        }
+
+        .btn-refresh-source:hover:not(:disabled) {
+          background: linear-gradient(180deg, rgba(255, 151, 69, 0.28), rgba(255, 122, 0, 0.18));
+          border-color: rgba(255, 176, 114, 0.62);
+          transform: translateY(-1px);
+          box-shadow: 0 8px 18px rgba(255, 122, 0, 0.12), 0 0 0 1px rgba(255, 122, 0, 0.08) inset;
+        }
+
+        .btn-refresh-source:disabled {
+          opacity: 0.72;
+          cursor: wait;
+          box-shadow: none;
+        }
+
+        .btn-primary {
+          border-color: rgba(255, 122, 0, 0.55);
+          background: rgba(255, 122, 0, 0.18);
+          color: #ffb273;
+        }
+
+        .incident-list {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+        }
+
+        .incident-item {
+          padding: 10px 12px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .incident-head {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          font-size: 12px;
+          margin-bottom: 4px;
+        }
+
+        .incident-source { color: var(--text-color); font-weight: 600; }
+        .incident-time { color: var(--text-secondary); font-size: 11px; }
+
+        .incident-msg {
+          color: var(--text-secondary);
+          font-size: 12px;
+          line-height: 1.4;
+          word-break: break-word;
+        }
+
+        .health-grid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(140px, 1fr));
+          gap: 10px;
+        }
+
+        .split-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
           gap: 12px;
         }
 
-        .solis-explorer-param-group {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
+        .timeline {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+          max-height: 260px;
+          overflow: auto;
         }
 
-        .solis-explorer-param-label {
-          font-size: 12px;
-          color: var(--text-secondary);
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.3px;
-        }
-
-        .solis-explorer-param-input {
+        .timeline-item {
           padding: 10px 12px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(0, 0, 0, 0.25);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+          display: grid;
+          gap: 3px;
+        }
+
+        .timeline-title {
+          font-size: 12px;
+          font-weight: 600;
           color: var(--text-color);
-          border-radius: 8px;
-          font-size: 13px;
-          font-family: inherit;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .solis-explorer-param-input:focus {
-          outline: none;
-          border-color: var(--accent);
-          background: rgba(0, 0, 0, 0.4);
-          box-shadow: 0 0 0 2px rgba(255, 122, 0, 0.2);
+        .timeline-detail {
+          font-size: 11px;
+          color: var(--text-secondary);
         }
 
-        .solis-explorer-actions {
-          display: flex;
-          gap: 8px;
-        }
-
-        .solis-explorer-button {
-          flex: 1;
-          padding: 12px 16px;
-          border: none;
-          background: var(--accent);
-          color: #000;
-          border-radius: 8px;
-          font-size: 13px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          box-shadow: 0 4px 15px rgba(255, 122, 0, 0.3);
-        }
-
-        .solis-explorer-button:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(255, 122, 0, 0.4);
-        }
-
-        .solis-explorer-button:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-          box-shadow: none;
-          transform: none;
-        }
-
-        .solis-explorer-response-section {
-          flex: 1;
+        .uptime-grid {
           display: flex;
           flex-direction: column;
-          min-height: 300px;
-          background: rgba(0, 0, 0, 0.3);
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          border-radius: 12px;
+          gap: 12px;
+          padding: 10px 12px 12px;
+        }
+
+        .uptime-row {
+          display: grid;
+          grid-template-columns: 84px 1fr 56px;
+          align-items: center;
+          gap: 10px;
+          font-size: 11px;
+        }
+
+        .uptime-date {
+          color: var(--text-secondary);
+        }
+
+        .uptime-track {
+          position: relative;
+          height: 10px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.08);
           overflow: hidden;
         }
 
-        .solis-explorer-response-header {
-          padding: 12px 16px;
-          background: rgba(0, 0, 0, 0.2);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        .uptime-fill {
+          position: absolute;
+          top: 0;
+          left: 0;
+          height: 100%;
+          border-radius: 999px;
+        }
+
+        .uptime-fill.state-on { background: linear-gradient(90deg, #3ddc84, #83f28f); }
+        .uptime-fill.state-intermittent { background: linear-gradient(90deg, #ffd166, #ffb347); }
+        .uptime-fill.state-mostly-off,
+        .uptime-fill.state-off { background: linear-gradient(90deg, #ff6b6b, #ff8e8e); }
+
+        .uptime-pct {
+          text-align: right;
+          color: var(--text-color);
+          font-weight: 700;
+        }
+
+        .uptime-meta {
+          margin-left: 94px;
+          font-size: 10px;
+          color: var(--text-secondary);
+          margin-top: -8px;
+          padding-bottom: 8px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .uptime-summary {
+          display: flex;
+          gap: 8px;
+          padding: 0 12px 8px;
+          flex-wrap: wrap;
+        }
+
+        .uptime-chip {
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.03);
+          color: var(--text-secondary);
+          border-radius: 999px;
+          padding: 4px 8px;
+          font-size: 10px;
+          letter-spacing: 0.2px;
+        }
+
+        .uptime-period-list {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+        }
+
+        .uptime-period-item {
           display: flex;
           justify-content: space-between;
-          align-items: center;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        .solis-explorer-response-meta {
+          gap: 10px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+          padding: 8px 10px;
           font-size: 11px;
           color: var(--text-secondary);
-          display: flex;
-          gap: 12px;
         }
 
-        .solis-explorer-meta-item {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .solis-explorer-meta-status-ok {
-          color: var(--success-color);
-          font-weight: 600;
-        }
-
-        .solis-explorer-meta-status-error {
-          color: var(--error-color);
-          font-weight: 600;
-        }
-
-        .solis-explorer-json-toggle {
-          padding: 6px 12px;
-          font-size: 11px;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 6px;
-          cursor: pointer;
-          font-family: inherit;
-          color: var(--text-secondary);
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .solis-explorer-json-toggle:hover {
+        .uptime-period-item strong {
           color: var(--text-color);
-          background: rgba(255, 255, 255, 0.1);
-          border-color: rgba(255, 255, 255, 0.2);
+          font-weight: 600;
         }
 
-        .solis-explorer-response-content {
-          flex: 1;
-          overflow-y: auto;
-          padding: 16px;
-          font-size: 13px;
+        .empty {
+          padding: 16px 12px;
+          color: var(--text-secondary);
+          font-size: 12px;
         }
 
-        .solis-explorer-placeholder {
-          color: var(--text-muted);
-          text-align: center;
-          padding: 40px 20px;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .solis-explorer-error {
-          color: var(--error-color);
-          background: rgba(255, 68, 68, 0.05);
-          padding: 12px;
+        .skeleton-line {
+          height: 12px;
+          margin-bottom: 8px;
           border-radius: 8px;
-          margin: 12px 0;
-          border-left: 3px solid var(--error-color);
+          background: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.06) 25%,
+            rgba(255, 255, 255, 0.13) 37%,
+            rgba(255, 255, 255, 0.06) 63%
+          );
+          background-size: 400% 100%;
+          animation: skeletonPulse 1.35s ease-in-out infinite;
         }
 
-        .solis-explorer-table {
-          width: 100%;
-          border-collapse: separate;
-          border-spacing: 0;
-          font-size: 12px;
+        .skeleton-line:last-child {
+          margin-bottom: 0;
         }
 
-        .solis-explorer-table th {
-          background: rgba(255, 255, 255, 0.02);
-          padding: 10px;
-          text-align: left;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-          font-weight: 600;
-          color: var(--text-secondary);
-          text-transform: uppercase;
-          letter-spacing: 0.3px;
+        .skeleton-content {
+          padding: 12px;
         }
 
-        .solis-explorer-table td {
-          padding: 10px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-          word-break: break-word;
-          color: var(--text-color);
-        }
-
-        .solis-explorer-table tr:hover td {
-          background: rgba(255, 255, 255, 0.02);
-        }
-
-        .solis-explorer-detail-section {
-          margin: 12px 0;
-        }
-
-        .solis-explorer-detail-section-title {
-          font-weight: 600;
-          color: var(--accent);
-          margin: 8px 0 6px 0;
-          font-size: 12px;
-          text-transform: uppercase;
-          letter-spacing: 0.3px;
-        }
-
-        .solis-explorer-detail-field {
-          display: flex;
-          padding: 6px 0;
-          font-size: 12px;
-          gap: 12px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.02);
-        }
-
-        .solis-explorer-detail-label {
-          font-weight: 600;
-          color: var(--text-secondary);
-          width: 140px;
-          flex-shrink: 0;
-        }
-
-        .solis-explorer-detail-value {
-          color: var(--text-color);
-          word-break: break-word;
-          flex: 1;
-        }
-
-        .solis-explorer-badge {
-          display: inline-block;
-          padding: 4px 10px;
-          border-radius: 6px;
-          font-size: 11px;
-          font-weight: 600;
-          background: rgba(255, 122, 0, 0.1);
-          color: var(--accent);
-          border: 1px solid rgba(255, 122, 0, 0.2);
-        }
-
-        .solis-explorer-spinner {
-          display: inline-block;
-          width: 16px;
-          height: 16px;
-          border: 2px solid rgba(255, 255, 255, 0.2);
-          border-top-color: var(--accent);
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-
-        .solis-explorer-endpoints-loading {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          color: var(--text-secondary);
-          font-size: 12px;
-        }
-
-        @media (max-width: 1200px) {
-          .solis-explorer-panel {
-            width: calc(100vw - 40px);
-            max-height: 80vh;
+        @keyframes skeletonPulse {
+          0% {
+            background-position: 100% 0;
+          }
+          100% {
+            background-position: 0 0;
           }
         }
 
-        @media (max-width: 768px) {
-          .solis-explorer-panel {
-            right: 10px;
+        @media (max-width: 980px) {
+          .pipeline-panel {
             left: 10px;
-            bottom: 10px;
             width: calc(100vw - 20px);
-            max-height: calc(100vh - 30px);
+            bottom: 10px;
+            max-height: calc(100vh - 20px);
           }
 
-          .solis-explorer-body {
+          .pipeline-metrics,
+          .health-grid {
+            grid-template-columns: repeat(2, minmax(130px, 1fr));
+          }
+
+          .pipeline-grid,
+          .split-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .pipeline-body {
+            padding-bottom: 22px;
+            scroll-padding-bottom: 22px;
+          }
+
+          .pipeline-header {
+            align-items: flex-start;
+          }
+
+          .pipeline-header-right {
             flex-direction: column;
-            gap: 16px;
-            padding: 16px;
+            align-items: flex-end;
           }
 
-          .solis-explorer-left-panel {
+          .tabs {
+            overflow-x: auto;
+            scrollbar-width: thin;
+            padding: 8px 10px;
+          }
+
+          .tab-btn {
             flex: 0 0 auto;
-            border-right: none;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            padding-right: 0;
-            padding-bottom: 16px;
+            white-space: nowrap;
           }
 
-          .solis-explorer-endpoints-grid {
-            grid-template-columns: 1fr 1fr 1fr;
+          .uptime-row {
+            grid-template-columns: 74px 1fr 48px;
+            gap: 8px;
+          }
+
+          .uptime-meta {
+            margin-left: 0;
+            margin-top: -4px;
           }
         }
 
-        ::-webkit-scrollbar {
-          width: 6px;
-          height: 6px;
-        }
+        @media (max-width: 680px) {
+          .pipeline-panel {
+            left: 6px;
+            width: calc(100vw - 12px);
+            bottom: 6px;
+            border-radius: 12px;
+            max-height: calc(100vh - 12px);
+          }
 
-        ::-webkit-scrollbar-track {
-          background: rgba(0, 0, 0, 0.1);
-          border-radius: 3px;
-        }
+          .pipeline-header {
+            padding: 10px 12px;
+            align-items: flex-start;
+            gap: 8px;
+          }
 
-        ::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.15);
-          border-radius: 3px;
-        }
+          .pipeline-title {
+            font-size: 14px;
+          }
 
-        ::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.3);
+          .pipeline-subtitle {
+            font-size: 11px;
+            line-height: 1.35;
+          }
+
+          .pipeline-header-right {
+            width: 100%;
+            align-items: stretch;
+            gap: 6px;
+          }
+
+          .pipeline-header-actions {
+            justify-content: flex-start;
+          }
+
+          .pipeline-header-actions .status {
+            max-width: 100%;
+            white-space: normal;
+            line-height: 1.25;
+          }
+
+          .pipeline-close {
+            align-self: flex-end;
+          }
+
+          .pipeline-body {
+            padding: 10px 10px 20px;
+            gap: 10px;
+          }
+
+          .pipeline-metrics,
+          .health-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .pipeline-metrics > .metric-card:last-child {
+            grid-column: 1 / -1;
+          }
+
+          .metric-card {
+            padding: 9px;
+          }
+
+          .metric-value {
+            font-size: 17px;
+          }
+
+          .btn {
+            padding: 7px 10px;
+            font-size: 11px;
+          }
+
+          .panel-card h4,
+          .source-mobile-item,
+          .incident-item,
+          .ledger-detail-cell,
+          .table th,
+          .table td {
+            border-bottom: 0;
+          }
+
+          .panel-card h4 {
+            padding: 10px 12px 8px;
+          }
+
+          .source-mobile-item {
+            gap: 8px;
+          }
+
+          .source-mobile-meta {
+            gap: 8px;
+            flex-wrap: wrap;
+            white-space: normal;
+          }
+
+          .source-lag-chip,
+          .source-lag-chip-wide {
+            width: 6ch;
+            min-width: 6ch;
+          }
+
+          .table {
+            font-size: 11px;
+          }
+
+          .table th,
+          .table td {
+            padding: 8px 8px;
+          }
+
+          .source-desktop-table {
+            display: none;
+          }
+
+          .source-mobile-list {
+            display: block;
+          }
+
+          .uptime-row {
+            grid-template-columns: 66px 1fr 42px;
+            font-size: 10px;
+          }
+
+          .uptime-meta {
+            font-size: 10px;
+            padding-bottom: 6px;
+          }
+
+          .actions {
+            justify-content: flex-start;
+            gap: 6px;
+          }
         }
       `}</style>
 
-      {/* Header */}
-      <div className="solis-explorer-header">
-        <h3>🔍 SolisCloud Explorer</h3>
-        <button className="solis-explorer-close" onClick={onClose}>×</button>
+      <div className="pipeline-header">
+        <div>
+          <div className="pipeline-title">Operations & Inverter Diagnostics</div>
+          <div className="pipeline-subtitle">Pipeline SLOs, alarm intelligence, and inverter health timeline</div>
+        </div>
+        <div className="pipeline-header-right">
+          <div className="pipeline-header-actions">
+            <span className={`status status-${isStale ? 'warning' : 'success'}`}>
+              {isStale ? 'Global stale state detected' : 'Global data freshness healthy'}
+            </span>
+            <button className="btn btn-primary" onClick={() => refreshAll()}>
+              Refresh All Pipelines
+            </button>
+          </div>
+          <button className="pipeline-close" onClick={onClose} aria-label="Close panel">x</button>
+        </div>
       </div>
 
-      {/* Body */}
-      <div className="solis-explorer-body">
-        {/* Left Panel - Endpoints List */}
-        <div className="solis-explorer-left-panel">
-          <div>
-            <div className="solis-explorer-section-title">Available Endpoints</div>
-            {endpointsLoading ? (
-              <div className="solis-explorer-endpoints-loading">
-                <span className="solis-explorer-spinner" />
-                Loading endpoints...
+      <div className="tabs">
+        <button
+          className={`tab-btn ${activeTab === 'pipeline' ? 'active' : ''}`}
+          onClick={() => setActiveTab('pipeline')}
+        >
+          Data Pipeline Health
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'inverter' ? 'active' : ''}`}
+          onClick={() => setActiveTab('inverter')}
+        >
+          Inverter Health & Alarms
+        </button>
+      </div>
+
+      {activeTab === 'pipeline' && (
+        <div className="pipeline-body">
+          {showPipelineSkeleton ? (
+            <>
+              <div className="pipeline-metrics">
+                <div className="metric-card metric-card-skeleton">
+                  <div className="metric-label">Availability</div>
+                  <div className="skeleton-badge">Summarizing</div>
+                  <div className="signal-bars"><span style={{ height: 9 }} /><span style={{ height: 14 }} /><span style={{ height: 18 }} /><span style={{ height: 23 }} /></div>
+                </div>
+                <div className="metric-card metric-card-skeleton">
+                  <div className="metric-label">Freshness SLA</div>
+                  <div className="skeleton-badge">Checking Sources</div>
+                  <div className="signal-bars"><span style={{ height: 8 }} /><span style={{ height: 13 }} /><span style={{ height: 16 }} /><span style={{ height: 21 }} /></div>
+                </div>
+                <div className="metric-card metric-card-skeleton">
+                  <div className="metric-label">Active Incidents</div>
+                  <div className="skeleton-badge">Scanning</div>
+                  <div className="signal-bars"><span style={{ height: 10 }} /><span style={{ height: 12 }} /><span style={{ height: 17 }} /><span style={{ height: 22 }} /></div>
+                </div>
+                <div className="metric-card metric-card-skeleton">
+                  <div className="metric-label">Avg Lag</div>
+                  <div className="skeleton-badge">Measuring</div>
+                  <div className="signal-bars"><span style={{ height: 7 }} /><span style={{ height: 11 }} /><span style={{ height: 15 }} /><span style={{ height: 19 }} /></div>
+                </div>
+                <div className="metric-card metric-card-skeleton">
+                  <div className="metric-label">Worst Lag</div>
+                  <div className="skeleton-badge">Measuring</div>
+                  <div className="signal-bars"><span style={{ height: 7 }} /><span style={{ height: 11 }} /><span style={{ height: 15 }} /><span style={{ height: 19 }} /></div>
+                </div>
               </div>
-            ) : endpointsError ? (
-              <div className="solis-explorer-error">
-                <strong>Error loading endpoints:</strong> {endpointsError}
+
+              <div className="pipeline-grid">
+                <div className="panel-card">
+                  <h4>Source Status Matrix</h4>
+                  <div className="pipeline-skeleton-table">
+                    {[0, 1, 2, 3].map((row) => (
+                      <div className="pipeline-row-skeleton" key={`pipeline-skeleton-${row}`}>
+                        <div className="skeleton-line mid" />
+                        <div className="skeleton-line short" />
+                        <div className="skeleton-line long" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="panel-card">
+                  <h4>Incident Feed</h4>
+                  <div className="pipeline-row-skeleton">
+                    <div className="skeleton-line short" />
+                    <div className="skeleton-line long" />
+                    <div className="skeleton-line mid" />
+                  </div>
+                  <div className="pipeline-row-skeleton">
+                    <div className="skeleton-line short" />
+                    <div className="skeleton-line long" />
+                    <div className="skeleton-line mid" />
+                  </div>
+                </div>
               </div>
-            ) : endpoints.length === 0 ? (
-              <div style={{ color: 'var(--text-muted)', fontSize: '12px', padding: '16px 0' }}>
-                No endpoints available
+            </>
+          ) : (
+            <>
+              <div className="pipeline-metrics">
+                <div className="metric-card">
+                  <div className="metric-label">Availability</div>
+                  <div className="metric-value">{metrics.availabilityPct}%</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Freshness SLA</div>
+                  <div className="metric-value">{metrics.freshnessPct}%</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Active Incidents</div>
+                  <div className="metric-value">{metrics.activeIncidents}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Avg Lag</div>
+                  <div className="metric-value">{formatLag(metrics.avgLag)}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Worst Lag</div>
+                  <div className="metric-value">{formatLag(metrics.maxLag)}</div>
+                </div>
               </div>
+
+              <div className="pipeline-grid">
+                <div className="panel-card">
+                  <h4>Source Status Matrix</h4>
+                  <div className="source-desktop-table table-wrap">
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>Source</th>
+                          <th>Status</th>
+                          <th className="col-lag">Lag</th>
+                          <th>Last Update</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sourceRows.map((src) => (
+                          <tr key={src.key}>
+                            <td>{src.label}</td>
+                            <td>
+                              <span className={`status status-${src.status.tone}`}>{src.status.label}</span>
+                            </td>
+                            <td className="col-lag"><span className="source-lag-chip source-lag-chip-wide">{formatLag(src.lagMs)}</span></td>
+                            <td>{formatTimestamp(src.lastUpdate)}</td>
+                            <td>
+                              <button
+                                className="btn btn-refresh-source"
+                                onClick={() => refreshData(src.refreshKey)}
+                                disabled={Boolean(src.loading)}
+                              >
+                                {src.loading ? 'Refreshing' : 'Refresh'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="source-mobile-list">
+                    {sourceRows.map((src) => (
+                      <div className="source-mobile-item" key={`mobile-${src.key}`}>
+                        <div className="source-mobile-head">
+                          <span className="source-mobile-name">{src.label}</span>
+                        </div>
+                        <div className="source-mobile-meta">
+                          <span className={`status status-${src.status.tone}`}>{src.status.label}</span>
+                          <span><strong>Lag:</strong> <span className="source-lag-chip">{formatLag(src.lagMs)}</span></span>
+                          <span><strong>Update:</strong> {formatTimestamp(src.lastUpdate)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="panel-card">
+                  <h4>Incident Feed</h4>
+                  {incidents.length === 0 ? (
+                    <div className="empty">No active incidents. Pipeline appears stable.</div>
+                  ) : (
+                    <ul className="incident-list">
+                      {incidents.map((incident, idx) => (
+                        <li key={`${incident.source}-${idx}`} className="incident-item">
+                          <div className="incident-head">
+                            <span className="incident-source">{incident.source}</span>
+                            <span className="incident-time">{formatTimestamp(incident.time)}</span>
+                          </div>
+                          <div className="incident-msg">{incident.message}</div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+        </div>
+      )}
+
+      {activeTab === 'inverter' && (
+        <div className="pipeline-body inverter-body">
+          <div className="health-grid">
+            {showInverterSkeleton ? (
+              <>
+                <div className="metric-card metric-card-skeleton">
+                  <div className="metric-label">Health Score</div>
+                  <div className="skeleton-badge">Signal Locking</div>
+                  <div className="signal-bars"><span style={{ height: 9 }} /><span style={{ height: 14 }} /><span style={{ height: 18 }} /><span style={{ height: 23 }} /></div>
+                </div>
+                <div className="metric-card metric-card-skeleton">
+                  <div className="metric-label">Realtime Power</div>
+                  <div className="skeleton-badge">Reading Bus</div>
+                  <div className="signal-bars"><span style={{ height: 8 }} /><span style={{ height: 13 }} /><span style={{ height: 16 }} /><span style={{ height: 21 }} /></div>
+                </div>
+                <div className="metric-card metric-card-skeleton">
+                  <div className="metric-label">Today Energy</div>
+                  <div className="skeleton-badge">Aggregating</div>
+                  <div className="signal-bars"><span style={{ height: 10 }} /><span style={{ height: 12 }} /><span style={{ height: 17 }} /><span style={{ height: 22 }} /></div>
+                </div>
+                <div className="metric-card metric-card-skeleton">
+                  <div className="metric-label">Unresolved Alarms</div>
+                  <div className="skeleton-badge">Syncing Events</div>
+                  <div className="signal-bars"><span style={{ height: 7 }} /><span style={{ height: 11 }} /><span style={{ height: 15 }} /><span style={{ height: 19 }} /></div>
+                </div>
+              </>
             ) : (
-              <div className="solis-explorer-endpoints-grid">
-                {endpoints.map((ep) => (
-                  <button
-                    key={ep.key}
-                    className={`solis-explorer-endpoint-btn ${selectedEndpoint === ep.key ? 'active' : ''}`}
-                    onClick={() => setSelectedEndpoint(ep.key)}
-                    title={ep.description}
-                  >
-                    {ep.key}
-                  </button>
-                ))}
-              </div>
+              <>
+                <div className="metric-card">
+                  <div className="metric-label">Health Score</div>
+                  <div className="metric-value">{inverterMetrics.score}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Realtime Power</div>
+                  <div className="metric-value">
+                    {inverterMetrics.realtimePower !== null ? `${inverterMetrics.realtimePower} kW` : 'N/A'}
+                  </div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Today Energy</div>
+                  <div className="metric-value">
+                    {inverterMetrics.todayEnergy !== null ? `${inverterMetrics.todayEnergy} kWh` : 'N/A'}
+                  </div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Unresolved Alarms</div>
+                  <div className="metric-value">{inverterMetrics.unresolvedAlarms}</div>
+                </div>
+              </>
             )}
           </div>
-        </div>
 
-        {/* Right Panel - Parameters & Response */}
-        <div className="solis-explorer-right-panel">
-          {/* Parameters Section */}
-          {selectedEndpointConfig && (
-            <div className="solis-explorer-params-section">
-              <div>
-                <div className="solis-explorer-section-title">{selectedEndpointConfig.category} - {selectedEndpointConfig.description}</div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                {Object.entries(selectedEndpointConfig.params).map(([key, def]) => (
-                  <div key={key} className="solis-explorer-param-group">
-                    <label className="solis-explorer-param-label">
-                      {key}
-                      {def.required && <span style={{ color: 'var(--error-color)' }}> *</span>}
-                    </label>
-                    <input
-                      type="text"
-                      value={params[key] || ''}
-                      onChange={(e) => setParams({ ...params, [key]: e.target.value })}
-                      placeholder={def.description}
-                      className="solis-explorer-param-input"
-                    />
+          {!showInverterSkeleton && (
+            <div className="panel-card">
+              <h4>Inverter Uptime Graph (Last 7 Days)</h4>
+              {hasUptimeData ? (
+                <>
+                  <div className="uptime-summary">
+                    <span className="uptime-chip">Fully Off Days: {uptimeMetrics.offDays}</span>
+                    <span className="uptime-chip">Intermittent Days: {uptimeMetrics.intermittentDays}</span>
                   </div>
-                ))}
-              </div>
-
-              <div className="solis-explorer-actions">
-                <button
-                  className="solis-explorer-button"
-                  onClick={executeCall}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <span className="solis-explorer-spinner" /> Fetching...
-                    </>
-                  ) : (
-                    'Execute →'
-                  )}
-                </button>
-              </div>
+                  <div className="uptime-grid">
+                    {inverterData.uptimeSeries.map((day) => (
+                      <React.Fragment key={`uptime-${day.date}`}>
+                        <div className="uptime-row">
+                          <div className="uptime-date">{formatTimestamp(day.date)}</div>
+                          <div className="uptime-track">
+                            <div
+                              className={`uptime-fill state-${day.state}`}
+                              style={{ width: `${day.uptimePct}%` }}
+                            />
+                          </div>
+                          <div className="uptime-pct">{day.uptimePct}%</div>
+                        </div>
+                        <div className="uptime-meta">
+                          Window {day.periodLabel} | {day.points} pts | State {day.state}
+                        </div>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                  <div className="empty" style={{ paddingTop: 8 }}>
+                    Derived from inverterDay sample coverage and observed active window.
+                  </div>
+                </>
+              ) : (
+                <div className="empty">Uptime data not available yet. Click Refresh Inverter Health.</div>
+              )}
             </div>
           )}
 
-          {/* Response Section */}
-          {response || error ? (
-            <div className="solis-explorer-response-section">
-              <div className="solis-explorer-response-header">
-                <div className="solis-explorer-response-meta">
-                  <div className="solis-explorer-meta-item">
-                    <span className={`solis-explorer-meta-status-${response?.ok ? 'ok' : 'error'}`}>
-                      {response?.ok ? '✓ Success' : '✗ Error'}
-                    </span>
-                  </div>
-                  {durationMs && (
-                    <div className="solis-explorer-meta-item">
-                      ⏱ {durationMs}ms
-                    </div>
-                  )}
-                  {response?.rateLimit && (
-                    <div className="solis-explorer-meta-item">
-                      🔄 {response.rateLimit.remaining} remaining
-                    </div>
-                  )}
-                </div>
-                <button
-                  className="solis-explorer-json-toggle"
-                  onClick={() => setRawJsonVisible(!rawJsonVisible)}
-                >
-                  {rawJsonVisible ? '📄 Formatted' : '{}  JSON'}
-                </button>
-              </div>
-
-              <div className="solis-explorer-response-content">
-                {error && (
-                  <div className="solis-explorer-error">
-                    <strong>Error:</strong> {error}
-                  </div>
-                )}
-                {rawJsonVisible ? (
-                  <div className="solis-explorer-json-block">
-                    {JSON.stringify(response?.solisResponse, null, 2)}
-                  </div>
-                ) : (
-                  renderFormatted(formatted)
-                )}
-              </div>
+          {(!hasInverterInfo && !hasAlarmData && !hasPerformanceData && !hasUptimeData && !inverterLoading && !inverterError) ? (
+            <div className="panel-card">
+              <h4>Inverter Diagnostics</h4>
+              <div className="empty">No inverter diagnostics data returned yet. Click refresh to retry.</div>
             </div>
           ) : (
-            <div className="solis-explorer-response-section">
-              <div className="solis-explorer-placeholder">
-                <span>📊</span>
-                <span>Select an endpoint and click Execute to view data</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
+            <>
+              {showInverterSkeleton && (
+                <>
+                  <div className="split-grid">
+                    <div className="panel-card">
+                      <h4>Inverter Info</h4>
+                      <div className="skeleton-content">
+                        <div className="skeleton-line" style={{ width: '78%' }} />
+                        <div className="skeleton-line" style={{ width: '64%' }} />
+                        <div className="skeleton-line" style={{ width: '70%' }} />
+                        <div className="skeleton-line" style={{ width: '56%' }} />
+                      </div>
+                    </div>
+                    <div className="panel-card">
+                      <h4>Alarm Timeline</h4>
+                      <div className="skeleton-content">
+                        <div className="skeleton-line" style={{ width: '84%' }} />
+                        <div className="skeleton-line" style={{ width: '72%' }} />
+                        <div className="skeleton-line" style={{ width: '66%' }} />
+                        <div className="skeleton-line" style={{ width: '74%' }} />
+                      </div>
+                    </div>
+                  </div>
 
-/**
- * Render formatted response based on type
- */
-function renderFormatted(formatted) {
-  if (!formatted) return <p style={{ color: 'var(--text-muted)' }}>No response</p>;
+                  <div className="split-grid">
+                    <div className="panel-card">
+                      <h4>Performance Timeline</h4>
+                      <div className="skeleton-content">
+                        <div className="skeleton-line" style={{ width: '80%' }} />
+                        <div className="skeleton-line" style={{ width: '62%' }} />
+                        <div className="skeleton-line" style={{ width: '76%' }} />
+                      </div>
+                    </div>
+                    <div className="panel-card">
+                      <h4>Alarm Ledger</h4>
+                      <div className="skeleton-content">
+                        <div className="skeleton-line" style={{ width: '92%' }} />
+                        <div className="skeleton-line" style={{ width: '88%' }} />
+                        <div className="skeleton-line" style={{ width: '85%' }} />
+                        <div className="skeleton-line" style={{ width: '90%' }} />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
 
-  const { type, items = [], sections = [] } = formatted;
+              {(hasInverterInfo || alarmTimeline.length > 0) && (
+                <div className="split-grid">
+                  {hasInverterInfo && (
+                    <div className="panel-card">
+                      <h4>Inverter Info</h4>
+                      <div className="table-wrap">
+                        <table className="table">
+                          <tbody>
+                            <tr>
+                              <th>Inverter ID</th>
+                              <td>{inverterData.inverter?.id || inverterData.detail?.id || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                              <th>Serial Number</th>
+                              <td>{inverterData.inverter?.sn || inverterData.detail?.sn || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                              <th>State</th>
+                              <td>
+                                <span className={`status status-${inverterMetrics.healthClass}`}>
+                                  {inverterMetrics.statusCode === 1 ? 'Online' : inverterMetrics.statusCode === 2 ? 'Offline' : inverterMetrics.statusCode === 3 ? 'Alarm' : 'Unknown'}
+                                </span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <th>Last Diagnostics Update</th>
+                              <td>{formatTimestamp(inverterData.updatedAt)}</td>
+                            </tr>
+                            <tr>
+                              <th>Data Points (today)</th>
+                              <td>{inverterData.daySeries.length}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
 
-  if (type === 'empty') {
-    return <p style={{ color: 'var(--text-muted)' }}>No data</p>;
-  }
-
-  if (type === 'paginated-list' || type === 'array-list') {
-    if (!items.length) return <p style={{ color: 'var(--text-muted)' }}>No items</p>;
-
-    const keys = Object.keys(items[0]).slice(0, 6);
-    return (
-      <>
-        <table className="solis-explorer-table">
-          <thead>
-            <tr>
-              {keys.map((k) => (
-                <th key={k}>{k}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {items.slice(0, 50).map((item, idx) => (
-              <tr key={idx}>
-                {keys.map((k) => (
-                  <td key={k}>{typeof item[k] === 'object' ? JSON.stringify(item[k]) : String(item[k])}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {items.length > 50 && <p style={{ marginTop: '8px', color: 'var(--text-muted)', fontSize: '11px' }}>... and {items.length - 50} more items</p>}
-      </>
-    );
-  }
-
-  if (type === 'time-series-array' || type === 'time-series-single') {
-    if (!items.length) return <p style={{ color: 'var(--text-muted)' }}>No series data</p>;
-
-    return (
-      <table className="solis-explorer-table">
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.slice(0, 30).map((item, idx) => (
-            <tr key={idx}>
-              <td>{item.timestampStr || new Date(item.timestamp).toLocaleString()}</td>
-              <td>{item.valueStr ? `${item.value} ${item.valueStr}` : item.value}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    );
-  }
-
-  if (type === 'detail-object') {
-    return (
-      <div>
-        {sections.map((sec) => (
-          <div key={sec.title} className="solis-explorer-detail-section">
-            <div className="solis-explorer-detail-section-title">{sec.title}</div>
-            {sec.fields.map((field) => (
-              <div key={field.label} className="solis-explorer-detail-field">
-                <div className="solis-explorer-detail-label">{field.label}</div>
-                <div className="solis-explorer-detail-value">
-                  {field.badge ? (
-                    <span className="solis-explorer-badge">{field.value}</span>
-                  ) : (
-                    <>
-                      {field.value} {field.unit && <span style={{ color: 'var(--text-secondary)' }}>{field.unit}</span>}
-                    </>
+                  {alarmTimeline.length > 0 && (
+                    <div className="panel-card">
+                      <h4>Alarm Timeline</h4>
+                      <ul className="timeline">
+                        {alarmTimeline.map((event, idx) => (
+                          <li className="timeline-item" key={`alarm-${idx}`}>
+                            <div className="timeline-title">{event.title}</div>
+                            <div className="timeline-detail">
+                              Severity {event.severity} | State {resolveAlarmState(event.status)} | {event.source}
+                            </div>
+                            <div className="incident-time">{formatTimestamp(event.time)}</div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              )}
+
+              {(hasPerformanceData || alarmLedger.length > 0) && (
+                <div className="split-grid">
+                  {hasPerformanceData && (
+                    <div className="panel-card">
+                      <h4>Performance Timeline</h4>
+                      <ul className="timeline">
+                        {performanceTimeline.map((event, idx) => (
+                          <li className="timeline-item" key={`perf-${idx}`}>
+                            <div className="timeline-title">{event.title}</div>
+                            <div className="timeline-detail">{event.detail}</div>
+                            <div className="incident-time">{formatTimestamp(event.time)}</div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {alarmLedger.length > 0 && (
+                    <div className="panel-card">
+                      <h4>Alarm Ledger</h4>
+                      <div className="table-wrap">
+                        <table className="table">
+                          <thead>
+                            <tr>
+                              <th>Code</th>
+                              <th>Name</th>
+                              <th>Level</th>
+                              <th>Total</th>
+                              <th>Open</th>
+                              <th>Last Seen</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {alarmLedger.map((alarm, idx) => (
+                              <React.Fragment key={`ledger-${idx}`}>
+                                <tr
+                                  className={`ledger-row ${expandedLedgerKey === alarm.key ? 'is-open' : ''}`}
+                                  onClick={() => setExpandedLedgerKey((prev) => (prev === alarm.key ? null : alarm.key))}
+                                >
+                                  <td>{alarm.code}</td>
+                                  <td>{alarm.name}</td>
+                                  <td>{alarm.level ?? '-'}</td>
+                                  <td>{alarm.totalCount}</td>
+                                  <td>{alarm.openCount}</td>
+                                  <td>{alarm.lastSeen ? formatTimestamp(alarm.lastSeen) : 'N/A'}</td>
+                                </tr>
+                                {expandedLedgerKey === alarm.key && (
+                                  <tr>
+                                    <td className="ledger-detail-cell" colSpan={6}>
+                                      <div className="ledger-details">
+                                        <div className="ledger-meta"><strong>Alarm message:</strong> {alarm.sample?.alarmMsg || 'Not provided by API'}</div>
+                                        <div className="ledger-meta"><strong>Advice:</strong> {alarm.sample?.advice || 'Not provided by API'}</div>
+                                        <div className="ledger-meta"><strong>Latest state:</strong> {alarm.latestState}</div>
+                                        <div className="ledger-meta"><strong>Device SN:</strong> {alarm.sample?.alarmDeviceSn || 'N/A'}</div>
+                                        <div className="ledger-meta"><strong>Machine:</strong> {alarm.sample?.machine || 'N/A'} ({alarm.sample?.model || 'N/A'})</div>
+                                        <div className="ledger-meta"><strong>Station:</strong> {alarm.sample?.stationName || 'N/A'}</div>
+                                        <div className="ledger-meta"><strong>Started:</strong> {formatTimestamp(deriveAlarmTimestamp({ alarmBeginTime: alarm.sample?.alarmBeginTime }))}</div>
+                                        <div className="ledger-meta"><strong>Ended:</strong> {formatTimestamp(deriveAlarmTimestamp({ alarmEndTime: alarm.sample?.alarmEndTime }))}</div>
+                                        <div className="ledger-meta"><strong>Duration:</strong> {formatDuration(alarm.sample?.alarmLong)}</div>
+                                        <div className="ledger-meta"><strong>Code description:</strong> Not provided by current Solis API endpoints/datasheet</div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+            </>
+          )}
+
+          <div className="actions">
+            {inverterError && (
+              <span className="status status-error">{inverterError}</span>
+            )}
+            {!inverterError && inverterLoading && (
+              <span className="status status-info">Loading inverter diagnostics...</span>
+            )}
+            {!inverterError && !inverterLoading && (
+              <span className={`status status-${inverterMetrics.healthClass}`}>
+                Inverter health telemetry updated
+              </span>
+            )}
+            <button className="btn btn-primary" onClick={fetchInverterInsights} disabled={inverterLoading}>
+              {inverterLoading ? 'Refreshing...' : 'Refresh Inverter Health'}
+            </button>
           </div>
-        ))}
-      </div>
-    );
-  }
-
-  return <p style={{ color: 'var(--text-muted)' }}>Unknown format type: {type}</p>;
+        </div>
+      )}
+    </div>
+  );
 }
-
-export default SolisExplorer;

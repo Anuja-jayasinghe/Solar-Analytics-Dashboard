@@ -37,10 +37,17 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 import BottomNav from "./components/BottomNav";
 
 function AppContent() {
-  const { isAdmin, loading, session } = useContext(AuthContext);
+  const { isAdmin, loading, session, dashboardAccess } = useContext(AuthContext);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [devToolsOpen, setDevToolsOpen] = useState(false);
   const devtoolsEnabled = (import.meta?.env?.VITE_ENABLE_DEVTOOLS ?? 'true') === 'true';
+  const canAccessOpsPanel = isAdmin || dashboardAccess === 'real';
+
+  useEffect(() => {
+    if (!canAccessOpsPanel && devToolsOpen) {
+      setDevToolsOpen(false);
+    }
+  }, [canAccessOpsPanel, devToolsOpen]);
 
   useEffect(() => {
     // Verify Supabase connection - don't block app if it fails
@@ -310,7 +317,7 @@ function AppContent() {
               <Sidebar
                 isCollapsed={isCollapsed}
                 setIsCollapsed={setIsCollapsed}
-                onDevToolsToggle={devtoolsEnabled ? (() => setDevToolsOpen((v) => !v)) : undefined}
+                onDevToolsToggle={(devtoolsEnabled && canAccessOpsPanel) ? (() => setDevToolsOpen((v) => !v)) : undefined}
               />
               <div
                 className="main-content"
@@ -349,12 +356,15 @@ function AppContent() {
                     </Routes>
                   </Suspense>
                 </div>
-                {devtoolsEnabled && (
+                {devtoolsEnabled && canAccessOpsPanel && (
                   <SolisExplorer open={devToolsOpen} onClose={() => setDevToolsOpen(false)} />
                 )}
               </div>
               <GoToTopButton />
-              <BottomNav />
+              <BottomNav
+                onDevToolsToggle={(devtoolsEnabled && canAccessOpsPanel) ? (() => setDevToolsOpen((v) => !v)) : undefined}
+                canAccessOpsPanel={devtoolsEnabled && canAccessOpsPanel}
+              />
             </div>
           }
         />
