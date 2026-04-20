@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../hooks/useData';
 import { FileWarning, ChevronRight, ChevronLeft } from 'lucide-react';
+import { formatDateDDMMYYYY } from '../lib/dateFormatter';
 
 const RefreshIndicator = () => {
   const { loading, lastUpdate, isStale, errors } = useData();
@@ -63,7 +64,7 @@ const RefreshIndicator = () => {
     if (diff < 60000) return 'Just now';
     if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
     if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-    return new Date(timestamp).toLocaleTimeString();
+    return formatDateDDMMYYYY(timestamp, 'N/A');
   };
 
   return (

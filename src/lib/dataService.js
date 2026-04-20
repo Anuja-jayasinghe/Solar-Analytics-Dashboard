@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient'
 import { cacheService } from './cacheService'
+import { formatDateDDMMYYYY } from './dateFormatter'
 
 const schema = import.meta.env.VITE_SUPABASE_SCHEMA || 'public'
 const cebTable = import.meta.env.VITE_SUPABASE_TABLE_CEB || 'ceb_data'
@@ -14,9 +15,7 @@ function toDateOnly(value) {
 }
 
 function formatShortDate(value) {
-  const date = toDateOnly(value)
-  if (!date) return 'Unknown'
-  return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+  return formatDateDDMMYYYY(value, 'Unknown')
 }
 
 function addDays(value, days) {

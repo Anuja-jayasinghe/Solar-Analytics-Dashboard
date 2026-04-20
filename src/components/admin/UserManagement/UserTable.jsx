@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatDateDDMMYYYY } from '../../../lib/dateFormatter';
 
 export default function UserTable({ users, loading, onRoleChange, onAccessChange }) {
   if (users.length === 0) {
@@ -123,12 +124,12 @@ export default function UserTable({ users, loading, onRoleChange, onAccessChange
                 </td>
                 <td style={cellStyle}>
                   <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
-                    {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown'}
+                    {formatDateDDMMYYYY(user.createdAt, 'Unknown')}
                   </span>
                 </td>
                 <td style={cellStyle}>
                   <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
-                    {user.lastSignInAt ? new Date(user.lastSignInAt).toLocaleDateString() : 'Never'}
+                    {formatDateDDMMYYYY(user.lastSignInAt, 'Never')}
                   </span>
                 </td>
               </tr>

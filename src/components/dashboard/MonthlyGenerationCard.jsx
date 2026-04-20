@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import NumberTicker from "../ui/NumberTicker";
 import { useData } from "../../hooks/useData"; // Adjust path as needed
+import { formatDateDDMMYYYY } from "../../lib/dateFormatter";
 
 
 const MonthlyGenerationCard = () => {
@@ -12,9 +13,8 @@ const MonthlyGenerationCard = () => {
   const startDate = monthlyGenerationData?.startDate;
   const isLoading = loading.monthlyGen;
 
-  // Format start date short (DD Mon)
   const formattedStartDate = startDate
-    ? new Date(startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+    ? formatDateDDMMYYYY(startDate, null)
     : null;
   
   // Convert only if >= 1000 kWh — keep exact precision

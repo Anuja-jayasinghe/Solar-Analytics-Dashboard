@@ -7,6 +7,8 @@
  * - Detail cards with grouped sections
  */
 
+import { formatDateDDMMYYYY } from './dateFormatter';
+
 /**
  * Format a paginated list response into table data
  * E.g., inverterList, userStationList, alarmList
@@ -112,7 +114,7 @@ export function formatDetailResponse(response) {
           value: stateMap[data.state] || stateMap[data.collectorState] || stateMap[data.status] || 'Unknown',
           badge: true,
         },
-        { label: 'Last Updated', value: data.dataTimestamp ? new Date(data.dataTimestamp).toLocaleString() : null },
+        { label: 'Last Updated', value: data.dataTimestamp ? formatDateDDMMYYYY(data.dataTimestamp, null) : null },
       ].filter((f) => f.value !== undefined),
     });
   }

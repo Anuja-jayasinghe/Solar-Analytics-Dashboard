@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useData } from '../contexts/DataContext';
+import { formatDateDDMMYYYY } from '../lib/dateFormatter';
 
 const STALE_THRESHOLD_MS = 10 * 60 * 1000;
 
@@ -19,8 +20,7 @@ function formatLag(ms) {
 }
 
 function formatTimestamp(ts) {
-  if (!ts) return 'Never';
-  return new Date(ts).toLocaleString();
+  return formatDateDDMMYYYY(ts, 'Never');
 }
 
 function formatDuration(ms) {
@@ -459,6 +459,7 @@ export default function SolisExplorer({ open, onClose }) {
   const hasAlarmData = inverterData.alarms.length > 0;
   const hasPerformanceData = performanceTimeline.length > 0;
   const hasAnyInverterContent = hasInverterInfo || hasAlarmData || hasPerformanceData;
+  const showInverterSkeleton = inverterLoading && !hasAnyInverterContent;
 
   useEffect(() => {
     if (!open) return undefined;
@@ -576,6 +577,55 @@ export default function SolisExplorer({ open, onClose }) {
           background: rgba(255, 255, 255, 0.03);
           border-radius: 12px;
           padding: 10px;
+        }
+
+        .metric-card.metric-card-skeleton {
+          border-color: rgba(255, 122, 0, 0.18);
+          background: linear-gradient(180deg, rgba(255, 122, 0, 0.08), rgba(255, 255, 255, 0.02));
+        }
+
+        .skeleton-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 2px 8px;
+          border-radius: 999px;
+          border: 1px solid rgba(154, 209, 255, 0.3);
+          color: #9ad1ff;
+          font-size: 10px;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+          margin-top: 6px;
+        }
+
+        .signal-bars {
+          margin-top: 10px;
+          display: flex;
+          align-items: flex-end;
+          gap: 4px;
+          height: 24px;
+        }
+
+        .signal-bars span {
+          width: 5px;
+          border-radius: 999px;
+          background: linear-gradient(180deg, rgba(255, 122, 0, 0.75), rgba(255, 122, 0, 0.2));
+          animation: signalDrift 1.15s ease-in-out infinite;
+        }
+
+        .signal-bars span:nth-child(2) { animation-delay: 0.12s; }
+        .signal-bars span:nth-child(3) { animation-delay: 0.24s; }
+        .signal-bars span:nth-child(4) { animation-delay: 0.36s; }
+
+        @keyframes signalDrift {
+          0%,
+          100% {
+            opacity: 0.5;
+            transform: scaleY(0.9);
+          }
+          50% {
+            opacity: 1;
+            transform: scaleY(1.08);
+          }
         }
 
         .metric-label {
@@ -987,26 +1037,53 @@ export default function SolisExplorer({ open, onClose }) {
       {activeTab === 'inverter' && (
         <div className="pipeline-body inverter-body">
           <div className="health-grid">
-            <div className="metric-card">
-              <div className="metric-label">Health Score</div>
-              <div className="metric-value">{inverterMetrics.score}</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-label">Realtime Power</div>
-              <div className="metric-value">
-                {inverterMetrics.realtimePower !== null ? `${inverterMetrics.realtimePower} kW` : 'N/A'}
-              </div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-label">Today Energy</div>
-              <div className="metric-value">
-                {inverterMetrics.todayEnergy !== null ? `${inverterMetrics.todayEnergy} kWh` : 'N/A'}
-              </div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-label">Unresolved Alarms</div>
-              <div className="metric-value">{inverterMetrics.unresolvedAlarms}</div>
-            </div>
+            {showInverterSkeleton ? (
+              <>
+                <div className="metric-card metric-card-skeleton">
+                  <div className="metric-label">Health Score</div>
+                  <div className="skeleton-badge">Signal Locking</div>
+                  <div className="signal-bars"><span style={{ height: 9 }} /><span style={{ height: 14 }} /><span style={{ height: 18 }} /><span style={{ height: 23 }} /></div>
+                </div>
+                <div className="metric-card metric-card-skeleton">
+                  <div className="metric-label">Realtime Power</div>
+                  <div className="skeleton-badge">Reading Bus</div>
+                  <div className="signal-bars"><span style={{ height: 8 }} /><span style={{ height: 13 }} /><span style={{ height: 16 }} /><span style={{ height: 21 }} /></div>
+                </div>
+                <div className="metric-card metric-card-skeleton">
+                  <div className="metric-label">Today Energy</div>
+                  <div className="skeleton-badge">Aggregating</div>
+                  <div className="signal-bars"><span style={{ height: 10 }} /><span style={{ height: 12 }} /><span style={{ height: 17 }} /><span style={{ height: 22 }} /></div>
+                </div>
+                <div className="metric-card metric-card-skeleton">
+                  <div className="metric-label">Unresolved Alarms</div>
+                  <div className="skeleton-badge">Syncing Events</div>
+                  <div className="signal-bars"><span style={{ height: 7 }} /><span style={{ height: 11 }} /><span style={{ height: 15 }} /><span style={{ height: 19 }} /></div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="metric-card">
+                  <div className="metric-label">Health Score</div>
+                  <div className="metric-value">{inverterMetrics.score}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Realtime Power</div>
+                  <div className="metric-value">
+                    {inverterMetrics.realtimePower !== null ? `${inverterMetrics.realtimePower} kW` : 'N/A'}
+                  </div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Today Energy</div>
+                  <div className="metric-value">
+                    {inverterMetrics.todayEnergy !== null ? `${inverterMetrics.todayEnergy} kWh` : 'N/A'}
+                  </div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Unresolved Alarms</div>
+                  <div className="metric-value">{inverterMetrics.unresolvedAlarms}</div>
+                </div>
+              </>
+            )}
           </div>
 
           {(!hasInverterInfo && !hasAlarmData && !hasPerformanceData && !inverterLoading && !inverterError) ? (
@@ -1016,7 +1093,7 @@ export default function SolisExplorer({ open, onClose }) {
             </div>
           ) : (
             <>
-              {inverterLoading && !hasAnyInverterContent && (
+              {showInverterSkeleton && (
                 <>
                   <div className="split-grid">
                     <div className="panel-card">
