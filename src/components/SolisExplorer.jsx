@@ -47,10 +47,43 @@ function toArray(value) {
 }
 
 function deriveAlarmTimestamp(alarm) {
-  const raw = alarm.alarmTime || alarm.createTime || alarm.time || alarm.dataTimestamp || alarm.occurTime;
+  const raw =
+    alarm.alarmBeginTime ||
+    alarm.alarmEndTime ||
+    alarm.alarmTime ||
+    alarm.createTime ||
+    alarm.time ||
+    alarm.dataTimestamp ||
+    alarm.occurTime;
   if (!raw) return 0;
+  if (typeof raw === 'number') {
+    return raw > 1e12 ? raw : raw * 1000;
+  }
+  if (/^\d+$/.test(String(raw))) {
+    const numeric = Number(raw);
+    return numeric > 1e12 ? numeric : numeric * 1000;
+  }
   const parsed = Date.parse(raw);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function resolveAlarmName(alarm) {
+  return (
+    alarm.alarmName ||
+    alarm.alarmMsg ||
+    alarm.msg ||
+    alarm.message ||
+    (alarm.alarmCode ? `Alarm ${alarm.alarmCode}` : 'Alarm')
+  );
+}
+
+function resolveAlarmState(state) {
+  const map = {
+    '0': 'Pending',
+    '1': 'Processed',
+    '2': 'Resolved',
+  };
+  return map[String(state)] || String(state ?? '-');
 }
 
 function toNumber(value) {
@@ -310,7 +343,7 @@ export default function SolisExplorer({ open, onClose }) {
     return inverterData.alarms
       .map((alarm) => ({
         type: 'alarm',
-        title: alarm.alarmName || alarm.msg || `Alarm ${alarm.alarmCode || ''}`,
+        title: resolveAlarmName(alarm),
         severity: Number(alarm.alarmLevel || 1),
         status: String(alarm.state || ''),
         source: alarm.alarmDeviceSn || alarm.deviceSn || 'Inverter',
@@ -365,6 +398,10 @@ export default function SolisExplorer({ open, onClose }) {
       },
     ].sort((a, b) => b.time - a.time);
   }, [inverterData.daySeries]);
+
+  const hasInverterInfo = Boolean(inverterData.inverter || inverterData.detail);
+  const hasAlarmData = inverterData.alarms.length > 0;
+  const hasPerformanceData = performanceTimeline.length > 0;
 
   useEffect(() => {
     if (!open) return undefined;
@@ -845,105 +882,114 @@ export default function SolisExplorer({ open, onClose }) {
             </div>
           </div>
 
-          <div className="split-grid">
+          {(!hasInverterInfo && !hasAlarmData && !hasPerformanceData && !inverterLoading && !inverterError) ? (
             <div className="panel-card">
-              <h4>Inverter Info</h4>
-              <table className="table">
-                <tbody>
-                  <tr>
-                    <th>Inverter ID</th>
-                    <td>{inverterData.inverter?.id || inverterData.detail?.id || 'N/A'}</td>
-                  </tr>
-                  <tr>
-                    <th>Serial Number</th>
-                    <td>{inverterData.inverter?.sn || inverterData.detail?.sn || 'N/A'}</td>
-                  </tr>
-                  <tr>
-                    <th>State</th>
-                    <td>
-                      <span className={`status status-${inverterMetrics.healthClass}`}>
-                        {inverterMetrics.statusCode === 1 ? 'Online' : inverterMetrics.statusCode === 2 ? 'Offline' : inverterMetrics.statusCode === 3 ? 'Alarm' : 'Unknown'}
-                      </span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th>Last Diagnostics Update</th>
-                    <td>{formatTimestamp(inverterData.updatedAt)}</td>
-                  </tr>
-                  <tr>
-                    <th>Data Points (today)</th>
-                    <td>{inverterData.daySeries.length}</td>
-                  </tr>
-                </tbody>
-              </table>
+              <h4>Inverter Diagnostics</h4>
+              <div className="empty">No inverter diagnostics data returned yet. Click refresh to retry.</div>
             </div>
+          ) : (
+            <>
+              {(hasInverterInfo || alarmTimeline.length > 0) && (
+                <div className="split-grid">
+                  {hasInverterInfo && (
+                    <div className="panel-card">
+                      <h4>Inverter Info</h4>
+                      <table className="table">
+                        <tbody>
+                          <tr>
+                            <th>Inverter ID</th>
+                            <td>{inverterData.inverter?.id || inverterData.detail?.id || 'N/A'}</td>
+                          </tr>
+                          <tr>
+                            <th>Serial Number</th>
+                            <td>{inverterData.inverter?.sn || inverterData.detail?.sn || 'N/A'}</td>
+                          </tr>
+                          <tr>
+                            <th>State</th>
+                            <td>
+                              <span className={`status status-${inverterMetrics.healthClass}`}>
+                                {inverterMetrics.statusCode === 1 ? 'Online' : inverterMetrics.statusCode === 2 ? 'Offline' : inverterMetrics.statusCode === 3 ? 'Alarm' : 'Unknown'}
+                              </span>
+                            </td>
+                          </tr>
+                          <tr>
+                            <th>Last Diagnostics Update</th>
+                            <td>{formatTimestamp(inverterData.updatedAt)}</td>
+                          </tr>
+                          <tr>
+                            <th>Data Points (today)</th>
+                            <td>{inverterData.daySeries.length}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
 
-            <div className="panel-card">
-              <h4>Alarm Timeline</h4>
-              {alarmTimeline.length === 0 ? (
-                <div className="empty">No alarms returned from inverter for current query.</div>
-              ) : (
-                <ul className="timeline">
-                  {alarmTimeline.map((event, idx) => (
-                    <li className="timeline-item" key={`alarm-${idx}`}>
-                      <div className="timeline-title">{event.title}</div>
-                      <div className="timeline-detail">
-                        Severity {event.severity} | State {event.status || 'N/A'} | {event.source}
-                      </div>
-                      <div className="incident-time">{formatTimestamp(event.time)}</div>
-                    </li>
-                  ))}
-                </ul>
+                  {alarmTimeline.length > 0 && (
+                    <div className="panel-card">
+                      <h4>Alarm Timeline</h4>
+                      <ul className="timeline">
+                        {alarmTimeline.map((event, idx) => (
+                          <li className="timeline-item" key={`alarm-${idx}`}>
+                            <div className="timeline-title">{event.title}</div>
+                            <div className="timeline-detail">
+                              Severity {event.severity} | State {resolveAlarmState(event.status)} | {event.source}
+                            </div>
+                            <div className="incident-time">{formatTimestamp(event.time)}</div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               )}
-            </div>
-          </div>
 
-          <div className="split-grid">
-            <div className="panel-card">
-              <h4>Performance Timeline</h4>
-              {performanceTimeline.length === 0 ? (
-                <div className="empty">No intraday performance samples available.</div>
-              ) : (
-                <ul className="timeline">
-                  {performanceTimeline.map((event, idx) => (
-                    <li className="timeline-item" key={`perf-${idx}`}>
-                      <div className="timeline-title">{event.title}</div>
-                      <div className="timeline-detail">{event.detail}</div>
-                      <div className="incident-time">{formatTimestamp(event.time)}</div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+              {(hasPerformanceData || hasAlarmData) && (
+                <div className="split-grid">
+                  {hasPerformanceData && (
+                    <div className="panel-card">
+                      <h4>Performance Timeline</h4>
+                      <ul className="timeline">
+                        {performanceTimeline.map((event, idx) => (
+                          <li className="timeline-item" key={`perf-${idx}`}>
+                            <div className="timeline-title">{event.title}</div>
+                            <div className="timeline-detail">{event.detail}</div>
+                            <div className="incident-time">{formatTimestamp(event.time)}</div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
-            <div className="panel-card">
-              <h4>Alarm Ledger</h4>
-              {inverterData.alarms.length === 0 ? (
-                <div className="empty">No alarms available.</div>
-              ) : (
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Code</th>
-                      <th>Name</th>
-                      <th>Level</th>
-                      <th>State</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {inverterData.alarms.slice(0, 12).map((alarm, idx) => (
-                      <tr key={`ledger-${idx}`}>
-                        <td>{alarm.alarmCode || '-'}</td>
-                        <td>{alarm.alarmName || alarm.msg || 'Unknown alarm'}</td>
-                        <td>{alarm.alarmLevel ?? '-'}</td>
-                        <td>{alarm.state ?? '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  {hasAlarmData && (
+                    <div className="panel-card">
+                      <h4>Alarm Ledger</h4>
+                      <table className="table">
+                        <thead>
+                          <tr>
+                            <th>Code</th>
+                            <th>Name</th>
+                            <th>Level</th>
+                            <th>State</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {inverterData.alarms.slice(0, 12).map((alarm, idx) => (
+                            <tr key={`ledger-${idx}`}>
+                              <td>{alarm.alarmCode || '-'}</td>
+                              <td>{resolveAlarmName(alarm)}</td>
+                              <td>{alarm.alarmLevel ?? '-'}</td>
+                              <td>{resolveAlarmState(alarm.state)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               )}
-            </div>
-          </div>
+            </>
+          )}
 
           <div className="actions">
             {inverterError && (
