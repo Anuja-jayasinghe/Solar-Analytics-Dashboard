@@ -819,6 +819,67 @@ export default function SolisExplorer({ open, onClose }) {
           -webkit-overflow-scrolling: touch;
         }
 
+        .source-mobile-list {
+          display: none;
+        }
+
+        .source-mobile-item {
+          padding: 10px 12px;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 8px;
+        }
+
+        .source-mobile-head {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
+          flex: 1 1 auto;
+          min-width: 0;
+        }
+
+        .source-mobile-name {
+          color: var(--text-color);
+          font-weight: 600;
+          font-size: 12px;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .source-mobile-meta {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 11px;
+          color: var(--text-secondary);
+          flex: 0 0 auto;
+          white-space: nowrap;
+        }
+
+        .source-mobile-meta div {
+          min-width: 0;
+          word-break: break-word;
+        }
+
+        .source-lag-chip {
+          display: inline-flex;
+          align-items: center;
+          justify-content: flex-end;
+          width: 6.5ch;
+          min-width: 6.5ch;
+          font-variant-numeric: tabular-nums;
+          font-feature-settings: 'tnum' 1;
+          white-space: nowrap;
+        }
+
+        .source-lag-chip-wide {
+          width: 7.5ch;
+          min-width: 7.5ch;
+        }
+
         .table th,
         .table td {
           text-align: left;
@@ -945,10 +1006,42 @@ export default function SolisExplorer({ open, onClose }) {
         }
 
         .btn-refresh-source {
-          width: 96px;
-          min-width: 96px;
+          width: auto;
+          min-width: 0;
           text-align: center;
           white-space: nowrap;
+          padding: 7px 11px 7px 10px;
+          border-radius: 999px;
+          background: linear-gradient(180deg, rgba(255, 141, 51, 0.22), rgba(255, 122, 0, 0.14));
+          border-color: rgba(255, 162, 89, 0.45);
+          color: #ffb273;
+          box-shadow: 0 0 0 1px rgba(255, 122, 0, 0.06) inset;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          text-transform: uppercase;
+          letter-spacing: 0.35px;
+        }
+
+        .btn-refresh-source::before {
+          content: '↻';
+          font-size: 13px;
+          line-height: 1;
+          color: #ffb273;
+        }
+
+        .btn-refresh-source:hover:not(:disabled) {
+          background: linear-gradient(180deg, rgba(255, 151, 69, 0.28), rgba(255, 122, 0, 0.18));
+          border-color: rgba(255, 176, 114, 0.62);
+          transform: translateY(-1px);
+          box-shadow: 0 8px 18px rgba(255, 122, 0, 0.12), 0 0 0 1px rgba(255, 122, 0, 0.08) inset;
+        }
+
+        .btn-refresh-source:disabled {
+          opacity: 0.72;
+          cursor: wait;
+          box-shadow: none;
         }
 
         .btn-primary {
@@ -1259,11 +1352,19 @@ export default function SolisExplorer({ open, onClose }) {
 
           .pipeline-metrics,
           .health-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .pipeline-metrics > .metric-card:last-child {
+            grid-column: 1 / -1;
+          }
+
+          .metric-card {
+            padding: 9px;
           }
 
           .metric-value {
-            font-size: 18px;
+            font-size: 17px;
           }
 
           .btn {
@@ -1271,9 +1372,33 @@ export default function SolisExplorer({ open, onClose }) {
             font-size: 11px;
           }
 
-          .btn-refresh-source {
-            width: 88px;
-            min-width: 88px;
+          .panel-card h4,
+          .source-mobile-item,
+          .incident-item,
+          .ledger-detail-cell,
+          .table th,
+          .table td {
+            border-bottom: 0;
+          }
+
+          .panel-card h4 {
+            padding: 10px 12px 8px;
+          }
+
+          .source-mobile-item {
+            gap: 8px;
+          }
+
+          .source-mobile-meta {
+            gap: 8px;
+            flex-wrap: wrap;
+            white-space: normal;
+          }
+
+          .source-lag-chip,
+          .source-lag-chip-wide {
+            width: 6ch;
+            min-width: 6ch;
           }
 
           .table {
@@ -1283,6 +1408,14 @@ export default function SolisExplorer({ open, onClose }) {
           .table th,
           .table td {
             padding: 8px 8px;
+          }
+
+          .source-desktop-table {
+            display: none;
+          }
+
+          .source-mobile-list {
+            display: block;
           }
 
           .uptime-row {
@@ -1363,7 +1496,7 @@ export default function SolisExplorer({ open, onClose }) {
           <div className="pipeline-grid">
             <div className="panel-card">
               <h4>Source Status Matrix</h4>
-              <div className="table-wrap">
+              <div className="source-desktop-table table-wrap">
                 <table className="table">
                   <thead>
                     <tr>
@@ -1381,7 +1514,7 @@ export default function SolisExplorer({ open, onClose }) {
                         <td>
                           <span className={`status status-${src.status.tone}`}>{src.status.label}</span>
                         </td>
-                        <td className="col-lag">{formatLag(src.lagMs)}</td>
+                        <td className="col-lag"><span className="source-lag-chip source-lag-chip-wide">{formatLag(src.lagMs)}</span></td>
                         <td>{formatTimestamp(src.lastUpdate)}</td>
                         <td>
                           <button
@@ -1396,6 +1529,20 @@ export default function SolisExplorer({ open, onClose }) {
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="source-mobile-list">
+                {sourceRows.map((src) => (
+                  <div className="source-mobile-item" key={`mobile-${src.key}`}>
+                    <div className="source-mobile-head">
+                      <span className="source-mobile-name">{src.label}</span>
+                    </div>
+                    <div className="source-mobile-meta">
+                      <span className={`status status-${src.status.tone}`}>{src.status.label}</span>
+                      <span><strong>Lag:</strong> <span className="source-lag-chip">{formatLag(src.lagMs)}</span></span>
+                      <span><strong>Update:</strong> {formatTimestamp(src.lastUpdate)}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
