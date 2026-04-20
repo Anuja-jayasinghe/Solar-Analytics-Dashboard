@@ -361,7 +361,10 @@ function AppContent() {
                 )}
               </div>
               <GoToTopButton />
-              <BottomNav />
+              <BottomNav
+                onDevToolsToggle={(devtoolsEnabled && canAccessOpsPanel) ? (() => setDevToolsOpen((v) => !v)) : undefined}
+                canAccessOpsPanel={devtoolsEnabled && canAccessOpsPanel}
+              />
             </div>
           }
         />

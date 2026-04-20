@@ -813,6 +813,12 @@ export default function SolisExplorer({ open, onClose }) {
           font-size: 12px;
         }
 
+        .table-wrap {
+          width: 100%;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+
         .table th,
         .table td {
           text-align: left;
@@ -1179,6 +1185,120 @@ export default function SolisExplorer({ open, onClose }) {
             flex-direction: column;
             align-items: flex-end;
           }
+
+          .tabs {
+            overflow-x: auto;
+            scrollbar-width: thin;
+            padding: 8px 10px;
+          }
+
+          .tab-btn {
+            flex: 0 0 auto;
+            white-space: nowrap;
+          }
+
+          .uptime-row {
+            grid-template-columns: 74px 1fr 48px;
+            gap: 8px;
+          }
+
+          .uptime-meta {
+            margin-left: 0;
+            margin-top: -4px;
+          }
+        }
+
+        @media (max-width: 680px) {
+          .pipeline-panel {
+            left: 6px;
+            width: calc(100vw - 12px);
+            bottom: 6px;
+            border-radius: 12px;
+            max-height: calc(100vh - 12px);
+          }
+
+          .pipeline-header {
+            padding: 10px 12px;
+            align-items: flex-start;
+            gap: 8px;
+          }
+
+          .pipeline-title {
+            font-size: 14px;
+          }
+
+          .pipeline-subtitle {
+            font-size: 11px;
+            line-height: 1.35;
+          }
+
+          .pipeline-header-right {
+            width: 100%;
+            align-items: stretch;
+            gap: 6px;
+          }
+
+          .pipeline-header-actions {
+            justify-content: flex-start;
+          }
+
+          .pipeline-header-actions .status {
+            max-width: 100%;
+            white-space: normal;
+            line-height: 1.25;
+          }
+
+          .pipeline-close {
+            align-self: flex-end;
+          }
+
+          .pipeline-body {
+            padding: 10px 10px 20px;
+            gap: 10px;
+          }
+
+          .pipeline-metrics,
+          .health-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .metric-value {
+            font-size: 18px;
+          }
+
+          .btn {
+            padding: 7px 10px;
+            font-size: 11px;
+          }
+
+          .btn-refresh-source {
+            width: 88px;
+            min-width: 88px;
+          }
+
+          .table {
+            font-size: 11px;
+          }
+
+          .table th,
+          .table td {
+            padding: 8px 8px;
+          }
+
+          .uptime-row {
+            grid-template-columns: 66px 1fr 42px;
+            font-size: 10px;
+          }
+
+          .uptime-meta {
+            font-size: 10px;
+            padding-bottom: 6px;
+          }
+
+          .actions {
+            justify-content: flex-start;
+            gap: 6px;
+          }
         }
       `}</style>
 
@@ -1243,38 +1363,40 @@ export default function SolisExplorer({ open, onClose }) {
           <div className="pipeline-grid">
             <div className="panel-card">
               <h4>Source Status Matrix</h4>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Source</th>
-                    <th>Status</th>
-                    <th className="col-lag">Lag</th>
-                    <th>Last Update</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sourceRows.map((src) => (
-                    <tr key={src.key}>
-                      <td>{src.label}</td>
-                      <td>
-                        <span className={`status status-${src.status.tone}`}>{src.status.label}</span>
-                      </td>
-                      <td className="col-lag">{formatLag(src.lagMs)}</td>
-                      <td>{formatTimestamp(src.lastUpdate)}</td>
-                      <td>
-                        <button
-                          className="btn btn-refresh-source"
-                          onClick={() => refreshData(src.refreshKey)}
-                          disabled={Boolean(src.loading)}
-                        >
-                          {src.loading ? 'Refreshing' : 'Refresh'}
-                        </button>
-                      </td>
+              <div className="table-wrap">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Source</th>
+                      <th>Status</th>
+                      <th className="col-lag">Lag</th>
+                      <th>Last Update</th>
+                      <th>Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {sourceRows.map((src) => (
+                      <tr key={src.key}>
+                        <td>{src.label}</td>
+                        <td>
+                          <span className={`status status-${src.status.tone}`}>{src.status.label}</span>
+                        </td>
+                        <td className="col-lag">{formatLag(src.lagMs)}</td>
+                        <td>{formatTimestamp(src.lastUpdate)}</td>
+                        <td>
+                          <button
+                            className="btn btn-refresh-source"
+                            onClick={() => refreshData(src.refreshKey)}
+                            disabled={Boolean(src.loading)}
+                          >
+                            {src.loading ? 'Refreshing' : 'Refresh'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div className="panel-card">
@@ -1447,34 +1569,36 @@ export default function SolisExplorer({ open, onClose }) {
                   {hasInverterInfo && (
                     <div className="panel-card">
                       <h4>Inverter Info</h4>
-                      <table className="table">
-                        <tbody>
-                          <tr>
-                            <th>Inverter ID</th>
-                            <td>{inverterData.inverter?.id || inverterData.detail?.id || 'N/A'}</td>
-                          </tr>
-                          <tr>
-                            <th>Serial Number</th>
-                            <td>{inverterData.inverter?.sn || inverterData.detail?.sn || 'N/A'}</td>
-                          </tr>
-                          <tr>
-                            <th>State</th>
-                            <td>
-                              <span className={`status status-${inverterMetrics.healthClass}`}>
-                                {inverterMetrics.statusCode === 1 ? 'Online' : inverterMetrics.statusCode === 2 ? 'Offline' : inverterMetrics.statusCode === 3 ? 'Alarm' : 'Unknown'}
-                              </span>
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Last Diagnostics Update</th>
-                            <td>{formatTimestamp(inverterData.updatedAt)}</td>
-                          </tr>
-                          <tr>
-                            <th>Data Points (today)</th>
-                            <td>{inverterData.daySeries.length}</td>
-                          </tr>
-                        </tbody>
-                      </table>
+                      <div className="table-wrap">
+                        <table className="table">
+                          <tbody>
+                            <tr>
+                              <th>Inverter ID</th>
+                              <td>{inverterData.inverter?.id || inverterData.detail?.id || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                              <th>Serial Number</th>
+                              <td>{inverterData.inverter?.sn || inverterData.detail?.sn || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                              <th>State</th>
+                              <td>
+                                <span className={`status status-${inverterMetrics.healthClass}`}>
+                                  {inverterMetrics.statusCode === 1 ? 'Online' : inverterMetrics.statusCode === 2 ? 'Offline' : inverterMetrics.statusCode === 3 ? 'Alarm' : 'Unknown'}
+                                </span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <th>Last Diagnostics Update</th>
+                              <td>{formatTimestamp(inverterData.updatedAt)}</td>
+                            </tr>
+                            <tr>
+                              <th>Data Points (today)</th>
+                              <td>{inverterData.daySeries.length}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   )}
 
@@ -1517,53 +1641,55 @@ export default function SolisExplorer({ open, onClose }) {
                   {alarmLedger.length > 0 && (
                     <div className="panel-card">
                       <h4>Alarm Ledger</h4>
-                      <table className="table">
-                        <thead>
-                          <tr>
-                            <th>Code</th>
-                            <th>Name</th>
-                            <th>Level</th>
-                            <th>Total</th>
-                            <th>Open</th>
-                            <th>Last Seen</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {alarmLedger.map((alarm, idx) => (
-                            <React.Fragment key={`ledger-${idx}`}>
-                              <tr
-                                className={`ledger-row ${expandedLedgerKey === alarm.key ? 'is-open' : ''}`}
-                                onClick={() => setExpandedLedgerKey((prev) => (prev === alarm.key ? null : alarm.key))}
-                              >
-                                <td>{alarm.code}</td>
-                                <td>{alarm.name}</td>
-                                <td>{alarm.level ?? '-'}</td>
-                                <td>{alarm.totalCount}</td>
-                                <td>{alarm.openCount}</td>
-                                <td>{alarm.lastSeen ? formatTimestamp(alarm.lastSeen) : 'N/A'}</td>
-                              </tr>
-                              {expandedLedgerKey === alarm.key && (
-                                <tr>
-                                  <td className="ledger-detail-cell" colSpan={6}>
-                                    <div className="ledger-details">
-                                      <div className="ledger-meta"><strong>Alarm message:</strong> {alarm.sample?.alarmMsg || 'Not provided by API'}</div>
-                                      <div className="ledger-meta"><strong>Advice:</strong> {alarm.sample?.advice || 'Not provided by API'}</div>
-                                      <div className="ledger-meta"><strong>Latest state:</strong> {alarm.latestState}</div>
-                                      <div className="ledger-meta"><strong>Device SN:</strong> {alarm.sample?.alarmDeviceSn || 'N/A'}</div>
-                                      <div className="ledger-meta"><strong>Machine:</strong> {alarm.sample?.machine || 'N/A'} ({alarm.sample?.model || 'N/A'})</div>
-                                      <div className="ledger-meta"><strong>Station:</strong> {alarm.sample?.stationName || 'N/A'}</div>
-                                      <div className="ledger-meta"><strong>Started:</strong> {formatTimestamp(deriveAlarmTimestamp({ alarmBeginTime: alarm.sample?.alarmBeginTime }))}</div>
-                                      <div className="ledger-meta"><strong>Ended:</strong> {formatTimestamp(deriveAlarmTimestamp({ alarmEndTime: alarm.sample?.alarmEndTime }))}</div>
-                                      <div className="ledger-meta"><strong>Duration:</strong> {formatDuration(alarm.sample?.alarmLong)}</div>
-                                      <div className="ledger-meta"><strong>Code description:</strong> Not provided by current Solis API endpoints/datasheet</div>
-                                    </div>
-                                  </td>
+                      <div className="table-wrap">
+                        <table className="table">
+                          <thead>
+                            <tr>
+                              <th>Code</th>
+                              <th>Name</th>
+                              <th>Level</th>
+                              <th>Total</th>
+                              <th>Open</th>
+                              <th>Last Seen</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {alarmLedger.map((alarm, idx) => (
+                              <React.Fragment key={`ledger-${idx}`}>
+                                <tr
+                                  className={`ledger-row ${expandedLedgerKey === alarm.key ? 'is-open' : ''}`}
+                                  onClick={() => setExpandedLedgerKey((prev) => (prev === alarm.key ? null : alarm.key))}
+                                >
+                                  <td>{alarm.code}</td>
+                                  <td>{alarm.name}</td>
+                                  <td>{alarm.level ?? '-'}</td>
+                                  <td>{alarm.totalCount}</td>
+                                  <td>{alarm.openCount}</td>
+                                  <td>{alarm.lastSeen ? formatTimestamp(alarm.lastSeen) : 'N/A'}</td>
                                 </tr>
-                              )}
-                            </React.Fragment>
-                          ))}
-                        </tbody>
-                      </table>
+                                {expandedLedgerKey === alarm.key && (
+                                  <tr>
+                                    <td className="ledger-detail-cell" colSpan={6}>
+                                      <div className="ledger-details">
+                                        <div className="ledger-meta"><strong>Alarm message:</strong> {alarm.sample?.alarmMsg || 'Not provided by API'}</div>
+                                        <div className="ledger-meta"><strong>Advice:</strong> {alarm.sample?.advice || 'Not provided by API'}</div>
+                                        <div className="ledger-meta"><strong>Latest state:</strong> {alarm.latestState}</div>
+                                        <div className="ledger-meta"><strong>Device SN:</strong> {alarm.sample?.alarmDeviceSn || 'N/A'}</div>
+                                        <div className="ledger-meta"><strong>Machine:</strong> {alarm.sample?.machine || 'N/A'} ({alarm.sample?.model || 'N/A'})</div>
+                                        <div className="ledger-meta"><strong>Station:</strong> {alarm.sample?.stationName || 'N/A'}</div>
+                                        <div className="ledger-meta"><strong>Started:</strong> {formatTimestamp(deriveAlarmTimestamp({ alarmBeginTime: alarm.sample?.alarmBeginTime }))}</div>
+                                        <div className="ledger-meta"><strong>Ended:</strong> {formatTimestamp(deriveAlarmTimestamp({ alarmEndTime: alarm.sample?.alarmEndTime }))}</div>
+                                        <div className="ledger-meta"><strong>Duration:</strong> {formatDuration(alarm.sample?.alarmLong)}</div>
+                                        <div className="ledger-meta"><strong>Code description:</strong> Not provided by current Solis API endpoints/datasheet</div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   )}
                 </div>
