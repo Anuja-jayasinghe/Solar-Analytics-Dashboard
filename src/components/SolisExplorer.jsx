@@ -100,6 +100,88 @@ function toNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+function formatClockHHMM(ts) {
+  if (!ts) return '--:--';
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return '--:--';
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+function median(values) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) {
+    return (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+  return sorted[mid];
+}
+
+function buildUptimeForDay(dayIso, points) {
+  const rows = toArray(points)
+    .map((point) => {
+      const rawTs = point.dataTimestamp || point.time || point.date;
+      let ts;
+      if (typeof rawTs === 'number') {
+        ts = rawTs > 1e12 ? rawTs : rawTs * 1000;
+      } else if (/^\d+$/.test(String(rawTs || ''))) {
+        const numeric = Number(rawTs);
+        ts = numeric > 1e12 ? numeric : numeric * 1000;
+      } else if (typeof point.time === 'string' && /^\d{2}:\d{2}(:\d{2})?$/.test(point.time)) {
+        ts = Date.parse(`${dayIso}T${point.time}`);
+      } else {
+        ts = Date.parse(rawTs);
+      }
+      const power = toNumber(point.power ?? point.pac ?? point.value) ?? 0;
+      return Number.isFinite(ts) ? { ts, power } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.ts - b.ts);
+
+  if (!rows.length) {
+    return {
+      date: dayIso,
+      points: 0,
+      uptimePct: 0,
+      state: 'off',
+      firstSeen: null,
+      lastSeen: null,
+      periodLabel: '--:-- - --:--',
+    };
+  }
+
+  const firstSeen = rows[0].ts;
+  const lastSeen = rows[rows.length - 1].ts;
+  const intervals = [];
+  for (let i = 1; i < rows.length; i += 1) {
+    const delta = rows[i].ts - rows[i - 1].ts;
+    if (delta > 0 && delta < 30 * 60 * 1000) {
+      intervals.push(delta);
+    }
+  }
+
+  const sampleInterval = median(intervals) || 5 * 60 * 1000;
+  const windowMs = Math.max(0, lastSeen - firstSeen);
+  const expectedPoints = Math.max(1, Math.round(windowMs / sampleInterval) + 1);
+  const uptimePct = Math.max(0, Math.min(100, Math.round((rows.length / expectedPoints) * 100)));
+
+  let state = 'on';
+  if (uptimePct < 80) state = 'mostly-off';
+  else if (uptimePct < 95) state = 'intermittent';
+
+  return {
+    date: dayIso,
+    points: rows.length,
+    uptimePct,
+    state,
+    firstSeen,
+    lastSeen,
+    periodLabel: `${formatClockHHMM(firstSeen)} - ${formatClockHHMM(lastSeen)}`,
+  };
+}
+
 export default function SolisExplorer({ open, onClose }) {
   const panelRef = useRef(null);
   const [activeTab, setActiveTab] = useState('pipeline');
@@ -111,6 +193,7 @@ export default function SolisExplorer({ open, onClose }) {
     detail: null,
     alarms: [],
     daySeries: [],
+    uptimeSeries: [],
     updatedAt: null,
   });
 
@@ -252,6 +335,12 @@ export default function SolisExplorer({ open, onClose }) {
 
       const today = new Date().toISOString().slice(0, 10);
 
+      const recentDates = Array.from({ length: 7 }, (_, idx) => {
+        const d = new Date();
+        d.setDate(d.getDate() - idx);
+        return d.toISOString().slice(0, 10);
+      });
+
       const detailPromise = runExplore('inverterDetail', {
         ...(inverterId ? { id: String(inverterId) } : {}),
         ...(inverterSn ? { sn: String(inverterSn) } : {}),
@@ -270,23 +359,38 @@ export default function SolisExplorer({ open, onClose }) {
         ...(stationId ? { stationId: String(stationId) } : {}),
       }).catch(() => null);
 
+      const uptimePromises = recentDates.map((date) =>
+        runExplore('inverterDay', {
+          ...(inverterSn ? { sn: String(inverterSn) } : {}),
+          ...(inverterId && !inverterSn ? { id: String(inverterId) } : {}),
+          time: date,
+          timeZone: '8',
+        }).catch(() => null)
+      );
+
       const [detailResp, dayResp, alarmsResp] = await Promise.all([
         detailPromise,
         dayPromise,
         alarmsPromise,
       ]);
 
+      const uptimeResponses = await Promise.all(uptimePromises);
+
       const alarms = toArray(alarmsResp?.data?.page?.records).length > 0
         ? toArray(alarmsResp?.data?.page?.records)
         : toArray(alarmsResp?.data?.records);
 
       const daySeries = toArray(dayResp?.data);
+      const uptimeSeries = recentDates
+        .map((date, idx) => buildUptimeForDay(date, uptimeResponses[idx]?.data))
+        .sort((a, b) => a.date.localeCompare(b.date));
 
       setInverterData({
         inverter,
         detail: detailResp?.data || null,
         alarms,
         daySeries,
+        uptimeSeries,
         updatedAt: Date.now(),
       });
     } catch (error) {
@@ -455,10 +559,32 @@ export default function SolisExplorer({ open, onClose }) {
     ].sort((a, b) => b.time - a.time);
   }, [inverterData.daySeries]);
 
+  const uptimeMetrics = useMemo(() => {
+    const days = inverterData.uptimeSeries || [];
+    if (!days.length) {
+      return {
+        avgUptime: 0,
+        offDays: 0,
+        intermittentDays: 0,
+      };
+    }
+
+    const avgUptime = Math.round(days.reduce((sum, d) => sum + (d.uptimePct || 0), 0) / days.length);
+    const offDays = days.filter((d) => d.state === 'off').length;
+    const intermittentDays = days.filter((d) => d.state === 'intermittent' || d.state === 'mostly-off').length;
+
+    return {
+      avgUptime,
+      offDays,
+      intermittentDays,
+    };
+  }, [inverterData.uptimeSeries]);
+
   const hasInverterInfo = Boolean(inverterData.inverter || inverterData.detail);
   const hasAlarmData = inverterData.alarms.length > 0;
   const hasPerformanceData = performanceTimeline.length > 0;
-  const hasAnyInverterContent = hasInverterInfo || hasAlarmData || hasPerformanceData;
+  const hasUptimeData = inverterData.uptimeSeries.length > 0;
+  const hasAnyInverterContent = hasInverterInfo || hasAlarmData || hasPerformanceData || hasUptimeData;
   const showInverterSkeleton = inverterLoading && !hasAnyInverterContent;
 
   useEffect(() => {
@@ -861,6 +987,99 @@ export default function SolisExplorer({ open, onClose }) {
           color: var(--text-secondary);
         }
 
+        .uptime-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          padding: 10px 12px 12px;
+        }
+
+        .uptime-row {
+          display: grid;
+          grid-template-columns: 84px 1fr 56px;
+          align-items: center;
+          gap: 10px;
+          font-size: 11px;
+        }
+
+        .uptime-date {
+          color: var(--text-secondary);
+        }
+
+        .uptime-track {
+          position: relative;
+          height: 10px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.08);
+          overflow: hidden;
+        }
+
+        .uptime-fill {
+          position: absolute;
+          top: 0;
+          left: 0;
+          height: 100%;
+          border-radius: 999px;
+        }
+
+        .uptime-fill.state-on { background: linear-gradient(90deg, #3ddc84, #83f28f); }
+        .uptime-fill.state-intermittent { background: linear-gradient(90deg, #ffd166, #ffb347); }
+        .uptime-fill.state-mostly-off,
+        .uptime-fill.state-off { background: linear-gradient(90deg, #ff6b6b, #ff8e8e); }
+
+        .uptime-pct {
+          text-align: right;
+          color: var(--text-color);
+          font-weight: 700;
+        }
+
+        .uptime-meta {
+          margin-left: 94px;
+          font-size: 10px;
+          color: var(--text-secondary);
+          margin-top: -8px;
+          padding-bottom: 8px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .uptime-summary {
+          display: flex;
+          gap: 8px;
+          padding: 0 12px 8px;
+          flex-wrap: wrap;
+        }
+
+        .uptime-chip {
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.03);
+          color: var(--text-secondary);
+          border-radius: 999px;
+          padding: 4px 8px;
+          font-size: 10px;
+          letter-spacing: 0.2px;
+        }
+
+        .uptime-period-list {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+        }
+
+        .uptime-period-item {
+          display: flex;
+          justify-content: space-between;
+          gap: 10px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+          padding: 8px 10px;
+          font-size: 11px;
+          color: var(--text-secondary);
+        }
+
+        .uptime-period-item strong {
+          color: var(--text-color);
+          font-weight: 600;
+        }
+
         .empty {
           padding: 16px 12px;
           color: var(--text-secondary);
@@ -1082,11 +1301,54 @@ export default function SolisExplorer({ open, onClose }) {
                   <div className="metric-label">Unresolved Alarms</div>
                   <div className="metric-value">{inverterMetrics.unresolvedAlarms}</div>
                 </div>
+                <div className="metric-card">
+                  <div className="metric-label">Avg Uptime (7d)</div>
+                  <div className="metric-value">{uptimeMetrics.avgUptime}%</div>
+                </div>
               </>
             )}
           </div>
 
-          {(!hasInverterInfo && !hasAlarmData && !hasPerformanceData && !inverterLoading && !inverterError) ? (
+          {!showInverterSkeleton && (
+            <div className="panel-card">
+              <h4>Inverter Uptime Graph (Last 7 Days)</h4>
+              {hasUptimeData ? (
+                <>
+                  <div className="uptime-summary">
+                    <span className="uptime-chip">Avg Uptime: {uptimeMetrics.avgUptime}%</span>
+                    <span className="uptime-chip">Fully Off Days: {uptimeMetrics.offDays}</span>
+                    <span className="uptime-chip">Intermittent Days: {uptimeMetrics.intermittentDays}</span>
+                  </div>
+                  <div className="uptime-grid">
+                    {inverterData.uptimeSeries.map((day) => (
+                      <React.Fragment key={`uptime-${day.date}`}>
+                        <div className="uptime-row">
+                          <div className="uptime-date">{formatTimestamp(day.date)}</div>
+                          <div className="uptime-track">
+                            <div
+                              className={`uptime-fill state-${day.state}`}
+                              style={{ width: `${day.uptimePct}%` }}
+                            />
+                          </div>
+                          <div className="uptime-pct">{day.uptimePct}%</div>
+                        </div>
+                        <div className="uptime-meta">
+                          Window {day.periodLabel} | {day.points} pts | State {day.state}
+                        </div>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                  <div className="empty" style={{ paddingTop: 8 }}>
+                    Derived from inverterDay sample coverage and observed active window.
+                  </div>
+                </>
+              ) : (
+                <div className="empty">Uptime data not available yet. Click Refresh Inverter Health.</div>
+              )}
+            </div>
+          )}
+
+          {(!hasInverterInfo && !hasAlarmData && !hasPerformanceData && !hasUptimeData && !inverterLoading && !inverterError) ? (
             <div className="panel-card">
               <h4>Inverter Diagnostics</h4>
               <div className="empty">No inverter diagnostics data returned yet. Click refresh to retry.</div>
@@ -1264,6 +1526,7 @@ export default function SolisExplorer({ open, onClose }) {
                   )}
                 </div>
               )}
+
             </>
           )}
 
