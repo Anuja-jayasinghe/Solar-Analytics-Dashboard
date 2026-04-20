@@ -1,10 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { formatResponse } from '../lib/solisResponseFormatters';
-import solisExplorerFallbackEndpoints from '../lib/solisExplorerFallbackEndpoints';
-
-function getLocalEndpointsFallback() {
-  return solisExplorerFallbackEndpoints;
-}
 
 function formatDate(date) {
   return date.toISOString().slice(0, 10);
@@ -85,8 +80,6 @@ const SolisExplorer = ({ open, onClose }) => {
   const [durationMs, setDurationMs] = useState(null);
   const [endpointsLoading, setEndpointsLoading] = useState(true);
   const [endpointsError, setEndpointsError] = useState(null);
-  const [usingLocalFallback, setUsingLocalFallback] = useState(false);
-  const [fallbackMessage, setFallbackMessage] = useState('');
   const panelRef = useRef(null);
 
   // Fetch endpoint list on mount
@@ -95,38 +88,27 @@ const SolisExplorer = ({ open, onClose }) => {
       try {
         setEndpointsLoading(true);
         setEndpointsError(null);
-        setUsingLocalFallback(false);
-        setFallbackMessage('');
         const res = await fetch('/api/solis/explore-endpoints');
         const body = await res.text();
         let data;
         try {
           data = JSON.parse(body);
         } catch (parseError) {
-          const fallbackEndpoints = getLocalEndpointsFallback();
-          setEndpoints(fallbackEndpoints);
-          setUsingLocalFallback(true);
-          setFallbackMessage('API endpoint is not returning JSON in local dev. Using local endpoint list fallback.');
-          setEndpointsError(null);
+          setEndpoints([]);
+          setEndpointsError('Endpoint API returned non-JSON response.');
           return;
         }
 
         if (res.ok) {
           setEndpoints(data.endpoints || []);
         } else {
-          const fallbackEndpoints = getLocalEndpointsFallback();
-          setEndpoints(fallbackEndpoints);
-          setUsingLocalFallback(true);
-          setFallbackMessage(data.error || 'Failed to fetch endpoints from API. Using local endpoint list fallback.');
-          setEndpointsError(null);
+          setEndpointsError(data.error || 'Failed to fetch endpoints from API.');
+          setEndpoints([]);
         }
       } catch (e) {
         console.error('Failed to fetch endpoints:', e);
-        const fallbackEndpoints = getLocalEndpointsFallback();
-        setEndpoints(fallbackEndpoints);
-        setUsingLocalFallback(true);
-        setFallbackMessage((e.message || 'Network error') + ' Using local endpoint list fallback.');
-        setEndpointsError(null);
+        setEndpointsError(e.message || 'Network error');
+        setEndpoints([]);
       } finally {
         setEndpointsLoading(false);
       }
@@ -703,25 +685,18 @@ const SolisExplorer = ({ open, onClose }) => {
                 No endpoints available
               </div>
             ) : (
-              <>
-                {usingLocalFallback && (
-                  <div style={{ color: 'var(--text-secondary)', fontSize: '12px', padding: '8px 0 12px' }}>
-                    {fallbackMessage || 'Local fallback list loaded.'}
-                  </div>
-                )}
-                <div className="solis-explorer-endpoints-grid">
-                  {endpoints.map((ep) => (
-                    <button
-                      key={ep.key}
-                      className={`solis-explorer-endpoint-btn ${selectedEndpoint === ep.key ? 'active' : ''}`}
-                      onClick={() => setSelectedEndpoint(ep.key)}
-                      title={ep.description}
-                    >
-                      {ep.key}
-                    </button>
-                  ))}
-                </div>
-              </>
+              <div className="solis-explorer-endpoints-grid">
+                {endpoints.map((ep) => (
+                  <button
+                    key={ep.key}
+                    className={`solis-explorer-endpoint-btn ${selectedEndpoint === ep.key ? 'active' : ''}`}
+                    onClick={() => setSelectedEndpoint(ep.key)}
+                    title={ep.description}
+                  >
+                    {ep.key}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         </div>
