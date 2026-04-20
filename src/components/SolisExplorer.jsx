@@ -458,6 +458,7 @@ export default function SolisExplorer({ open, onClose }) {
   const hasInverterInfo = Boolean(inverterData.inverter || inverterData.detail);
   const hasAlarmData = inverterData.alarms.length > 0;
   const hasPerformanceData = performanceTimeline.length > 0;
+  const hasAnyInverterContent = hasInverterInfo || hasAlarmData || hasPerformanceData;
 
   useEffect(() => {
     if (!open) return undefined;
@@ -558,6 +559,10 @@ export default function SolisExplorer({ open, onClose }) {
           overflow: auto;
           display: grid;
           gap: 14px;
+        }
+
+        .inverter-body {
+          min-height: 540px;
         }
 
         .pipeline-metrics {
@@ -812,6 +817,37 @@ export default function SolisExplorer({ open, onClose }) {
           font-size: 12px;
         }
 
+        .skeleton-line {
+          height: 12px;
+          margin-bottom: 8px;
+          border-radius: 8px;
+          background: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.06) 25%,
+            rgba(255, 255, 255, 0.13) 37%,
+            rgba(255, 255, 255, 0.06) 63%
+          );
+          background-size: 400% 100%;
+          animation: skeletonPulse 1.35s ease-in-out infinite;
+        }
+
+        .skeleton-line:last-child {
+          margin-bottom: 0;
+        }
+
+        .skeleton-content {
+          padding: 12px;
+        }
+
+        @keyframes skeletonPulse {
+          0% {
+            background-position: 100% 0;
+          }
+          100% {
+            background-position: 0 0;
+          }
+        }
+
         @media (max-width: 980px) {
           .pipeline-panel {
             left: 10px;
@@ -949,7 +985,7 @@ export default function SolisExplorer({ open, onClose }) {
       )}
 
       {activeTab === 'inverter' && (
-        <div className="pipeline-body">
+        <div className="pipeline-body inverter-body">
           <div className="health-grid">
             <div className="metric-card">
               <div className="metric-label">Health Score</div>
@@ -980,6 +1016,51 @@ export default function SolisExplorer({ open, onClose }) {
             </div>
           ) : (
             <>
+              {inverterLoading && !hasAnyInverterContent && (
+                <>
+                  <div className="split-grid">
+                    <div className="panel-card">
+                      <h4>Inverter Info</h4>
+                      <div className="skeleton-content">
+                        <div className="skeleton-line" style={{ width: '78%' }} />
+                        <div className="skeleton-line" style={{ width: '64%' }} />
+                        <div className="skeleton-line" style={{ width: '70%' }} />
+                        <div className="skeleton-line" style={{ width: '56%' }} />
+                      </div>
+                    </div>
+                    <div className="panel-card">
+                      <h4>Alarm Timeline</h4>
+                      <div className="skeleton-content">
+                        <div className="skeleton-line" style={{ width: '84%' }} />
+                        <div className="skeleton-line" style={{ width: '72%' }} />
+                        <div className="skeleton-line" style={{ width: '66%' }} />
+                        <div className="skeleton-line" style={{ width: '74%' }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="split-grid">
+                    <div className="panel-card">
+                      <h4>Performance Timeline</h4>
+                      <div className="skeleton-content">
+                        <div className="skeleton-line" style={{ width: '80%' }} />
+                        <div className="skeleton-line" style={{ width: '62%' }} />
+                        <div className="skeleton-line" style={{ width: '76%' }} />
+                      </div>
+                    </div>
+                    <div className="panel-card">
+                      <h4>Alarm Ledger</h4>
+                      <div className="skeleton-content">
+                        <div className="skeleton-line" style={{ width: '92%' }} />
+                        <div className="skeleton-line" style={{ width: '88%' }} />
+                        <div className="skeleton-line" style={{ width: '85%' }} />
+                        <div className="skeleton-line" style={{ width: '90%' }} />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
               {(hasInverterInfo || alarmTimeline.length > 0) && (
                 <div className="split-grid">
                   {hasInverterInfo && (
