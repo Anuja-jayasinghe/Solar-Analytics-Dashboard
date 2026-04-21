@@ -9,6 +9,9 @@ function AdminDashboard() {
   const [tab, setTab] = useState("users");
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
+  const adminRed = "#ff4d4f";
+  const adminRedDark = "#b3262a";
+  const adminGlow = "rgba(255, 77, 79, 0.45)";
 
   const renderContent = () => {
     switch (tab) {
@@ -30,7 +33,7 @@ function AdminDashboard() {
     <div
       style={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, rgba(20,20,20,0.95) 0%, rgba(30,30,30,0.95) 100%)",
+        background: "radial-gradient(circle at 15% 10%, rgba(255,77,79,0.08), transparent 30%), radial-gradient(circle at 85% 90%, rgba(179,38,42,0.12), transparent 40%), linear-gradient(135deg, rgba(18,10,12,0.97) 0%, rgba(28,14,16,0.97) 100%)",
         color: "var(--text-color)",
       }}
     >
@@ -46,7 +49,7 @@ function AdminDashboard() {
         <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
             <div>
-              <h1 style={{ color: "var(--accent)", margin: 0, fontSize: "32px", fontWeight: "bold" }}>
+              <h1 style={{ color: adminRed, margin: 0, fontSize: "32px", fontWeight: "bold" }}>
                 ⚡ Admin Dashboard
               </h1>
               <p style={{ color: "var(--text-secondary)", margin: "0.5rem 0 0 0", fontSize: "14px" }}>
@@ -57,8 +60,8 @@ function AdminDashboard() {
             <button
               onClick={() => navigate("/dashboard")}
               style={{
-                background: "var(--accent)",
-                color: "#000",
+                background: adminRed,
+                color: "#fff",
                 border: "none",
                 padding: "12px 24px",
                 borderRadius: "8px",
@@ -66,17 +69,17 @@ function AdminDashboard() {
                 fontWeight: "bold",
                 fontSize: "14px",
                 transition: "all 0.2s ease",
-                boxShadow: "0 2px 8px rgba(255, 122, 0, 0.3)"
+                boxShadow: `0 2px 8px ${adminGlow}`
               }}
               onMouseOver={(e) => {
-                e.target.style.background = "#ff8c00";
+                e.target.style.background = adminRedDark;
                 e.target.style.transform = "translateY(-2px)";
-                e.target.style.boxShadow = "0 4px 12px rgba(255, 122, 0, 0.4)";
+                e.target.style.boxShadow = `0 4px 12px ${adminGlow}`;
               }}
               onMouseOut={(e) => {
-                e.target.style.background = "var(--accent)";
+                e.target.style.background = adminRed;
                 e.target.style.transform = "translateY(0)";
-                e.target.style.boxShadow = "0 2px 8px rgba(255, 122, 0, 0.3)";
+                e.target.style.boxShadow = `0 2px 8px ${adminGlow}`;
               }}
             >
               🏠 Back to Dashboard
@@ -113,22 +116,22 @@ function AdminDashboard() {
               key={item.id}
               onClick={() => setTab(item.id)}
               style={{
-                background: tab === item.id ? "var(--accent)" : "rgba(50,50,50,0.6)",
-                color: tab === item.id ? "#000" : "#fff",
-                border: "1px solid " + (tab === item.id ? "var(--accent)" : "var(--border-color)"),
+                background: tab === item.id ? adminRed : "rgba(50,50,50,0.6)",
+                color: "#fff",
+                border: "1px solid " + (tab === item.id ? adminRed : "var(--border-color)"),
                 padding: "1.5rem",
                 borderRadius: "12px",
                 cursor: "pointer",
                 transition: "all 0.2s ease",
                 boxShadow: tab === item.id
-                  ? "0 0 15px rgba(255,122,0,0.6)"
+                  ? "0 0 15px rgba(255,77,79,0.6)"
                   : "0 0 5px rgba(0,0,0,0.2)",
                 textAlign: "left"
               }}
               onMouseOver={(e) => {
                 if (tab !== item.id) {
                   e.currentTarget.style.background = "rgba(70,70,70,0.8)";
-                  e.currentTarget.style.boxShadow = "0 0 10px rgba(255,122,0,0.3)";
+                  e.currentTarget.style.boxShadow = "0 0 10px rgba(255,77,79,0.35)";
                 }
               }}
               onMouseOut={(e) => {

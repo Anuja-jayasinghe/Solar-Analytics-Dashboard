@@ -268,7 +268,7 @@ function Sidebar({ onDevToolsToggle }) {
           style={{
             position: "fixed",
             inset: 0,
-            background: "radial-gradient(circle at 20% 10%, rgba(0,255,170,0.08), transparent 40%), radial-gradient(circle at 90% 90%, rgba(255,122,0,0.08), transparent 45%), linear-gradient(135deg, rgba(5,7,12,0.98), rgba(7,14,24,0.98))",
+            background: "radial-gradient(circle at 20% 10%, rgba(255,70,70,0.12), transparent 40%), radial-gradient(circle at 90% 90%, rgba(180,30,30,0.14), transparent 45%), linear-gradient(135deg, rgba(8,6,8,0.98), rgba(16,8,10,0.98))",
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
@@ -287,8 +287,8 @@ function Sidebar({ onDevToolsToggle }) {
               color: "#fff",
               maxWidth: "680px",
               width: "100%",
-              boxShadow: "0 16px 48px rgba(0,0,0,0.75), 0 0 0 1px rgba(0,255,170,0.12), inset 0 1px 0 rgba(255,255,255,0.06)",
-              border: "1px solid rgba(0,255,170,0.18)",
+              boxShadow: "0 16px 48px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,80,80,0.2), inset 0 1px 0 rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,80,80,0.24)",
               animation: "adminPortalSlide 0.45s ease-out",
               position: "relative",
               overflow: "hidden",
@@ -298,7 +298,7 @@ function Sidebar({ onDevToolsToggle }) {
             <div style={{
               position: "absolute",
               inset: 0,
-              background: "repeating-linear-gradient(0deg, rgba(0,255,170,0.05) 0, rgba(0,255,170,0.05) 1px, transparent 1px, transparent 28px), repeating-linear-gradient(90deg, rgba(0,255,170,0.03) 0, rgba(0,255,170,0.03) 1px, transparent 1px, transparent 28px)",
+              background: "repeating-linear-gradient(0deg, rgba(255,80,80,0.06) 0, rgba(255,80,80,0.06) 1px, transparent 1px, transparent 28px), repeating-linear-gradient(90deg, rgba(255,80,80,0.04) 0, rgba(255,80,80,0.04) 1px, transparent 1px, transparent 28px)",
               opacity: 0.25,
               pointerEvents: "none"
             }} />
@@ -317,17 +317,17 @@ function Sidebar({ onDevToolsToggle }) {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                border: "1px solid rgba(0,255,170,0.22)",
+                border: "1px solid rgba(255,80,80,0.28)",
                 background: "rgba(0,0,0,0.35)",
                 borderRadius: "10px",
                 padding: "0.8rem 0.9rem",
                 marginBottom: "1rem"
               }}>
                 <div>
-                  <div style={{ fontFamily: "Consolas, 'Courier New', monospace", fontSize: "11px", color: "rgba(0,255,170,0.85)", letterSpacing: "1px" }}>
+                  <div style={{ fontFamily: "Consolas, 'Courier New', monospace", fontSize: "11px", color: "rgba(255,120,120,0.92)", letterSpacing: "1px" }}>
                     AUTH_GATEWAY
                   </div>
-                  <div style={{ fontFamily: "Consolas, 'Courier New', monospace", fontSize: "18px", fontWeight: 700, color: "#e7fff7" }}>
+                  <div style={{ fontFamily: "Consolas, 'Courier New', monospace", fontSize: "18px", fontWeight: 700, color: "#ffe9e9" }}>
                     DEVELOPER CONTROL ENTRY
                   </div>
                 </div>
@@ -339,13 +339,13 @@ function Sidebar({ onDevToolsToggle }) {
 
             {isAdmin ? (
               <>
-                <div style={{ border: "1px solid rgba(0,255,170,0.24)", borderRadius: "10px", background: "rgba(0,18,16,0.45)", marginBottom: "1rem", overflow: "hidden" }}>
+                <div style={{ border: "1px solid rgba(255,80,80,0.26)", borderRadius: "10px", background: "rgba(24,8,8,0.5)", marginBottom: "1rem", overflow: "hidden" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "130px 1fr", fontFamily: "Consolas, 'Courier New', monospace", fontSize: "12px" }}>
-                    <div style={{ padding: "0.65rem 0.8rem", color: "rgba(255,255,255,0.65)", borderRight: "1px solid rgba(0,255,170,0.15)", borderBottom: "1px solid rgba(0,255,170,0.15)" }}>AUTH_ROLE</div>
-                    <div style={{ padding: "0.65rem 0.8rem", color: "#77ffd4", borderBottom: "1px solid rgba(0,255,170,0.15)" }}>ROOT_ADMIN</div>
-                    <div style={{ padding: "0.65rem 0.8rem", color: "rgba(255,255,255,0.65)", borderRight: "1px solid rgba(0,255,170,0.15)", borderBottom: "1px solid rgba(0,255,170,0.15)" }}>TOKEN_STATE</div>
-                    <div style={{ padding: "0.65rem 0.8rem", color: "#77ffd4", borderBottom: "1px solid rgba(0,255,170,0.15)" }}>VERIFIED</div>
-                    <div style={{ padding: "0.65rem 0.8rem", color: "rgba(255,255,255,0.65)", borderRight: "1px solid rgba(0,255,170,0.15)" }}>CAPABILITIES</div>
+                    <div style={{ padding: "0.65rem 0.8rem", color: "rgba(255,255,255,0.65)", borderRight: "1px solid rgba(255,80,80,0.18)", borderBottom: "1px solid rgba(255,80,80,0.18)" }}>AUTH_ROLE</div>
+                    <div style={{ padding: "0.65rem 0.8rem", color: "#ff9b9b", borderBottom: "1px solid rgba(255,80,80,0.18)" }}>ROOT_ADMIN</div>
+                    <div style={{ padding: "0.65rem 0.8rem", color: "rgba(255,255,255,0.65)", borderRight: "1px solid rgba(255,80,80,0.18)", borderBottom: "1px solid rgba(255,80,80,0.18)" }}>TOKEN_STATE</div>
+                    <div style={{ padding: "0.65rem 0.8rem", color: "#ff9b9b", borderBottom: "1px solid rgba(255,80,80,0.18)" }}>VERIFIED</div>
+                    <div style={{ padding: "0.65rem 0.8rem", color: "rgba(255,255,255,0.65)", borderRight: "1px solid rgba(255,80,80,0.18)" }}>CAPABILITIES</div>
                     <div style={{ padding: "0.65rem 0.8rem", color: "rgba(255,255,255,0.86)" }}>USER_MGMT, CONFIG_WRITE, METRICS_READ</div>
                   </div>
                 </div>
@@ -357,9 +357,9 @@ function Sidebar({ onDevToolsToggle }) {
                   }}
                   style={{
                     width: "100%",
-                    background: "linear-gradient(180deg, rgba(0,255,170,0.22), rgba(0,255,170,0.1))",
-                    color: "#dffff4",
-                    border: "1px solid rgba(0,255,170,0.4)",
+                    background: "linear-gradient(180deg, rgba(255,80,80,0.3), rgba(190,40,40,0.2))",
+                    color: "#ffeaea",
+                    border: "1px solid rgba(255,100,100,0.55)",
                     padding: "12px 14px",
                     borderRadius: "10px",
                     fontWeight: 700,
