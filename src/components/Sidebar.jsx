@@ -61,7 +61,7 @@ const DevToolsIcon = ({ className }) => (
 function Sidebar({ onDevToolsToggle }) {
   const devtoolsEnabled = (import.meta?.env?.VITE_ENABLE_DEVTOOLS ?? 'true') === 'true';
   const { theme, setTheme } = useContext(ThemeContext);
-  const { session, signOut, user } = useContext(AuthContext);
+  const { session, signOut, user, isAdmin } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -421,7 +421,7 @@ function Sidebar({ onDevToolsToggle }) {
         )}
       </div>
 
-      {/* Admin Access Popup */}
+      {/* Professional Admin Portal Entrance */}
       {showAdminPopup && (
         <div
           style={{
@@ -430,135 +430,265 @@ function Sidebar({ onDevToolsToggle }) {
             left: 0,
             right: 0,
             bottom: 0,
-            background: "rgba(0,0,0,0.8)",
+            background: "linear-gradient(135deg, rgba(0,0,0,0.92), rgba(20,20,40,0.92))",
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
             zIndex: 9999,
-            backdropFilter: "blur(10px)",
+            backdropFilter: "blur(12px)",
             padding: "1rem"
           }}
           onClick={() => setShowAdminPopup(false)}
         >
           <div
             style={{
-              background: "linear-gradient(135deg, #1a1a1a, #2d2d2d)",
-              borderRadius: "20px",
-              padding: "clamp(1.5rem, 4vw, 2.5rem)",
+              background: "linear-gradient(135deg, rgba(15,15,25,0.98), rgba(25,25,40,0.98))",
+              borderRadius: "24px",
+              padding: "clamp(2rem, 5vw, 3.5rem)",
               color: "#fff",
-              textAlign: "center",
-              maxWidth: "500px",
+              maxWidth: "550px",
               width: "100%",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
-              border: "2px solid var(--accent)",
-              animation: "popupBounce 0.5s ease-out",
+              boxShadow: "0 25px 50px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.1)",
+              border: "1px solid rgba(255,122,0,0.3)",
+              animation: "adminPortalSlide 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
               maxHeight: "90vh",
-              overflowY: "auto"
+              overflowY: "auto",
+              backdropFilter: "blur(8px)"
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>🚫</div>
-            <h2 style={{
-              marginBottom: "1rem",
-              color: "var(--accent)",
-              fontSize: "1.8rem",
-              textShadow: "0 2px 4px rgba(0,0,0,0.5)"
-            }}>
-              🛡️ RESTRICTED ACCESS! 🛡️
-            </h2>
-            <p style={{
-              marginBottom: "1.5rem",
-              fontSize: "1.1rem",
-              lineHeight: "1.6",
-              color: "#e0e0e0"
-            }}>
-              🎭 <strong>Nice try, sneaky one!</strong> 🎭<br />
-              This area is for <span style={{ color: "var(--accent)", fontWeight: "bold" }}>ADMIN WIZARDS</span> only!<br />
-              <br />
-              🔮 You need special admin powers to enter this mystical realm!<br />
-              💫 Contact your system administrator for the secret handshake!<br />
-              <br />
-              <em style={{ color: "#888" }}>Or maybe you're just curious... we like that! 😉</em>
-            </p>
-
-            <div style={{
-              marginBottom: "1.5rem",
-              textAlign: "center"
-            }}>
-              <p style={{
-                fontSize: "0.8rem",
-                color: "#666",
-                margin: "0 0 0.3rem 0",
-                fontStyle: "italic",
-                opacity: 0.7
+            {/* Header */}
+            <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
+              <div style={{
+                fontSize: "3.5rem",
+                marginBottom: "1rem",
+                background: "linear-gradient(135deg, var(--accent), #00d4aa)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text"
               }}>
-                <em>Maybe try clicking on the lightbulb emoji above? 💡</em>
+                ⚙️
+              </div>
+              <h2 style={{
+                margin: "0 0 0.5rem 0",
+                fontSize: "28px",
+                fontWeight: "700",
+                letterSpacing: "0.5px"
+              }}>
+                Admin Portal
+              </h2>
+              <p style={{
+                margin: "0.5rem 0 0 0",
+                fontSize: "13px",
+                color: "rgba(255,255,255,0.6)",
+                letterSpacing: "0.3px",
+                textTransform: "uppercase"
+              }}>
+                System Administration & Control
               </p>
-              <span
-                onClick={() => {
-                  setShowAdminPopup(false);
-                  window.location.href = '/admin/dashboard';
-                }}
-                style={{
-                  color: "#666",
-                  cursor: "pointer",
-                  fontSize: "0.8rem",
-                  textDecoration: "underline",
-                  opacity: 0.5,
-                  transition: "opacity 0.3s ease",
-                  display: "inline-block"
-                }}
-                onMouseOver={(e) => {
-                  e.target.style.opacity = "0.8";
-                }}
-                onMouseOut={(e) => {
-                  e.target.style.opacity = "0.5";
-                }}
-              >
-                <em>BoooooooooooooooHaa!...</em>
-              </span>
             </div>
-            <button
-              onClick={() => setShowAdminPopup(false)}
-              style={{
-                background: "linear-gradient(45deg, var(--accent), #00d4aa)",
-                color: "#fff",
-                border: "none",
-                padding: "12px 24px",
-                borderRadius: "25px",
-                cursor: "pointer",
-                fontSize: "1rem",
-                fontWeight: "bold",
-                transition: "all 0.3s ease",
-                boxShadow: "0 4px 15px rgba(0, 212, 170, 0.3)",
-                textShadow: "0 1px 2px rgba(0,0,0,0.3)"
-              }}
-              onMouseOver={(e) => {
-                e.target.style.transform = "scale(1.05)";
-                e.target.style.boxShadow = "0 6px 20px rgba(0, 212, 170, 0.4)";
-              }}
-              onMouseOut={(e) => {
-                e.target.style.transform = "scale(1)";
-                e.target.style.boxShadow = "0 4px 15px rgba(0, 212, 170, 0.3)";
-              }}
-            >
-              🎪 Got it, thanks!
-            </button>
+
+            {/* Content */}
+            {isAdmin ? (
+              <>
+                {/* For Admin Users */}
+                <div style={{
+                  background: "rgba(255,122,0,0.08)",
+                  border: "1px solid rgba(255,122,0,0.25)",
+                  borderRadius: "16px",
+                  padding: "1.5rem",
+                  marginBottom: "2rem"
+                }}>
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "1rem",
+                    marginBottom: "1rem"
+                  }}>
+                    <div style={{
+                      padding: "1rem",
+                      background: "rgba(255,255,255,0.05)",
+                      borderRadius: "12px",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      textAlign: "center"
+                    }}>
+                      <div style={{ fontSize: "24px", fontWeight: "700", color: "var(--accent)", marginBottom: "0.25rem" }}>📊</div>
+                      <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.3px" }}>Management</div>
+                    </div>
+                    <div style={{
+                      padding: "1rem",
+                      background: "rgba(255,255,255,0.05)",
+                      borderRadius: "12px",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      textAlign: "center"
+                    }}>
+                      <div style={{ fontSize: "24px", fontWeight: "700", color: "#00d4aa", marginBottom: "0.25rem" }}>🔧</div>
+                      <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.3px" }}>Settings</div>
+                    </div>
+                  </div>
+                  <div style={{
+                    fontSize: "13px",
+                    color: "rgba(255,255,255,0.8)",
+                    lineHeight: "1.6"
+                  }}>
+                    Welcome back, <span style={{ fontWeight: "600", color: "var(--accent)" }}>{user?.email?.split('@')[0]}</span>. You have full access to all admin features.
+                  </div>
+                </div>
+
+                {/* Primary Action */}
+                <button
+                  onClick={() => {
+                    setShowAdminPopup(false);
+                    navigate('/admin/dashboard');
+                  }}
+                  style={{
+                    width: "100%",
+                    background: "linear-gradient(135deg, var(--accent), #ff9d3d)",
+                    color: "#000",
+                    border: "none",
+                    padding: "16px 24px",
+                    borderRadius: "12px",
+                    cursor: "pointer",
+                    fontSize: "15px",
+                    fontWeight: "700",
+                    transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                    boxShadow: "0 8px 24px rgba(255, 122, 0, 0.3)",
+                    marginBottom: "1rem",
+                    letterSpacing: "0.5px",
+                    textTransform: "uppercase",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px"
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.transform = "translateY(-3px)";
+                    e.currentTarget.style.boxShadow = "0 12px 32px rgba(255, 122, 0, 0.4)";
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "0 8px 24px rgba(255, 122, 0, 0.3)";
+                  }}
+                >
+                  <span>→</span> Enter Admin Dashboard
+                </button>
+
+                {/* Secondary Action */}
+                <button
+                  onClick={() => setShowAdminPopup(false)}
+                  style={{
+                    width: "100%",
+                    background: "transparent",
+                    color: "rgba(255,255,255,0.7)",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    padding: "12px 24px",
+                    borderRadius: "12px",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)";
+                    e.currentTarget.style.color = "rgba(255,255,255,0.9)";
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)";
+                    e.currentTarget.style.color = "rgba(255,255,255,0.7)";
+                  }}
+                >
+                  Close
+                </button>
+              </>
+            ) : (
+              <>
+                {/* For Non-Admin Users */}
+                <div style={{
+                  background: "rgba(220, 53, 69, 0.08)",
+                  border: "1px solid rgba(220, 53, 69, 0.25)",
+                  borderRadius: "16px",
+                  padding: "1.5rem",
+                  marginBottom: "2rem",
+                  textAlign: "center"
+                }}>
+                  <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>🔒</div>
+                  <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "16px", fontWeight: "600", color: "rgba(220, 53, 69, 0.9)" }}>
+                    Access Restricted
+                  </h3>
+                  <p style={{
+                    margin: "0.5rem 0 0 0",
+                    fontSize: "13px",
+                    color: "rgba(255,255,255,0.7)",
+                    lineHeight: "1.6"
+                  }}>
+                    This portal is reserved for administrators only. You do not currently have admin privileges.
+                  </p>
+                </div>
+
+                {/* Contact Section */}
+                <div style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: "12px",
+                  padding: "1.5rem",
+                  marginBottom: "2rem",
+                  textAlign: "center"
+                }}>
+                  <p style={{
+                    margin: "0",
+                    fontSize: "13px",
+                    color: "rgba(255,255,255,0.7)",
+                    lineHeight: "1.6"
+                  }}>
+                    If you believe you should have admin access, please <span style={{ color: "var(--accent)", fontWeight: "600" }}>contact your system administrator</span> to request permissions.
+                  </p>
+                </div>
+
+                {/* Close Button */}
+                <button
+                  onClick={() => setShowAdminPopup(false)}
+                  style={{
+                    width: "100%",
+                    background: "linear-gradient(135deg, rgba(255,122,0,0.15), rgba(0,212,170,0.08))",
+                    color: "rgba(255,255,255,0.8)",
+                    border: "1px solid rgba(255,122,0,0.2)",
+                    padding: "12px 24px",
+                    borderRadius: "12px",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = "linear-gradient(135deg, rgba(255,122,0,0.2), rgba(0,212,170,0.12))";
+                    e.currentTarget.style.borderColor = "rgba(255,122,0,0.3)";
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = "linear-gradient(135deg, rgba(255,122,0,0.15), rgba(0,212,170,0.08))";
+                    e.currentTarget.style.borderColor = "rgba(255,122,0,0.2)";
+                  }}
+                >
+                  Close
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
 
       <style jsx>{`
-        @keyframes popupBounce {
+        @keyframes adminPortalSlide {
           0% {
-            transform: scale(0.3) rotate(-10deg);
+            transform: scale(0.8) translateY(30px);
             opacity: 0;
           }
           50% {
-            transform: scale(1.05) rotate(2deg);
+            transform: scale(1.02);
           }
           100% {
-            transform: scale(1) rotate(0deg);
+            transform: scale(1) translateY(0);
             opacity: 1;
           }
         }
