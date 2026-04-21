@@ -268,47 +268,85 @@ function Sidebar({ onDevToolsToggle }) {
           style={{
             position: "fixed",
             inset: 0,
-            background: "linear-gradient(135deg, rgba(0,8,20,0.97), rgba(5,15,35,0.97))",
+            background: "radial-gradient(circle at 20% 10%, rgba(0,255,170,0.08), transparent 40%), radial-gradient(circle at 90% 90%, rgba(255,122,0,0.08), transparent 45%), linear-gradient(135deg, rgba(5,7,12,0.98), rgba(7,14,24,0.98))",
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
             zIndex: 9999,
-            backdropFilter: "blur(20px)",
+            backdropFilter: "blur(14px)",
             padding: "1rem",
+            animation: "portalFadeIn 0.25s ease-out",
           }}
           onClick={() => setShowAdminPopup(false)}
         >
           <div
             style={{
-              background: "linear-gradient(135deg, rgba(3,8,18,0.98), rgba(10,20,40,0.98))",
-              borderRadius: "20px",
-              padding: "clamp(1.8rem, 4vw, 2.6rem)",
+              background: "linear-gradient(180deg, rgba(10,13,20,0.98), rgba(6,10,16,0.98))",
+              borderRadius: "14px",
+              padding: "clamp(1.2rem, 3vw, 1.8rem)",
               color: "#fff",
-              maxWidth: "620px",
+              maxWidth: "680px",
               width: "100%",
-              boxShadow: "0 0 80px rgba(255,122,0,0.18), 0 30px 80px rgba(0,0,0,0.8)",
-              border: "1px solid rgba(255,122,0,0.25)",
+              boxShadow: "0 16px 48px rgba(0,0,0,0.75), 0 0 0 1px rgba(0,255,170,0.12), inset 0 1px 0 rgba(255,255,255,0.06)",
+              border: "1px solid rgba(0,255,170,0.18)",
               animation: "adminPortalSlide 0.45s ease-out",
+              position: "relative",
+              overflow: "hidden",
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-              <h2 style={{ margin: 0, fontSize: "30px", fontWeight: 800, letterSpacing: "0.5px", background: "linear-gradient(135deg, var(--accent), #00d4aa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-                ADMIN CONTROL
-              </h2>
-              <div style={{ fontSize: "11px", color: "rgba(0,212,170,0.75)", letterSpacing: "2px", marginTop: "0.5rem", fontFamily: "monospace" }}>
-                [SECURE ENVIRONMENT ACTIVE]
+            <div style={{
+              position: "absolute",
+              inset: 0,
+              background: "repeating-linear-gradient(0deg, rgba(0,255,170,0.05) 0, rgba(0,255,170,0.05) 1px, transparent 1px, transparent 28px), repeating-linear-gradient(90deg, rgba(0,255,170,0.03) 0, rgba(0,255,170,0.03) 1px, transparent 1px, transparent 28px)",
+              opacity: 0.25,
+              pointerEvents: "none"
+            }} />
+
+            <div style={{ position: "relative" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.9rem" }}>
+                <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#ff5f57" }} />
+                <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#febc2e" }} />
+                <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#28c840" }} />
+                <span style={{ marginLeft: "0.6rem", fontFamily: "Consolas, 'Courier New', monospace", fontSize: "12px", color: "rgba(255,255,255,0.6)" }}>
+                  root@solar-edge:~$ admin-entry --secure
+                </span>
               </div>
-            </div>
+
+              <div style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                border: "1px solid rgba(0,255,170,0.22)",
+                background: "rgba(0,0,0,0.35)",
+                borderRadius: "10px",
+                padding: "0.8rem 0.9rem",
+                marginBottom: "1rem"
+              }}>
+                <div>
+                  <div style={{ fontFamily: "Consolas, 'Courier New', monospace", fontSize: "11px", color: "rgba(0,255,170,0.85)", letterSpacing: "1px" }}>
+                    AUTH_GATEWAY
+                  </div>
+                  <div style={{ fontFamily: "Consolas, 'Courier New', monospace", fontSize: "18px", fontWeight: 700, color: "#e7fff7" }}>
+                    DEVELOPER CONTROL ENTRY
+                  </div>
+                </div>
+                <div style={{ fontFamily: "Consolas, 'Courier New', monospace", fontSize: "11px", color: "rgba(255,255,255,0.65)", textAlign: "right" }}>
+                  SESSION: {String(user?.email || "guest").split("@")[0].toUpperCase()}<br />
+                  NODE: PROD-AUTH-01
+                </div>
+              </div>
 
             {isAdmin ? (
               <>
-                <div style={{ background: "linear-gradient(135deg, rgba(0,212,170,0.1), rgba(255,122,0,0.05))", border: "1px solid rgba(0,212,170,0.25)", borderRadius: "12px", padding: "1rem", marginBottom: "1rem" }}>
-                  <div style={{ fontSize: "12px", color: "rgba(0,212,170,0.95)", letterSpacing: "1px", textTransform: "uppercase", fontFamily: "monospace", fontWeight: 700 }}>
-                    ADMIN VERIFIED
-                  </div>
-                  <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.72)", marginTop: "0.4rem" }}>
-                    {user?.email?.split("@")[0]} has full access to management features.
+                <div style={{ border: "1px solid rgba(0,255,170,0.24)", borderRadius: "10px", background: "rgba(0,18,16,0.45)", marginBottom: "1rem", overflow: "hidden" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "130px 1fr", fontFamily: "Consolas, 'Courier New', monospace", fontSize: "12px" }}>
+                    <div style={{ padding: "0.65rem 0.8rem", color: "rgba(255,255,255,0.65)", borderRight: "1px solid rgba(0,255,170,0.15)", borderBottom: "1px solid rgba(0,255,170,0.15)" }}>AUTH_ROLE</div>
+                    <div style={{ padding: "0.65rem 0.8rem", color: "#77ffd4", borderBottom: "1px solid rgba(0,255,170,0.15)" }}>ROOT_ADMIN</div>
+                    <div style={{ padding: "0.65rem 0.8rem", color: "rgba(255,255,255,0.65)", borderRight: "1px solid rgba(0,255,170,0.15)", borderBottom: "1px solid rgba(0,255,170,0.15)" }}>TOKEN_STATE</div>
+                    <div style={{ padding: "0.65rem 0.8rem", color: "#77ffd4", borderBottom: "1px solid rgba(0,255,170,0.15)" }}>VERIFIED</div>
+                    <div style={{ padding: "0.65rem 0.8rem", color: "rgba(255,255,255,0.65)", borderRight: "1px solid rgba(0,255,170,0.15)" }}>CAPABILITIES</div>
+                    <div style={{ padding: "0.65rem 0.8rem", color: "rgba(255,255,255,0.86)" }}>USER_MGMT, CONFIG_WRITE, METRICS_READ</div>
                   </div>
                 </div>
 
@@ -317,31 +355,73 @@ function Sidebar({ onDevToolsToggle }) {
                     setShowAdminPopup(false);
                     navigate("/admin/dashboard");
                   }}
-                  style={{ width: "100%", background: "linear-gradient(135deg, var(--accent), #ff9d3d)", color: "#111", border: "none", padding: "14px 18px", borderRadius: "10px", fontWeight: 800, letterSpacing: "0.8px", cursor: "pointer", textTransform: "uppercase", marginBottom: "0.7rem" }}
+                  style={{
+                    width: "100%",
+                    background: "linear-gradient(180deg, rgba(0,255,170,0.22), rgba(0,255,170,0.1))",
+                    color: "#dffff4",
+                    border: "1px solid rgba(0,255,170,0.4)",
+                    padding: "12px 14px",
+                    borderRadius: "10px",
+                    fontWeight: 700,
+                    letterSpacing: "0.9px",
+                    cursor: "pointer",
+                    textTransform: "uppercase",
+                    marginBottom: "0.6rem",
+                    fontFamily: "Consolas, 'Courier New', monospace",
+                  }}
                 >
-                  Enter Admin Dashboard
+                  [ EXEC ./admin-dashboard --mode=control ]
                 </button>
 
-                <button onClick={() => setShowAdminPopup(false)} style={{ width: "100%", background: "transparent", color: "rgba(255,255,255,0.72)", border: "1px solid rgba(255,255,255,0.2)", padding: "12px 18px", borderRadius: "10px", cursor: "pointer", textTransform: "uppercase" }}>
-                  Close
+                <button
+                  onClick={() => setShowAdminPopup(false)}
+                  style={{
+                    width: "100%",
+                    background: "rgba(255,255,255,0.03)",
+                    color: "rgba(255,255,255,0.72)",
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    padding: "11px 14px",
+                    borderRadius: "10px",
+                    cursor: "pointer",
+                    textTransform: "uppercase",
+                    fontFamily: "Consolas, 'Courier New', monospace",
+                    letterSpacing: "0.8px",
+                  }}
+                >
+                  [ ABORT ]
                 </button>
               </>
             ) : (
               <>
-                <div style={{ background: "linear-gradient(135deg, rgba(220,53,69,0.12), rgba(220,53,69,0.04))", border: "1px solid rgba(220,53,69,0.35)", borderRadius: "12px", padding: "1.2rem", marginBottom: "1rem" }}>
-                  <div style={{ fontSize: "12px", color: "rgba(220,53,69,0.95)", letterSpacing: "1px", textTransform: "uppercase", fontFamily: "monospace", fontWeight: 700 }}>
-                    Access Denied
+                <div style={{ border: "1px solid rgba(255,92,92,0.35)", borderRadius: "10px", background: "rgba(45,8,8,0.4)", padding: "0.9rem", marginBottom: "0.9rem", fontFamily: "Consolas, 'Courier New', monospace" }}>
+                  <div style={{ fontSize: "12px", color: "rgba(255,92,92,0.95)", letterSpacing: "1px", textTransform: "uppercase", fontWeight: 700 }}>
+                    AUTHORIZATION_FAILED
                   </div>
-                  <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.72)", marginTop: "0.4rem" }}>
-                    This portal is restricted to administrators.
+                  <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.72)", marginTop: "0.45rem" }}>
+                    Admin claim missing in current identity token. Contact platform owner for role escalation.
                   </div>
                 </div>
 
-                <button onClick={() => setShowAdminPopup(false)} style={{ width: "100%", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.8)", border: "1px solid rgba(255,255,255,0.15)", padding: "12px 18px", borderRadius: "10px", cursor: "pointer", textTransform: "uppercase" }}>
-                  Close
+                <button
+                  onClick={() => setShowAdminPopup(false)}
+                  style={{
+                    width: "100%",
+                    background: "rgba(255,255,255,0.04)",
+                    color: "rgba(255,255,255,0.82)",
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    padding: "11px 14px",
+                    borderRadius: "10px",
+                    cursor: "pointer",
+                    textTransform: "uppercase",
+                    fontFamily: "Consolas, 'Courier New', monospace",
+                    letterSpacing: "0.8px",
+                  }}
+                >
+                  [ CLOSE ]
                 </button>
               </>
             )}
+            </div>
           </div>
         </div>
       )}
