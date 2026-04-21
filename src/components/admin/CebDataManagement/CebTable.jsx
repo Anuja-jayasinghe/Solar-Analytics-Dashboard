@@ -15,7 +15,12 @@ export default function CebTable({
   onItemsPerPageChange = () => {},
   onEdit = () => {},
   onDelete = () => {},
-  loading = false
+  loading = false,
+  editingId = null,
+  editForm = null,
+  onEditFormChange = () => {},
+  onSaveEdit = () => {},
+  onCancelEdit = () => {}
 }) {
   const { selectedTheme, adminColorPresets } = useContext(AdminThemeContext);
   const theme = getAdminTheme(adminColorPresets[selectedTheme]);
@@ -63,7 +68,20 @@ export default function CebTable({
     color: theme.colors.text,
     fontSize: '13px',
     fontFamily: theme.fonts.mono,
-    borderBottom: `1px solid ${theme.colors.border}`
+    borderBottom: `1px solid ${theme.colors.border}`,
+    position: 'relative'
+  };
+
+  const inputStyle = {
+    width: '100%',
+    background: 'rgba(0,0,0,0.4)',
+    border: `1px solid ${theme.colors.accent}40`,
+    color: theme.colors.text,
+    padding: '4px 8px',
+    fontSize: '12px',
+    fontFamily: theme.fonts.mono,
+    outline: 'none',
+    borderRadius: '1px'
   };
 
   return (
@@ -86,57 +104,143 @@ export default function CebTable({
             </tr>
           </thead>
           <tbody>
-            {data.map((row, idx) => (
-              <tr key={row.id} style={{
-                transition: 'background 0.15s ease'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-              >
-                <td style={cellStyle}>{row.bill_date}</td>
-                <td style={cellStyle}>{String(row.meter_reading || 0).padStart(6, '0')}</td>
-                <td style={cellStyle}>{row.units_exported || 0}</td>
-                <td style={{ ...cellStyle, color: theme.colors.success }}>
-                  {row.earnings ? `LKR ${row.earnings.toLocaleString()}` : 'LKR 00.00'}
-                </td>
-                <td style={{ ...cellStyle, display: 'flex', gap: '0.6rem' }}>
-                  <button
-                    onClick={() => onEdit(row)}
-                    disabled={loading}
-                    style={{
-                      background: 'transparent',
-                      color: theme.colors.accent,
-                      border: `1px solid ${theme.colors.accent}60`,
-                      borderRadius: '2px',
-                      padding: '4px 8px',
-                      fontSize: '10px',
-                      fontFamily: theme.fonts.mono,
-                      cursor: 'pointer',
-                      textTransform: 'uppercase'
-                    }}
-                  >
-                    [ EDIT ]
-                  </button>
-                  <button
-                    onClick={() => onDelete(row.id)}
-                    disabled={loading}
-                    style={{
-                      background: 'transparent',
-                      color: theme.colors.danger,
-                      border: `1px solid ${theme.colors.danger}60`,
-                      borderRadius: '2px',
-                      padding: '4px 8px',
-                      fontSize: '10px',
-                      fontFamily: theme.fonts.mono,
-                      cursor: 'pointer',
-                      textTransform: 'uppercase'
-                    }}
-                  >
-                    [ DROP ]
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {data.map((row) => {
+              const isEditing = editingId === row.id;
+              
+              return (
+                <tr key={row.id} style={{
+                  transition: 'all 0.2s ease',
+                  background: isEditing ? `${theme.colors.accent}08` : 'transparent',
+                  boxShadow: isEditing ? `inset 0 0 20px ${theme.colors.accent}12` : 'none',
+                  borderLeft: isEditing ? `3px solid ${theme.colors.accent}` : '3px solid transparent'
+                }}
+                onMouseEnter={(e) => !isEditing && (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+                onMouseLeave={(e) => !isEditing && (e.currentTarget.style.background = 'transparent')}
+                >
+                  {isEditing ? (
+                    <>
+                      {/* IN-LINE EDITING MODE */}
+                      <td style={cellStyle}>
+                        <div style={{ position: 'absolute', top: '-10px', left: '10px', fontSize: '8px', color: theme.colors.accent, background: '#060d1a', padding: '0 4px', zIndex: 5 }}>EDIT_LOCK</div>
+                        <input
+                          type="date"
+                          value={editForm.bill_date}
+                          onChange={(e) => onEditFormChange({ ...editForm, bill_date: e.target.value })}
+                          style={inputStyle}
+                        />
+                      </td>
+                      <td style={cellStyle}>
+                        <input
+                          type="number"
+                          value={editForm.meter_reading}
+                          onChange={(e) => onEditFormChange({ ...editForm, meter_reading: e.target.value })}
+                          style={inputStyle}
+                        />
+                      </td>
+                      <td style={cellStyle}>
+                        <input
+                          type="number"
+                          value={editForm.units_exported}
+                          onChange={(e) => onEditFormChange({ ...editForm, units_exported: e.target.value })}
+                          style={inputStyle}
+                        />
+                      </td>
+                      <td style={cellStyle}>
+                        <input
+                          type="number"
+                          value={editForm.earnings}
+                          onChange={(e) => onEditFormChange({ ...editForm, earnings: e.target.value })}
+                          style={{ ...inputStyle, color: theme.colors.success }}
+                        />
+                      </td>
+                      <td style={{ ...cellStyle, display: 'flex', gap: '0.6rem' }}>
+                        <button
+                          onClick={onSaveEdit}
+                          disabled={loading}
+                          style={{
+                            background: theme.colors.accent,
+                            color: '#000',
+                            border: 'none',
+                            borderRadius: '1px',
+                            padding: '4px 10px',
+                            fontSize: '10px',
+                            fontFamily: theme.fonts.mono,
+                            cursor: 'pointer',
+                            fontWeight: '700',
+                            textTransform: 'uppercase'
+                          }}
+                        >
+                          {loading ? 'PUSH...' : 'COMMIT'}
+                        </button>
+                        <button
+                          onClick={onCancelEdit}
+                          disabled={loading}
+                          style={{
+                            background: 'transparent',
+                            color: theme.colors.textMuted,
+                            border: `1px solid ${theme.colors.borderStrong}`,
+                            borderRadius: '1px',
+                            padding: '4px 10px',
+                            fontSize: '10px',
+                            fontFamily: theme.fonts.mono,
+                            cursor: 'pointer',
+                            textTransform: 'uppercase'
+                          }}
+                        >
+                          ROLLBACK
+                        </button>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      {/* STANDARD READ MODE */}
+                      <td style={cellStyle}>{row.bill_date}</td>
+                      <td style={cellStyle}>{String(row.meter_reading || 0).padStart(6, '0')}</td>
+                      <td style={cellStyle}>{row.units_exported || 0}</td>
+                      <td style={{ ...cellStyle, color: theme.colors.success }}>
+                        {row.earnings ? `LKR ${row.earnings.toLocaleString()}` : 'LKR 00.00'}
+                      </td>
+                      <td style={{ ...cellStyle, display: 'flex', gap: '0.6rem' }}>
+                        <button
+                          onClick={() => onEdit(row)}
+                          disabled={loading}
+                          style={{
+                            background: 'transparent',
+                            color: theme.colors.accent,
+                            border: `1px solid ${theme.colors.accent}60`,
+                            borderRadius: '2px',
+                            padding: '4px 8px',
+                            fontSize: '10px',
+                            fontFamily: theme.fonts.mono,
+                            cursor: 'pointer',
+                            textTransform: 'uppercase'
+                          }}
+                        >
+                          [ EDIT ]
+                        </button>
+                        <button
+                          onClick={() => onDelete(row.id)}
+                          disabled={loading}
+                          style={{
+                            background: 'transparent',
+                            color: theme.colors.danger,
+                            border: `1px solid ${theme.colors.danger}60`,
+                            borderRadius: '2px',
+                            padding: '4px 8px',
+                            fontSize: '10px',
+                            fontFamily: theme.fonts.mono,
+                            cursor: 'pointer',
+                            textTransform: 'uppercase'
+                          }}
+                        >
+                          [ DROP ]
+                        </button>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

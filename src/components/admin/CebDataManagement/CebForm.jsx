@@ -4,15 +4,13 @@ import { getAdminTheme } from '../adminTheme';
 
 /**
  * CEB Data Form Component
- * Technical interface for adding/editing CEB records
+ * Dedicated purely to NEW_RECORD_ENTRY to maintain direct DB editing feel
  */
 export default function CebForm({
   form = { bill_date: '', meter_reading: '', units_exported: '', earnings: '' },
   onFormChange = () => {},
   onSubmit = () => {},
-  loading = false,
-  editingId = null,
-  onCancelEdit = () => {}
+  loading = false
 }) {
   const { selectedTheme, adminColorPresets } = useContext(AdminThemeContext);
   const theme = getAdminTheme(adminColorPresets[selectedTheme]);
@@ -33,8 +31,8 @@ export default function CebForm({
     background: theme.colors.accent,
     color: '#000',
     border: 'none',
-    padding: '10px',
     borderRadius: '2px',
+    padding: '10px',
     cursor: 'pointer',
     fontWeight: '700',
     fontFamily: theme.fonts.mono,
@@ -58,8 +56,18 @@ export default function CebForm({
         position: 'relative'
       }}
     >
-      <div style={{ position: 'absolute', top: '-10px', left: '15px', background: theme.colors.background, padding: '0 8px', fontSize: '10px', fontFamily: theme.fonts.mono, color: theme.colors.accent }}>
-        DATA_INPUT_STREAM
+      <div style={{ 
+        position: 'absolute', 
+        top: '-10px', 
+        left: '15px', 
+        background: theme.colors.background, 
+        padding: '0 8px', 
+        fontSize: '10px', 
+        fontFamily: theme.fonts.mono, 
+        color: theme.colors.accent,
+        letterSpacing: '1px'
+      }}>
+        [ NEW_DATA_TRANSACTION ]
       </div>
 
       <input
@@ -94,18 +102,8 @@ export default function CebForm({
         style={inputStyle}
       />
       <button type="submit" disabled={loading} style={buttonStyle}>
-        {loading ? 'PUSHING...' : editingId ? '[ UPDATE_RECORD ]' : '[ COMMIT_RECORD ]'}
+        {loading ? 'PUSHING_CMD...' : '[ COMMIT_NEW_RECORD ]'}
       </button>
-      {editingId && (
-        <button
-          type="button"
-          onClick={onCancelEdit}
-          disabled={loading}
-          style={{ ...buttonStyle, background: 'rgba(255,255,255,0.05)', color: theme.colors.textMuted, border: `1px solid ${theme.colors.border}` }}
-        >
-          [ ABORT ]
-        </button>
-      )}
     </form>
   );
 }

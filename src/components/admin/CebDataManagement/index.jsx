@@ -203,18 +203,15 @@ const CebDataManagement = () => {
         </div>
       )}
 
-      {/* Form Component */}
-      <CebForm
-        form={form}
-        onFormChange={setForm}
-        onSubmit={handleSubmit}
-        loading={loading}
-        editingId={editingId}
-        onCancelEdit={() => {
-          setForm({ bill_date: "", meter_reading: "", units_exported: "", earnings: "" });
-          setEditingId(null);
-        }}
-      />
+      {/* Form Component - Hidden during in-line edit to focus context */}
+      {!editingId && (
+        <CebForm
+          form={form}
+          onFormChange={setForm}
+          onSubmit={handleSubmit}
+          loading={loading}
+        />
+      )}
 
       {/* Table Component */}
       <CebTable
@@ -227,6 +224,14 @@ const CebDataManagement = () => {
         onEdit={startEdit}
         onDelete={requestDelete}
         loading={loading}
+        editingId={editingId}
+        editForm={form}
+        onEditFormChange={setForm}
+        onSaveEdit={handleSubmit}
+        onCancelEdit={() => {
+          setForm({ bill_date: "", meter_reading: "", units_exported: "", earnings: "" });
+          setEditingId(null);
+        }}
       />
 
       {/* Confirmation Dialog */}
