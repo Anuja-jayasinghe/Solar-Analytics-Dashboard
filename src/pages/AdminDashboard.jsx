@@ -4,14 +4,12 @@ import { AuthContext } from "../contexts/AuthContext";
 import ErrorBoundary from "../components/shared/ErrorBoundary";
 import CebDataManagement from "../components/admin/CebDataManagement"; 
 import UserManagement from "../components/admin/UserManagement";
+import { adminShellStyles, adminTheme } from "../components/admin/adminTheme";
 
 function AdminDashboard() {
   const [tab, setTab] = useState("users");
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
-  const adminRed = "#ff4d4f";
-  const adminRedDark = "#b3262a";
-  const adminGlow = "rgba(255, 77, 79, 0.45)";
 
   const renderContent = () => {
     switch (tab) {
@@ -25,83 +23,78 @@ function AdminDashboard() {
   };
 
   const tabs = [
-    { id: "users", label: "👥 User Management", desc: "Manage users, roles & access" },
-    { id: "ceb", label: "📊 CEB Data", desc: "Manage CEB data entry" },
+    { id: "users", label: "USER_MGMT", desc: "roles, permissions, access" },
+    { id: "ceb", label: "CEB_DATA", desc: "billing records, earnings, history" },
   ];
 
   return (
     <div
       style={{
-        minHeight: "100vh",
-        background: "radial-gradient(circle at 15% 10%, rgba(255,77,79,0.08), transparent 30%), radial-gradient(circle at 85% 90%, rgba(179,38,42,0.12), transparent 40%), linear-gradient(135deg, rgba(18,10,12,0.97) 0%, rgba(28,14,16,0.97) 100%)",
-        color: "var(--text-color)",
+        ...adminShellStyles.page,
       }}
     >
       {/* Header */}
       <div
         style={{
-          padding: "2rem",
-          borderBottom: "1px solid var(--border-color)",
-          background: "rgba(0,0,0,0.3)",
-          backdropFilter: "blur(10px)"
+          ...adminShellStyles.header,
         }}
       >
-        <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
+        <div style={adminShellStyles.pageFrame}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
             <div>
-              <h1 style={{ color: adminRed, margin: 0, fontSize: "32px", fontWeight: "bold" }}>
-                ⚡ Admin Dashboard
+              <div style={adminShellStyles.badge}>
+                admin / control-plane
+              </div>
+              <h1 style={{ ...adminShellStyles.pageTitle, marginTop: "0.8rem" }}>
+                Admin Control Center
               </h1>
-              <p style={{ color: "var(--text-secondary)", margin: "0.5rem 0 0 0", fontSize: "14px" }}>
-                Manage users, roles, and system settings
+              <p style={{ color: adminTheme.colors.textMuted, margin: "0.5rem 0 0 0", fontSize: "14px" }}>
+                Secure operations for users, access policy, and billing records
               </p>
             </div>
             
             <button
               onClick={() => navigate("/dashboard")}
               style={{
-                background: adminRed,
-                color: "#fff",
-                border: "none",
+                ...adminShellStyles.pillButton,
+                background: adminTheme.gradients.accent,
+                color: adminTheme.colors.text,
                 padding: "12px 24px",
-                borderRadius: "8px",
-                cursor: "pointer",
-                fontWeight: "bold",
                 fontSize: "14px",
-                transition: "all 0.2s ease",
-                boxShadow: `0 2px 8px ${adminGlow}`
+                boxShadow: adminTheme.shadows.button,
               }}
               onMouseOver={(e) => {
-                e.target.style.background = adminRedDark;
-                e.target.style.transform = "translateY(-2px)";
-                e.target.style.boxShadow = `0 4px 12px ${adminGlow}`;
+                e.currentTarget.style.background = adminTheme.colors.accentDark;
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = adminTheme.shadows.buttonHover;
               }}
               onMouseOut={(e) => {
-                e.target.style.background = adminRed;
-                e.target.style.transform = "translateY(0)";
-                e.target.style.boxShadow = `0 2px 8px ${adminGlow}`;
+                e.currentTarget.style.background = adminTheme.colors.accent;
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = adminTheme.shadows.button;
               }}
             >
-              🏠 Back to Dashboard
+              return_to_dashboard
             </button>
           </div>
 
           {/* Admin Info */}
           <div style={{
             padding: "1rem",
-            background: "rgba(40, 167, 69, 0.1)",
-            border: "1px solid rgba(40, 167, 69, 0.3)",
-            borderRadius: "8px",
+            background: adminTheme.colors.accentSoft,
+            border: `1px solid ${adminTheme.colors.border}`,
+            borderRadius: "10px",
             fontSize: "14px",
-            color: "var(--text-secondary)"
+            color: adminTheme.colors.textMuted,
+            fontFamily: adminTheme.fonts.mono,
           }}>
-            <span style={{ color: "#28a745", fontWeight: "bold" }}>👤 Logged in as:</span> {user?.email}
+            <span style={{ color: adminTheme.colors.accent, fontWeight: "bold" }}>identity:</span> {user?.email}
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "2rem" }}>
+      <div style={{ ...adminShellStyles.pageFrame, padding: "2rem" }}>
         {/* Tab Navigation */}
         <div
           style={{
@@ -116,33 +109,26 @@ function AdminDashboard() {
               key={item.id}
               onClick={() => setTab(item.id)}
               style={{
-                background: tab === item.id ? adminRed : "rgba(50,50,50,0.6)",
-                color: "#fff",
-                border: "1px solid " + (tab === item.id ? adminRed : "var(--border-color)"),
-                padding: "1.5rem",
-                borderRadius: "12px",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                boxShadow: tab === item.id
-                  ? "0 0 15px rgba(255,77,79,0.6)"
-                  : "0 0 5px rgba(0,0,0,0.2)",
-                textAlign: "left"
+                ...adminShellStyles.tabCard,
+                ...(tab === item.id ? adminShellStyles.tabCardActive : {}),
               }}
               onMouseOver={(e) => {
                 if (tab !== item.id) {
-                  e.currentTarget.style.background = "rgba(70,70,70,0.8)";
-                  e.currentTarget.style.boxShadow = "0 0 10px rgba(255,77,79,0.35)";
+                  e.currentTarget.style.background = "rgba(59,130,246,0.12)";
+                  e.currentTarget.style.boxShadow = "0 0 10px rgba(59,130,246,0.24)";
                 }
               }}
               onMouseOut={(e) => {
                 if (tab !== item.id) {
-                  e.currentTarget.style.background = "rgba(50,50,50,0.6)";
-                  e.currentTarget.style.boxShadow = "0 0 5px rgba(0,0,0,0.2)";
+                  e.currentTarget.style.background = "rgba(16, 30, 58, 0.72)";
+                  e.currentTarget.style.boxShadow = "none";
                 }
               }}
             >
-              <div style={{ fontSize: "20px", marginBottom: "0.5rem" }}>{item.label}</div>
-              <div style={{ fontSize: "12px", opacity: 0.8 }}>{item.desc}</div>
+              <div style={{ fontFamily: adminTheme.fonts.mono, fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase", color: tab === item.id ? adminTheme.colors.text : adminTheme.colors.accent }}>
+                {item.label}
+              </div>
+              <div style={{ fontSize: "12px", opacity: 0.78, marginTop: "0.55rem" }}>{item.desc}</div>
             </button>
           ))}
         </div>
@@ -150,10 +136,7 @@ function AdminDashboard() {
         {/* Content Area */}
         <div
           style={{
-            background: "rgba(20,20,20,0.5)",
-            border: "1px solid var(--border-color)",
-            borderRadius: "12px",
-            backdropFilter: "blur(10px)",
+            ...adminShellStyles.panel,
             padding: "2rem"
           }}
         >
