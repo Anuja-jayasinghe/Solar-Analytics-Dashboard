@@ -153,15 +153,6 @@ export default function UserManagement() {
     );
   });
 
-  if (loading && allUsers.length === 0) {
-    return (
-      <div style={{ padding: '2rem' }}>
-        <h2 style={{ color: 'var(--accent)', margin: '0 0 1rem 0' }}>👥 User Management</h2>
-        <SkeletonLoader count={5} variant="user" />
-      </div>
-    );
-  }
-
   return (
     <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
       {/* Header */}
@@ -175,7 +166,7 @@ export default function UserManagement() {
       </div>
 
       {/* Stats */}
-      <UserStats users={allUsers} />
+      <UserStats users={allUsers} loading={loading && allUsers.length === 0} />
 
       {/* Search */}
       <SearchBar 
@@ -221,12 +212,16 @@ export default function UserManagement() {
       )}
 
       {/* User Table */}
-      <UserTable
-        users={filteredUsers}
-        loading={loading}
-        onRoleChange={handleRoleChange}
-        onAccessChange={handleAccessChange}
-      />
+      {loading && allUsers.length === 0 ? (
+        <SkeletonLoader count={8} variant="table" />
+      ) : (
+        <UserTable
+          users={filteredUsers}
+          loading={loading}
+          onRoleChange={handleRoleChange}
+          onAccessChange={handleAccessChange}
+        />
+      )}
 
       {/* Confirm Dialog */}
       <ConfirmDialog

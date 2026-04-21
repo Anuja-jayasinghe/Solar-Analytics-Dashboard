@@ -164,15 +164,6 @@ const CebDataManagement = () => {
     setEditingId(record.id);
   };
 
-  if (loading && allData.length === 0) {
-    return (
-      <div style={{ padding: "2rem" }}>
-        <h2 style={{ color: "var(--accent)", margin: "0 0 1rem 0" }}>⚙️ CEB Data Management</h2>
-        <SkeletonLoader count={5} variant="user" />
-      </div>
-    );
-  }
-
   return (
     <div style={{ padding: "2rem", maxWidth: "1000px", margin: "0 auto", color: "var(--text-color)" }}>
       {/* Header */}
@@ -214,25 +205,29 @@ const CebDataManagement = () => {
       )}
 
       {/* Table Component */}
-      <CebTable
-        data={paginatedData}
-        currentPage={currentPage}
-        itemsPerPage={itemsPerPage}
-        totalItems={totalItems}
-        onPageChange={paginate}
-        onItemsPerPageChange={setItemsPerPage}
-        onEdit={startEdit}
-        onDelete={requestDelete}
-        loading={loading}
-        editingId={editingId}
-        editForm={form}
-        onEditFormChange={setForm}
-        onSaveEdit={handleSubmit}
-        onCancelEdit={() => {
-          setForm({ bill_date: "", meter_reading: "", units_exported: "", earnings: "" });
-          setEditingId(null);
-        }}
-      />
+      {loading && allData.length === 0 ? (
+        <SkeletonLoader count={8} variant="table" />
+      ) : (
+        <CebTable
+          data={paginatedData}
+          currentPage={currentPage}
+          itemsPerPage={itemsPerPage}
+          totalItems={totalItems}
+          onPageChange={paginate}
+          onItemsPerPageChange={setItemsPerPage}
+          onEdit={startEdit}
+          onDelete={requestDelete}
+          loading={loading}
+          editingId={editingId}
+          editForm={form}
+          onEditFormChange={setForm}
+          onSaveEdit={handleSubmit}
+          onCancelEdit={() => {
+            setForm({ bill_date: "", meter_reading: "", units_exported: "", earnings: "" });
+            setEditingId(null);
+          }}
+        />
+      )}
 
       {/* Confirmation Dialog */}
       <ConfirmDialog

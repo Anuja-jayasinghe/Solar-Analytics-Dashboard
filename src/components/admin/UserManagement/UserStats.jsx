@@ -1,10 +1,15 @@
 import React, { useContext } from 'react';
 import { AdminThemeContext } from '../../../contexts/AdminThemeContext';
 import { getAdminTheme } from '../adminTheme';
+import SkeletonLoader from '../../shared/SkeletonLoader';
 
-export default function UserStats({ users }) {
+export default function UserStats({ users, loading }) {
   const { selectedTheme, adminColorPresets } = useContext(AdminThemeContext);
   const theme = getAdminTheme(adminColorPresets[selectedTheme]);
+
+  if (loading) {
+    return <SkeletonLoader variant="stats" />;
+  }
 
   const admins = users.filter(u => u.role === 'admin');
   const regularUsers = users.filter(u => u.role !== 'admin');
