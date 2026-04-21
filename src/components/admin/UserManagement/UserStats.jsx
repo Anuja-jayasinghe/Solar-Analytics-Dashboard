@@ -1,23 +1,28 @@
-import React from 'react';
+import React, { useContext } from 'react';
+import { AdminThemeContext } from '../../../contexts/AdminThemeContext';
+import { getAdminTheme } from '../adminTheme';
 
 export default function UserStats({ users }) {
+  const { selectedTheme, adminColorPresets } = useContext(AdminThemeContext);
+  const theme = getAdminTheme(adminColorPresets[selectedTheme]);
+
   const admins = users.filter(u => u.role === 'admin');
   const regularUsers = users.filter(u => u.role !== 'admin');
   const realAccessUsers = users.filter(u => u.dashboardAccess === 'real');
   const demoAccessUsers = users.filter(u => u.dashboardAccess === 'demo');
 
   const stats = [
-    { label: 'Total Users', value: users.length, icon: '👥', color: '#3b82f6' },
-    { label: 'Admins', value: admins.length, icon: '🔑', color: '#8b5cf6' },
-    { label: 'Regular Users', value: regularUsers.length, icon: '👤', color: '#10b981' },
-    { label: 'Real Access', value: realAccessUsers.length, icon: '✅', color: '#f59e0b' },
-    { label: 'Demo Access', value: demoAccessUsers.length, icon: '📊', color: '#6b7280' }
+    { label: 'ALL_USERS', value: users.length, icon: 'Users', color: theme.colors.accent },
+    { label: 'SUPER_ADMINS', value: admins.length, icon: 'Shield', color: theme.colors.danger },
+    { label: 'STANDARD_USER', value: regularUsers.length, icon: 'User', color: theme.colors.success },
+    { label: 'SECURE_REAL', value: realAccessUsers.length, icon: 'Lock', color: theme.colors.warning },
+    { label: 'SANDBOX_DEMO', value: demoAccessUsers.length, icon: 'Code', color: theme.colors.textMuted }
   ];
 
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
       gap: '1rem',
       marginBottom: '2rem'
     }}>
@@ -25,53 +30,70 @@ export default function UserStats({ users }) {
         <div
           key={index}
           style={{
-            background: 'var(--card-bg)',
-            border: '1px solid var(--card-border)',
-            borderRadius: '12px',
-            padding: '1.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            boxShadow: '0 2px 8px var(--card-shadow)',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 4px 16px var(--card-shadow)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 2px 8px var(--card-shadow)';
+            background: 'rgba(0,0,0,0.2)',
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: '2px',
+            padding: '1rem',
+            position: 'relative',
+            overflow: 'hidden'
           }}
         >
+          {/* Diagnostic Corner */}
           <div style={{
-            fontSize: '32px',
-            width: '48px',
-            height: '48px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: `${stat.color}20`,
-            borderRadius: '10px'
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            padding: '2px 4px',
+            fontSize: '8px',
+            fontFamily: theme.fonts.mono,
+            color: theme.colors.accent,
+            opacity: 0.5,
+            borderBottom: `1px solid ${theme.colors.border}`,
+            borderLeft: `1px solid ${theme.colors.border}`
           }}>
-            {stat.icon}
+            0x0{index + 1}
           </div>
-          <div>
+
+          <div style={{
+            fontFamily: theme.fonts.mono,
+            fontSize: '10px',
+            color: theme.colors.textMuted,
+            letterSpacing: '1px',
+            marginBottom: '0.5rem',
+            textTransform: 'uppercase'
+          }}>
+            {stat.label}
+          </div>
+          
+          <div style={{
+            fontFamily: theme.fonts.mono,
+            fontSize: '28px',
+            fontWeight: '700',
+            color: stat.color,
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: '0.4rem'
+          }}>
+            {stat.value.toString().padStart(2, '0')}
+            <span style={{ fontSize: '10px', opacity: 0.4, fontWeight: 'normal' }}>UNIT_CNT</span>
+          </div>
+
+          <div style={{
+            marginTop: '0.8rem',
+            height: '2px',
+            width: '100%',
+            background: 'rgba(255,255,255,0.05)',
+            position: 'relative'
+          }}>
             <div style={{
-              fontSize: '24px',
-              fontWeight: '700',
-              color: stat.color,
-              marginBottom: '2px'
-            }}>
-              {stat.value}
-            </div>
-            <div style={{
-              fontSize: '13px',
-              color: 'var(--text-secondary)',
-              fontWeight: '500'
-            }}>
-              {stat.label}
-            </div>
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              height: '100%',
+              width: `${Math.min((stat.value / (users.length || 1)) * 100, 100)}%`,
+              background: stat.color,
+              boxShadow: `0 0 8px ${stat.color}80`
+            }} />
           </div>
         </div>
       ))}
