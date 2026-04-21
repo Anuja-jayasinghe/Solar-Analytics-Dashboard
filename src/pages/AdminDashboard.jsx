@@ -12,7 +12,10 @@ import { getAdminShellStyles, getAdminTheme } from "../components/admin/adminThe
  * Features: ASCII Branding, Dynamic System Telemetry, Auto-scrolling Terminal, CRT Overlay.
  */
 function AdminDashboard() {
-  const [tab, setTab] = useState("users");
+  // Initialize tab from localStorage or default to "users"
+  const [tab, setTab] = useState(() => {
+    return localStorage.getItem("admin_active_tab") || "users";
+  });
   const [logs, setLogs] = useState([]);
   const [uptime, setUptime] = useState("00:00:00");
   const [loadAvg, setLoadAvg] = useState("0.08 / 0.12");
@@ -25,6 +28,11 @@ function AdminDashboard() {
   
   const terminalRef = useRef(null);
   const bootTime = useRef(Date.now());
+
+  // Persist tab choice
+  useEffect(() => {
+    localStorage.setItem("admin_active_tab", tab);
+  }, [tab]);
 
   // 1. Dynamic Uptime Engine
   useEffect(() => {
