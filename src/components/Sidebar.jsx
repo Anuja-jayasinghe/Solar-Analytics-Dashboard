@@ -2,7 +2,9 @@ import React, { useState, useEffect, useContext, useRef } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ThemeContext } from "./ThemeContext";
 import { AuthContext } from "../contexts/AuthContext";
+import { AdminThemeContext, adminColorPresets } from "../contexts/AdminThemeContext";
 import { LogOut, User } from "lucide-react";
+import { adminTheme, getAdminTheme } from "./admin/adminTheme";
 
 // --- SVG Icons ---
 const DashboardIcon = ({ className }) => (
@@ -59,17 +61,21 @@ const DevToolsIcon = ({ className }) => (
 );
 
 function Sidebar({ onDevToolsToggle }) {
-  const devtoolsEnabled = (import.meta?.env?.VITE_ENABLE_DEVTOOLS ?? 'true') === 'true';
+  const devtoolsEnabled = (import.meta?.env?.VITE_ENABLE_DEVTOOLS ?? "true") === "true";
   const { theme, setTheme } = useContext(ThemeContext);
-  const { session, signOut, user } = useContext(AuthContext);
+  const { session, signOut, user, isAdmin } = useContext(AuthContext);
+  const { selectedTheme, updateTheme } = useContext(AdminThemeContext);
   const navigate = useNavigate();
   const location = useLocation();
 
   const [showAdminPopup, setShowAdminPopup] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
   const menuRef = useRef(null);
 
-  // Close user menu when clicking outside
+  // Get the current theme colors
+  const currentTheme = getAdminTheme(adminColorPresets[selectedTheme]);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -78,14 +84,13 @@ function Sidebar({ onDevToolsToggle }) {
     };
 
     if (showUserMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showUserMenu]);
 
   const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
+    setTheme(theme === "dark" ? "light" : "dark");
   };
 
   const handleAdminAccess = () => {
@@ -94,15 +99,15 @@ function Sidebar({ onDevToolsToggle }) {
 
   const handleLogout = async () => {
     await signOut();
-    navigate('/', { state: { from: 'dashboard' } });
+    navigate("/", { state: { from: "dashboard" } });
   };
 
   const isDashboardRoute =
-    location.pathname === '/' ||
-    location.pathname === '/dashboard' ||
-    location.pathname.startsWith('/dashboard/') ||
-    location.pathname === '/demodashbaard' ||
-    location.pathname.startsWith('/demodashbaard/');
+    location.pathname === "/" ||
+    location.pathname === "/dashboard" ||
+    location.pathname.startsWith("/dashboard/") ||
+    location.pathname === "/demodashbaard" ||
+    location.pathname.startsWith("/demodashbaard/");
 
   return (
     <>
@@ -120,46 +125,16 @@ function Sidebar({ onDevToolsToggle }) {
           top: 0;
           left: 0;
           z-index: 1000;
-          transition: transform 0.3s ease;
         }
-        
+
         .sidebar-nav {
           display: flex;
           flex-direction: column;
           gap: 1rem;
           margin-top: 2rem;
         }
-        
-        .sidebar-nav a {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 48px;
-          height: 48px;
-          color: var(--text-color);
-          border-radius: 0.5rem;
-          transition: background-color 0.2s ease, color 0.2s ease;
-        }
-        
-        .sidebar-nav a:hover {
-          background-color: transparent;
-          color: var(--accent);
-        }
 
-        .sidebar-nav a.active {
-          background-color: transparent;
-          color: var(--accent);
-        }
-
-        .sidebar-nav a:hover svg,
-        .sidebar-nav a.active svg {
-          color: var(--accent);
-        }
-
-        .sidebar-nav a.active:hover {
-          background-color: transparent;
-        }
-
+        .sidebar-nav a,
         .sidebar-nav button {
           display: flex;
           align-items: center;
@@ -168,35 +143,33 @@ function Sidebar({ onDevToolsToggle }) {
           height: 48px;
           color: var(--text-color);
           border-radius: 0.5rem;
-          transition: background-color 0.2s ease, color 0.2s ease;
           background: transparent;
           border: none;
           cursor: pointer;
           padding: 0;
-        }
-        
-        .sidebar-nav button svg {
-          flex-shrink: 0;
+          transition: all 0.2s ease;
         }
 
-        .sidebar-nav button:hover {
+        .sidebar-nav a:hover,
+        .sidebar-nav button:hover,
+        .sidebar-nav a.active {
           background-color: transparent;
           color: var(--accent);
         }
-        
+
         .sidebar-logo {
           font-size: 2rem;
           color: var(--text-color);
           margin-bottom: 2rem;
         }
-        
+
         .devtools-divider {
           width: 32px;
           height: 1px;
           background: linear-gradient(90deg, transparent, var(--accent), transparent);
           margin: 2rem 0;
         }
-        
+
         .devtools-button {
           display: flex;
           align-items: center;
@@ -209,160 +182,60 @@ function Sidebar({ onDevToolsToggle }) {
           border-radius: 0.5rem;
           cursor: pointer;
           transition: all 0.3s ease;
-          animation: pulse 3s ease-in-out infinite;
         }
 
-        .devtools-button svg {
-          width: 24px;
-          height: 24px;
-          overflow: visible;
-        }
-        
         .devtools-button:hover {
           background-color: transparent;
           color: var(--accent);
           transform: scale(1.05);
         }
-        
-        @keyframes pulse {
-          0%, 100% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0.9;
-          }
+
+        @keyframes adminPortalSlide {
+          0% { transform: scale(0.9) translateY(24px); opacity: 0; }
+          100% { transform: scale(1) translateY(0); opacity: 1; }
         }
       `}</style>
 
-      {/* Desktop title bar */}
       <div className="app-header">
-        <h1 style={{
-          color: "var(--accent)",
-          fontSize: "1.5rem",
-          fontWeight: "bold",
-          margin: 0,
-          letterSpacing: '-0.5px'
-        }}>
-          SolarEdge
-        </h1>
+        <h1 style={{ color: "var(--accent)", letterSpacing: "-0.5px" }}>SolarEdge</h1>
 
-        {/* Profile Button */}
         {user && (
-          <div style={{ position: 'relative' }} ref={menuRef}>
+          <div ref={menuRef} style={{ position: "relative", display: "flex", alignItems: "center" }}>
             <button
-              onClick={() => setShowUserMenu(!showUserMenu)}
+              onClick={() => setShowUserMenu((value) => !value)}
               style={{
-                height: '38px',
-                padding: '0 14px',
-                borderRadius: '20px',
-                background: showUserMenu ? 'var(--accent)' : 'rgba(255,122,0,0.1)',
-                border: '1px solid rgba(255,122,0,0.3)',
-                color: showUserMenu ? '#fff' : 'var(--text-color)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer',
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                fontSize: '14px',
-                fontWeight: '500',
-                boxShadow: showUserMenu ? '0 4px 12px rgba(255,122,0,0.3)' : 'none'
-              }}
-              onMouseEnter={(e) => {
-                if (!showUserMenu) {
-                  e.currentTarget.style.background = 'rgba(255,122,0,0.15)';
-                  e.currentTarget.style.borderColor = 'rgba(255,122,0,0.4)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!showUserMenu) {
-                  e.currentTarget.style.background = 'rgba(255,122,0,0.1)';
-                  e.currentTarget.style.borderColor = 'rgba(255,122,0,0.3)';
-                }
+                padding: "10px 14px",
+                borderRadius: "10px",
+                border: "1px solid rgba(255,122,0,0.3)",
+                background: showUserMenu ? "rgba(255,122,0,0.2)" : "rgba(255,122,0,0.1)",
+                color: showUserMenu ? "#fff" : "var(--text-color)",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                fontSize: "14px",
+                fontWeight: 500,
               }}
             >
               <User size={18} />
-              <span style={{
-                maxWidth: '150px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}>
-                {user.email?.split('@')[0] || 'User'}
+              <span style={{ maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {user.email?.split("@")[0] || "User"}
               </span>
             </button>
 
             {showUserMenu && (
-              <div style={{
-                position: 'absolute',
-                top: '46px',
-                right: '0',
-                width: '280px',
-                background: 'var(--navbar-bg)',
-                backdropFilter: 'blur(20px)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '12px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-                overflow: 'hidden',
-                zIndex: 1000,
-                animation: 'slideDown 0.2s ease-out'
-              }}>
-                <div style={{
-                  padding: '20px',
-                  borderBottom: '1px solid var(--border-color)',
-                  background: 'rgba(255,122,0,0.05)'
-                }}>
-                  <div style={{
-                    fontSize: '15px',
-                    fontWeight: '600',
-                    color: 'var(--text-color)',
-                    marginBottom: '4px',
-                    wordBreak: 'break-word'
-                  }}>
+              <div style={{ position: "absolute", top: "46px", right: 0, width: "280px", background: "var(--navbar-bg)", backdropFilter: "blur(20px)", border: "1px solid var(--border-color)", borderRadius: "12px", boxShadow: "0 8px 32px rgba(0,0,0,0.2)", overflow: "hidden", zIndex: 1000 }}>
+                <div style={{ padding: "20px", borderBottom: "1px solid var(--border-color)", background: "rgba(255,122,0,0.05)" }}>
+                  <div style={{ fontSize: "15px", fontWeight: 600, color: "var(--text-color)", marginBottom: "4px", wordBreak: "break-word" }}>
                     {user.email}
                   </div>
-                  <div style={{
-                    fontSize: '12px',
-                    color: 'var(--text-secondary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}>
-                    <span style={{
-                      width: '6px',
-                      height: '6px',
-                      borderRadius: '50%',
-                      background: 'var(--success-color)',
-                      display: 'inline-block'
-                    }}></span>
-                    Real Dashboard Access
+                  <div style={{ fontSize: "12px", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--success-color)", display: "inline-block" }} />
+                    {isAdmin ? "Admin Access" : "Real Dashboard Access"}
                   </div>
                 </div>
-                <button
-                  onClick={handleLogout}
-                  style={{
-                    width: '100%',
-                    padding: '14px 20px',
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--error-color)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    transition: 'all 0.2s ease',
-                    textAlign: 'left'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--error-color)';
-                    e.currentTarget.style.color = 'white';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.color = 'var(--error-color)';
-                  }}
-                >
+                <button onClick={handleLogout} style={{ width: "100%", padding: "14px 20px", background: "transparent", border: "none", color: "var(--error-color)", display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "14px", textAlign: "left" }}>
                   <LogOut size={16} />
                   <span>Logout</span>
                 </button>
@@ -373,193 +246,362 @@ function Sidebar({ onDevToolsToggle }) {
       </div>
 
       <div className="sidebar">
-        <div className="sidebar-logo">
-          <img src="/favicon.svg" alt="SolarEdge" width={30} height={30} />
-        </div>
+        <div className="sidebar-logo" />
         <nav className="sidebar-nav">
-          <NavLink
-            to="/"
-            end
-            title="Dashboard"
-            className={({ isActive }) => (isActive || isDashboardRoute ? 'active' : undefined)}
-          >
+          <NavLink to="/" end title="Dashboard" className={({ isActive }) => (isActive || isDashboardRoute ? "active" : undefined)}>
             <DashboardIcon />
           </NavLink>
           <NavLink to="/settings" title="Settings">
             <SettingsIcon />
           </NavLink>
-
-          <button
-            onClick={toggleTheme}
-            title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-            aria-label="Toggle theme"
-          >
-            {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+          <button onClick={toggleTheme} title={theme === "dark" ? "Light Mode" : "Dark Mode"} aria-label="Toggle theme">
+            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
           </button>
-
-          <button
-            onClick={handleAdminAccess}
-            title="Admin Access"
-            aria-label="Admin access"
-          >
+          <button onClick={handleAdminAccess} title="Admin Access" aria-label="Admin access">
             <LockIcon />
           </button>
         </nav>
 
         {devtoolsEnabled && <div className="devtools-divider" />}
         {devtoolsEnabled && (
-          <button
-            className="devtools-button"
-            onClick={() => {
-              if (onDevToolsToggle) onDevToolsToggle();
-            }}
-            title="Toggle Dev Tools"
-            aria-label="Toggle Dev Tools"
-          >
+          <button className="devtools-button" onClick={() => onDevToolsToggle?.()} title="Toggle Dev Tools" aria-label="Toggle Dev Tools">
             <DevToolsIcon />
           </button>
         )}
       </div>
 
-      {/* Admin Access Popup */}
       {showAdminPopup && (
         <div
           style={{
             position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0,0,0,0.8)",
+            inset: 0,
+            background: currentTheme.gradients.backdrop,
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
             zIndex: 9999,
-            backdropFilter: "blur(10px)",
-            padding: "1rem"
+            backdropFilter: "blur(14px)",
+            padding: "1rem",
+            animation: "portalFadeIn 0.25s ease-out",
           }}
           onClick={() => setShowAdminPopup(false)}
         >
           <div
             style={{
-              background: "linear-gradient(135deg, #1a1a1a, #2d2d2d)",
-              borderRadius: "20px",
-              padding: "clamp(1.5rem, 4vw, 2.5rem)",
-              color: "#fff",
-              textAlign: "center",
-              maxWidth: "500px",
+              background: currentTheme.gradients.surface,
+              borderRadius: "14px",
+              padding: "clamp(1.2rem, 3vw, 1.8rem)",
+              color: currentTheme.colors.text,
+              maxWidth: "680px",
               width: "100%",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
-              border: "2px solid var(--accent)",
-              animation: "popupBounce 0.5s ease-out",
-              maxHeight: "90vh",
-              overflowY: "auto"
+              boxShadow: currentTheme.shadows.panel,
+              border: `1px solid ${currentTheme.colors.borderStrong}`,
+              animation: "adminPortalSlide 0.45s ease-out",
+              position: "relative",
+              overflow: "hidden",
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>🚫</div>
-            <h2 style={{
-              marginBottom: "1rem",
-              color: "var(--accent)",
-              fontSize: "1.8rem",
-              textShadow: "0 2px 4px rgba(0,0,0,0.5)"
-            }}>
-              🛡️ RESTRICTED ACCESS! 🛡️
-            </h2>
-            <p style={{
-              marginBottom: "1.5rem",
-              fontSize: "1.1rem",
-              lineHeight: "1.6",
-              color: "#e0e0e0"
-            }}>
-              🎭 <strong>Nice try, sneaky one!</strong> 🎭<br />
-              This area is for <span style={{ color: "var(--accent)", fontWeight: "bold" }}>ADMIN WIZARDS</span> only!<br />
-              <br />
-              🔮 You need special admin powers to enter this mystical realm!<br />
-              💫 Contact your system administrator for the secret handshake!<br />
-              <br />
-              <em style={{ color: "#888" }}>Or maybe you're just curious... we like that! 😉</em>
-            </p>
-
             <div style={{
-              marginBottom: "1.5rem",
-              textAlign: "center"
-            }}>
-              <p style={{
-                fontSize: "0.8rem",
-                color: "#666",
-                margin: "0 0 0.3rem 0",
-                fontStyle: "italic",
-                opacity: 0.7
+              position: "absolute",
+              inset: 0,
+              background: currentTheme.gradients.grid,
+              opacity: 0.18,
+              pointerEvents: "none"
+            }} />
+
+            <div style={{ position: "relative" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.9rem" }}>
+                <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: currentTheme.colors.danger }} />
+                <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: currentTheme.colors.warning }} />
+                <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: currentTheme.colors.success }} />
+                <span style={{ marginLeft: "0.6rem", fontFamily: currentTheme.fonts.mono, fontSize: "12px", color: currentTheme.colors.textMuted }}>
+                  root@solar-edge:~$ admin-entry --secure
+                </span>
+              </div>
+
+              <div style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                border: `1px solid ${currentTheme.colors.borderStrong}`,
+                background: "rgba(0,0,0,0.35)",
+                borderRadius: "10px",
+                padding: "0.8rem 0.9rem",
+                marginBottom: "1rem"
               }}>
-                <em>Maybe try clicking on the lightbulb emoji above? 💡</em>
-              </p>
-              <span
-                onClick={() => {
-                  setShowAdminPopup(false);
-                  window.location.href = '/admin/dashboard';
-                }}
-                style={{
-                  color: "#666",
-                  cursor: "pointer",
-                  fontSize: "0.8rem",
-                  textDecoration: "underline",
-                  opacity: 0.5,
-                  transition: "opacity 0.3s ease",
-                  display: "inline-block"
-                }}
-                onMouseOver={(e) => {
-                  e.target.style.opacity = "0.8";
-                }}
-                onMouseOut={(e) => {
-                  e.target.style.opacity = "0.5";
-                }}
-              >
-                <em>BoooooooooooooooHaa!...</em>
-              </span>
+                <div>
+                  <div style={{ fontFamily: currentTheme.fonts.mono, fontSize: "11px", color: currentTheme.colors.accent, letterSpacing: "1px" }}>
+                    AUTH_GATEWAY
+                  </div>
+                  <div style={{ fontFamily: currentTheme.fonts.mono, fontSize: "18px", fontWeight: 700, color: currentTheme.colors.text }}>
+                    DEVELOPER CONTROL ENTRY
+                  </div>
+                </div>
+                <div style={{ fontFamily: currentTheme.fonts.mono, fontSize: "11px", color: currentTheme.colors.textMuted, textAlign: "right" }}>
+                  SESSION: {String(user?.email || "guest").split("@")[0].toUpperCase()}<br />
+                  NODE: PROD-AUTH-01
+                </div>
+              </div>
+
+            {isAdmin ? (
+              <>
+                <div style={{ border: `1px solid ${currentTheme.colors.border}`, borderRadius: "10px", background: "rgba(9,20,42,0.52)", marginBottom: "1rem", overflow: "hidden" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "130px 1fr", fontFamily: currentTheme.fonts.mono, fontSize: "12px" }}>
+                    <div style={{ padding: "0.65rem 0.8rem", color: currentTheme.colors.textMuted, borderRight: `1px solid ${currentTheme.colors.border}`, borderBottom: `1px solid ${currentTheme.colors.border}` }}>AUTH_ROLE</div>
+                    <div style={{ padding: "0.65rem 0.8rem", color: "#93c5fd", borderBottom: `1px solid ${currentTheme.colors.border}` }}>ROOT_ADMIN</div>
+                    <div style={{ padding: "0.65rem 0.8rem", color: currentTheme.colors.textMuted, borderRight: `1px solid ${currentTheme.colors.border}`, borderBottom: `1px solid ${currentTheme.colors.border}` }}>TOKEN_STATE</div>
+                    <div style={{ padding: "0.65rem 0.8rem", color: "#93c5fd", borderBottom: `1px solid ${currentTheme.colors.border}` }}>VERIFIED</div>
+                    <div style={{ padding: "0.65rem 0.8rem", color: currentTheme.colors.textMuted, borderRight: `1px solid ${currentTheme.colors.border}` }}>CAPABILITIES</div>
+                    <div style={{ padding: "0.65rem 0.8rem", color: currentTheme.colors.text }}>USER_MGMT, CONFIG_WRITE, METRICS_READ</div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setShowAdminPopup(false);
+                    navigate("/admin/dashboard");
+                  }}
+                  style={{
+                    width: "100%",
+                    background: currentTheme.gradients.accent,
+                    color: currentTheme.colors.text,
+                    border: `1px solid ${currentTheme.colors.borderStrong}`,
+                    padding: "12px 14px",
+                    borderRadius: "4px",
+                    fontWeight: 700,
+                    letterSpacing: "0.9px",
+                    cursor: "pointer",
+                    textTransform: "uppercase",
+                    marginBottom: "0.6rem",
+                    fontFamily: currentTheme.fonts.mono,
+                    boxShadow: currentTheme.shadows.glow
+                  }}
+                >
+                  [ EXEC ./admin-dashboard --mode=control ]
+                </button>
+
+                <button
+                  onClick={() => setShowAdminPopup(false)}
+                  style={{
+                    width: "100%",
+                    background: "rgba(255,255,255,0.03)",
+                    color: currentTheme.colors.textMuted,
+                    border: `1px solid ${currentTheme.colors.border}`,
+                    padding: "11px 14px",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    textTransform: "uppercase",
+                    fontFamily: currentTheme.fonts.mono,
+                    letterSpacing: "0.8px",
+                    marginBottom: "1.5rem"
+                  }}
+                >
+                  [ ABORT ]
+                </button>
+
+                {/* Color Palette Selector - Moved to end and shrunk */}
+                <div style={{ 
+                  marginTop: "0.5rem", 
+                  padding: "0.4rem 0.6rem", 
+                  background: "rgba(0,0,0,0.2)", 
+                  border: `1px solid ${currentTheme.colors.border}`,
+                  borderRadius: "2px"
+                }}>
+                  <div style={{ 
+                    display: "flex", 
+                    justifyContent: "space-between", 
+                    alignItems: "center",
+                    marginBottom: "0.4rem"
+                  }}>
+                    <div style={{ fontFamily: currentTheme.fonts.mono, fontSize: "8px", color: currentTheme.colors.accent, letterSpacing: "1px", textTransform: "uppercase" }}>
+                      SYS_COLOR_CONFIG
+                    </div>
+                    <div style={{ fontFamily: currentTheme.fonts.mono, fontSize: "8px", color: currentTheme.colors.textMuted, opacity: 0.5 }}>
+                      ID: {selectedTheme.toUpperCase()}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap", justifyContent: "flex-start" }}>
+                    {Object.entries(adminColorPresets).map(([key, preset]) => (
+                      <button
+                        key={key}
+                        onClick={() => updateTheme(key)}
+                        title={preset.name}
+                        style={{
+                          width: "6px",
+                          height: "6px",
+                          borderRadius: "1px",
+                          background: preset.hex,
+                          border: "none",
+                          cursor: "pointer",
+                          transition: "all 0.2s ease",
+                          boxShadow: selectedTheme === key ? `0 0 4px ${preset.hex}` : "none",
+                          opacity: selectedTheme === key ? 1 : 0.15,
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Tech Metadata Flair */}
+                <div style={{ 
+                  marginTop: "1rem", 
+                  paddingTop: "0.5rem", 
+                  borderTop: `1px dashed ${currentTheme.colors.border}`,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontFamily: currentTheme.fonts.mono,
+                  fontSize: "9px",
+                  color: "rgba(255,255,255,0.2)"
+                }}>
+                  <div>ULID: 01H6...{Math.random().toString(36).substring(7).toUpperCase()}</div>
+                  <div style={{ color: currentTheme.colors.success }}>MEM_LOCAL: 42.8MB</div>
+                  <div>SEC_LAYER: V3_RSA</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ border: `1px solid ${currentTheme.colors.borderStrong}`, borderRadius: "10px", background: "rgba(17,35,68,0.4)", padding: "0.9rem", marginBottom: "0.9rem", fontFamily: currentTheme.fonts.mono }}>
+                  <div style={{ fontSize: "12px", color: currentTheme.colors.accent, letterSpacing: "1px", textTransform: "uppercase", fontWeight: 700 }}>
+                    AUTHORIZATION_FAILED
+                  </div>
+                  <div style={{ fontSize: "12px", color: currentTheme.colors.textMuted, marginTop: "0.45rem" }}>
+                    Admin claim missing in current identity token. Contact platform owner for role escalation.
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowAdminPopup(false)}
+                  style={{
+                    width: "100%",
+                    background: "rgba(255,255,255,0.04)",
+                    color: currentTheme.colors.textMuted,
+                    border: `1px solid ${currentTheme.colors.border}`,
+                    padding: "11px 14px",
+                    borderRadius: "10px",
+                    cursor: "pointer",
+                    textTransform: "uppercase",
+                    fontFamily: currentTheme.fonts.mono,
+                    letterSpacing: "0.8px",
+                  }}
+                >
+                  [ CLOSE ]
+                </button>
+              </>
+            )}
             </div>
-            <button
-              onClick={() => setShowAdminPopup(false)}
-              style={{
-                background: "linear-gradient(45deg, var(--accent), #00d4aa)",
-                color: "#fff",
-                border: "none",
-                padding: "12px 24px",
-                borderRadius: "25px",
-                cursor: "pointer",
-                fontSize: "1rem",
-                fontWeight: "bold",
-                transition: "all 0.3s ease",
-                boxShadow: "0 4px 15px rgba(0, 212, 170, 0.3)",
-                textShadow: "0 1px 2px rgba(0,0,0,0.3)"
-              }}
-              onMouseOver={(e) => {
-                e.target.style.transform = "scale(1.05)";
-                e.target.style.boxShadow = "0 6px 20px rgba(0, 212, 170, 0.4)";
-              }}
-              onMouseOut={(e) => {
-                e.target.style.transform = "scale(1)";
-                e.target.style.boxShadow = "0 4px 15px rgba(0, 212, 170, 0.3)";
-              }}
-            >
-              🎪 Got it, thanks!
-            </button>
           </div>
         </div>
       )}
 
-      <style jsx>{`
-        @keyframes popupBounce {
+      <style>{`
+        @keyframes adminPortalSlide {
           0% {
-            transform: scale(0.3) rotate(-10deg);
+            transform: scale(0.8) translateY(50px);
+            opacity: 0;
+            filter: blur(10px);
+          }
+          50% {
+            transform: scale(1.05) translateY(-8px);
+          }
+          100% {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+            filter: blur(0);
+          }
+        }
+        
+        @keyframes portalFadeIn {
+          0% {
+            opacity: 0;
+            backdrop-filter: blur(0px);
+          }
+          100% {
+            opacity: 1;
+            backdrop-filter: blur(25px);
+          }
+        }
+
+        @keyframes gridShift {
+          0% {
+            transform: translateY(0);
+          }
+          100% {
+            transform: translateY(40px);
+          }
+        }
+        
+        @keyframes techGlow {
+          0%, 100% {
+            transform: translateX(-100%);
             opacity: 0;
           }
           50% {
-            transform: scale(1.05) rotate(2deg);
+            opacity: 1;
+          }
+        }
+
+        @keyframes techGlowAdvanced {
+          0% {
+            transform: translateX(-100%) translateY(-50%);
+            opacity: 0;
+          }
+          50% {
+            opacity: 1;
           }
           100% {
-            transform: scale(1) rotate(0deg);
+            transform: translateX(100%) translateY(50%);
+            opacity: 0;
+          }
+        }
+
+        @keyframes scanlines {
+          0% {
+            transform: translateY(0);
+          }
+          100% {
+            transform: translateY(4px);
+          }
+        }
+
+        @keyframes techPulse {
+          0%, 100% {
+            opacity: 0.6;
+            text-shadow: 0 0 10px rgba(0,212,170,0.3);
+          }
+          50% {
             opacity: 1;
+            text-shadow: 0 0 20px rgba(0,212,170,0.7);
+          }
+        }
+
+        @keyframes techLineFlow {
+          0% {
+            height: 0%;
+          }
+          50% {
+            height: 100%;
+          }
+          100% {
+            height: 0%;
+          }
+        }
+
+        @keyframes techSpin {
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
+        }
+
+        @keyframes techSpinReverse {
+          0% {
+            transform: rotate(360deg);
+          }
+          100% {
+            transform: rotate(0deg);
           }
         }
       `}</style>

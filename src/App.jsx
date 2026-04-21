@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "r
 import { ClerkProvider } from "@clerk/clerk-react";
 import ToastManager from './components/shared/ToastManager';
 import { ThemeProvider } from "./components/ThemeContext";
+import { AdminThemeProvider } from "./contexts/AdminThemeContext";
 import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 import { DataProvider } from "./contexts/DataContext";
 import Sidebar from "./components/Sidebar";
@@ -36,7 +37,235 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 
 import BottomNav from "./components/BottomNav";
 
-function AppContent() {
+/**
+ * Security wrapper for admin routes
+ * Moved outside AppContent to prevent unnecessary unmounting of children
+ */
+function RequireAdmin({ children }) {
+  const { isAdmin, loading, session } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        color: 'var(--accent)',
+        fontSize: '18px'
+      }}>
+        Loading...
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '2rem',
+        background: 'var(--bg-color)',
+        textAlign: 'center'
+      }}>
+        <div style={{
+          maxWidth: '500px',
+          background: 'var(--card-bg)',
+          border: '1px solid var(--card-border)',
+          borderRadius: '16px',
+          padding: '2.5rem',
+          boxShadow: '0 8px 32px var(--card-shadow)'
+        }}>
+          <div style={{ fontSize: '64px', marginBottom: '1rem' }}>🔐</div>
+          <h1 style={{
+            color: 'var(--accent)',
+            marginBottom: '1rem',
+            fontSize: '28px',
+            fontWeight: '700'
+          }}>
+            Authentication Required
+          </h1>
+          <p style={{
+            color: 'var(--text-secondary)',
+            marginBottom: '2rem',
+            fontSize: '16px',
+            lineHeight: '1.6'
+          }}>
+            You need to be logged in as an administrator to access the admin dashboard.
+          </p>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => navigate('/login')}
+              style={{
+                background: 'var(--accent)',
+                color: '#000',
+                border: 'none',
+                padding: '12px 24px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: '700',
+                fontSize: '15px',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              🔑 Admin Login
+            </button>
+            <button
+              onClick={() => navigate('/demodashbaard')}
+              style={{
+                background: 'var(--card-bg-solid)',
+                color: 'var(--text-color)',
+                border: '1px solid var(--border-color)',
+                padding: '12px 24px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '15px',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              📊 Demo Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '2rem',
+        background: 'var(--bg-color)',
+        textAlign: 'center'
+      }}>
+        <div style={{
+          maxWidth: '600px',
+          background: 'var(--card-bg)',
+          border: '1px solid var(--card-border)',
+          borderRadius: '16px',
+          padding: '2.5rem',
+          boxShadow: '0 8px 32px var(--card-shadow)'
+        }}>
+          <div style={{ fontSize: '64px', marginBottom: '1rem' }}>🚫</div>
+          <h1 style={{
+            color: 'var(--error-color)',
+            marginBottom: '1rem',
+            fontSize: '28px',
+            fontWeight: '700'
+          }}>
+            Access Denied
+          </h1>
+          <p style={{
+            color: 'var(--text-secondary)',
+            marginBottom: '1.5rem',
+            fontSize: '16px',
+            lineHeight: '1.6'
+          }}>
+            Your account does not have administrator privileges. Only authorized administrators can access this area.
+          </p>
+          <div style={{
+            background: 'rgba(255, 68, 68, 0.1)',
+            border: '1px solid rgba(255, 68, 68, 0.3)',
+            borderRadius: '8px',
+            padding: '1rem',
+            marginBottom: '2rem',
+            fontSize: '14px',
+            color: 'var(--text-secondary)'
+          }}>
+            <strong style={{ color: 'var(--error-color)' }}>Logged in as:</strong> {session?.user?.email}
+          </div>
+          <p style={{
+            color: 'var(--text-muted)',
+            fontSize: '14px',
+            marginBottom: '2rem'
+          }}>
+            Need admin access? Contact the system administrator to request permissions.
+          </p>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => navigate('/dashboard')}
+              style={{
+                background: 'var(--accent)',
+                color: '#000',
+                border: 'none',
+                padding: '12px 24px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: '700',
+                fontSize: '15px',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              🏠 Go to Dashboard
+            </button>
+            <button
+              onClick={() => navigate('/demodashbaard')}
+              style={{
+                background: 'var(--card-bg-solid)',
+                color: 'var(--text-color)',
+                border: '1px solid var(--border-color)',
+                padding: '12px 24px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '15px',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              📊 Demo Dashboard
+            </button>
+            <button
+              onClick={() => navigate('/access')}
+              style={{
+                background: 'transparent',
+                color: 'var(--accent)',
+                border: '1px solid var(--accent)',
+                padding: '12px 24px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '15px',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.background = 'rgba(255,122,0,0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              📧 Request Access
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return children;
+}
+
+const AppContent = React.memo(() => {
   const { isAdmin, loading, session, dashboardAccess } = useContext(AuthContext);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [devToolsOpen, setDevToolsOpen] = useState(false);
@@ -65,229 +294,6 @@ function AppContent() {
       console.warn("[Supabase] Connection check error:", err.message);
     }
   }, []);
-
-  function RequireAdmin({ children }) {
-    const navigate = useNavigate();
-
-    if (loading) {
-      return (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-          color: 'var(--accent)',
-          fontSize: '18px'
-        }}>
-          Loading...
-        </div>
-      );
-    }
-
-    if (!session) {
-      return (
-        <div style={{
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: '2rem',
-          background: 'var(--bg-color)',
-          textAlign: 'center'
-        }}>
-          <div style={{
-            maxWidth: '500px',
-            background: 'var(--card-bg)',
-            border: '1px solid var(--card-border)',
-            borderRadius: '16px',
-            padding: '2.5rem',
-            boxShadow: '0 8px 32px var(--card-shadow)'
-          }}>
-            <div style={{ fontSize: '64px', marginBottom: '1rem' }}>🔐</div>
-            <h1 style={{
-              color: 'var(--accent)',
-              marginBottom: '1rem',
-              fontSize: '28px',
-              fontWeight: '700'
-            }}>
-              Authentication Required
-            </h1>
-            <p style={{
-              color: 'var(--text-secondary)',
-              marginBottom: '2rem',
-              fontSize: '16px',
-              lineHeight: '1.6'
-            }}>
-              You need to be logged in as an administrator to access the admin dashboard.
-            </p>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button
-                onClick={() => navigate('/login')}
-                style={{
-                  background: 'var(--accent)',
-                  color: '#000',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: '700',
-                  fontSize: '15px',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-              >
-                🔑 Admin Login
-              </button>
-              <button
-                onClick={() => navigate('/demodashbaard')}
-                style={{
-                  background: 'var(--card-bg-solid)',
-                  color: 'var(--text-color)',
-                  border: '1px solid var(--border-color)',
-                  padding: '12px 24px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  fontSize: '15px',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-              >
-                📊 Demo Dashboard
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (!isAdmin) {
-      return (
-        <div style={{
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: '2rem',
-          background: 'var(--bg-color)',
-          textAlign: 'center'
-        }}>
-          <div style={{
-            maxWidth: '600px',
-            background: 'var(--card-bg)',
-            border: '1px solid var(--card-border)',
-            borderRadius: '16px',
-            padding: '2.5rem',
-            boxShadow: '0 8px 32px var(--card-shadow)'
-          }}>
-            <div style={{ fontSize: '64px', marginBottom: '1rem' }}>🚫</div>
-            <h1 style={{
-              color: 'var(--error-color)',
-              marginBottom: '1rem',
-              fontSize: '28px',
-              fontWeight: '700'
-            }}>
-              Access Denied
-            </h1>
-            <p style={{
-              color: 'var(--text-secondary)',
-              marginBottom: '1.5rem',
-              fontSize: '16px',
-              lineHeight: '1.6'
-            }}>
-              Your account does not have administrator privileges. Only authorized administrators can access this area.
-            </p>
-            <div style={{
-              background: 'rgba(255, 68, 68, 0.1)',
-              border: '1px solid rgba(255, 68, 68, 0.3)',
-              borderRadius: '8px',
-              padding: '1rem',
-              marginBottom: '2rem',
-              fontSize: '14px',
-              color: 'var(--text-secondary)'
-            }}>
-              <strong style={{ color: 'var(--error-color)' }}>Logged in as:</strong> {session?.user?.email}
-            </div>
-            <p style={{
-              color: 'var(--text-muted)',
-              fontSize: '14px',
-              marginBottom: '2rem'
-            }}>
-              Need admin access? Contact the system administrator to request permissions.
-            </p>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button
-                onClick={() => navigate('/dashboard')}
-                style={{
-                  background: 'var(--accent)',
-                  color: '#000',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: '700',
-                  fontSize: '15px',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-              >
-                🏠 Go to Dashboard
-              </button>
-              <button
-                onClick={() => navigate('/demodashbaard')}
-                style={{
-                  background: 'var(--card-bg-solid)',
-                  color: 'var(--text-color)',
-                  border: '1px solid var(--border-color)',
-                  padding: '12px 24px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  fontSize: '15px',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-              >
-                📊 Demo Dashboard
-              </button>
-              <button
-                onClick={() => navigate('/access')}
-                style={{
-                  background: 'transparent',
-                  color: 'var(--accent)',
-                  border: '1px solid var(--accent)',
-                  padding: '12px 24px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  fontSize: '15px',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.background = 'rgba(255,122,0,0.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.background = 'transparent';
-                }}
-              >
-                📧 Request Access
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return children;
-  }
 
   return (
     <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'var(--accent)' }}>Loading...</div>}>
@@ -371,7 +377,9 @@ function AppContent() {
       </Routes>
     </Suspense>
   );
-}
+});
+
+AppContent.displayName = 'AppContent';
 
 // maintanance toggle
 const IS_MAINTENANCE = false
@@ -404,19 +412,21 @@ function App() {
   const clerkWrappedApp = (
     <ErrorBoundary>
       <AuthProvider>
-        <ThemeProvider>
-          <ErrorBoundary>
-            <DataProvider>
-              <Router>
-                <ToastManager />
-                <Analytics />
-                <ErrorBoundary>
-                  <AppContent />
-                </ErrorBoundary>
-              </Router>
-            </DataProvider>
-          </ErrorBoundary>
-        </ThemeProvider>
+        <AdminThemeProvider>
+          <ThemeProvider>
+            <ErrorBoundary>
+              <DataProvider>
+                <Router>
+                  <ToastManager />
+                  <Analytics />
+                  <ErrorBoundary>
+                    <AppContent />
+                  </ErrorBoundary>
+                </Router>
+              </DataProvider>
+            </ErrorBoundary>
+          </ThemeProvider>
+        </AdminThemeProvider>
       </AuthProvider>
     </ErrorBoundary>
   );
