@@ -62,7 +62,3 @@ dist-ssr
 .vibe/
 .windsurf/
 .zencoder/
-# Supabase Agent Skills
-.agents/
-skills/
-skills-lock.json
