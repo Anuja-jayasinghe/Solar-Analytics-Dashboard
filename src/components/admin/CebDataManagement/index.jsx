@@ -6,6 +6,7 @@ import SkeletonLoader from "../../shared/SkeletonLoader";
 import ConfirmDialog from "../../shared/ConfirmDialog";
 import CebForm from "./CebForm";
 import CebTable from "./CebTable";
+import VerificationQueue from "./VerificationQueue";
 
 /**
  * CEB Data Management Component
@@ -34,6 +35,7 @@ const CebDataManagement = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [rate, setRate] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Pagination hook
   const {
@@ -200,8 +202,26 @@ const CebDataManagement = () => {
 
       setUploadResult(payload);
       setSelectedBillFile(null);
-      setMessage("✅ Bill uploaded and saved successfully.");
+      setMessage("⏳ Bill uploaded! Extracting data with AI...");
+      
+      try {
+        const extRes = await fetch('/api/ceb-bills/extract', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ ingestionId: payload.ingestionId })
+        });
+        const extData = await extRes.json();
+        if (!extRes.ok) throw new Error(extData.error || 'Failed to extract.');
+        setMessage("✅ Bill uploaded and extracted successfully! Please review it in the Verification Queue.");
+      } catch (extErr) {
+        setMessage(`⚠️ Bill uploaded, but AI extraction failed: ${extErr.message}. You can retry in the Verification Queue.`);
+      }
+
       fetchStorageFiles();
+      setRefreshKey(prev => prev + 1);
     } catch (err) {
       console.error("CEB bill upload error:", err);
       setMessage(`❌ ${err.message}`);
@@ -470,6 +490,9 @@ const CebDataManagement = () => {
           )}
         </div>
       </div>
+
+      {/* Verification Queue (Step 2 & 3) */}
+      <VerificationQueue key={refreshKey} onApproveSuccess={fetchData} />
 
       {/* Form Component - Hidden during in-line edit to focus context */}
       {!editingId && (

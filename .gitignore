@@ -32,3 +32,37 @@ dist-ssr
 .env
 .vercel
 .env*.local
+# AI IDE & Agent Specific Folders
+.adal/
+.augment/
+.bob/
+.claude/
+.codebuddy/
+.commandcode/
+.continue/
+.cortex/
+.crush/
+.factory/
+.goose/
+.iflow/
+.junie/
+.kilocode/
+.kiro/
+.kode/
+.mcpjam/
+.mux/
+.neovate/
+.openhands/
+.pi/
+.pochi/
+.qoder/
+.qwen/
+.roo/
+.trae/
+.vibe/
+.windsurf/
+.zencoder/
+# Supabase Agent Skills
+.agents/
+skills/
+skills-lock.json
