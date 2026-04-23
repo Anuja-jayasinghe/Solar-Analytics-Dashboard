@@ -133,7 +133,7 @@ const bannerStyle = {
   padding: '1rem 1.25rem',
   backdropFilter: 'blur(12px)',
   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-  animation: 'slideDown 0.3s ease-out',
+  animation: 'bannerSlideDown 0.3s ease-out',
 };
 
 const bannerContentStyle = {

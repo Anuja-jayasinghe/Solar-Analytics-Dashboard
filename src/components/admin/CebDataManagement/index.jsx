@@ -20,6 +20,7 @@ const CebDataManagement = () => {
   const [selectedBillFile, setSelectedBillFile] = useState(null);
   const [uploadResult, setUploadResult] = useState(null);
   const [storageFiles, setStorageFiles] = useState([]);
+  const [isStorageCollapsed, setIsStorageCollapsed] = useState(true);
   const [filesLoading, setFilesLoading] = useState(false);
   const [filesError, setFilesError] = useState("");
   const [form, setForm] = useState({
@@ -120,7 +121,7 @@ const CebDataManagement = () => {
       const token = await fetchAuthToken();
       if (!token) throw new Error("No auth token");
 
-      const response = await fetch("/api/ceb-bills/ingestions?limit=8", {
+      const response = await fetch("/api/ceb-bills/ingestions?limit=100", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -372,11 +373,31 @@ const CebDataManagement = () => {
         )}
 
         <div style={{ marginTop: "1rem", borderTop: "1px solid var(--border-color)", paddingTop: "0.75rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem" }}>
-            <h4 style={{ margin: 0, color: "var(--text-color)", fontSize: "14px" }}>Files In Storage</h4>
+          <div 
+            onClick={() => setIsStorageCollapsed(!isStorageCollapsed)}
+            style={{ 
+              display: "flex", 
+              justifyContent: "space-between", 
+              alignItems: "center", 
+              gap: "0.75rem",
+              cursor: "pointer",
+              userSelect: "none"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <span style={{ fontSize: "10px", opacity: 0.7, transform: isStorageCollapsed ? "none" : "rotate(90deg)", transition: "transform 0.2s" }}>
+                {isStorageCollapsed ? "▶" : "▼"}
+              </span>
+              <h4 style={{ margin: 0, color: "var(--text-color)", fontSize: "14px" }}>
+                Files In Storage ({storageFiles.length})
+              </h4>
+            </div>
             <button
               type="button"
-              onClick={fetchStorageFiles}
+              onClick={(e) => {
+                e.stopPropagation();
+                fetchStorageFiles();
+              }}
               disabled={filesLoading}
               style={{
                 border: "1px solid var(--border-color)",
@@ -393,44 +414,58 @@ const CebDataManagement = () => {
             </button>
           </div>
 
-          {filesError && (
-            <p style={{ margin: "0.5rem 0 0 0", color: "#d9534f", fontSize: "12px" }}>
-              Failed to load storage files: {filesError}
-            </p>
-          )}
+          {!isStorageCollapsed && (
+            <div style={{ 
+              marginTop: "1rem",
+              animation: "slideDown 0.2s ease-out"
+            }}>
+              {filesError && (
+                <p style={{ margin: "0.5rem 0 0 0", color: "#d9534f", fontSize: "12px" }}>
+                  Failed to load storage files: {filesError}
+                </p>
+              )}
 
-          {!filesError && storageFiles.length === 0 && !filesLoading && (
-            <p style={{ margin: "0.5rem 0 0 0", color: "var(--text-secondary)", fontSize: "12px" }}>
-              No files found in storage.
-            </p>
-          )}
+              {!filesError && storageFiles.length === 0 && !filesLoading && (
+                <p style={{ margin: "0.5rem 0 0 0", color: "var(--text-secondary)", fontSize: "12px" }}>
+                  No files found in storage.
+                </p>
+              )}
 
-          {!filesError && storageFiles.length > 0 && (
-            <div style={{ marginTop: "0.5rem", overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: "left", padding: "6px", borderBottom: "1px solid var(--border-color)" }}>Uploaded</th>
-                    <th style={{ textAlign: "left", padding: "6px", borderBottom: "1px solid var(--border-color)" }}>File Path</th>
-                    <th style={{ textAlign: "left", padding: "6px", borderBottom: "1px solid var(--border-color)" }}>Size (MB)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {storageFiles.map((row) => (
-                    <tr key={row.id}>
-                      <td style={{ padding: "6px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
-                        {row.createdAt ? new Date(row.createdAt).toLocaleString() : "-"}
-                      </td>
-                      <td style={{ padding: "6px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)", fontFamily: "monospace" }}>
-                        {row.name}
-                      </td>
-                      <td style={{ padding: "6px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
-                        {row.sizeBytes ? (row.sizeBytes / 1024 / 1024).toFixed(2) : "0.00"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {!filesError && storageFiles.length > 0 && (
+                <div style={{ 
+                  marginTop: "0.5rem", 
+                  overflowY: "auto", 
+                  maxHeight: "250px",
+                  border: "1px solid var(--border-color)",
+                  borderRadius: "4px",
+                  background: "rgba(0,0,0,0.2)"
+                }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                    <thead style={{ position: "sticky", top: 0, background: "var(--card-bg)", zIndex: 1 }}>
+                      <tr>
+                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>Uploaded</th>
+                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>File Path</th>
+                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>Size (MB)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {storageFiles.map((row) => (
+                        <tr key={row.id}>
+                          <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
+                            {row.createdAt ? new Date(row.createdAt).toLocaleString() : "-"}
+                          </td>
+                          <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)", fontFamily: "monospace", wordBreak: "break-all" }}>
+                            {row.name}
+                          </td>
+                          <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
+                            {row.sizeBytes ? (row.sizeBytes / 1024 / 1024).toFixed(2) : "0.00"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </div>
