@@ -18,16 +18,10 @@ const CebDataManagement = () => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedBillFile, setSelectedBillFile] = useState(null);
-  const [selectedBillFiles, setSelectedBillFiles] = useState([]);
-  const [bulkUploading, setBulkUploading] = useState(false);
-  const [bulkUploadResults, setBulkUploadResults] = useState([]);
   const [uploadResult, setUploadResult] = useState(null);
-  const [recentIngestions, setRecentIngestions] = useState([]);
-  const [ingestionsLoading, setIngestionsLoading] = useState(false);
-  const [ingestionsError, setIngestionsError] = useState("");
-  const [reconciliationData, setReconciliationData] = useState(null);
-  const [reconciliationLoading, setReconciliationLoading] = useState(false);
-  const [reconciliationError, setReconciliationError] = useState("");
+  const [storageFiles, setStorageFiles] = useState([]);
+  const [filesLoading, setFilesLoading] = useState(false);
+  const [filesError, setFilesError] = useState("");
   const [form, setForm] = useState({
     bill_date: "",
     meter_reading: "",
@@ -94,8 +88,7 @@ const CebDataManagement = () => {
   useEffect(() => {
     fetchSettings();
     fetchData();
-    fetchRecentIngestions();
-    fetchBackfillReconciliation();
+    fetchStorageFiles();
   }, []);
 
   const fetchAuthToken = async () => {
@@ -119,9 +112,9 @@ const CebDataManagement = () => {
     };
   };
 
-  const fetchRecentIngestions = async () => {
-    setIngestionsLoading(true);
-    setIngestionsError("");
+  const fetchStorageFiles = async () => {
+    setFilesLoading(true);
+    setFilesError("");
 
     try {
       const token = await fetchAuthToken();
@@ -138,41 +131,12 @@ const CebDataManagement = () => {
         throw new Error(payload.details || payload.error || `Failed with status ${response.status}`);
       }
 
-      setRecentIngestions(payload.ingestions || []);
+      setStorageFiles(payload.files || []);
     } catch (err) {
-      console.error("CEB ingestion list fetch error:", err);
-      setIngestionsError(err.message || "Failed to load ingestion history");
+      console.error("CEB storage file list fetch error:", err);
+      setFilesError(err.message || "Failed to load storage file list");
     } finally {
-      setIngestionsLoading(false);
-    }
-  };
-
-  const fetchBackfillReconciliation = async () => {
-    setReconciliationLoading(true);
-    setReconciliationError("");
-
-    try {
-      const token = await fetchAuthToken();
-      if (!token) throw new Error("No auth token");
-
-      const year = new Date().getFullYear();
-      const response = await fetch(`/api/ceb-bills/reconciliation?year=${year}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const payload = await readApiResponse(response);
-      if (!response.ok) {
-        throw new Error(payload.details || payload.error || `Failed with status ${response.status}`);
-      }
-
-      setReconciliationData(payload);
-    } catch (err) {
-      console.error("CEB reconciliation fetch error:", err);
-      setReconciliationError(err.message || "Failed to load backfill reconciliation");
-    } finally {
-      setReconciliationLoading(false);
+      setFilesLoading(false);
     }
   };
 
@@ -227,7 +191,7 @@ const CebDataManagement = () => {
         if (status === 409) {
           setMessage(`⚠️ Duplicate bill detected. Existing ingestion ID: ${payload.ingestionId || "Unknown"}`);
           setUploadResult(payload);
-          fetchRecentIngestions();
+          fetchStorageFiles();
           return;
         }
         throw new Error(payload.details || payload.error || `Upload failed with status ${status}`);
@@ -236,69 +200,12 @@ const CebDataManagement = () => {
       setUploadResult(payload);
       setSelectedBillFile(null);
       setMessage("✅ Bill uploaded and saved successfully.");
-      fetchRecentIngestions();
-      fetchBackfillReconciliation();
+      fetchStorageFiles();
     } catch (err) {
       console.error("CEB bill upload error:", err);
       setMessage(`❌ ${err.message}`);
     } finally {
       setUploading(false);
-    }
-  };
-
-  const handleBulkUpload = async () => {
-    if (!selectedBillFiles.length) {
-      setMessage("❌ Please choose files for bulk upload.");
-      return;
-    }
-
-    setBulkUploading(true);
-    setBulkUploadResults([]);
-    setMessage("");
-
-    try {
-      const token = await fetchAuthToken();
-      if (!token) throw new Error("No auth token");
-
-      const results = [];
-      for (const file of selectedBillFiles) {
-        if (file.size > 10 * 1024 * 1024) {
-          results.push({
-            fileName: file.name,
-            ok: false,
-            status: 400,
-            message: "File too large (>10MB)",
-          });
-          continue;
-        }
-
-        const result = await uploadSingleFile(file, token);
-        const messageFromApi = result.payload?.details || result.payload?.error || (result.ok ? "Uploaded" : "Failed");
-
-        results.push({
-          fileName: file.name,
-          ok: result.ok,
-          status: result.status,
-          message: messageFromApi,
-          ingestionId: result.payload?.ingestionId || null,
-        });
-      }
-
-      setBulkUploadResults(results);
-      setSelectedBillFiles([]);
-
-      const successCount = results.filter((r) => r.ok).length;
-      const duplicateCount = results.filter((r) => r.status === 409).length;
-      const failCount = results.length - successCount - duplicateCount;
-      setMessage(`✅ Bulk upload finished. Success: ${successCount}, Duplicates: ${duplicateCount}, Failed: ${failCount}`);
-
-      fetchRecentIngestions();
-      fetchBackfillReconciliation();
-    } catch (err) {
-      console.error("CEB bulk upload error:", err);
-      setMessage(`❌ ${err.message}`);
-    } finally {
-      setBulkUploading(false);
     }
   };
 
@@ -452,38 +359,6 @@ const CebDataManagement = () => {
           </button>
         </div>
 
-        <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
-          <input
-            type="file"
-            multiple
-            accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
-            onChange={(e) => setSelectedBillFiles(Array.from(e.target.files || []))}
-            disabled={bulkUploading}
-          />
-          <button
-            type="button"
-            onClick={handleBulkUpload}
-            disabled={bulkUploading || selectedBillFiles.length === 0}
-            style={{
-              background: "#1f7a4f",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              padding: "0.6rem 1rem",
-              cursor: bulkUploading || selectedBillFiles.length === 0 ? "not-allowed" : "pointer",
-              opacity: bulkUploading || selectedBillFiles.length === 0 ? 0.7 : 1
-            }}
-          >
-            {bulkUploading ? "Bulk Uploading..." : `Bulk Upload (${selectedBillFiles.length})`}
-          </button>
-        </div>
-
-        {selectedBillFiles.length > 0 && (
-          <p style={{ margin: "0.75rem 0 0 0", fontSize: "13px", color: "var(--text-secondary)" }}>
-            Bulk queue ready: <strong>{selectedBillFiles.length}</strong> files selected.
-          </p>
-        )}
-
         {selectedBillFile && (
           <p style={{ margin: "0.75rem 0 0 0", fontSize: "13px", color: "var(--text-secondary)" }}>
             Selected: <strong>{selectedBillFile.name}</strong> ({(selectedBillFile.size / 1024 / 1024).toFixed(2)} MB)
@@ -498,11 +373,11 @@ const CebDataManagement = () => {
 
         <div style={{ marginTop: "1rem", borderTop: "1px solid var(--border-color)", paddingTop: "0.75rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem" }}>
-            <h4 style={{ margin: 0, color: "var(--text-color)", fontSize: "14px" }}>Recent Bill Uploads</h4>
+            <h4 style={{ margin: 0, color: "var(--text-color)", fontSize: "14px" }}>Files In Storage</h4>
             <button
               type="button"
-              onClick={fetchRecentIngestions}
-              disabled={ingestionsLoading}
+              onClick={fetchStorageFiles}
+              disabled={filesLoading}
               style={{
                 border: "1px solid var(--border-color)",
                 background: "transparent",
@@ -510,57 +385,47 @@ const CebDataManagement = () => {
                 borderRadius: "6px",
                 padding: "0.3rem 0.6rem",
                 fontSize: "12px",
-                cursor: ingestionsLoading ? "not-allowed" : "pointer",
-                opacity: ingestionsLoading ? 0.6 : 1
+                cursor: filesLoading ? "not-allowed" : "pointer",
+                opacity: filesLoading ? 0.6 : 1
               }}
             >
-              {ingestionsLoading ? "Refreshing..." : "Refresh"}
+              {filesLoading ? "Refreshing..." : "Refresh"}
             </button>
           </div>
 
-          {ingestionsError && (
+          {filesError && (
             <p style={{ margin: "0.5rem 0 0 0", color: "#d9534f", fontSize: "12px" }}>
-              Failed to load recent uploads: {ingestionsError}
+              Failed to load storage files: {filesError}
             </p>
           )}
 
-          {!ingestionsError && recentIngestions.length === 0 && !ingestionsLoading && (
+          {!filesError && storageFiles.length === 0 && !filesLoading && (
             <p style={{ margin: "0.5rem 0 0 0", color: "var(--text-secondary)", fontSize: "12px" }}>
-              No uploads recorded yet.
+              No files found in storage.
             </p>
           )}
 
-          {!ingestionsError && recentIngestions.length > 0 && (
+          {!filesError && storageFiles.length > 0 && (
             <div style={{ marginTop: "0.5rem", overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
                 <thead>
                   <tr>
-                    <th style={{ textAlign: "left", padding: "6px", borderBottom: "1px solid var(--border-color)" }}>Received</th>
-                    <th style={{ textAlign: "left", padding: "6px", borderBottom: "1px solid var(--border-color)" }}>Source</th>
-                    <th style={{ textAlign: "left", padding: "6px", borderBottom: "1px solid var(--border-color)" }}>Status</th>
-                    <th style={{ textAlign: "left", padding: "6px", borderBottom: "1px solid var(--border-color)" }}>Ingestion ID</th>
+                    <th style={{ textAlign: "left", padding: "6px", borderBottom: "1px solid var(--border-color)" }}>Uploaded</th>
+                    <th style={{ textAlign: "left", padding: "6px", borderBottom: "1px solid var(--border-color)" }}>File Path</th>
+                    <th style={{ textAlign: "left", padding: "6px", borderBottom: "1px solid var(--border-color)" }}>Size (MB)</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {recentIngestions.map((row) => (
+                  {storageFiles.map((row) => (
                     <tr key={row.id}>
                       <td style={{ padding: "6px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
-                        {new Date(row.received_at).toLocaleString()}
-                      </td>
-                      <td style={{ padding: "6px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)", textTransform: "capitalize" }}>
-                        {(row.source_type || "manual_upload").replaceAll("_", " ")}
-                      </td>
-                      <td style={{
-                        padding: "6px",
-                        borderBottom: "1px solid var(--border-color)",
-                        color: row.status === "failed" ? "#d9534f" : "#28a745",
-                        fontWeight: 600,
-                        textTransform: "capitalize"
-                      }}>
-                        {row.status || "unknown"}
+                        {row.createdAt ? new Date(row.createdAt).toLocaleString() : "-"}
                       </td>
                       <td style={{ padding: "6px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)", fontFamily: "monospace" }}>
-                        {row.id}
+                        {row.name}
+                      </td>
+                      <td style={{ padding: "6px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
+                        {row.sizeBytes ? (row.sizeBytes / 1024 / 1024).toFixed(2) : "0.00"}
                       </td>
                     </tr>
                   ))}
@@ -568,100 +433,6 @@ const CebDataManagement = () => {
               </table>
             </div>
           )}
-
-          {bulkUploadResults.length > 0 && (
-            <div style={{ marginTop: "0.75rem" }}>
-              <h4 style={{ margin: "0 0 0.4rem 0", fontSize: "13px", color: "var(--text-color)" }}>Last Bulk Upload Result</h4>
-              <div style={{ maxHeight: "160px", overflow: "auto", border: "1px solid var(--border-color)", borderRadius: "6px" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
-                  <thead>
-                    <tr>
-                      <th style={{ textAlign: "left", padding: "6px", borderBottom: "1px solid var(--border-color)" }}>File</th>
-                      <th style={{ textAlign: "left", padding: "6px", borderBottom: "1px solid var(--border-color)" }}>Result</th>
-                      <th style={{ textAlign: "left", padding: "6px", borderBottom: "1px solid var(--border-color)" }}>Info</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {bulkUploadResults.map((result) => (
-                      <tr key={`${result.fileName}-${result.status}-${result.ingestionId || "none"}`}>
-                        <td style={{ padding: "6px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>{result.fileName}</td>
-                        <td style={{ padding: "6px", borderBottom: "1px solid var(--border-color)", color: result.ok ? "#28a745" : result.status === 409 ? "#d39e00" : "#d9534f", fontWeight: 600 }}>
-                          {result.ok ? "Uploaded" : result.status === 409 ? "Duplicate" : "Failed"}
-                        </td>
-                        <td style={{ padding: "6px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
-                          {result.ingestionId ? `Ingestion: ${result.ingestionId}` : result.message}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          <div style={{ marginTop: "1rem", borderTop: "1px solid var(--border-color)", paddingTop: "0.75rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem" }}>
-              <h4 style={{ margin: 0, color: "var(--text-color)", fontSize: "14px" }}>Backfill Reconciliation</h4>
-              <button
-                type="button"
-                onClick={fetchBackfillReconciliation}
-                disabled={reconciliationLoading}
-                style={{
-                  border: "1px solid var(--border-color)",
-                  background: "transparent",
-                  color: "var(--text-color)",
-                  borderRadius: "6px",
-                  padding: "0.3rem 0.6rem",
-                  fontSize: "12px",
-                  cursor: reconciliationLoading ? "not-allowed" : "pointer",
-                  opacity: reconciliationLoading ? 0.6 : 1
-                }}
-              >
-                {reconciliationLoading ? "Refreshing..." : "Refresh"}
-              </button>
-            </div>
-
-            {reconciliationError && (
-              <p style={{ margin: "0.5rem 0 0 0", color: "#d9534f", fontSize: "12px" }}>
-                Failed to load reconciliation: {reconciliationError}
-              </p>
-            )}
-
-            {!reconciliationError && reconciliationData?.totals && (
-              <p style={{ margin: "0.5rem 0", color: "var(--text-secondary)", fontSize: "12px" }}>
-                Year {reconciliationData.year}: Uploaded {reconciliationData.totals.uploadedDocs}, CEB Records {reconciliationData.totals.cebRecords}, Delta {reconciliationData.totals.delta}
-              </p>
-            )}
-
-            {!reconciliationError && reconciliationData?.months?.length > 0 && (
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
-                  <thead>
-                    <tr>
-                      <th style={{ textAlign: "left", padding: "6px", borderBottom: "1px solid var(--border-color)" }}>Month</th>
-                      <th style={{ textAlign: "left", padding: "6px", borderBottom: "1px solid var(--border-color)" }}>Uploaded</th>
-                      <th style={{ textAlign: "left", padding: "6px", borderBottom: "1px solid var(--border-color)" }}>Received</th>
-                      <th style={{ textAlign: "left", padding: "6px", borderBottom: "1px solid var(--border-color)" }}>Failed</th>
-                      <th style={{ textAlign: "left", padding: "6px", borderBottom: "1px solid var(--border-color)" }}>CEB Rows</th>
-                      <th style={{ textAlign: "left", padding: "6px", borderBottom: "1px solid var(--border-color)" }}>Delta</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reconciliationData.months.map((month) => (
-                      <tr key={month.month}>
-                        <td style={{ padding: "6px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>{month.month}</td>
-                        <td style={{ padding: "6px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>{month.uploadedDocs}</td>
-                        <td style={{ padding: "6px", borderBottom: "1px solid var(--border-color)", color: "#28a745" }}>{month.received}</td>
-                        <td style={{ padding: "6px", borderBottom: "1px solid var(--border-color)", color: month.failed > 0 ? "#d9534f" : "var(--text-secondary)" }}>{month.failed}</td>
-                        <td style={{ padding: "6px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>{month.cebRecords}</td>
-                        <td style={{ padding: "6px", borderBottom: "1px solid var(--border-color)", color: month.delta === 0 ? "#28a745" : "#d39e00", fontWeight: 600 }}>{month.delta}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
