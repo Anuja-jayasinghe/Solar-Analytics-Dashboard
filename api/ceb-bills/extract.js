@@ -14,11 +14,11 @@ The user ONLY cares about the solar generation/export data. You must completely 
 
 Carefully extract the following fields and return ONLY a JSON object:
 
-* "billing_month": The display month of the bill, typically found next to the Account No (e.g., "2026 MAR" or "2024 SEP").
-* "billing_period_start": The start date of the consumption period (YYYY-MM-DD).
-* "billing_period_end": The end date of the consumption period (YYYY-MM-DD).
-* "bill_issue_date": The date the bill was generated (YYYY-MM-DD).
-* "meter_reading": Look for the meter register marked "(E)" for Export. Extract the CURRENT reading for this register ONLY. This number represents the cumulative exported units to date, which will continuously increase over time and can be any number of digits. Do NOT extract the register marked "(1)".
+* "billing_month": The display month of the bill (e.g., "2026 MAR" or "2024 SEP").
+* "billing_period_start": Look under the "Date" or "දිනය" section in the table. You will see two dates followed by a duration. Extract the EARLIER of these two dates (YYYY-MM-DD).
+* "billing_period_end": Extract the LATER of the two dates in that same section (YYYY-MM-DD).
+* "bill_issue_date": The date found near "Bill Date" at the top of the document (YYYY-MM-DD).
+* "meter_reading": Find the exact text "(E)". COMPLETELY IGNORE the specific digit "7268763" wherever it appears in the document, as this is a static meter identifier. Ignore the number that is on the exact same line as "(E)". The Current Reading is the number on the line IMMEDIATELY BELOW the "(E)" line. Extract the number from that next line.
 * "units_exported": The total number of solar units exported to the grid.
 * "earnings": The total Rs charge for units exported.
 

@@ -7,6 +7,8 @@ const VerificationQueue = ({ onApproveSuccess }) => {
   const [queue, setQueue] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState([]);
   const [processingId, setProcessingId] = useState(null);
   const [unprocessed, setUnprocessed] = useState([]);
 
@@ -50,13 +52,17 @@ const VerificationQueue = ({ onApproveSuccess }) => {
           });
       }
 
-      setQueue(mergedQueue);
+      
+      setQueue(mergedQueue.filter(i => i.review_status !== 'approved'));
+      setHistory(mergedQueue.filter(i => i.review_status === 'approved').sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at)));
+
       
       // Initialize edit forms
       const initials = {};
       mergedQueue.forEach(item => {
          initials[item.id] = {
             billing_period_start: item.billing_period_start || '',
+            billing_period_end: item.billing_period_end || '',
             meter_reading: item.meter_reading || '',
             units_exported: item.units_exported || '',
             earnings: item.earnings || '',
@@ -100,7 +106,9 @@ const VerificationQueue = ({ onApproveSuccess }) => {
      
      // 1. Insert into ceb_data
      const finalData = {
-         bill_date: form.billing_period_start || new Date().toISOString().split('T')[0],
+         bill_date: form.billing_period_end || form.billing_period_start || new Date().toISOString().split('T')[0],
+         billing_period_start: form.billing_period_start || null,
+         billing_period_end: form.billing_period_end || null,
          meter_reading: parseFloat(form.meter_reading) || 0,
          units_exported: parseFloat(form.units_exported) || 0,
          earnings: parseFloat(form.earnings) || 0,
@@ -177,7 +185,8 @@ const VerificationQueue = ({ onApproveSuccess }) => {
        const template = import.meta.env.VITE_CLERK_JWT_TEMPLATE_NAME;
        
        let successCount = 0;
-       const testBillList = unprocessed.length > 0 ? [unprocessed[0]] : [];
+       // Process all found bills
+        const testBillList = unprocessed.length > 0 ? [unprocessed[0]] : [];
        for (const bill of testBillList) {
            let success = false;
            let attempts = 0;
@@ -209,7 +218,7 @@ const VerificationQueue = ({ onApproveSuccess }) => {
                await new Promise(resolve => setTimeout(resolve, 5000));
            }
        }
-       setMessage({ type: 'success', text: `Successfully extracted ${successCount} of ${unprocessed.length} bills. They are now in the queue below.` });
+       setMessage({ type: 'success', text: `Successfully extracted ${successCount} of ${unprocessed.length} bills.` });
        fetchQueue();
      } catch(err) {
        setMessage({ type: 'error', text: err.message });
@@ -306,6 +315,10 @@ const VerificationQueue = ({ onApproveSuccess }) => {
                                <input type="date" value={form.billing_period_start} onChange={e => handleFormChange(item.id, 'billing_period_start', e.target.value)} style={{ flex: 1, padding:'0.4rem', background:'var(--bg-color)', color:'var(--text-color)', border:'1px solid var(--border-color)', borderRadius:'4px', colorScheme: 'dark' }} />
                             </div>
                             <div style={{ display: 'flex', gap:'0.5rem', alignItems:'center' }}>
+                               <label style={{ width:'100px', fontSize:'12px', color:'var(--text-secondary)' }}>Bill End Date</label>
+                               <input type="date" value={form.billing_period_end} onChange={e => handleFormChange(item.id, 'billing_period_end', e.target.value)} style={{ flex: 1, padding:'0.4rem', background:'var(--bg-color)', color:'var(--text-color)', border:'1px solid var(--border-color)', borderRadius:'4px', colorScheme: 'dark' }} />
+                            </div>
+                            <div style={{ display: 'flex', gap:'0.5rem', alignItems:'center' }}>
                                <label style={{ width:'100px', fontSize:'12px', color:'var(--text-secondary)' }}>Meter Reading</label>
                                <input type="number" value={form.meter_reading} onChange={e => handleFormChange(item.id, 'meter_reading', e.target.value)} style={{ flex: 1, padding:'0.4rem', background:'var(--bg-color)', color:'var(--text-color)', border:'1px solid var(--border-color)', borderRadius:'4px' }} />
                             </div>
@@ -322,6 +335,9 @@ const VerificationQueue = ({ onApproveSuccess }) => {
                  )}
 
                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem', paddingTop:'1rem', borderTop: '1px solid var(--border-color)' }}>
+                     <button title="Run AI again" onClick={() => handleRetryExtraction(item)} disabled={processingId === item.id} style={{ background: "transparent", color: "var(--secondary-color)", border: "1px solid var(--secondary-color)", padding: "0.4rem 1rem", borderRadius: "6px", cursor: "pointer" }}>
+                        {processingId === item.id && !['failed_api_limit', 'failed_extraction'].includes(item.review_status) ? 'Retrying...' : 'Retry AI'}
+                     </button>
                      <button title="Reject & Ignore" onClick={() => handleReject(item)} disabled={processingId === item.id} style={{ background: 'transparent', color:'var(--text-secondary)', border:'1px solid var(--border-color)', padding:'0.4rem 1rem', borderRadius:'6px', cursor:'pointer' }}>
                         Reject
                      </button>
@@ -334,6 +350,38 @@ const VerificationQueue = ({ onApproveSuccess }) => {
               </div>
            );
          })}
+
+      {/* Verified History Section */}
+      <div style={{ marginTop: '1.5rem', border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden' }}>
+         <button 
+            onClick={() => setShowHistory(!showHistory)}
+            style={{ width: '100%', padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.05)', border: 'none', color: 'var(--text-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+         >
+            <span style={{ fontWeight: 'bold', fontSize: '14px' }}>📜 Verified History ({history.length})</span>
+            <span>{showHistory ? '▲' : '▼'}</span>
+         </button>
+         
+         {showHistory && (
+            <div style={{ padding: '0.5rem', background: 'rgba(0,0,0,0.1)' }}>
+               {history.length === 0 ? (
+                  <p style={{ padding: '1rem', color: 'var(--text-secondary)', textAlign: 'center', margin: 0 }}>No approved extractions yet.</p>
+               ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                     {history.map(item => (
+                        <div key={item.id} style={{ padding: '0.75rem', background: 'rgba(76, 175, 80, 0.05)', border: '1px solid rgba(76, 175, 80, 0.2)', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                           <div>
+                              <strong style={{ color: '#4caf50' }}>{item.billing_month}</strong>
+                              <span style={{ marginLeft: '1rem', fontSize: '12px', color: 'var(--text-secondary)' }}>{item.units_exported} Units | Rs. {item.earnings}</span>
+                           </div>
+                           <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Approved: {new Date(item.updated_at).toLocaleDateString()}</div>
+                        </div>
+                     ))}
+                  </div>
+               )}
+            </div>
+         )}
+      </div>
+
       </div>
     </div>
   );
