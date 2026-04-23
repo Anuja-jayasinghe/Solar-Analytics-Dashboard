@@ -23,7 +23,7 @@ const VerificationQueue = ({ onApproveSuccess }) => {
         *,
         ceb_bill_ingestions(file_path, status, id)
       `)
-      .in('review_status', ['pending_review', 'auto_approved'])
+      .in('review_status', ['pending_review', 'auto_approved', 'approved'])
       .order('created_at', { ascending: false });
 
     if (error) {

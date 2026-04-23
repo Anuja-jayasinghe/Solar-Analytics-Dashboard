@@ -463,25 +463,56 @@ const CebDataManagement = () => {
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
                     <thead style={{ position: "sticky", top: 0, background: "var(--card-bg)", zIndex: 1 }}>
                       <tr>
-                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>Uploaded</th>
-                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>File Path</th>
-                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>Size (MB)</th>
+                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>Date</th>
+                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>File</th>
+                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>Status</th>
+                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>Month</th>
+                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>Units</th>
+                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>Earnings</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {storageFiles.map((row) => (
-                        <tr key={row.id}>
-                          <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
-                            {row.createdAt ? new Date(row.createdAt).toLocaleString() : "-"}
-                          </td>
-                          <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)", fontFamily: "monospace", wordBreak: "break-all" }}>
-                            {row.name}
-                          </td>
-                          <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
-                            {row.sizeBytes ? (row.sizeBytes / 1024 / 1024).toFixed(2) : "0.00"}
-                          </td>
-                        </tr>
-                      ))}
+                      {storageFiles.map((row) => {
+                        const ext = row.extraction || {};
+                        const statusColor = 
+                          row.status === 'approved' ? '#4caf50' : 
+                          row.status === 'pending_review' || row.status === 'auto_approved' ? '#ffc107' :
+                          row.status.includes('failed') ? '#f44336' : 'var(--text-secondary)';
+                        
+                        return (
+                          <tr key={row.id}>
+                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)", fontSize: '11px' }}>
+                              {row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "-"}
+                            </td>
+                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-color)", fontWeight: '500' }}>
+                              {row.name}
+                            </td>
+                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)" }}>
+                               <span style={{ 
+                                  padding: '2px 6px', 
+                                  borderRadius: '4px', 
+                                  fontSize: '10px', 
+                                  textTransform: 'uppercase', 
+                                  fontWeight: 'bold',
+                                  background: `${statusColor}22`,
+                                  color: statusColor,
+                                  border: `1px solid ${statusColor}44`
+                               }}>
+                                  {row.status.replace('_', ' ')}
+                               </span>
+                            </td>
+                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "#38bdf8", fontWeight: 'bold' }}>
+                              {ext.billing_month || '-'}
+                            </td>
+                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-color)" }}>
+                              {ext.units_exported || '-'}
+                            </td>
+                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "#4caf50" }}>
+                              {ext.earnings ? `Rs. ${ext.earnings}` : '-'}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
