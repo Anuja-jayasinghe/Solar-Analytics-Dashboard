@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { verifyAdminToken } from '../middleware/verifyAdminToken.js';
-import pdf from 'pdf-parse/lib/pdf-parse.js';
+import { PDFParse } from 'pdf-parse';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVER_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
@@ -115,8 +115,9 @@ export default async function handler(req, res) {
     const arrayBuffer = await fileData.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
-    // 3. Parse PDF programmatically
-    const pdfData = await pdf(buffer);
+    // 3. Parse PDF using the same class-based API as test.js
+    const parser = new PDFParse({ data: buffer });
+    const pdfData = await parser.getText();
     const text = pdfData.text;
 
     // --- REGEX EXTRACTION (from user script) ---
@@ -128,27 +129,20 @@ export default async function handler(req, res) {
     
 
     // --- METER READING EXTRACTION ---
-    // CEB PDFs sometimes smush the reading and date together (e.g. "1436792024-09-05")
-    // and sometimes have them space-separated. We try both patterns.
-    const meterReadingPatternSpaced = /(?:\s|^)(\d+)\s+(\d{4}-\d{2}-\d{2})(?:\s|$)/g;
-    const meterReadingPatternSmushed = /(\d+)(20\d{2}-\d{2}-\d{2})/g;
+    // Logic: Look for readings followed by dates in the meter section.
+    // In CEB bills, readings for (E) are often on lines like "14	3679	2024-09-05"
+    // We avoid matching "0.00 2024-08-28" by ensuring the reading is a standalone integer.
+    const meterReadingPattern = /(?:\s|^)(\d+)\s+(\d{4}-\d{2}-\d{2})(?:\s|$)/g;
     let meterMatches = [];
     let m;
 
-    // Try space-separated pattern first
-    while ((m = meterReadingPatternSpaced.exec(text)) !== null) {
+    while ((m = meterReadingPattern.exec(text)) !== null) {
         const reading = parseInt(m[1]);
         const date = m[2];
+        // Filter out clearly wrong readings (like small walk order numbers or noise)
+        // If we have a known units_exported, we can use it to validate,
+        // but for now we just collect all candidates.
         meterMatches.push({ reading, date });
-    }
-
-    // If nothing found, fall back to smushed pattern
-    if (meterMatches.length === 0) {
-        while ((m = meterReadingPatternSmushed.exec(text)) !== null) {
-            const reading = parseInt(m[1]);
-            const date = m[2];
-            meterMatches.push({ reading, date });
-        }
     }
 
     // Sort candidates by date (ascending)
@@ -249,6 +243,8 @@ export default async function handler(req, res) {
         .update({ status: validationResult.status })
         .eq('id', ingestionId);
 
+    parser.destroy();
+
     return res.status(200).json({ 
         success: true, 
         extraction: extractionInsert,
@@ -265,6 +261,7 @@ export default async function handler(req, res) {
       } catch (e) {
           console.error('Secondary crash updating status:', e);
       }
+      if (typeof parser !== 'undefined' && parser.destroy) parser.destroy();
       return res.status(500).json({ error: 'Extraction failed internally.', details: err?.message });
   }
 }
