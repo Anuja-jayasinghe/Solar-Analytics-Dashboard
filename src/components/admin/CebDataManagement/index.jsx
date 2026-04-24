@@ -6,6 +6,7 @@ import SkeletonLoader from "../../shared/SkeletonLoader";
 import ConfirmDialog from "../../shared/ConfirmDialog";
 import CebForm from "./CebForm";
 import CebTable from "./CebTable";
+import VerificationQueue from "./VerificationQueue";
 
 /**
  * CEB Data Management Component
@@ -201,8 +202,24 @@ const CebDataManagement = () => {
 
       setUploadResult(payload);
       setSelectedBillFile(null);
-      setMessage("✅ Bill uploaded successfully! Data extraction is currently disabled.");
+      setMessage("⏳ Bill uploaded! Extracting data using programmatic parser...");
       
+      try {
+        const extRes = await fetch('/api/ceb-bills/extract', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ ingestionId: payload.ingestionId })
+        });
+        const extData = await extRes.json();
+        if (!extRes.ok) throw new Error(extData.error || 'Failed to extract.');
+        setMessage("✅ Bill uploaded and extracted successfully! Please review it in the Parsing Review Queue.");
+      } catch (extErr) {
+        setMessage(`⚠️ Bill uploaded, but parsing failed: ${extErr.message}. You can retry in the Parsing Review Queue.`);
+      }
+
       fetchStorageFiles();
       setRefreshKey(prev => prev + 1);
     } catch (err) {
@@ -210,6 +227,53 @@ const CebDataManagement = () => {
       setMessage(`❌ ${err.message}`);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const [ingestionToDelete, setIngestionToDelete] = useState(null);
+
+  const handleExtractFromStorage = async (ingestionId) => {
+    setMessage("⏳ Extracting data...");
+    try {
+        const token = await fetchAuthToken();
+        const extRes = await fetch('/api/ceb-bills/extract', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ ingestionId })
+        });
+        const extData = await extRes.json();
+        if (!extRes.ok) throw new Error(extData.error || 'Failed to extract.');
+        setMessage("✅ Extracted successfully! Please review it in the Parsing Review Queue.");
+        fetchStorageFiles();
+        setRefreshKey(prev => prev + 1);
+    } catch (extErr) {
+        setMessage(`⚠️ Parsing failed: ${extErr.message}`);
+    }
+  };
+
+  const handleDeleteIngestion = async (ingestionId) => {
+    setMessage("⏳ Deleting file from storage...");
+    try {
+        const token = await fetchAuthToken();
+        const res = await fetch('/api/ceb-bills/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ ingestionId })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to delete.');
+        
+        setMessage("✅ File and records completely removed from storage.");
+        fetchStorageFiles();
+        setRefreshKey(prev => prev + 1);
+    } catch (err) {
+        setMessage(`❌ Failed to delete: ${err.message}`);
     }
   };
 
@@ -446,25 +510,65 @@ const CebDataManagement = () => {
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
                     <thead style={{ position: "sticky", top: 0, background: "var(--card-bg)", zIndex: 1 }}>
                       <tr>
-                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>Uploaded</th>
-                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>File Path</th>
-                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>Size (MB)</th>
+                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>Date</th>
+                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>File</th>
+                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>Status</th>
+                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>Month</th>
+                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>Units</th>
+                        <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>Earnings</th>
+                        <th style={{ textAlign: "right", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {storageFiles.map((row) => (
-                        <tr key={row.id}>
-                          <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
-                            {row.createdAt ? new Date(row.createdAt).toLocaleString() : "-"}
-                          </td>
-                          <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)", fontFamily: "monospace", wordBreak: "break-all" }}>
-                            {row.name}
-                          </td>
-                          <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
-                            {row.sizeBytes ? (row.sizeBytes / 1024 / 1024).toFixed(2) : "0.00"}
-                          </td>
-                        </tr>
-                      ))}
+                      {storageFiles.map((row) => {
+                        const ext = row.extraction || {};
+                        const statusColor = 
+                          row.status === 'approved' ? '#4caf50' : 
+                          row.status === 'pending_review' || row.status === 'auto_approved' ? '#ffc107' :
+                          row.status.includes('failed') ? '#f44336' : 'var(--text-secondary)';
+                        
+                        return (
+                          <tr key={row.id}>
+                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)", fontSize: '11px' }}>
+                              {row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "-"}
+                            </td>
+                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-color)", fontWeight: '500' }}>
+                              {row.name}
+                            </td>
+                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)" }}>
+                               <span style={{ 
+                                  padding: '2px 6px', 
+                                  borderRadius: '4px', 
+                                  fontSize: '10px', 
+                                  textTransform: 'uppercase', 
+                                  fontWeight: 'bold',
+                                  background: `${statusColor}22`,
+                                  color: statusColor,
+                                  border: `1px solid ${statusColor}44`
+                               }}>
+                                  {row.status.replace('_', ' ')}
+                               </span>
+                            </td>
+                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "#38bdf8", fontWeight: 'bold' }}>
+                              {ext.billing_month || '-'}
+                            </td>
+                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-color)" }}>
+                              {ext.units_exported || '-'}
+                            </td>
+                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "#4caf50" }}>
+                              {ext.earnings ? `Rs. ${ext.earnings}` : '-'}
+                            </td>
+                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", textAlign: "right" }}>
+                              {row.status !== 'approved' && (
+                                <>
+                                  <button onClick={() => handleExtractFromStorage(row.id)} style={{ background: 'transparent', color: '#2196f3', border: '1px solid #2196f3', borderRadius: '4px', padding: '2px 8px', fontSize: '10px', marginRight: '4px', cursor: 'pointer' }}>Parse</button>
+                                  <button onClick={() => setIngestionToDelete(row.id)} title="Delete completely to allow re-upload" style={{ background: 'transparent', color: '#f44336', border: '1px solid #f44336', borderRadius: '4px', padding: '2px 8px', fontSize: '10px', cursor: 'pointer' }}>🗑️</button>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -474,7 +578,10 @@ const CebDataManagement = () => {
         </div>
       </div>
 
-            {/* Form Component - Hidden during in-line edit to focus context */}
+      {/* Verification Queue (Step 2 & 3) */}
+      <VerificationQueue key={refreshKey} onApproveSuccess={fetchData} />
+
+      {/* Form Component - Hidden during in-line edit to focus context */}
       {!editingId && (
         <CebForm
           form={form}
@@ -508,6 +615,22 @@ const CebDataManagement = () => {
           }}
         />
       )}
+
+      {/* Confirmation Dialog for File Deletion */}
+      <ConfirmDialog
+        open={!!ingestionToDelete}
+        title="Delete Uploaded File"
+        message="Are you sure you want to delete this uploaded file? This will completely remove it from the system and allow you to re-upload it if needed."
+        confirmText="Delete File"
+        cancelText="Cancel"
+        onConfirm={() => {
+            handleDeleteIngestion(ingestionToDelete);
+            setIngestionToDelete(null);
+        }}
+        onCancel={() => setIngestionToDelete(null)}
+        isLoading={false}
+        isDangerous={true}
+      />
 
       {/* Confirmation Dialog */}
       <ConfirmDialog
