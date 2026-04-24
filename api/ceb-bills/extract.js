@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { verifyAdminToken } from '../middleware/verifyAdminToken.js';
-import { PDFParse } from 'pdf-parse';
+import pdf from 'pdf-parse/lib/pdf-parse.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVER_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
@@ -115,10 +115,12 @@ export default async function handler(req, res) {
     const arrayBuffer = await fileData.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
-    // 3. Parse PDF using the same class-based API as test.js
-    const parser = new PDFParse({ data: buffer });
-    const pdfData = await parser.getText();
-    const text = pdfData.text;
+    // 3. Parse PDF programmatically (ESM-safe function API)
+    const pdfData = await pdf(buffer);
+    // Normalize whitespace: collapse tabs and multiple spaces into a single space
+    // per line, while preserving newlines. This ensures regexes behave consistently
+    // regardless of how pdf-parse renders spacing from the underlying PDF renderer.
+    const text = pdfData.text.replace(/[^\S\n]+/g, ' ');
 
     // --- REGEX EXTRACTION (from user script) ---
     const monthMatch = text.match(/([0-9]{4}\s+[A-Z]{3})\s*Month:/i);
@@ -129,55 +131,48 @@ export default async function handler(req, res) {
     
 
     // --- METER READING EXTRACTION ---
-    // Logic: Look for readings followed by dates in the meter section.
-    // In CEB bills, readings for (E) are often on lines like "14	3679	2024-09-05"
-    // We avoid matching "0.00 2024-08-28" by ensuring the reading is a standalone integer.
-    const meterReadingPattern = /(?:\s|^)(\d+)\s+(\d{4}-\d{2}-\d{2})(?:\s|$)/g;
+    // CEB PDF meter section structure (after whitespace normalisation):
+    //   "4 3676 34 Days"       → walkOrder  prevReading  numDays  "Days"
+    //   "10 3 2024-08-02"      → walkOrder  consumedUnits  prevDate  (noise line)
+    //   "14 3679 2024-09-05"   → walkOrder  currReading  currDate
+    //
+    // Pattern 1: grab the reading from the "N Days" line (previous meter reading)
+    const daysLineMatch = text.match(/^\s*\d+\s+(\d+)\s+\d+\s+Days\s*$/im);
+    // Pattern 2: grab reading+date from lines that end with a YYYY-MM-DD date
+    const dateLinePattern = /^\s*\d+\s+(\d+)\s+(\d{4}-\d{2}-\d{2})\s*$/gm;
     let meterMatches = [];
     let m;
 
-    while ((m = meterReadingPattern.exec(text)) !== null) {
-        const reading = parseInt(m[1]);
-        const date = m[2];
-        // Filter out clearly wrong readings (like small walk order numbers or noise)
-        // If we have a known units_exported, we can use it to validate,
-        // but for now we just collect all candidates.
-        meterMatches.push({ reading, date });
+    while ((m = dateLinePattern.exec(text)) !== null) {
+        meterMatches.push({ reading: parseInt(m[1]), date: m[2] });
     }
-
-    // Sort candidates by date (ascending)
     meterMatches.sort((a, b) => new Date(a.date) - new Date(b.date));
-    
+
+    // Override the previous reading with the one from the Days line if found
+    // (more reliable than taking the first date-line candidate).
+    const prevReadingOverride = daysLineMatch ? parseInt(daysLineMatch[1]) : null;
+
     const unitsExported = unitsMatch ? parseInt(unitsMatch[1]) : 0;
     let readingPrev = 0;
     let readingCurr = 0;
     let periodStart = null;
     let periodEnd = null;
 
-    if (meterMatches.length >= 2) {
-        // Try to find a pair whose delta exactly matches units_exported (exact same logic as sandbox)
-        let found = false;
-        for (let i = 0; i < meterMatches.length; i++) {
-            for (let j = i + 1; j < meterMatches.length; j++) {
-                if (meterMatches[j].reading - meterMatches[i].reading === unitsExported) {
-                    readingPrev = meterMatches[i].reading;
-                    readingCurr = meterMatches[j].reading;
-                    periodStart = meterMatches[i].date;
-                    periodEnd = meterMatches[j].date;
-                    found = true;
-                    break;
-                }
-            }
-            if (found) break;
-        }
+    if (meterMatches.length >= 1) {
+        // The last date-line candidate is the current reading
+        readingCurr = meterMatches[meterMatches.length - 1].reading;
+        periodEnd   = meterMatches[meterMatches.length - 1].date;
 
-        // Fallback: take the first and last candidate if no exact match found
-        if (!found) {
-            readingPrev = meterMatches[0].reading;
-            readingCurr = meterMatches[meterMatches.length - 1].reading;
-            periodStart = meterMatches[0].date;
-            periodEnd = meterMatches[meterMatches.length - 1].date;
-        }
+        // Use the Days-line previous reading if found (most reliable),
+        // otherwise fall back to the first date-line candidate
+        readingPrev = prevReadingOverride !== null
+            ? prevReadingOverride
+            : (meterMatches.length >= 2 ? meterMatches[0].reading : 0);
+
+        // Period start comes from the first date-line candidate
+        periodStart = meterMatches.length >= 2
+            ? meterMatches[0].date
+            : null;
     }
 
     const extractedData = {
@@ -243,8 +238,6 @@ export default async function handler(req, res) {
         .update({ status: validationResult.status })
         .eq('id', ingestionId);
 
-    parser.destroy();
-
     return res.status(200).json({ 
         success: true, 
         extraction: extractionInsert,
@@ -261,7 +254,7 @@ export default async function handler(req, res) {
       } catch (e) {
           console.error('Secondary crash updating status:', e);
       }
-      if (typeof parser !== 'undefined' && parser.destroy) parser.destroy();
+      // parser.destroy() not needed with function-based API
       return res.status(500).json({ error: 'Extraction failed internally.', details: err?.message });
   }
 }
