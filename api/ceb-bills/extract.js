@@ -123,6 +123,8 @@ export default async function handler(req, res) {
     parser.destroy();
 
     // --- REGEX EXTRACTION ---
+    // Account Number: "Electricity A/C No.: 4924089702"
+    const accountMatch   = text.match(/Electricity A\/C No\.:\s*(\d+)/i);
     // v2.4.5 raw: "2024 SEP\tMonth:\n"  — tab between year+month and "Month:"
     const monthMatch     = text.match(/([0-9]{4} [A-Z]{3})\s+Month:/i);
     // Bill Date is clean: "Bill Date: 9/5/2024 9:59:05 AM"
@@ -164,6 +166,7 @@ export default async function handler(req, res) {
     }
 
     const extractedData = {
+        account_number: accountMatch ? accountMatch[1] : null,
         billing_month: monthMatch ? monthMatch[1].toUpperCase() : null,
         bill_issue_date: issueDateMatch ? issueDateMatch[1] : null,
         billing_period_start: periodStart,
@@ -197,7 +200,7 @@ export default async function handler(req, res) {
     // 6. Save to ceb_bill_extractions & update status
     const extractionPayload = {
         ingestion_id: ingestionId,
-        account_number: null,
+        account_number: extractedData.account_number,
         billing_month: extractedData.billing_month,
         billing_period_start: extractedData.billing_period_start || null,
         billing_period_end: extractedData.billing_period_end || null,
