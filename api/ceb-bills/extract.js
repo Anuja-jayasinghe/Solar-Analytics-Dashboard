@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { verifyAdminToken } from '../middleware/verifyAdminToken.js';
-import pdf from 'pdf-parse/lib/pdf-parse.js';
+import { PDFParse } from 'pdf-parse';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVER_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
@@ -115,64 +115,52 @@ export default async function handler(req, res) {
     const arrayBuffer = await fileData.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
-    // 3. Parse PDF programmatically (ESM-safe function API)
-    const pdfData = await pdf(buffer);
-    // Normalize whitespace: collapse tabs and multiple spaces into a single space
-    // per line, while preserving newlines. This ensures regexes behave consistently
-    // regardless of how pdf-parse renders spacing from the underlying PDF renderer.
-    const text = pdfData.text.replace(/[^\S\n]+/g, ' ');
+    // 3. Parse PDF using pdf-parse v2.4.5 PDFParse class
+    const parser = new PDFParse({ data: buffer });
+    const pdfData = await parser.getText();
+    // Use raw text directly — v2.4.5 preserves real tabs as delimiters
+    const text = pdfData.text;
+    parser.destroy();
 
-    // --- REGEX EXTRACTION (from user script) ---
-    const monthMatch = text.match(/([0-9]{4}\s+[A-Z]{3})\s*Month:/i);
-    const issueDateMatch = text.match(/Bill Date:\s*([0-9/]+)/i);
+    // --- REGEX EXTRACTION ---
+    // v2.4.5 raw: "2024 SEP\tMonth:\n"  — tab between year+month and "Month:"
+    const monthMatch     = text.match(/([0-9]{4} [A-Z]{3})\s+Month:/i);
+    // Bill Date is clean: "Bill Date: 9/5/2024 9:59:05 AM"
+    const issueDateMatch = text.match(/Bill Date:\s*([0-9\/]+)/i);
 
-    const unitsMatch = text.match(/No\.\s*of\s*Units\s*Exported\s*\(kWh\)[\s\S]*?(\d+)/i);
-    const earningsMatch = text.match(/Charge\s*for\s*Units\s*Exported\s*\(Rs\.\)[\s\S]*?([\d,]+\.\d{2})/i);
-    
+    // Units exported: "No. of Units Exported (kWh) 3676" (space-separated on same line)
+    const unitsMatch    = text.match(/No\. of Units Exported \(kWh\)\s+(\d+)/i);
+    // Earnings: "Charge for Units Exported (Rs.) 136,012.00"
+    const earningsMatch = text.match(/Charge for Units Exported \(Rs\.\)\s+([\d,]+\.\d{2})/i);
 
     // --- METER READING EXTRACTION ---
-    // CEB PDF meter section structure (after whitespace normalisation):
-    //   "4 3676 34 Days"       → walkOrder  prevReading  numDays  "Days"
-    //   "10 3 2024-08-02"      → walkOrder  consumedUnits  prevDate  (noise line)
-    //   "14 3679 2024-09-05"   → walkOrder  currReading  currDate
-    //
-    // Pattern 1: grab the reading from the "N Days" line (previous meter reading)
-    const daysLineMatch = text.match(/^\s*\d+\s+(\d+)\s+\d+\s+Days\s*$/im);
-    // Pattern 2: grab reading+date from lines that end with a YYYY-MM-DD date
-    const dateLinePattern = /^\s*\d+\s+(\d+)\s+(\d{4}-\d{2}-\d{2})\s*$/gm;
+    // v2.4.5 raw meter rows: "14\t3679\t2024-09-05"
+    // Pattern: capture tab-separated reading and date on the same line
+    const meterReadingPattern = /\t(\d+)\t(\d{4}-\d{2}-\d{2})/g;
     let meterMatches = [];
-    let m;
+    let hit;
 
-    while ((m = dateLinePattern.exec(text)) !== null) {
-        meterMatches.push({ reading: parseInt(m[1]), date: m[2] });
+    while ((hit = meterReadingPattern.exec(text)) !== null) {
+        meterMatches.push({ reading: parseInt(hit[1]), date: hit[2] });
     }
+    // Sort by date ascending: first entry = previous reading, last = current reading
     meterMatches.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    // Override the previous reading with the one from the Days line if found
-    // (more reliable than taking the first date-line candidate).
-    const prevReadingOverride = daysLineMatch ? parseInt(daysLineMatch[1]) : null;
 
     const unitsExported = unitsMatch ? parseInt(unitsMatch[1]) : 0;
     let readingPrev = 0;
     let readingCurr = 0;
     let periodStart = null;
-    let periodEnd = null;
+    let periodEnd   = null;
 
-    if (meterMatches.length >= 1) {
-        // The last date-line candidate is the current reading
+    if (meterMatches.length >= 2) {
+        readingPrev = meterMatches[0].reading;
         readingCurr = meterMatches[meterMatches.length - 1].reading;
+        periodStart = meterMatches[0].date;
         periodEnd   = meterMatches[meterMatches.length - 1].date;
-
-        // Use the Days-line previous reading if found (most reliable),
-        // otherwise fall back to the first date-line candidate
-        readingPrev = prevReadingOverride !== null
-            ? prevReadingOverride
-            : (meterMatches.length >= 2 ? meterMatches[0].reading : 0);
-
-        // Period start comes from the first date-line candidate
-        periodStart = meterMatches.length >= 2
-            ? meterMatches[0].date
-            : null;
+    } else if (meterMatches.length === 1) {
+        readingCurr = meterMatches[0].reading;
+        periodEnd   = meterMatches[0].date;
     }
 
     const extractedData = {
