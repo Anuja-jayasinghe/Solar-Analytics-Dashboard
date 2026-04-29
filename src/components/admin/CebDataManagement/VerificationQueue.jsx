@@ -63,6 +63,8 @@ const VerificationQueue = ({ onApproveSuccess }) => {
                 meter_reading: item.meter_reading || '',
                 units_exported: item.units_exported || '',
                 earnings: item.earnings || '',
+                account_number: item.account_number || '',
+                billing_month: item.billing_month || '',
             };
         });
         setEditForms(initials);
@@ -103,14 +105,21 @@ const VerificationQueue = ({ onApproveSuccess }) => {
             billing_period_end: formData.billing_period_end,
             meter_reading: parseFloat(formData.meter_reading),
             units_exported: parseFloat(formData.units_exported),
-            earnings: parseFloat(formData.earnings)
+            earnings: parseFloat(formData.earnings),
+            account_number: formData.account_number || null,
+            billing_month: formData.billing_month || null,
+            ingestion_id: item.ingestion_id,
+            data_source: 'dashboard_upload',
+            file_path: item.ceb_bill_ingestions?.file_path || null
         };
 
-        const { error: insertError } = await supabase
+        const { error: upsertError } = await supabase
             .from('ceb_data')
-            .insert([cleanData]);
+            .upsert([cleanData], { 
+                onConflict: 'account_number, billing_month' 
+            });
 
-        if (insertError) throw insertError;
+        if (upsertError) throw upsertError;
 
         const { error: extError } = await supabase
             .from('ceb_bill_extractions')
@@ -260,28 +269,36 @@ const VerificationQueue = ({ onApproveSuccess }) => {
                              )}
 
                              {/* Editable Fields Grid */}
-                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                                 <div>
-                                     <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>Period Start</label>
-                                     <input type="date" value={formData.billing_period_start} onChange={e => handleFormChange(item.id, 'billing_period_start', e.target.value)} style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)', borderRadius: '4px' }} />
-                                 </div>
-                                 <div>
-                                     <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>Period End</label>
-                                     <input type="date" value={formData.billing_period_end} onChange={e => handleFormChange(item.id, 'billing_period_end', e.target.value)} style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)', borderRadius: '4px' }} />
-                                 </div>
-                                 <div>
-                                     <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>Current Meter Reading</label>
-                                     <input type="number" value={formData.meter_reading} onChange={e => handleFormChange(item.id, 'meter_reading', e.target.value)} style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)', borderRadius: '4px' }} />
-                                 </div>
-                                 <div>
-                                     <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>Units Exported</label>
-                                     <input type="number" value={formData.units_exported} onChange={e => handleFormChange(item.id, 'units_exported', e.target.value)} style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)', borderRadius: '4px' }} />
-                                 </div>
-                                 <div style={{ gridColumn: '1 / -1' }}>
-                                     <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>Earnings (Rs)</label>
-                                     <input type="number" step="0.01" value={formData.earnings} onChange={e => handleFormChange(item.id, 'earnings', e.target.value)} style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)', borderRadius: '4px' }} />
-                                 </div>
-                             </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                  <div>
+                                      <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>Account Number</label>
+                                      <input type="text" value={formData.account_number} onChange={e => handleFormChange(item.id, 'account_number', e.target.value)} style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)', borderRadius: '4px' }} />
+                                  </div>
+                                  <div>
+                                      <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>Billing Month</label>
+                                      <input type="text" placeholder="YYYY MMM" value={formData.billing_month} onChange={e => handleFormChange(item.id, 'billing_month', e.target.value)} style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)', borderRadius: '4px' }} />
+                                  </div>
+                                  <div>
+                                      <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>Period Start</label>
+                                      <input type="date" value={formData.billing_period_start} onChange={e => handleFormChange(item.id, 'billing_period_start', e.target.value)} style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)', borderRadius: '4px' }} />
+                                  </div>
+                                  <div>
+                                      <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>Period End</label>
+                                      <input type="date" value={formData.billing_period_end} onChange={e => handleFormChange(item.id, 'billing_period_end', e.target.value)} style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)', borderRadius: '4px' }} />
+                                  </div>
+                                  <div>
+                                      <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>Current Meter Reading</label>
+                                      <input type="number" value={formData.meter_reading} onChange={e => handleFormChange(item.id, 'meter_reading', e.target.value)} style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)', borderRadius: '4px' }} />
+                                  </div>
+                                  <div>
+                                      <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>Units Exported</label>
+                                      <input type="number" value={formData.units_exported} onChange={e => handleFormChange(item.id, 'units_exported', e.target.value)} style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)', borderRadius: '4px' }} />
+                                  </div>
+                                  <div style={{ gridColumn: '1 / -1' }}>
+                                      <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>Earnings (Rs)</label>
+                                      <input type="number" step="0.01" value={formData.earnings} onChange={e => handleFormChange(item.id, 'earnings', e.target.value)} style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)', borderRadius: '4px' }} />
+                                  </div>
+                              </div>
                           </>
                        )}
 

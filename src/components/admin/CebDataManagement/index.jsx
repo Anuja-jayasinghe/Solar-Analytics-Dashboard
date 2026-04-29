@@ -29,6 +29,8 @@ const CebDataManagement = () => {
     meter_reading: "",
     units_exported: "",
     earnings: "",
+    account_number: "",
+    billing_month: "",
   });
   const [editingId, setEditingId] = useState(null);
   const [message, setMessage] = useState("");
@@ -289,6 +291,9 @@ const CebDataManagement = () => {
         meter_reading: parseFloat(form.meter_reading) || 0,
         units_exported: parseFloat(form.units_exported) || 0,
         earnings: parseFloat(form.earnings) || 0,
+        account_number: form.account_number || null,
+        billing_month: form.billing_month || null,
+        data_source: editingId ? undefined : 'manual_entry'
       };
 
       if (editingId) {
@@ -301,13 +306,16 @@ const CebDataManagement = () => {
         if (error) throw error;
         setMessage("✅ Record updated successfully.");
       } else {
-        // insert new
-        const { error } = await supabase.from("ceb_data").insert([recordData]);
+        // insert new with upsert check
+        const { error } = await supabase
+            .from("ceb_data")
+            .upsert([recordData], { onConflict: 'account_number, billing_month' });
+            
         if (error) throw error;
-        setMessage("✅ Record added successfully.");
+        setMessage("✅ Record added successfully (Synced).");
       }
 
-      setForm({ bill_date: "", meter_reading: "", units_exported: "", earnings: "" });
+      setForm({ bill_date: "", meter_reading: "", units_exported: "", earnings: "", account_number: "", billing_month: "" });
       setEditingId(null);
       fetchData();
     } catch (err) {
@@ -355,6 +363,8 @@ const CebDataManagement = () => {
       meter_reading: record.meter_reading,
       units_exported: record.units_exported,
       earnings: record.earnings,
+      account_number: record.account_number || "",
+      billing_month: record.billing_month || "",
     });
     setEditingId(record.id);
   };
