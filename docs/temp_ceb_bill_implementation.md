@@ -53,3 +53,27 @@ The implementation includes a collapsible **"Files In Storage"** section (`index
 
 ---
 *Note: The `ceb_data` table acts as the final source of truth for the dashboard charts, which are populated securely through either the manual form or an approved queue item.*
+
+---
+
+## 4. Planned Robustness & Data Integrity Enhancements
+
+To ensure the system remains highly robust, user-friendly, and free of "orphaned" records (e.g., a file sitting in storage when the database record is deleted), the following architectural improvements are planned:
+
+### A. Centralized Deletion & Cascading Cleanups
+- **Current Issue**: Deleting an upload from "Files in Storage" cleans up the storage bucket and extraction tables correctly. However, deleting a finalized record directly from the main CEB Table leaves the original PDF in storage.
+- **Solution - Centralized API**: Create a single `/api/ceb-bills/delete-record` endpoint. When a user deletes a record from the frontend table, this endpoint will securely execute a transaction that:
+  1. Deletes the row in `ceb_data`.
+  2. Deletes the row in `ceb_bill_extractions`.
+  3. Deletes the row in `ceb_bill_ingestions`.
+  4. Deletes the physical file from the `ceb_bills` storage bucket.
+- **Solution - Database Triggers**: Implement Postgres functions/triggers in Supabase that listen for `DELETE` operations on `ceb_data` and automatically remove associated ingestions and storage files.
+
+### B. User-Friendly Data Traceability (UI/UX)
+- **"View Original Bill"**: In the main CEB Data Table, add a link to view the original PDF for records created via the OCR pipeline, proving the data's source.
+- **Source Indicators**: Display a small icon next to records in the main table indicating if they were "Manually Entered" ✍️ or "Auto-Parsed" 🤖.
+- **Explicit Deletion Warnings**: When deleting an auto-parsed record, the confirmation dialog will explicitly warn: *"This will permanently delete the record AND the associated PDF bill from storage."*
+
+### C. Extraction Reliability & Validation
+- **Confidence Scores**: Update the parsing prompt to return a "confidence score". Low confidence parses (e.g., due to blurry images) will automatically flag as `needs_review`.
+- **Strict Math Validation**: Implement a backend check before queuing: `(Meter Reading Current - Meter Reading Previous) = Units Exported`. If the math does not align with the extracted text, the system will auto-flag the bill for human review.
