@@ -20,7 +20,8 @@ export default function CebTable({
   editForm = null,
   onEditFormChange = () => {},
   onSaveEdit = () => {},
-  onCancelEdit = () => {}
+  onCancelEdit = () => {},
+  onPreview = () => {}
 }) {
   const { selectedTheme, adminColorPresets } = useContext(AdminThemeContext);
   const theme = getAdminTheme(adminColorPresets[selectedTheme]);
@@ -217,15 +218,21 @@ export default function CebTable({
                                {row.data_source === 'manual_entry' ? 'MANUAL' : 'PARSED'}
                             </span>
                             {row.file_path && (
-                               <a 
-                                  href={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/ceb_bills/${row.file_path}`} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
+                               <button
+                                  onClick={() => onPreview && onPreview(row.file_path)}
                                   title="View Original Bill"
-                                  style={{ color: theme.colors.accent, textDecoration: 'none', fontSize: '14px' }}
+                                  style={{ 
+                                    color: theme.colors.accent, 
+                                    textDecoration: 'none', 
+                                    fontSize: '14px',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: 0
+                                  }}
                                >
                                   📄
-                               </a>
+                               </button>
                             )}
                          </div>
                       </td>
