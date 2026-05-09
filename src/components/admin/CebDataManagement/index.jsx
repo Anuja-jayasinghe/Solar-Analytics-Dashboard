@@ -327,8 +327,8 @@ const CebDataManagement = () => {
   };
 
   // ✅ Ask confirmation before delete
-  const requestDelete = (id) => {
-    setDeleteTarget(id);
+  const requestDelete = (record) => {
+    setDeleteTarget(record);
     setConfirmOpen(true);
   };
 
@@ -337,14 +337,31 @@ const CebDataManagement = () => {
     if (!deleteTarget) return;
     setLoading(true);
 
-    const { error } = await supabase.from("ceb_data").delete().eq("id", deleteTarget);
+    try {
+      const token = await fetchAuthToken();
+      const response = await fetch('/api/ceb-bills/delete-record', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ recordId: deleteTarget.id })
+      });
 
-    if (error) {
-      setMessage(`❌ Error deleting record: ${error.message}`);
-    } else {
-      setMessage("✅ Record deleted.");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete record.');
+      }
+
+      setMessage("✅ Record and associated files permanently deleted.");
       fetchData();
+      fetchStorageFiles();
+      setRefreshKey(prev => prev + 1);
+    } catch (err) {
+      setMessage(`❌ Error deleting record: ${err.message}`);
+      console.error("Delete error:", err);
     }
+
     setConfirmOpen(false);
     setDeleteTarget(null);
     setLoading(false);
@@ -646,7 +663,11 @@ const CebDataManagement = () => {
       <ConfirmDialog
         open={confirmOpen}
         title="Confirm Deletion"
-        message="This action cannot be undone. Are you sure you want to delete this CEB record?"
+        message={
+          deleteTarget?.data_source !== 'manual_entry'
+            ? "This action cannot be undone. Are you sure you want to delete this CEB record? This will permanently delete the record AND the associated PDF bill from storage."
+            : "This action cannot be undone. Are you sure you want to delete this manually entered CEB record?"
+        }
         confirmText="Delete"
         cancelText="Cancel"
         onConfirm={confirmDelete}

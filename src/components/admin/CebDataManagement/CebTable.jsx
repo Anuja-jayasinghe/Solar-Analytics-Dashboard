@@ -248,7 +248,7 @@ export default function CebTable({
                           [ EDIT ]
                         </button>
                         <button
-                          onClick={() => onDelete(row.id)}
+                          onClick={() => onDelete(row)}
                           disabled={loading}
                           style={{
                             background: 'transparent',

@@ -158,24 +158,21 @@ const VerificationQueue = ({ onApproveSuccess }) => {
      try {
        const ingestionId = item.ingestion_id || (typeof item.id === 'string' && item.id.includes('failed-') ? item.id.replace('failed-', '') : item.id);
        
-       if (typeof item.id === 'string' && item.id.startsWith('failed-')) {
-           const { error } = await supabase
-             .from('ceb_bill_ingestions')
-             .update({ status: 'rejected' })
-             .eq('id', ingestionId);
-           if (error) throw error;
-       } else {
-           const { error } = await supabase
-             .from('ceb_bill_extractions')
-             .update({ review_status: 'rejected' })
-             .eq('id', item.id);
-           if (error) throw error;
-           
-           await supabase
-             .from('ceb_bill_ingestions')
-             .update({ status: 'rejected' })
-             .eq('id', ingestionId);
+       const token = import.meta.env.VITE_CLERK_JWT_TEMPLATE_NAME 
+            ? await getToken({ template: import.meta.env.VITE_CLERK_JWT_TEMPLATE_NAME }) 
+            : await getToken();
+
+       const response = await fetch('/api/ceb-bills/delete', {
+           method: 'DELETE',
+           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+           body: JSON.stringify({ ingestionId })
+       });
+
+       if (!response.ok) {
+           throw new Error('Failed to permanently delete rejected file.');
        }
+       
+       if (onApproveSuccess) onApproveSuccess();
      } catch (err) {
        console.error("Reject error", err);
        fetchQueue(); // restore UI if it failed
