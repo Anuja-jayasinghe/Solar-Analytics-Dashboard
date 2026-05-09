@@ -47,7 +47,10 @@ export default async function handler(req, res) {
         // 3. Delete any extractions (if not handled by cascade)
         await supabase.from('ceb_bill_extractions').delete().eq('ingestion_id', ingestionId);
 
-        // 4. Delete the ingestion record
+        // 4. Delete the finalized record from ceb_data if it exists
+        await supabase.from('ceb_data').delete().eq('ingestion_id', ingestionId);
+
+        // 5. Delete the ingestion record
         const { error: deleteError } = await supabase
             .from('ceb_bill_ingestions')
             .delete()
@@ -55,7 +58,7 @@ export default async function handler(req, res) {
 
         if (deleteError) throw deleteError;
 
-        return res.status(200).json({ success: true, message: 'File and records completely deleted.' });
+        return res.status(200).json({ success: true, message: 'File and all associated records (including finalized data) completely deleted.' });
 
     } catch (err) {
         console.error('CEB Delete error:', err);
