@@ -60,7 +60,16 @@ The implementation includes a collapsible **"Files In Storage"** section (`index
 
 To ensure the system remains highly robust, user-friendly, and free of "orphaned" records (e.g., a file sitting in storage when the database record is deleted), the following architectural improvements are planned:
 
-### A. Centralized Deletion & Cascading Cleanups
+### A. Storage Optimization & Professional Cleanup
+- **Goal**: Maintain a clean, professional storage environment by ensuring that only fully vetted and approved files consume storage space.
+- **Implementation**: When a file is uploaded, it is held temporarily. If a file is **rejected** in the verification queue, or left unapproved for an extended period, it is automatically and permanently purged from the storage bucket. The storage bucket must only serve as an archive for `approved` CEB bills.
+
+### B. Intelligent Duplicate Prevention & Data Hierarchy
+- **Goal**: Prevent duplicate records for the same billing month, especially during the transition from historical manual data entry to the automated pipeline.
+- **Implementation**: The main `ceb_data` table enforces a strict unique constraint on `(account_number, billing_month)`. 
+- **Conflict Resolution (The Hierarchy)**: If an automated bill is parsed and approved for a month that already has a `manual_entry` record, the system will **automatically override** the manual entry with the verified parsed data. Automated, proven data always takes precedence over historical manual entries.
+
+### C. Centralized Deletion & Cascading Cleanups
 - **Current Issue**: Deleting an upload from "Files in Storage" cleans up the storage bucket and extraction tables correctly. However, deleting a finalized record directly from the main CEB Table leaves the original PDF in storage.
 - **Solution - Centralized API**: Create a single `/api/ceb-bills/delete-record` endpoint. When a user deletes a record from the frontend table, this endpoint will securely execute a transaction that:
   1. Deletes the row in `ceb_data`.
@@ -69,11 +78,11 @@ To ensure the system remains highly robust, user-friendly, and free of "orphaned
   4. Deletes the physical file from the `ceb_bills` storage bucket.
 - **Solution - Database Triggers**: Implement Postgres functions/triggers in Supabase that listen for `DELETE` operations on `ceb_data` and automatically remove associated ingestions and storage files.
 
-### B. User-Friendly Data Traceability (UI/UX)
+### D. User-Friendly Data Traceability (UI/UX)
 - **"View Original Bill"**: In the main CEB Data Table, add a link to view the original PDF for records created via the OCR pipeline, proving the data's source.
 - **Source Indicators**: Display a small icon next to records in the main table indicating if they were "Manually Entered" ✍️ or "Auto-Parsed" 🤖.
 - **Explicit Deletion Warnings**: When deleting an auto-parsed record, the confirmation dialog will explicitly warn: *"This will permanently delete the record AND the associated PDF bill from storage."*
 
-### C. Extraction Reliability & Validation
+### E. Extraction Reliability & Validation
 - **Confidence Scores**: Update the parsing prompt to return a "confidence score". Low confidence parses (e.g., due to blurry images) will automatically flag as `needs_review`.
 - **Strict Math Validation**: Implement a backend check before queuing: `(Meter Reading Current - Meter Reading Previous) = Units Exported`. If the math does not align with the extracted text, the system will auto-flag the bill for human review.
