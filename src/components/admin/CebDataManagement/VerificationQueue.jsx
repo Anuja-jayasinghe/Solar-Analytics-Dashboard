@@ -43,6 +43,9 @@ const VerificationQueue = ({ onApproveSuccess }) => {
   // Editable forms state keyed by extraction id
   const [editForms, setEditForms] = useState({});
 
+  // Bulk action state: null | { action, done, total }
+  const [bulkProcessing, setBulkProcessing] = useState(null);
+
   const fetchQueue = async () => {
     setLoading(true);
     try {
@@ -234,6 +237,57 @@ const VerificationQueue = ({ onApproveSuccess }) => {
     }
   };
 
+  // ── Bulk action helpers ───────────────────────────────────────────────────
+
+  const handleApproveAll = async () => {
+    const approvable = queue.filter(i => !isFailedItem(i));
+    if (!approvable.length) return;
+    setBulkProcessing({ action: 'Approving', done: 0, total: approvable.length });
+    setMessage(null);
+    let ok = 0, fail = 0;
+    for (let i = 0; i < approvable.length; i++) {
+      setBulkProcessing({ action: 'Approving', done: i, total: approvable.length });
+      try { await handleApprove(approvable[i]); ok++; }
+      catch { fail++; }
+    }
+    setBulkProcessing(null);
+    setMessage({ type: fail ? 'error' : 'success', text: `Bulk approve: ${ok} saved${fail ? `, ${fail} failed` : ''}.` });
+    fetchQueue();
+    if (onApproveSuccess) onApproveSuccess();
+  };
+
+  const handleRejectAll = async () => {
+    if (!queue.length) return;
+    if (!window.confirm(`Permanently delete all ${queue.length} queued bill(s)? This cannot be undone.`)) return;
+    setBulkProcessing({ action: 'Rejecting', done: 0, total: queue.length });
+    setMessage(null);
+    const snapshot = [...queue];
+    let ok = 0, fail = 0;
+    for (let i = 0; i < snapshot.length; i++) {
+      setBulkProcessing({ action: 'Rejecting', done: i, total: snapshot.length });
+      try { await handleReject(snapshot[i]); ok++; }
+      catch { fail++; }
+    }
+    setBulkProcessing(null);
+    setMessage({ type: fail ? 'error' : 'success', text: `Bulk reject: ${ok} removed${fail ? `, ${fail} failed` : ''}.` });
+  };
+
+  const handleReparseAll = async () => {
+    const reparsable = queue.filter(i => i.ingestion_id);
+    if (!reparsable.length) return;
+    setBulkProcessing({ action: 'Reparsing', done: 0, total: reparsable.length });
+    setMessage(null);
+    let ok = 0, fail = 0;
+    for (let i = 0; i < reparsable.length; i++) {
+      setBulkProcessing({ action: 'Reparsing', done: i, total: reparsable.length });
+      try { await handleRetryParse(reparsable[i].ingestion_id); ok++; }
+      catch { fail++; }
+    }
+    setBulkProcessing(null);
+    setMessage({ type: fail ? 'error' : 'success', text: `Bulk reparse: ${ok} done${fail ? `, ${fail} failed` : ''}.` });
+    fetchQueue();
+  };
+
   if (loading) return <div style={{ padding: '1rem', color: 'var(--text-secondary)' }}>Loading Review Queue...</div>;
 
   return (
@@ -259,6 +313,69 @@ const VerificationQueue = ({ onApproveSuccess }) => {
             </div>
          )}
 
+         {/* ── Bulk Action Toolbar ────────────────────────────────────────── */}
+         {queue.length > 1 && (
+           <div style={{
+             display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap',
+             padding: '0.6rem 0.75rem', marginBottom: '1rem',
+             background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)',
+             borderRadius: '8px'
+           }}>
+             <span style={{ fontSize: '11px', color: 'var(--text-secondary)', marginRight: '0.25rem', flexShrink: 0 }}>
+               Bulk actions ({queue.length}):
+             </span>
+
+             {/* Approve All */}
+             <button
+               onClick={handleApproveAll}
+               disabled={!!bulkProcessing || queue.filter(i => !isFailedItem(i)).length === 0}
+               style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(76,175,80,0.15)', color: '#4caf50', border: '1px solid rgba(76,175,80,0.4)', padding: '0.35rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', opacity: bulkProcessing ? 0.6 : 1 }}
+             >
+               ✅ Approve All
+               {bulkProcessing?.action === 'Approving' && (
+                 <span style={{ fontSize: '10px', fontWeight: 'normal', opacity: 0.8 }}>({bulkProcessing.done}/{bulkProcessing.total})</span>
+               )}
+             </button>
+
+             {/* Reparse All */}
+             <button
+               onClick={handleReparseAll}
+               disabled={!!bulkProcessing}
+               style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(33,150,243,0.12)', color: '#2196f3', border: '1px solid rgba(33,150,243,0.4)', padding: '0.35rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', opacity: bulkProcessing ? 0.6 : 1 }}
+             >
+               🔄 Reparse All
+               {bulkProcessing?.action === 'Reparsing' && (
+                 <span style={{ fontSize: '10px', fontWeight: 'normal', opacity: 0.8 }}>({bulkProcessing.done}/{bulkProcessing.total})</span>
+               )}
+             </button>
+
+             {/* Reject All */}
+             <button
+               onClick={handleRejectAll}
+               disabled={!!bulkProcessing}
+               style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(244,67,54,0.1)', color: '#f44336', border: '1px solid rgba(244,67,54,0.35)', padding: '0.35rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', opacity: bulkProcessing ? 0.6 : 1 }}
+             >
+               🗑 Reject All
+               {bulkProcessing?.action === 'Rejecting' && (
+                 <span style={{ fontSize: '10px', fontWeight: 'normal', opacity: 0.8 }}>({bulkProcessing.done}/{bulkProcessing.total})</span>
+               )}
+             </button>
+
+             {/* Live progress strip */}
+             {bulkProcessing && (
+               <div style={{ flex: 1, minWidth: '120px', height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
+                 <div style={{
+                   height: '100%',
+                   width: `${Math.round((bulkProcessing.done / bulkProcessing.total) * 100)}%`,
+                   background: bulkProcessing.action === 'Approving' ? '#4caf50' : bulkProcessing.action === 'Reparsing' ? '#2196f3' : '#f44336',
+                   borderRadius: '2px',
+                   transition: 'width 0.3s ease'
+                 }} />
+               </div>
+             )}
+           </div>
+         )}
+
          {queue.length === 0 ? (
             <p style={{ textAlign: 'center', color: 'var(--text-secondary)', margin: '2rem 0' }}>All clear! No bills waiting for review.</p>
          ) : (
@@ -268,6 +385,7 @@ const VerificationQueue = ({ onApproveSuccess }) => {
                  const ingPath = item.ceb_bill_ingestions?.file_path || 'Unknown File';
                  const fileName = ingPath.split('/').pop();
                  const formData = editForms[item.id] || {};
+                 const isItemBusy = processingId === item.id || !!bulkProcessing;
 
                  return (
                     <div key={item.id} style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem', background: 'rgba(0,0,0,0.2)' }}>
@@ -333,15 +451,15 @@ const VerificationQueue = ({ onApproveSuccess }) => {
 
                        {/* Action Buttons */}
                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
-                          <button title="Reject & Remove" onClick={() => handleReject(item)} disabled={processingId === item.id} style={{ background: 'transparent', color:'var(--text-secondary)', border:'1px solid var(--border-color)', padding:'0.4rem 1rem', borderRadius:'6px', cursor:'pointer' }}>
+                          <button title="Reject & Remove" onClick={() => handleReject(item)} disabled={isItemBusy} style={{ background: 'transparent', color:'var(--text-secondary)', border:'1px solid var(--border-color)', padding:'0.4rem 1rem', borderRadius:'6px', cursor:'pointer', opacity: isItemBusy ? 0.5 : 1 }}>
                              {processingId === item.id ? '...' : 'Reject'}
                           </button>
                           {!isFailed && (
                               <>
-                                  <button onClick={() => handleRetryParse(item.ingestion_id)} disabled={processingId === item.id} style={{ background: 'transparent', color:'#2196f3', border:'1px solid #2196f3', padding:'0.4rem 1rem', borderRadius:'6px', cursor:'pointer' }}>
+                                  <button onClick={() => handleRetryParse(item.ingestion_id)} disabled={isItemBusy} style={{ background: 'transparent', color:'#2196f3', border:'1px solid #2196f3', padding:'0.4rem 1rem', borderRadius:'6px', cursor:'pointer', opacity: isItemBusy ? 0.5 : 1 }}>
                                      Re-parse
                                   </button>
-                                  <button onClick={() => handleApprove(item)} disabled={processingId === item.id} style={{ background: '#4caf50', color:'white', border:'none', padding:'0.4rem 1.5rem', borderRadius:'6px', cursor:'pointer', fontWeight:'bold' }}>
+                                  <button onClick={() => handleApprove(item)} disabled={isItemBusy} style={{ background: '#4caf50', color:'white', border:'none', padding:'0.4rem 1.5rem', borderRadius:'6px', cursor:'pointer', fontWeight:'bold', opacity: isItemBusy ? 0.5 : 1 }}>
                                      {processingId === item.id ? 'Saving...' : 'Approve & Save'}
                                   </button>
                               </>
