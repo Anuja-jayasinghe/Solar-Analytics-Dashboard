@@ -17,13 +17,13 @@ const SystemTrends = () => {
   const [showXAxisLabels, setShowXAxisLabels] = useState(false);
 
   // Use DataContext for consistent billing period info
-  const { monthlyGenerationData, loading: contextLoading } = useData();
+  const { monthlyGenerationData, loading: contextLoading, isDemo } = useData();
 
   useEffect(() => {
     async function loadTrends() {
       setLoading(true);
       try {
-        const demoMode = (import.meta?.env?.VITE_DEMO_TEST_MODE ?? 'false') === 'true';
+        const demoMode = isDemo;
         if (demoMode) {
           // ... demo logic remains same ... 
           // (omitting for brevity, but in real replace I must include it or user logic will break. 

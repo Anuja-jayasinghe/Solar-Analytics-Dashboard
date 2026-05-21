@@ -604,7 +604,8 @@ export const DataProvider = ({ children }) => {
     refreshData,
     refreshAll,
     lastUpdate,
-    isStale
+    isStale,
+    isDemo: false
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

@@ -89,6 +89,7 @@ export const DemoDataProvider = ({ children }) => {
     refreshAll: () => { },
     lastUpdate: { live: Date.now(), charts: Date.now(), totalEarnings: Date.now(), monthlyGen: Date.now() },
     isStale: false,
+    isDemo: true,
   };
 
   return (

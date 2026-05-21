@@ -4,13 +4,13 @@ import { HousePlugIcon } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 
 const DailyTargetTracker = () => {
-  const { livePowerData, loading } = useData();
+  const { livePowerData, loading, isDemo } = useData();
   const [target, setTarget] = useState();
   const [waveOffset1, setWaveOffset1] = useState(0);
   const [waveOffset2, setWaveOffset2] = useState(0);
 
   useEffect(() => {
-    const demoMode = (import.meta?.env?.VITE_DEMO_TEST_MODE ?? 'false') === 'true';
+    const demoMode = isDemo;
     if (demoMode) {
       setTarget(40); // 40 kWh demo target (realistic for 6-8kW system)
       return;
