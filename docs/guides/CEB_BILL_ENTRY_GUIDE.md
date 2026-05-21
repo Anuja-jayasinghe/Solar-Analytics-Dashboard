@@ -1,33 +1,41 @@
-# [TEMP] CEB Bill Entry Process - Current Implementation
+# 🧾 CEB Bill Entry Process - Ingestion & OCR Guide
 
-> **Note:** This is a temporary document outlining the currently implemented processes for entering CEB billing data into the Solar Analytics Dashboard, based on the `CebDataManagement` components.
+This guide outlines the processes for entering CEB (Ceylon Electricity Board) billing data into the Solar Analytics Dashboard, leveraging both the direct **Manual Entry** form and the **Automated OCR Ingestion Pipeline**.
 
-There are two primary pathways for data entry: a direct **Manual Entry** method and an **Automated OCR Pipeline**.
+---
 
 ## 1. Automated OCR Pipeline (Primary Process)
 
-This is a three-step process designed to minimize manual data entry by extracting data directly from digital bills.
+The automated OCR ingestion pipeline is a three-step workflow designed to minimize manual typing by extracting data directly from digital bills.
+
+```mermaid
+graph TD
+    A[Upload Bill PDF/Image] --> B[Auto-parse via Document AI]
+    B --> C[Parsing Review Queue]
+    C -->|Verify & Edit| D[Approve & Save]
+    D --> E[Final ceb_data Table]
+```
 
 ### Step 1: File Upload
-- **Trigger**: User selects a CEB bill file (supports `.pdf`, `.png`, `.jpg` up to 10MB) and clicks "Upload Bill" (`index.jsx`).
-- **Action**: The file is securely uploaded to the backend storage via the `/api/ceb-bills/upload` endpoint.
-- **Processing**: Once stored, it receives an `ingestionId`. The system immediately triggers the programmatic parser (`/api/ceb-bills/extract`) to read the structured data from the document in the background.
-- **Validation**: If a duplicate bill is uploaded, the system detects it and warns the user instead of creating duplicate records.
+- **Trigger**: The admin selects a CEB bill file (supports `.pdf`, `.png`, `.jpg` up to 10MB) and clicks "Upload Bill" inside the Admin Dashboard.
+- **Action**: The file is securely uploaded to the private Supabase Storage bucket (`ceb_bills`) via the `/api/ceb-bills/upload` endpoint.
+- **Processing**: The file receives an `ingestionId`, and the system automatically triggers the background parser (`/api/ceb-bills/extract`).
+- **Validation**: If a duplicate bill is uploaded, the system detects the hash overlap and alerts the user rather than creating duplicate records.
 
 ### Step 2: Parsing Review Queue
 - **Location**: `VerificationQueue.jsx`
-- **Function**: Once parsed, the bill lands in the **Parsing Review Queue**.
-- **Data Extracted**: The system attempts to auto-extract critical fields: `Account Number`, `Billing Month`, `Period Start`, `Period End`, `Meter Reading`, `Units Exported`, and `Earnings`.
-- **Status Indicators**: The UI provides visual cues on the extraction quality:
-  - ✅ **LOOKS GOOD** (`auto_approved`): High confidence extraction.
-  - ⚠️ **NEEDS REVIEW** (`pending_review`): Parsed, but requires human verification (e.g., potential validation errors are highlighted in yellow).
+- **Function**: Once parsed, the bill lands in the **Parsing Review Queue** waiting for user verification.
+- **Fields Extracted**: The system extracts critical fields: `Account Number`, `Billing Month`, `Period Start`, `Period End`, `Meter Reading`, `Units Exported`, and `Earnings`.
+- **Status Indicators**:
+  - ✅ **LOOKS GOOD** (`auto_approved`): High-confidence extraction.
+  - ⚠️ **NEEDS REVIEW** (`pending_review`): Parsed, but requires human verification (e.g. potential validation errors or low extraction scores highlighted in yellow).
   - ❌ **PARSE FAILED**: Unable to read the document. Provides an option to "Retry Parsing".
 - **Interactivity**: The user can manually edit any of the extracted fields directly within the queue grid to correct any parser mistakes.
 
 ### Step 3: Approve & Save
-- **Action**: Once satisfied with the extracted numbers, the user clicks **"Approve & Save"**.
-- **Database Update**: This pushes the cleaned and verified data into the main `ceb_data` database table, securely logging it for dashboard charts. It uses an upsert mechanism based on `account_number` and `billing_month`.
-- **Completion**: The record's status in `ceb_bill_extractions` and `ceb_bill_ingestions` is updated to 'approved'. The bill is moved out of the queue and into the **"Verified History"** log at the bottom of the page.
+- **Action**: Once satisfied with the extracted values, the user clicks **"Approve & Save"**.
+- **Database Update**: This pushes the finalized data into the main `ceb_data` database table, securely logging it for dashboard charts. It uses an upsert mechanism based on `account_number` and `billing_month`.
+- **Completion**: The record's status in `ceb_bill_extractions` and `ceb_bill_ingestions` is updated to `'approved'`. The bill is moved out of the queue and into the **"Verified History"** log at the bottom of the page.
 
 ---
 
@@ -43,16 +51,13 @@ For scenarios where a digital file is unavailable or a quick reading needs to be
 
 ## 3. File Storage Management
 
-The implementation includes a collapsible **"Files In Storage"** section (`index.jsx`) for administrative oversight.
+The implementation includes a collapsible **"Files In Storage"** section for administrative oversight.
 
 - **Capabilities**:
   - View all files currently in backend storage.
   - Check processing statuses (`approved`, `pending_review`, `failed`).
   - Manually trigger a "Parse" action if a file becomes stuck.
   - Completely delete a file and its associated extractions from the system to start fresh.
-
----
-*Note: The `ceb_data` table acts as the final source of truth for the dashboard charts, which are populated securely through either the manual form or an approved queue item.*
 
 ---
 

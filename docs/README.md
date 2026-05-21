@@ -21,6 +21,9 @@ Essential guides for users, testers, and deployers:
   
 - **[Data Refresh & Caching Guide](./guides/DATA_REFRESH_AND_CACHING_GUIDE.md)**  
   Detailed documentation on caching strategy, polling intervals, SWR implementation, and API reference
+  
+- **[CEB Bill Entry Guide](./guides/CEB_BILL_ENTRY_GUIDE.md)**  
+  Detailed instructions for manual CEB data entry and automated OCR ingestion pipeline reviews
 
 ### 🛠️ Development Documentation (`/development`)
 
@@ -75,6 +78,7 @@ Historical documentation and completed implementation records:
 | Testing Guide | Guide | ✅ Active | Nov 19, 2025 |
 | Deployment Checklist | Guide | ✅ Active | Nov 19, 2025 |
 | Caching Guide | Guide | ✅ Active | Nov 19, 2025 |
+| CEB Bill Entry Guide | Guide | ✅ Active | May 21, 2026 |
 | Admin Improvements | Development | 🚧 Planning | Nov 19, 2025 |
 | CEB Bill Automation Plan | Development | 🚧 Proposed | Apr 21, 2026 |
 | Implementation Tracker | Archive | ✅ Completed | Nov 19, 2025 |
@@ -104,8 +108,8 @@ A: See [Changelog](../CHANGELOG.md) and [Implementation Tracker](./archive/IMPLE
 
 ## 📊 Documentation Stats
 
-- **Total Documents**: 10
-- **Active Guides**: 3
+- **Total Documents**: 11
+- **Active Guides**: 4
 - **Development Docs**: 2
 - **Archived Docs**: 4
 - **Root Docs**: 2 (README, CHANGELOG)
@@ -148,7 +152,8 @@ For questions or issues:
 ### Change Log
 - **Created:** November 17, 2025 - Initial documentation hub structure
 - **Updated:** November 19, 2025 - Updated all document timestamps, verified status indicators, added maintainer log
+- **Updated:** May 21, 2026 - Cleaned up backup/temporary files, promoted CEB Bill Entry to formal guides, updated settings and branding documentation
 
-**Documentation Hub Version:** 1.1  
-**Last Updated:** November 19, 2025  
+**Documentation Hub Version:** 1.2  
+**Last Updated:** May 21, 2026  
 **Maintained By:** Anuja Jayasinghe
