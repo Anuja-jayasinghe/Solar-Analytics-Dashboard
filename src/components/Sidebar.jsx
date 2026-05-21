@@ -268,6 +268,22 @@ function Sidebar({ onDevToolsToggle }) {
             <DevToolsIcon />
           </button>
         )}
+
+        <div style={{
+          marginTop: 'auto',
+          marginBottom: '1rem',
+          fontSize: '9px',
+          fontFamily: 'var(--font-mono, monospace)',
+          color: 'var(--text-secondary)',
+          opacity: 0.4,
+          cursor: 'default',
+          userSelect: 'none',
+          textAlign: 'center',
+          fontWeight: 'bold',
+          letterSpacing: '0.5px'
+        }} title="Solar Analytics Dashboard Release">
+          v2.0.0
+        </div>
       </div>
 
       {showAdminPopup && (
