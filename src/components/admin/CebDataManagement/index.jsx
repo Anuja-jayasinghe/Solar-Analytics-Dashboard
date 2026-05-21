@@ -19,7 +19,8 @@ const CebDataManagement = () => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedBillFiles, setSelectedBillFiles] = useState([]);
-  const [uploadResult, setUploadResult] = useState(null);
+  const [uploadResults, setUploadResults] = useState(null); // null = no batch yet; array = per-file results
+  const [uploadProgress, setUploadProgress] = useState(null); // { current, total, phase, fileName }
   const [storageFiles, setStorageFiles] = useState([]);
   const [isStorageCollapsed, setIsStorageCollapsed] = useState(true);
   const [filesLoading, setFilesLoading] = useState(false);
@@ -175,79 +176,120 @@ const CebDataManagement = () => {
 
   const handleBillUpload = async () => {
     if (!selectedBillFiles || selectedBillFiles.length === 0) {
-      setMessage("❌ Please choose at least one file to upload.");
+      setMessage('❌ Please choose at least one file to upload.');
       return;
     }
 
     setUploading(true);
-    setUploadResult(null);
-    setMessage("");
+    setUploadResults([]);      // show panel immediately — results grow live
+    setUploadProgress(null);
+    setMessage('');
+
+    const total = selectedBillFiles.length;
+
+    // Helper: append one result to the live list
+    const pushResult = (result) =>
+      setUploadResults(prev => [...(prev || []), result]);
 
     try {
-      const token = await fetchAuthToken();
-      if (!token) throw new Error("No auth token");
-
-      let successCount = 0;
-      let failCount = 0;
-      let duplicateCount = 0;
-
-      for (let i = 0; i < selectedBillFiles.length; i++) {
+      for (let i = 0; i < total; i++) {
         const file = selectedBillFiles[i];
-        
+
+        // ── Pre-flight: size check ───────────────────────────────────────────
         if (file.size > 10 * 1024 * 1024) {
-          console.warn(`File ${file.name} is too large.`);
-          failCount++;
+          pushResult({
+            fileName: file.name,
+            status: 'too_large',
+            message: `File is ${(file.size / 1024 / 1024).toFixed(1)} MB — exceeds the 10 MB limit.`
+          });
           continue;
         }
 
-        setMessage(`⏳ Uploading file ${i + 1} of ${selectedBillFiles.length}: ${file.name}...`);
+        // ── Re-fetch token every file (Clerk rotates tokens; stale token = 401) ──
+        setUploadProgress({ current: i + 1, total, phase: 'Uploading', fileName: file.name });
+        const token = await fetchAuthToken();
+        if (!token) {
+          pushResult({
+            fileName: file.name,
+            status: 'upload_failed',
+            message: 'Authentication expired — please refresh the page and try again.'
+          });
+          continue;
+        }
+
+        // ── Step 1: Upload ───────────────────────────────────────────────────
         const { ok, status, payload } = await uploadSingleFile(file, token);
 
         if (!ok) {
           if (status === 409) {
-            duplicateCount++;
+            pushResult({
+              fileName: file.name,
+              status: 'duplicate',
+              message: 'Already in system — not re-uploaded.',
+              ingestionId: payload.ingestionId,
+              existingStatus: payload.status
+            });
           } else {
-            failCount++;
+            pushResult({
+              fileName: file.name,
+              status: 'upload_failed',
+              message: payload.error || payload.details || `Upload failed (HTTP ${status})`
+            });
           }
           continue;
         }
 
-        // Trigger extraction immediately for this file
-        setMessage(`⏳ Extracting file ${i + 1} of ${selectedBillFiles.length}: ${file.name}...`);
+        // ── Step 2: Parse ────────────────────────────────────────────────────
+        setUploadProgress({ current: i + 1, total, phase: 'Parsing', fileName: file.name });
         try {
           const extRes = await fetch('/api/ceb-bills/extract', {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${token}`
-              },
-              body: JSON.stringify({ ingestionId: payload.ingestionId })
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ ingestionId: payload.ingestionId })
           });
-          if (!extRes.ok) throw new Error('Extraction failed');
-          successCount++;
+          const extData = await extRes.json().catch(() => ({}));
+
+          if (!extRes.ok) throw new Error(extData.error || `Parser returned HTTP ${extRes.status}`);
+
+          const reviewStatus = extData.extraction?.review_status;
+          const confidence   = extData.extraction?.confidence_score;
+          const valErrors    = extData.extraction?.validation_errors || [];
+          const isAutoOk     = reviewStatus === 'auto_approved';
+
+          pushResult({
+            fileName: file.name,
+            status: isAutoOk ? 'auto_approved' : 'needs_review',
+            message: isAutoOk
+              ? 'Parsed successfully — check the Review Queue to approve.'
+              : 'Parsed with warnings — review before approving.',
+            ingestionId: payload.ingestionId,
+            validationErrors: valErrors,
+            confidence
+          });
         } catch (extErr) {
-          console.warn(`Extraction failed for ${file.name}`);
-          failCount++;
+          pushResult({
+            fileName: file.name,
+            status: 'parse_failed',
+            message: extErr.message || 'Parser could not extract data. Use "Retry Parsing" from the queue.',
+            ingestionId: payload.ingestionId
+          });
         }
       }
 
       setSelectedBillFiles([]);
-      
-      let finalMessage = "";
-      if (successCount > 0) finalMessage += `✅ ${successCount} bill(s) processed successfully. `;
-      if (duplicateCount > 0) finalMessage += `⚠️ ${duplicateCount} duplicate(s) skipped. `;
-      if (failCount > 0) finalMessage += `❌ ${failCount} file(s) failed. `;
-      
-      setMessage(finalMessage || "No files were processed.");
+      setMessage('');
       fetchStorageFiles();
       setRefreshKey(prev => prev + 1);
     } catch (err) {
-      console.error("CEB bill upload error:", err);
+      console.error('CEB bill upload error:', err);
       setMessage(`❌ ${err.message}`);
     } finally {
       setUploading(false);
+      setUploadProgress(null);
     }
   };
+
+
 
   const [ingestionToDelete, setIngestionToDelete] = useState(null);
 
@@ -497,6 +539,124 @@ const CebDataManagement = () => {
             {(selectedBillFiles.reduce((acc, file) => acc + file.size, 0) / 1024 / 1024).toFixed(2)} MB total)
           </p>
         )}
+
+        {/* ── Batch Upload Results Panel — shows live during upload and after ── */}
+        {(uploading || (uploadResults && uploadResults.length > 0)) && (() => {
+          const STATUS_CONFIG = {
+            auto_approved: { icon: '✅', color: '#4caf50', label: 'Parsed & Ready' },
+            needs_review:  { icon: '⚠️', color: '#ff9800', label: 'Needs Review'  },
+            parse_failed:  { icon: '❌', color: '#f44336', label: 'Parse Failed'  },
+            duplicate:     { icon: '🔁', color: '#2196f3', label: 'Duplicate'     },
+            upload_failed: { icon: '❌', color: '#f44336', label: 'Upload Failed' },
+            too_large:     { icon: '⚠️', color: '#ff9800', label: 'Too Large'     }
+          };
+          const done       = uploadResults?.length || 0;
+          const processed  = uploadResults?.filter(r => ['auto_approved', 'needs_review'].includes(r.status)).length || 0;
+          const duplicates = uploadResults?.filter(r => r.status === 'duplicate').length || 0;
+          const failed     = uploadResults?.filter(r => ['upload_failed', 'parse_failed', 'too_large'].includes(r.status)).length || 0;
+          const pct        = uploadProgress ? Math.round(((uploadProgress.current - 1) / uploadProgress.total) * 100) : 100;
+
+          return (
+            <div style={{ marginTop: '1rem', border: `1px solid ${uploading ? 'var(--accent)' : 'var(--border-color)'}`, borderRadius: '8px', overflow: 'hidden', transition: 'border-color 0.3s' }}>
+
+              {/* ── Live progress bar (visible only while uploading) ── */}
+              {uploading && uploadProgress && (
+                <div style={{ padding: '0.7rem 1rem', background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '12px', color: 'var(--text-color)', fontWeight: '500' }}>
+                      ⏳ {uploadProgress.phase} file {uploadProgress.current} of {uploadProgress.total}
+                    </span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', maxWidth: '55%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>
+                      {uploadProgress.fileName}
+                    </span>
+                  </div>
+                  {/* Progress track */}
+                  <div style={{ height: '5px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${pct}%`,
+                      background: 'var(--accent)',
+                      borderRadius: '3px',
+                      transition: 'width 0.35s ease'
+                    }} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{done} of {uploadProgress.total} files settled</span>
+                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{pct}%</span>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Header: summary badges ── */}
+              <div style={{
+                background: 'rgba(255,255,255,0.03)', borderBottom: uploadResults?.length ? '1px solid var(--border-color)' : 'none',
+                padding: '0.6rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 'bold', color: 'var(--text-color)', fontSize: '13px' }}>
+                    {uploading ? '📥 Processing…' : '📋 Batch Results'}
+                    {uploadProgress && uploading && <span style={{ fontWeight: 'normal', color: 'var(--text-secondary)', marginLeft: '4px', fontSize: '11px' }}>({uploadProgress.total} files)</span>}
+                    {!uploading && uploadResults && <span style={{ fontWeight: 'normal', color: 'var(--text-secondary)', marginLeft: '4px', fontSize: '11px' }}>({uploadResults.length} file{uploadResults.length !== 1 ? 's' : ''})</span>}
+                  </span>
+                  {processed > 0 && <span style={{ fontSize: '11px', padding: '1px 7px', borderRadius: '4px', background: 'rgba(76,175,80,0.15)', color: '#4caf50', border: '1px solid rgba(76,175,80,0.3)' }}>{processed} processed</span>}
+                  {duplicates > 0 && <span style={{ fontSize: '11px', padding: '1px 7px', borderRadius: '4px', background: 'rgba(33,150,243,0.15)', color: '#2196f3', border: '1px solid rgba(33,150,243,0.3)' }}>{duplicates} duplicate</span>}
+                  {failed > 0 && <span style={{ fontSize: '11px', padding: '1px 7px', borderRadius: '4px', background: 'rgba(244,67,54,0.15)', color: '#f44336', border: '1px solid rgba(244,67,54,0.3)' }}>{failed} failed</span>}
+                </div>
+                {!uploading && (
+                  <button onClick={() => setUploadResults(null)} title="Dismiss" style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '20px', lineHeight: 1, padding: '0 4px' }}>×</button>
+                )}
+              </div>
+
+              {/* ── Per-file result rows (grow in real time) ── */}
+              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                {(uploadResults || []).map((result, i) => {
+                  const cfg = STATUS_CONFIG[result.status] || { icon: '❓', color: 'var(--text-secondary)', label: result.status };
+                  return (
+                    <div key={i} style={{
+                      padding: '0.5rem 1rem',
+                      borderBottom: '1px solid var(--border-color)',
+                      display: 'flex', alignItems: 'flex-start', gap: '0.6rem',
+                      background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.018)',
+                      animation: 'fadeInRow 0.25s ease'
+                    }}>
+                      <span style={{ fontSize: '14px', flexShrink: 0, marginTop: '2px' }}>{cfg.icon}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '12px', color: 'var(--text-color)', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '55%' }}>{result.fileName}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+                            {result.confidence != null && (
+                              <span style={{ fontSize: '10px', color: result.confidence >= 80 ? '#4caf50' : '#ff9800' }}>{result.confidence}% confidence</span>
+                            )}
+                            <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '3px', background: `${cfg.color}22`, color: cfg.color, border: `1px solid ${cfg.color}44`, fontWeight: 'bold' }}>{cfg.label}</span>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>{result.message}</div>
+                        {result.validationErrors?.length > 0 && (
+                          <div style={{ marginTop: '3px' }}>
+                            {result.validationErrors.map((err, ei) => <div key={ei} style={{ fontSize: '10px', color: '#ff9800', marginTop: '1px' }}>• {err}</div>)}
+                          </div>
+                        )}
+                        {result.status === 'duplicate' && result.existingStatus && (
+                          <div style={{ fontSize: '10px', color: '#2196f3', marginTop: '2px' }}>Existing record status: <strong>{result.existingStatus.replace(/_/g, ' ')}</strong></div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* ── Spinner row: shows while more files are still processing ── */}
+                {uploading && uploadProgress && (
+                  <div style={{ padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderTop: done > 0 ? '1px solid var(--border-color)' : 'none', opacity: 0.7 }}>
+                    <span style={{ fontSize: '14px', animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                      {uploadProgress.phase} <em>{uploadProgress.fileName}</em>…
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         <div style={{ marginTop: "1rem", borderTop: "1px solid var(--border-color)", paddingTop: "0.75rem" }}>
           <div 
