@@ -12,22 +12,39 @@ function validateExtraction(result, latestDbRecord, currentTariff = 37.00) {
     const errors = [];
     let status = "auto_approved";
 
+    // Track which critical fields were cleanly extracted for confidence scoring
+    const fieldChecks = {
+        account_number: !!result.account_number,
+        billing_month: !!result.billing_month,
+        billing_period_start: !!result.billing_period_start,
+        billing_period_end: !!result.billing_period_end,
+        meter_reading_current: result.meter_reading_current > 0,
+        meter_reading_previous: result.meter_reading_previous >= 0,
+        units_exported: result.units_exported > 0,
+        earnings: result.earnings > 0
+    };
+    const extractedCount = Object.values(fieldChecks).filter(Boolean).length;
+    let confidence_score = Math.round((extractedCount / Object.keys(fieldChecks).length) * 100);
+
     // 1. Sanity Checks
     if (!result.meter_reading_current || result.meter_reading_current <= 0) errors.push("Invalid current meter reading");
     if (!result.units_exported || result.units_exported < 0) errors.push("Invalid exported units");
     if (!result.earnings || result.earnings < 0) errors.push("Invalid earnings");
     if (!result.billing_month) errors.push("Missing billing month");
 
-    // 2. Proofing checks (from user script)
+    // 2. Proofing checks (math validation)
     const expectedEarnings = (result.units_exported * currentTariff).toFixed(2);
     const earningsDifference = Math.abs(parseFloat(expectedEarnings) - result.earnings);
     if (earningsDifference >= 1.00) { 
         errors.push(`Math mismatch: ${result.units_exported} units at Rs.${currentTariff} should be Rs.${expectedEarnings}, but extracted Rs.${result.earnings}`);
+        confidence_score = Math.max(0, confidence_score - 20); // Penalise confidence for math errors
     }
 
+    // 3. Meter delta check
     const calculatedUnits = result.meter_reading_current - result.meter_reading_previous;
-    if (calculatedUnits !== result.units_exported) { 
+    if (result.meter_reading_previous > 0 && calculatedUnits !== result.units_exported) { 
         errors.push(`Meter mismatch: Current (${result.meter_reading_current}) - Prev (${result.meter_reading_previous}) = ${calculatedUnits}, but extracted units = ${result.units_exported}`);
+        confidence_score = Math.max(0, confidence_score - 15);
     }
 
     if (result.billing_period_start && result.billing_period_end) {
@@ -43,6 +60,7 @@ function validateExtraction(result, latestDbRecord, currentTariff = 37.00) {
     return { 
         status, 
         validation_errors: errors,
+        confidence_score: Math.min(100, Math.max(0, confidence_score)),
         clean_data: result 
     };
 }
@@ -115,12 +133,13 @@ export default async function handler(req, res) {
     const arrayBuffer = await fileData.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
-    // 3. Parse PDF using pdf-parse v2.4.5 PDFParse class
+    // 3. Parse PDF using pdf-parse v2.4.5 class-based API
+    // PDFParse accepts { data: Buffer } and getText() returns a TextResult with .text
     const parser = new PDFParse({ data: buffer });
     const pdfData = await parser.getText();
     // Use raw text directly — v2.4.5 preserves real tabs as delimiters
     const text = pdfData.text;
-    parser.destroy();
+    await parser.destroy();
 
     // --- REGEX EXTRACTION ---
     // Account Number: "Electricity A/C No.: 4924089702"
@@ -211,6 +230,7 @@ export default async function handler(req, res) {
         earnings: extractedData.earnings,
         review_status: validationResult.status,
         validation_errors: validationResult.validation_errors,
+        confidence_score: validationResult.confidence_score,
         raw_ai_json: extractedData
     };
 
@@ -245,7 +265,6 @@ export default async function handler(req, res) {
       } catch (e) {
           console.error('Secondary crash updating status:', e);
       }
-      // parser.destroy() not needed with function-based API
       return res.status(500).json({ error: 'Extraction failed internally.', details: err?.message });
   }
 }

@@ -18,7 +18,7 @@ const CebDataManagement = () => {
   const [allData, setAllData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [selectedBillFile, setSelectedBillFile] = useState(null);
+  const [selectedBillFiles, setSelectedBillFiles] = useState([]);
   const [uploadResult, setUploadResult] = useState(null);
   const [storageFiles, setStorageFiles] = useState([]);
   const [isStorageCollapsed, setIsStorageCollapsed] = useState(true);
@@ -174,13 +174,8 @@ const CebDataManagement = () => {
   };
 
   const handleBillUpload = async () => {
-    if (!selectedBillFile) {
-      setMessage("❌ Please choose a file to upload.");
-      return;
-    }
-
-    if (selectedBillFile.size > 10 * 1024 * 1024) {
-      setMessage("❌ File is too large. Maximum supported size is 10MB.");
+    if (!selectedBillFiles || selectedBillFiles.length === 0) {
+      setMessage("❌ Please choose at least one file to upload.");
       return;
     }
 
@@ -192,38 +187,58 @@ const CebDataManagement = () => {
       const token = await fetchAuthToken();
       if (!token) throw new Error("No auth token");
 
-      const { ok, status, payload } = await uploadSingleFile(selectedBillFile, token);
+      let successCount = 0;
+      let failCount = 0;
+      let duplicateCount = 0;
 
-      if (!ok) {
-        if (status === 409) {
-          setMessage(`⚠️ Duplicate bill detected. Existing ingestion ID: ${payload.ingestionId || "Unknown"}`);
-          setUploadResult(payload);
-          fetchStorageFiles();
-          return;
+      for (let i = 0; i < selectedBillFiles.length; i++) {
+        const file = selectedBillFiles[i];
+        
+        if (file.size > 10 * 1024 * 1024) {
+          console.warn(`File ${file.name} is too large.`);
+          failCount++;
+          continue;
         }
-        throw new Error(payload.details || payload.error || `Upload failed with status ${status}`);
+
+        setMessage(`⏳ Uploading file ${i + 1} of ${selectedBillFiles.length}: ${file.name}...`);
+        const { ok, status, payload } = await uploadSingleFile(file, token);
+
+        if (!ok) {
+          if (status === 409) {
+            duplicateCount++;
+          } else {
+            failCount++;
+          }
+          continue;
+        }
+
+        // Trigger extraction immediately for this file
+        setMessage(`⏳ Extracting file ${i + 1} of ${selectedBillFiles.length}: ${file.name}...`);
+        try {
+          const extRes = await fetch('/api/ceb-bills/extract', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({ ingestionId: payload.ingestionId })
+          });
+          if (!extRes.ok) throw new Error('Extraction failed');
+          successCount++;
+        } catch (extErr) {
+          console.warn(`Extraction failed for ${file.name}`);
+          failCount++;
+        }
       }
 
-      setUploadResult(payload);
-      setSelectedBillFile(null);
-      setMessage("⏳ Bill uploaded! Extracting data using programmatic parser...");
+      setSelectedBillFiles([]);
       
-      try {
-        const extRes = await fetch('/api/ceb-bills/extract', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify({ ingestionId: payload.ingestionId })
-        });
-        const extData = await extRes.json();
-        if (!extRes.ok) throw new Error(extData.error || 'Failed to extract.');
-        setMessage("✅ Bill uploaded and extracted successfully! Please review it in the Parsing Review Queue.");
-      } catch (extErr) {
-        setMessage(`⚠️ Bill uploaded, but parsing failed: ${extErr.message}. You can retry in the Parsing Review Queue.`);
-      }
-
+      let finalMessage = "";
+      if (successCount > 0) finalMessage += `✅ ${successCount} bill(s) processed successfully. `;
+      if (duplicateCount > 0) finalMessage += `⚠️ ${duplicateCount} duplicate(s) skipped. `;
+      if (failCount > 0) finalMessage += `❌ ${failCount} file(s) failed. `;
+      
+      setMessage(finalMessage || "No files were processed.");
       fetchStorageFiles();
       setRefreshKey(prev => prev + 1);
     } catch (err) {
@@ -453,37 +468,33 @@ const CebDataManagement = () => {
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
           <input
             type="file"
+            multiple
             accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
-            onChange={(e) => setSelectedBillFile(e.target.files?.[0] || null)}
+            onChange={(e) => setSelectedBillFiles(Array.from(e.target.files || []))}
             disabled={uploading}
           />
           <button
             type="button"
             onClick={handleBillUpload}
-            disabled={uploading || !selectedBillFile}
+            disabled={uploading || selectedBillFiles.length === 0}
             style={{
               background: "var(--accent)",
               color: "white",
               border: "none",
               borderRadius: "8px",
               padding: "0.6rem 1rem",
-              cursor: uploading || !selectedBillFile ? "not-allowed" : "pointer",
-              opacity: uploading || !selectedBillFile ? 0.7 : 1
+              cursor: uploading || selectedBillFiles.length === 0 ? "not-allowed" : "pointer",
+              opacity: uploading || selectedBillFiles.length === 0 ? 0.7 : 1
             }}
           >
-            {uploading ? "Uploading..." : "Upload Bill"}
+            {uploading ? "Uploading..." : `Upload ${selectedBillFiles.length > 1 ? 'Files' : 'Bill'}`}
           </button>
         </div>
 
-        {selectedBillFile && (
+        {selectedBillFiles.length > 0 && (
           <p style={{ margin: "0.75rem 0 0 0", fontSize: "13px", color: "var(--text-secondary)" }}>
-            Selected: <strong>{selectedBillFile.name}</strong> ({(selectedBillFile.size / 1024 / 1024).toFixed(2)} MB)
-          </p>
-        )}
-
-        {uploadResult?.ingestionId && (
-          <p style={{ margin: "0.75rem 0 0 0", fontSize: "13px", color: "var(--text-secondary)" }}>
-            Ingestion ID: <strong>{uploadResult.ingestionId}</strong>
+            Selected: <strong>{selectedBillFiles.length} file(s)</strong> (
+            {(selectedBillFiles.reduce((acc, file) => acc + file.size, 0) / 1024 / 1024).toFixed(2)} MB total)
           </p>
         )}
 

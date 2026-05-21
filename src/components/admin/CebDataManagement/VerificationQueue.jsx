@@ -2,6 +2,35 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { useAuth } from '@clerk/clerk-react';
 
+// Helper: determine if a queue item represents a failed parse
+const isFailedItem = (item) => {
+  const failedStatuses = ['failed_api_limit', 'failed_extraction'];
+  return failedStatuses.includes(item.review_status);
+};
+
+// Confidence score bar component
+const ConfidenceBar = ({ score }) => {
+  if (score === null || score === undefined) return null;
+  const color = score >= 80 ? '#4caf50' : score >= 50 ? '#ff9800' : '#f44336';
+  return (
+    <div style={{ marginBottom: '0.75rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+        <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Extraction Confidence</span>
+        <span style={{ fontSize: '11px', fontWeight: 'bold', color }}>{score}%</span>
+      </div>
+      <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+        <div style={{
+          height: '100%',
+          width: `${score}%`,
+          background: color,
+          borderRadius: '2px',
+          transition: 'width 0.5s ease'
+        }} />
+      </div>
+    </div>
+  );
+};
+
 const VerificationQueue = ({ onApproveSuccess }) => {
   const { getToken } = useAuth();
   const [queue, setQueue] = useState([]);
@@ -235,7 +264,7 @@ const VerificationQueue = ({ onApproveSuccess }) => {
          ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                {queue.map((item) => {
-                 const isFailed = item.id.startsWith('failed-');
+                 const isFailed = isFailedItem(item);
                  const ingPath = item.ceb_bill_ingestions?.file_path || 'Unknown File';
                  const fileName = ingPath.split('/').pop();
                  const formData = editForms[item.id] || {};
@@ -257,7 +286,10 @@ const VerificationQueue = ({ onApproveSuccess }) => {
                              <button onClick={() => handleRetryParse(item.ingestion_id)} style={{ marginTop: '0.5rem', background: '#f44336', color: 'white', border: 'none', padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer' }}>Retry Parsing</button>
                           </div>
                        ) : (
-                          <>
+                           <>
+                              {/* Confidence Bar */}
+                              <ConfidenceBar score={item.confidence_score} />
+
                              {/* Validation Warnings */}
                              {item.validation_errors && item.validation_errors.length > 0 && (
                                 <div style={{ background: 'rgba(255, 152, 0, 0.1)', borderLeft: '3px solid #ff9800', padding: '0.5rem 0.75rem', marginBottom: '1rem', fontSize: '13px', color: '#ff9800' }}>
@@ -342,8 +374,18 @@ const VerificationQueue = ({ onApproveSuccess }) => {
                               <div>
                                  <strong style={{ color: '#4caf50' }}>{item.billing_month}</strong>
                                  <span style={{ marginLeft: '1rem', fontSize: '12px', color: 'var(--text-secondary)' }}>{item.units_exported} Units | Rs. {item.earnings}</span>
+                                 {item.confidence_score !== null && item.confidence_score !== undefined && (
+                                    <span style={{ marginLeft: '0.75rem', fontSize: '10px', padding: '1px 5px', borderRadius: '3px', background: item.confidence_score >= 80 ? 'rgba(76,175,80,0.2)' : 'rgba(255,152,0,0.2)', color: item.confidence_score >= 80 ? '#4caf50' : '#ff9800', fontWeight: 'bold' }}>
+                                      {item.confidence_score}% confidence
+                                    </span>
+                                  )}
                               </div>
-                              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Approved: {new Date(item.updated_at).toLocaleDateString()}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                  {item.ceb_bill_ingestions?.file_path && (
+                                    <span title="Original bill available" style={{ fontSize: '16px', cursor: 'default' }}>📄</span>
+                                  )}
+                                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Approved: {new Date(item.updated_at).toLocaleDateString()}</div>
+                              </div>
                            </div>
                         ))}
                      </div>

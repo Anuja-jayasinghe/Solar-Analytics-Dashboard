@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         const { recordId } = req.body;
         if (!recordId) return res.status(400).json({ error: 'Missing recordId' });
 
-        // 1. Fetch the ceb_data record to get ingestion_id
+        // 1. Fetch the ceb_data record to get ingestion_id + file_path for storage cleanup
         const { data: record, error: fetchError } = await supabase
             .from('ceb_data')
             .select('ingestion_id')
@@ -33,7 +33,20 @@ export default async function handler(req, res) {
 
         const ingestionId = record.ingestion_id;
 
-        // 2. Delete the record from ceb_data
+        // 2. Pre-fetch the file path BEFORE deletion (DB trigger will cascade-delete ingestion row)
+        let filePath = null;
+        if (ingestionId) {
+            const { data: ingestion } = await supabase
+                .from('ceb_bill_ingestions')
+                .select('file_path')
+                .eq('id', ingestionId)
+                .single();
+            filePath = ingestion?.file_path || null;
+        }
+
+        // 3. Delete the record from ceb_data
+        // NOTE: A DB trigger (trg_cascade_delete_ceb_data) will automatically
+        //       cascade-delete the associated ceb_bill_extractions and ceb_bill_ingestions rows.
         const { error: deleteRecordError } = await supabase
             .from('ceb_data')
             .delete()
@@ -41,28 +54,17 @@ export default async function handler(req, res) {
 
         if (deleteRecordError) throw deleteRecordError;
 
-        // 3. If there is an associated ingestion, cascade delete it
-        if (ingestionId) {
-            // Get file path
-            const { data: ingestion } = await supabase
-                .from('ceb_bill_ingestions')
-                .select('file_path')
-                .eq('id', ingestionId)
-                .single();
-
-            // Delete physical file
-            if (ingestion && ingestion.file_path) {
-                await supabase
-                    .storage
-                    .from(BUCKET)
-                    .remove([ingestion.file_path]);
+        // 4. Delete physical file from storage (must be done in app layer, trigger can't reach Storage API)
+        if (filePath) {
+            const { error: storageError } = await supabase
+                .storage
+                .from(BUCKET)
+                .remove([filePath]);
+            
+            if (storageError) {
+                // Log but don't fail — DB records are already cleaned up
+                console.warn('Storage file removal failed (non-fatal):', storageError.message);
             }
-
-            // Delete extractions
-            await supabase.from('ceb_bill_extractions').delete().eq('ingestion_id', ingestionId);
-
-            // Delete ingestion record
-            await supabase.from('ceb_bill_ingestions').delete().eq('id', ingestionId);
         }
 
         return res.status(200).json({ success: true, message: 'Record and associated files completely deleted.' });
@@ -72,3 +74,4 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Internal server error during deletion.', details: err.message });
     }
 }
+
