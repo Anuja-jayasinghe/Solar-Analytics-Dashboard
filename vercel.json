@@ -1,5 +1,9 @@
 {
   "rewrites": [
+    {
+      "source": "/api/admin/users",
+      "destination": "/api/admin/users/[userId]"
+    },
     { 
       "source": "/((?!api).*)", 
       "destination": "/index.html" 
