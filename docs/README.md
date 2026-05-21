@@ -29,6 +29,9 @@ Active development notes and future enhancements:
 - **[Admin Improvement Notes](./development/ADMIN_IMPROVEMENT_NOTES.md)**  
   Planned improvements for admin features including authentication, authorization, MFA, audit logging, and security enhancements
 
+- **[CEB Bill Automation Implementation Plan](./development/CEB_BILL_AUTOMATION_IMPLEMENTATION_PLAN.md)**
+  Detailed phased roadmap for OCR-based bill extraction and email-driven bill ingestion with verification loop
+
 ### 📦 Archive (`/archive`)
 
 Historical documentation and completed implementation records:
@@ -55,8 +58,9 @@ Historical documentation and completed implementation records:
 
 ### For Developers
 1. Review [Admin Improvement Notes](./development/ADMIN_IMPROVEMENT_NOTES.md) for planned features
-2. Check [Implementation Tracker](./archive/IMPLEMENTATION_TRACKER.md) to understand completed phases
-3. Read [Data Fetching Audit](./archive/DATA_FETCHING_AUDIT_REPORT.md) for architecture insights
+2. Read [CEB Bill Automation Implementation Plan](./development/CEB_BILL_AUTOMATION_IMPLEMENTATION_PLAN.md) for the OCR and email automation roadmap
+3. Check [Implementation Tracker](./archive/IMPLEMENTATION_TRACKER.md) to understand completed phases
+4. Read [Data Fetching Audit](./archive/DATA_FETCHING_AUDIT_REPORT.md) for architecture insights
 
 ### For Deployment
 1. Complete the [Deployment Checklist](./guides/DEPLOYMENT_CHECKLIST.md)
@@ -72,8 +76,11 @@ Historical documentation and completed implementation records:
 | Deployment Checklist | Guide | ✅ Active | Nov 19, 2025 |
 | Caching Guide | Guide | ✅ Active | Nov 19, 2025 |
 | Admin Improvements | Development | 🚧 Planning | Nov 19, 2025 |
+| CEB Bill Automation Plan | Development | 🚧 Proposed | Apr 21, 2026 |
 | Implementation Tracker | Archive | ✅ Completed | Nov 19, 2025 |
-| Audit Report | Archive | 📦 Historical | Nov 19, 2025 |## 🔍 Finding Information
+| Audit Report | Archive | 📦 Historical | Nov 19, 2025 |
+
+## 🔍 Finding Information
 
 ### Common Questions
 
@@ -97,9 +104,9 @@ A: See [Changelog](../CHANGELOG.md) and [Implementation Tracker](./archive/IMPLE
 
 ## 📊 Documentation Stats
 
-- **Total Documents**: 9
+- **Total Documents**: 10
 - **Active Guides**: 3
-- **Development Docs**: 1
+- **Development Docs**: 2
 - **Archived Docs**: 4
 - **Root Docs**: 2 (README, CHANGELOG)
 

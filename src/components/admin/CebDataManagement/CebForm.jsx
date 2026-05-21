@@ -7,7 +7,7 @@ import { getAdminTheme } from '../adminTheme';
  * Dedicated purely to NEW_RECORD_ENTRY to maintain direct DB editing feel
  */
 export default function CebForm({
-  form = { bill_date: '', meter_reading: '', units_exported: '', earnings: '' },
+  form = { bill_date: '', meter_reading: '', units_exported: '', earnings: '', account_number: '', billing_month: '' },
   onFormChange = () => {},
   onSubmit = () => {},
   loading = false
@@ -73,7 +73,32 @@ export default function CebForm({
       <input
         type="date"
         value={form.bill_date}
-        onChange={(e) => onFormChange({ ...form, bill_date: e.target.value })}
+        onChange={(e) => {
+           const date = e.target.value;
+           let derivedMonth = form.billing_month;
+           if (date && !form.billing_month) {
+              const d = new Date(date);
+              const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+              derivedMonth = `${d.getFullYear()} ${months[d.getMonth()]}`;
+           }
+           onFormChange({ ...form, bill_date: date, billing_month: derivedMonth });
+        }}
+        required
+        style={inputStyle}
+      />
+      <input
+        type="text"
+        placeholder="ACCOUNT_NUMBER"
+        value={form.account_number}
+        onChange={(e) => onFormChange({ ...form, account_number: e.target.value })}
+        required
+        style={inputStyle}
+      />
+      <input
+        type="text"
+        placeholder="BILLING_MONTH (YYYY MMM)"
+        value={form.billing_month}
+        onChange={(e) => onFormChange({ ...form, billing_month: e.target.value })}
         required
         style={inputStyle}
       />

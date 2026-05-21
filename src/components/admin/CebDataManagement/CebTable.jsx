@@ -20,7 +20,8 @@ export default function CebTable({
   editForm = null,
   onEditFormChange = () => {},
   onSaveEdit = () => {},
-  onCancelEdit = () => {}
+  onCancelEdit = () => {},
+  onPreview = () => {}
 }) {
   const { selectedTheme, adminColorPresets } = useContext(AdminThemeContext);
   const theme = getAdminTheme(adminColorPresets[selectedTheme]);
@@ -100,6 +101,7 @@ export default function CebTable({
               <th style={headerStyle}>METER_VAL</th>
               <th style={headerStyle}>EXPORT_UNIT</th>
               <th style={headerStyle}>YIELD_LKR</th>
+              <th style={headerStyle}>SRC_TYPE</th>
               <th style={headerStyle}>OP_CMDS</th>
             </tr>
           </thead>
@@ -153,6 +155,9 @@ export default function CebTable({
                           style={{ ...inputStyle, color: theme.colors.success }}
                         />
                       </td>
+                      <td style={cellStyle}>
+                         <div style={{ fontSize: '10px', color: theme.colors.textMuted }}>FIXED_SOURCE</div>
+                      </td>
                       <td style={{ ...cellStyle, display: 'flex', gap: '0.6rem' }}>
                         <button
                           onClick={onSaveEdit}
@@ -200,6 +205,37 @@ export default function CebTable({
                       <td style={{ ...cellStyle, color: theme.colors.success }}>
                         {row.earnings ? `LKR ${row.earnings.toLocaleString()}` : 'LKR 00.00'}
                       </td>
+                      <td style={cellStyle}>
+                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ 
+                               fontSize: '9px', 
+                               padding: '2px 4px', 
+                               background: row.data_source === 'manual_entry' ? 'rgba(255,255,255,0.05)' : `${theme.colors.accent}20`,
+                               color: row.data_source === 'manual_entry' ? theme.colors.textMuted : theme.colors.accent,
+                               border: `1px solid ${row.data_source === 'manual_entry' ? theme.colors.border : theme.colors.accent}40`,
+                               borderRadius: '2px'
+                            }}>
+                               {row.data_source === 'manual_entry' ? 'MANUAL' : 'PARSED'}
+                            </span>
+                            {row.file_path && (
+                               <button
+                                  onClick={() => onPreview && onPreview(row.file_path)}
+                                  title="View Original Bill"
+                                  style={{ 
+                                    color: theme.colors.accent, 
+                                    textDecoration: 'none', 
+                                    fontSize: '14px',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: 0
+                                  }}
+                               >
+                                  📄
+                               </button>
+                            )}
+                         </div>
+                      </td>
                       <td style={{ ...cellStyle, display: 'flex', gap: '0.6rem' }}>
                         <button
                           onClick={() => onEdit(row)}
@@ -219,7 +255,7 @@ export default function CebTable({
                           [ EDIT ]
                         </button>
                         <button
-                          onClick={() => onDelete(row.id)}
+                          onClick={() => onDelete(row)}
                           disabled={loading}
                           style={{
                             background: 'transparent',
