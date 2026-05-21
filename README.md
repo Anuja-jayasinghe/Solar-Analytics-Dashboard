@@ -9,7 +9,7 @@
 &nbsp;&nbsp;&nbsp;&nbsp;[![GitHub](https://img.shields.io/badge/Solar--Analytics--Dashboard-100000?style=flat&logo=github&logoColor=white)](https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard)
 
 ### 📊 **Badges:**
-![Version](https://img.shields.io/badge/version-2.0.0-blue)
+![Version](https://img.shields.io/badge/version-2.1.0-blue)
 ![React](https://img.shields.io/badge/react-19.1.1-blue)
 ![Vite](https://img.shields.io/badge/vite-7.1.7-purple)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -57,6 +57,7 @@ Solar Analytics Dashboard was born out of the need to efficiently monitor solar 
 * 📅 **Billing Period Alignment** for accurate tracking
 * 🛡️ **Error Resilience** with circuit breaker pattern
 * 💾 **Dual-layer Cache** (Memory + LocalStorage)
+* ⚙️ **Unified Settings Sync** - Reactively synced daily targets via data context
 * ⚙️ **Admin Panel** for CEB data management
 * 📱 **Responsive Design** for all devices
 
@@ -127,6 +128,17 @@ Retryable? → Yes → Schedule Retry (exponential backoff)
      ↓                    ↓
 Show Error Badge    ErrorBanner (>5min outage)
 ```
+
+### ⚙️ Settings & Daily Target Flow
+
+System settings (such as the daily generation target `dailyGenerationTarget`) are managed dynamically:
+1. **Supabase Database** holds the source-of-truth configuration settings.
+2. **DataContext (`DataContext.jsx`)** fetches settings on initialization and handles caching/refetching.
+3. **Reactive Synchronization**: Sub-components like `DailyTargetTracker.jsx` consume `dailyGenerationTarget` reactively from context. Any updates in settings are immediately reflected across the entire dashboard without manual page refreshes.
+
+### 🎨 Polished Brand Presentation
+- The main header features a sleek double-orange gradient brand name (`SolarEdge`) styled in high-contrast text.
+- An online status visual is integrated with a vibrant pulsing green breathing status indicator, showcasing premium layout aesthetics and dynamic state reflection.
 
 ---
 
@@ -239,6 +251,7 @@ $$ LANGUAGE plpgsql;
 For comprehensive guides and development documentation, visit the **[Documentation Hub](./docs/README.md)**
 
 ### Quick Links:
+* **[CEB Bill Entry Guide](./docs/guides/CEB_BILL_ENTRY_GUIDE.md)** - Manual and OCR Ingestion
 * **[Testing Guide](./docs/guides/TESTING_GUIDE.md)** - Test procedures and checklists
 * **[Deployment Checklist](./docs/guides/DEPLOYMENT_CHECKLIST.md)** - Production deployment
 * **[Caching Guide](./docs/guides/DATA_REFRESH_AND_CACHING_GUIDE.md)** - Cache strategy
@@ -279,7 +292,8 @@ This project is licensed under the MIT License — see the LICENSE file for more
 ### Change Log
 - **Created:** November 17, 2025 - Initial v2.0.0 documentation
 - **Updated:** November 19, 2025 - Corrected dependency versions (React 19.1.1, Vite 7.1.7, Chakra UI 3.29.0, Recharts 3.3.0), added Chakra UI to tech stack, added maintainer log
+- **Updated:** May 21, 2026 - Documented unified settings reactive flow, premium brand header with breathing green online pulse indicator, and bumped version to v2.1.0
 
-**Last Updated:** November 19, 2025  
-**Version:** 2.0.0  
+**Last Updated:** May 21, 2026  
+**Version:** 2.1.0  
 **Status:** Production Ready ✅ 
