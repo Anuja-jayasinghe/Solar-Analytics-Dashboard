@@ -1,34 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useData } from "../../hooks/useData";
 import { HousePlugIcon } from "lucide-react";
-import { supabase } from "../../lib/supabaseClient";
 
 const DailyTargetTracker = () => {
-  const { livePowerData, loading, isDemo } = useData();
-  const [target, setTarget] = useState();
+  const { livePowerData, loading, isDemo, dailyGenerationTarget } = useData();
   const [waveOffset1, setWaveOffset1] = useState(0);
   const [waveOffset2, setWaveOffset2] = useState(0);
 
-  useEffect(() => {
-    const demoMode = isDemo;
-    if (demoMode) {
-      setTarget(40); // 40 kWh demo target (realistic for 6-8kW system)
-      return;
-    }
-    const fetchTarget = async () => {
-      try {
-        const { data: setting } = await supabase
-          .from("system_settings")
-          .select("setting_value")
-          .eq("setting_name", "daily_generation_target")
-          .single();
-        if (setting) setTarget(parseFloat(setting.setting_value));
-      } catch (err) {
-        console.error("Error fetching daily target:", err);
-      }
-    };
-    fetchTarget();
-  }, []);
+  const target = dailyGenerationTarget || (isDemo ? 40 : 150);
 
   // Animate waves continuously
   useEffect(() => {

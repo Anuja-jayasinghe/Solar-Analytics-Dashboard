@@ -18,6 +18,7 @@ export const DataProvider = ({ children }) => {
   const [inverterPotentialValue, setInverterPotentialValue] = useState({ total: 0 });
   const [environmentalImpact, setEnvironmentalImpact] = useState({ co2Avoided: 0, treesPlanted: 0 }); // New state
   const [gridCapacity, setGridCapacity] = useState(40);
+  const [dailyGenerationTarget, setDailyGenerationTarget] = useState(150);
 
   // Filter states
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -142,6 +143,7 @@ export const DataProvider = ({ children }) => {
           setLivePowerData(cached.liveData);
           setInverterPotentialValue(cached.inverterPotentialValue);
           setEnvironmentalImpact(cached.environmentalImpact || { co2Avoided: 0, treesPlanted: 0 });
+          setDailyGenerationTarget(cached.dailyGenerationTarget || 150);
         }
         else if (key === 'totalEarnings') setTotalEarningsData(cached);
         else if (key === 'monthlyGen') setMonthlyGenerationData(cached);
@@ -220,6 +222,32 @@ export const DataProvider = ({ children }) => {
           setGridCapacity(40);
         }
 
+        // Fetch daily generation target from settings; fall back to 150 kWh
+        let fetchedTarget = 150;
+        try {
+          const { data: targetData, error: targetError } = await supabase
+            .from('system_settings')
+            .select('setting_value')
+            .eq('setting_name', 'daily_generation_target')
+            .limit(1);
+          if (targetError) {
+            console.warn('[DataContext] Supabase error fetching daily_generation_target:', {
+              message: targetError.message,
+              code: targetError.code,
+              status: targetError.status
+            });
+          }
+          if (targetData?.[0]) {
+            const targetVal = parseFloat(targetData[0].setting_value);
+            if (Number.isFinite(targetVal)) {
+              fetchedTarget = targetVal;
+            }
+          }
+        } catch (targetErr) {
+          console.warn('[DataContext] Failed to fetch daily_generation_target; using default 150 kWh', targetErr);
+        }
+        setDailyGenerationTarget(fetchedTarget);
+
         // Fetch Environmental Impact Constants (defaults: CO2=0.984, Trees=220)
         let co2Factor = 0.984;
         let treeFactor = 220;
@@ -260,7 +288,8 @@ export const DataProvider = ({ children }) => {
         cacheService.set(key, 'data', {
           liveData,
           inverterPotentialValue: { total: potentialValue },
-          environmentalImpact: { co2Avoided, treesPlanted }
+          environmentalImpact: { co2Avoided, treesPlanted },
+          dailyGenerationTarget: fetchedTarget
         });
         setLastUpdate(prev => ({ ...prev, [key]: Date.now(), inverterValue: Date.now(), environmentalImpact: Date.now() }));
 
@@ -597,6 +626,7 @@ export const DataProvider = ({ children }) => {
     inverterPotentialValue,
     environmentalImpact, // Export environmentalImpact
     gridCapacity,
+    dailyGenerationTarget, // Export dailyGenerationTarget
     selectedYear,
     setSelectedYear,
     loading,

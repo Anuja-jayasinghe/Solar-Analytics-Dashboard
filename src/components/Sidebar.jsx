@@ -194,10 +194,74 @@ function Sidebar({ onDevToolsToggle }) {
           0% { transform: scale(0.9) translateY(24px); opacity: 0; }
           100% { transform: scale(1) translateY(0); opacity: 1; }
         }
+
+        .logo-brand {
+          font-size: clamp(1.25rem, 3.5vw, 1.45rem);
+          margin: 0;
+          display: flex;
+          align-items: center;
+          font-family: 'Outfit', 'Inter', sans-serif;
+          letter-spacing: -0.04em;
+          line-height: 1;
+          user-select: none;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .logo-brand:hover {
+          transform: translateY(-1px);
+          filter: drop-shadow(0 4px 12px rgba(255, 110, 0, 0.25));
+        }
+
+        .logo-solar {
+          background: linear-gradient(135deg, #ffb700 0%, #ff5500 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          font-weight: 900;
+          text-transform: uppercase;
+        }
+
+        .logo-edge {
+          background: linear-gradient(135deg, #ff8800 0%, #ff3300 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          font-weight: 300;
+          text-transform: uppercase;
+          letter-spacing: 0.01em;
+        }
+
+        .logo-dot {
+          display: inline-block;
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: #10b981; /* Vibrant green accent */
+          margin-left: 3px;
+          margin-top: 6px;
+          box-shadow: 0 0 6px rgba(16, 185, 129, 0.4), 0 0 10px rgba(16, 185, 129, 0.2);
+          animation: pulseGlow 2s infinite ease-in-out;
+        }
+
+        @keyframes pulseGlow {
+          0%, 100% { 
+            opacity: 0.4; 
+            transform: scale(0.8); 
+            box-shadow: 0 0 4px rgba(16, 185, 129, 0.4); 
+          }
+          50% { 
+            opacity: 1; 
+            transform: scale(1.2); 
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.8), 0 0 14px rgba(16, 185, 129, 0.4); 
+          }
+        }
       `}</style>
 
       <div className="app-header">
-        <h1 style={{ color: "var(--accent)", letterSpacing: "-0.5px" }}>SolarEdge</h1>
+        <h1 className="logo-brand">
+          <span className="logo-solar">Solar</span>
+          <span className="logo-edge">Edge</span>
+          <span className="logo-dot" />
+        </h1>
 
         {user && (
           <div ref={menuRef} style={{ position: "relative", display: "flex", alignItems: "center" }}>

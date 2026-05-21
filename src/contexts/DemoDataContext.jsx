@@ -83,6 +83,7 @@ export const DemoDataProvider = ({ children }) => {
     monthlyGenerationData,
     inverterPotentialValue,
     environmentalImpact,
+    dailyGenerationTarget: 40,
     loading,
     errors,
     refreshData: () => { },
