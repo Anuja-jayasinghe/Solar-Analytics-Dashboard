@@ -20,20 +20,23 @@ Session log of diagnosing and fixing "login page won't load locally" (`npm run d
 
 User chose: **Option 1 — ngrok tunnel** (per `docs/LOCAL_CLERK_DEVELOPMENT.md`), to test real Clerk auth locally using a tunnel that gets added to Clerk's allowed origins, rather than switching to a `pk_test_` key or the dead-code mock bypass.
 
-## Actions taken
+## ngrok setup — completed 2026-07-12
 
 - Checked for existing package managers: no `choco`/`scoop`; `winget` available.
-- Installed ngrok via `winget install ngrok.ngrok --accept-package-agreements --accept-source-agreements` (user confirmed).
-- Verified install: `ngrok version` → `3.3.1`. Note: winget updated PATH but the current shell session needs a restart to pick it up; binary found at `C:\Users\Anuja J\AppData\Local\Microsoft\WinGet\Packages\Ngrok.Ngrok_Microsoft.Winget.Source_8wekyb3d8bbwe\ngrok.exe` in the meantime.
+- Installed ngrok via `winget install ngrok.ngrok --accept-package-agreements --accept-source-agreements`.
+- User provided an ngrok auth token; ran `ngrok config add-authtoken <token>`.
+- First tunnel attempt failed: `ERR_NGROK_121` — the winget package installed ngrok 3.3.1, but the account requires agent >= 3.20.0. Fixed with `ngrok update` → 3.39.9.
+- Added `"dev:ngrok": "ngrok http 5173"` to `package.json`.
+- Found a leftover `node` process (PID from an earlier ad-hoc `npm run dev` test in this session) squatting on port 5173, causing Vite to drift to 5174. Killed it so `npm run dev` reliably binds 5173.
+- Second tunnel attempt returned `403` / `"Blocked request... not allowed"` — Vite 7's `server.allowedHosts` check rejects the ngrok Host header by default. Fixed by adding `allowedHosts: ['.ngrok-free.dev', '.ngrok.io', '.ngrok.app']` to `vite.config.js`'s `server` block (scoped allowlist, not a blanket `true`, to keep the check meaningful).
+- Confirmed the tunnel serves the app end-to-end: `curl https://gap-trapdoor-skewer.ngrok-free.dev/` → `200`.
 
-## Remaining steps (ngrok setup — paused, waiting on user)
+**Still needed from the user:** add `https://gap-trapdoor-skewer.ngrok-free.dev` to the Clerk Dashboard's Allowed Origins / Redirect URLs (dashboard.clerk.com → app → Domains/Paths), then open that URL and confirm the login page renders and Clerk auth completes. This ngrok free-tier subdomain is stable per local ngrok config but can change if ngrok is reconfigured or the account plan changes — re-check Clerk's allowed origins if so.
 
-- [x] Verify ngrok install completed
-- [ ] **User needs to provide an ngrok auth token** from https://dashboard.ngrok.com/get-started/your-authtoken (or run `ngrok config add-authtoken <token>` themselves)
-- [ ] Add `dev:ngrok` script to `package.json` per the doc
-- [ ] Start `npm run dev`, then `ngrok http 5173` (or the actual active port)
-- [ ] Add the resulting ngrok HTTPS URL to Clerk Dashboard → Allowed Origins / Redirect URLs
-- [ ] Visit the ngrok URL and confirm the login page renders and Clerk auth completes
+## Branching (per user request — no direct work on `main`)
+
+- `fix/lint-cleanup-and-minor-bugs` — the codebase-wide lint/bug-fix sweep (2 commits: code fixes, then this doc + changelog)
+- `chore/local-dev-ngrok-setup` — this ngrok/local-dev setup (this commit)
 
 ---
 
