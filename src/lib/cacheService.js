@@ -129,7 +129,9 @@ class CacheService {
               ttl: Math.floor(ttl / 1000),
               expired: ttl < 0
             });
-          } catch (e) {}
+          } catch (_e) {
+            // Skip corrupted/unparseable cache entries when computing stats
+          }
         }
       });
     } catch (error) {

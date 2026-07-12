@@ -4,7 +4,7 @@ import { ThemeContext } from "./ThemeContext";
 import { AuthContext } from "../contexts/AuthContext";
 import { AdminThemeContext, adminColorPresets } from "../contexts/AdminThemeContext";
 import { LogOut, User } from "lucide-react";
-import { adminTheme, getAdminTheme } from "./admin/adminTheme";
+import { getAdminTheme } from "./admin/adminTheme";
 
 // --- SVG Icons ---
 const DashboardIcon = ({ className }) => (
@@ -63,14 +63,13 @@ const DevToolsIcon = ({ className }) => (
 function Sidebar({ onDevToolsToggle }) {
   const devtoolsEnabled = (import.meta?.env?.VITE_ENABLE_DEVTOOLS ?? "true") === "true";
   const { theme, setTheme } = useContext(ThemeContext);
-  const { session, signOut, user, isAdmin } = useContext(AuthContext);
+  const { signOut, user, isAdmin } = useContext(AuthContext);
   const { selectedTheme, updateTheme } = useContext(AdminThemeContext);
   const navigate = useNavigate();
   const location = useLocation();
 
   const [showAdminPopup, setShowAdminPopup] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showColorPicker, setShowColorPicker] = useState(false);
   const menuRef = useRef(null);
 
   // Get the current theme colors

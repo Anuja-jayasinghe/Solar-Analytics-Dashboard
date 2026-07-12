@@ -10,7 +10,7 @@ const Settings = () => {
   const [settings, setSettings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
-  const { theme, setTheme } = useContext(ThemeContext);
+  const { setTheme } = useContext(ThemeContext);
   const { dashboardAccess, hasRealAccess } = useContext(AuthContext);
   const [blockOpen, setBlockOpen] = useState(false);
   const { refreshData } = useData();

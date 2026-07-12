@@ -147,7 +147,7 @@ export default async function handler(req, res) {
     // v2.4.5 raw: "2024 SEP\tMonth:\n"  — tab between year+month and "Month:"
     const monthMatch     = text.match(/([0-9]{4} [A-Z]{3})\s+Month:/i);
     // Bill Date is clean: "Bill Date: 9/5/2024 9:59:05 AM"
-    const issueDateMatch = text.match(/Bill Date:\s*([0-9\/]+)/i);
+    const issueDateMatch = text.match(/Bill Date:\s*([0-9/]+)/i);
 
     // Units exported: "No. of Units Exported (kWh) 3676" (space-separated on same line)
     const unitsMatch    = text.match(/No\. of Units Exported \(kWh\)\s+(\d+)/i);

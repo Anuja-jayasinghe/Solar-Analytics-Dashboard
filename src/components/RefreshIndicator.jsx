@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../hooks/useData';
-import { FileWarning, ChevronRight, ChevronLeft } from 'lucide-react';
 import { formatDateDDMMYYYY } from '../lib/dateFormatter';
 
 const RefreshIndicator = () => {
-  const { loading, lastUpdate, isStale, errors } = useData();
+  const { loading, lastUpdate, errors } = useData();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const isAnyLoading = Object.values(loading).some(Boolean);
   const mostRecentUpdate = lastUpdate.live || lastUpdate.charts || Date.now();
@@ -161,19 +160,6 @@ const spinnerStyle = {
   borderTopColor: 'var(--accent)',
   borderRadius: '50%',
   animation: 'spin 0.8s linear infinite',
-};
-
-const infoStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.5rem',
-  color: 'var(--text-color)',
-};
-
-const staleWarningStyle = {
-  fontSize: '0.7rem',
-  color: '#ff9800',
-  fontWeight: 600,
 };
 
 export default RefreshIndicator;

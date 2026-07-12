@@ -66,7 +66,7 @@ export default function UserTable({ users, loading, onRoleChange, onAccessChange
             </tr>
           </thead>
           <tbody>
-            {users.map((user, index) => (
+            {users.map((user) => (
               <tr
                 key={user.id}
                 style={{

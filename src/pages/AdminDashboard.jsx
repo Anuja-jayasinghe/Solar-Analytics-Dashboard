@@ -130,7 +130,7 @@ function AdminDashboard() {
 | (___ | |  | | |   /  \\   | |__) |
  \\___ \\| |  | | |  / /\\ \\  |  _  / 
  ____) | |__| | |_/ ____ \\ | | \\ \\ 
-|_____/ \____/|_/_/    \\_\\_|_|  \\_\\`}
+|_____/ \\____/|_/_/    \\_\\_|_|  \\_\\`}
               </pre>
               <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginTop: "1rem" }}>
                 <h1 style={shellStyles.pageTitle}>CONTROL.CENTER</h1>

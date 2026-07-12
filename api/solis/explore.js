@@ -52,8 +52,7 @@ function checkRateLimit(limitKey, limit = 30, windowMs = 60000) {
 function getUserInfo(req) {
   // Try Clerk headers first
   const clerküserId = req.headers['x-clerk-user-id'] || req.headers.get?.('x-clerk-user-id');
-  const clerkAuthStatus = req.headers['x-clerk-auth-status'];
-  
+
   // Fallback to custom headers
   const userId = clerküserId || req.headers['x-user-id'];
   const isAuthenticated = Boolean(clerküserId) || req.headers['x-authenticated'] === 'true';

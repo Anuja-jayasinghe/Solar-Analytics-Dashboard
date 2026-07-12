@@ -23,7 +23,13 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
+    },
+  },
+  {
+    files: ['api/**/*.js', 'functions/**/*.js', 'scripts/**/*.js', 'vite.config.js', 'src/lib/solisAuth.js'],
+    languageOptions: {
+      globals: globals.node,
     },
   },
 ])
