@@ -2,6 +2,19 @@
 
 All notable changes to the Solar Analytics Dashboard project.
 
+## [Unreleased] - 2026-07-12
+
+### Fixed
+- **ErrorBanner.jsx**: fixed an invalid/conditional React hook call — `useToast()`/`useEffect()` were being called inside a plain helper function (`getErrorTitle`) invoked during render inside a `.map()`, which would throw when a rate-limit error was shown. Moved the toast side-effect into the component's top-level `useEffect`.
+- **eslint.config.js**: added Node globals for `api/`, `functions/`, `scripts/`, `vite.config.js`, and `src/lib/solisAuth.js`, eliminating ~130 false-positive `no-undef` errors for `process`/`Buffer`. Added `argsIgnorePattern`/`caughtErrorsIgnorePattern` (`^_`) so intentionally-unused params can be marked explicitly.
+- **AdminDashboard.jsx**: fixed a broken escape sequence (`\_` → `\\_`) in the CONTROL.CENTER ASCII-art banner that was silently dropping a backslash from the rendered art.
+- Removed dead code: unused storage-listing helpers in `api/ceb-bills/ingestions.js` (leftover from a pre-DB-query implementation), unused imports/vars/dead style objects across `RefreshIndicator.jsx`, `Sidebar.jsx`, `MonthlyGenerationCard.jsx`, and several admin components, an empty silent `catch {}` in `cacheService.js` (now documented as intentional).
+
+Full write-up: [docs/development/LOCAL_LOGIN_DEBUG_LOG.md](development/LOCAL_LOGIN_DEBUG_LOG.md)
+
+### In progress
+- Diagnosing local dev login failure: `.env.local` has a Clerk **production** (`pk_live_`) publishable key, which Clerk refuses to initialize outside its configured production domain — breaks the login page under both `npm run dev` and `npx vercel dev` on localhost. Fix path chosen: ngrok tunnel (per `docs/LOCAL_CLERK_DEVELOPMENT.md` Option 1). ngrok installed via winget; **blocked on user providing an ngrok auth token** to continue setup.
+
 ## [2.0.0] - 2025-11-16
 
 ### 🎉 Major Release - Performance & Reliability Overhaul
