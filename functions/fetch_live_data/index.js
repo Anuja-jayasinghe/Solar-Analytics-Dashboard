@@ -144,7 +144,7 @@ async function storeLiveData(inverters) {
   console.log('💾 Inserting into Supabase table: inverter_data_live');
   console.log('   Conflict resolution: ON CONFLICT (inverter_sn, data_timestamp) DO UPDATE');
   
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('inverter_data_live')
     .upsert(liveDataRows, { onConflict: 'inverter_sn,data_timestamp' });
 

@@ -6,6 +6,7 @@ import { useToast } from './shared/ToastManager';
 const ErrorBanner = () => {
   const { errors } = useData();
   const [visibleErrors, setVisibleErrors] = useState([]);
+  const toast = useToast();
 
   useEffect(() => {
     // Safety check
@@ -16,7 +17,7 @@ const ErrorBanner = () => {
     const prolongedThreshold = 5 * 60 * 1000; // 5 minutes
 
     const prolongedErrors = Object.entries(errors)
-      .filter(([key, error]) => {
+      .filter(([, error]) => {
         if (!error || typeof error === 'string') return false;
         const errorAge = now - (error.time || 0);
         return errorAge > prolongedThreshold;
@@ -29,7 +30,11 @@ const ErrorBanner = () => {
       }));
 
     setVisibleErrors(prolongedErrors);
-  }, [errors]);
+
+    if (prolongedErrors.some((error) => error.type === 'rate-limit')) {
+      toast.error(typeof errors === 'string' ? errors : 'An error occurred while fetching data');
+    }
+  }, [errors, toast]);
 
   const getErrorIcon = (type) => {
     switch (type) {
@@ -51,13 +56,6 @@ const ErrorBanner = () => {
       case 'auth':
         return 'Authentication Issue';
       case 'rate-limit':
-        const toast = useToast();
-
-        useEffect(() => {
-          if (errors) {
-            toast.error(typeof errors === 'string' ? errors : 'An error occurred while fetching data');
-          }
-        }, [errors]);
         return 'Rate Limit Exceeded';
       case 'server':
         return 'Server Error';

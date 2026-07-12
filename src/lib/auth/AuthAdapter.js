@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars -- interface stub methods document their contract via named params */
 /**
  * Auth Adapter Interface
  * Abstract authentication interface that can be implemented by different providers

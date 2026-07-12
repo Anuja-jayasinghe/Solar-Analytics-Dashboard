@@ -62,3 +62,7 @@ dist-ssr
 .vibe/
 .windsurf/
 .zencoder/
+.env*
+
+# This project uses pnpm (pnpm-lock.yaml) — ignore npm's lockfile
+package-lock.json

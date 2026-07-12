@@ -184,7 +184,6 @@ function monthKeyFromDateString(dateStr) {
   const d = new Date(dateStr)
   if (Number.isNaN(d.getTime())) return 'Unknown'
   const y = d.getFullYear()
-  const m = d.getMonth() + 1
   return `${new Intl.DateTimeFormat('en', { month: 'short' }).format(d)}-${String(y)}`
 }
 

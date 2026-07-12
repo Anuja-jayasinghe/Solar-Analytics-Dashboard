@@ -278,10 +278,10 @@ export default function AdminManagement() {
 async function safeReadBody(response) {
   try {
     return await response.json();
-  } catch (e) {
+  } catch (_e) {
     try {
       return await response.text();
-    } catch (err) {
+    } catch (_err) {
       return 'Unable to read body';
     }
   }

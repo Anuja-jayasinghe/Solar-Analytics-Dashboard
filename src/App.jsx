@@ -266,7 +266,7 @@ function RequireAdmin({ children }) {
 }
 
 const AppContent = React.memo(() => {
-  const { isAdmin, loading, session, dashboardAccess } = useContext(AuthContext);
+  const { isAdmin, dashboardAccess } = useContext(AuthContext);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [devToolsOpen, setDevToolsOpen] = useState(false);
   const devtoolsEnabled = (import.meta?.env?.VITE_ENABLE_DEVTOOLS ?? 'true') === 'true';

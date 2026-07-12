@@ -145,7 +145,7 @@ const solisEndpointsConfig = {
 
   getAllEnabledEndpoints() {
     return Object.entries(this)
-      .filter(([key, val]) => val.enabled === true && typeof val === 'object' && val.path)
+      .filter(([, val]) => val.enabled === true && typeof val === 'object' && val.path)
       .map(([key, val]) => ({ key, ...val }));
   },
 

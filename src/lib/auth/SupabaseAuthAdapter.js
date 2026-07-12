@@ -103,7 +103,7 @@ export class SupabaseAuthAdapter extends AuthAdapter {
   }
 
   async refreshSession() {
-    const { data, error } = await supabase.auth.refreshSession();
+    const { data } = await supabase.auth.refreshSession();
     return data?.session || null;
   }
 

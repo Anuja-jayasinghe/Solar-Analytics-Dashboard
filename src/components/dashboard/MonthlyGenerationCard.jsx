@@ -1,5 +1,5 @@
 // src/components/MonthlyGenerationCard.jsx
-import React, { useEffect, useState } from "react";
+import React from "react";
 import NumberTicker from "../ui/NumberTicker";
 import { useData } from "../../hooks/useData"; // Adjust path as needed
 import { formatDateDDMMYYYY } from "../../lib/dateFormatter";
@@ -25,11 +25,6 @@ const MonthlyGenerationCard = () => {
     displayValue = total / 1000; // convert to MWh
     unit = "MWh";
   }
-
-  // Optional: format with commas for readability
-  const formattedValue = displayValue.toLocaleString(undefined, {
-    maximumFractionDigits: 3, // show up to 3 decimals but don't force rounding
-  });
 
   return (
     <div

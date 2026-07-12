@@ -11,7 +11,7 @@ const AuthErrorModal = () => {
     if (!errors || typeof errors !== 'object') return;
 
     // Check if any error is an auth error (401/403)
-    const authError = Object.entries(errors).find(([key, error]) => {
+    const authError = Object.entries(errors).find(([, error]) => {
       return error && typeof error === 'object' && (error.type === 'auth');
     });
 
