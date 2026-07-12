@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { verifyAdminToken } from '../middleware/verifyAdminToken.js'
-import { buildStoragePath, createSha256, parseMultipartForm } from '../lib/cebBillUploadUtils.js'
+import { buildStoragePath, createSha256, parseMultipartForm } from '../_lib/cebBillUploadUtils.js'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVER_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY

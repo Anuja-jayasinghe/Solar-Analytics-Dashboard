@@ -10,7 +10,7 @@
  */
 
 import { solisFetch } from '../../src/lib/solisAuth.js';
-import validator from '../lib/solisExplorerValidator.js';
+import validator from '../_lib/solisExplorerValidator.js';
 
 // Simple in-memory rate limiter (per Vercel function invocation)
 const requestLogs = {};

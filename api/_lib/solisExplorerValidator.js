@@ -4,7 +4,7 @@
  * Validates endpoint keys and parameters before forwarding to Solis API
  */
 
-import solisEndpointsConfig from '../config/solisEndpointsConfig.js';
+import solisEndpointsConfig from '../_config/solisEndpointsConfig.js';
 
 class SolisExplorerValidator {
   /**
