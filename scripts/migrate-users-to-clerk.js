@@ -86,7 +86,7 @@ async function migrateUsers() {
               emailAddress: [user.email]
             });
 
-            if (existingUsers.length > 0) {
+            if (existingUsers.data.length > 0) {
               console.log(`   ⏭️  Skipped: ${user.email} (already exists in Clerk)`);
               results.skipped.push({
                 email: user.email,
