@@ -8,6 +8,8 @@ export default defineConfig(({ mode }) => {
   return {
   plugins: [react()],
   server: {
+    // Allow ngrok tunnel hosts for local Clerk auth testing (see docs/LOCAL_CLERK_DEVELOPMENT.md)
+    allowedHosts: ['.ngrok-free.dev', '.ngrok.io', '.ngrok.app'],
     proxy: {
       '/api': {
         target: env.VITE_API_PROXY_TARGET || 'http://localhost:3000',
