@@ -44,7 +44,7 @@ export default async function handler(req, res) {
           orderBy: '-created_at'
         });
 
-        const users = userList.map(user => ({
+        const users = userList.data.map(user => ({
           id: user.id,
           email: user.emailAddresses[0]?.emailAddress,
           firstName: user.firstName,
