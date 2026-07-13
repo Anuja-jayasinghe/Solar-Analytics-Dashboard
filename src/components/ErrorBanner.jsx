@@ -34,7 +34,8 @@ const ErrorBanner = () => {
     if (prolongedErrors.some((error) => error.type === 'rate-limit')) {
       toast.error(typeof errors === 'string' ? errors : 'An error occurred while fetching data');
     }
-  }, [errors, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- toast (from useToast()) is a new object every render; only react to `errors` changing
+  }, [errors]);
 
   const getErrorIcon = (type) => {
     switch (type) {
