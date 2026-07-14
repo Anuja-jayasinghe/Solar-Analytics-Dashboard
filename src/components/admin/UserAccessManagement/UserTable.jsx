@@ -106,9 +106,9 @@ export default function UserTable({
             style={{
               padding: '6px 12px',
               backgroundColor: currentPage === 1 ? 'var(--hover-bg)' : 'var(--accent)',
-              color: currentPage === 1 ? '#999' : 'white',
+              color: currentPage === 1 ? 'var(--text-muted)' : '#fff',
               border: 'none',
-              borderRadius: '4px',
+              borderRadius: '6px',
               cursor: currentPage === 1 || loading ? 'not-allowed' : 'pointer',
               fontSize: '13px',
               fontWeight: '600'
@@ -127,9 +127,9 @@ export default function UserTable({
             style={{
               padding: '6px 12px',
               backgroundColor: currentPage >= totalPages ? 'var(--hover-bg)' : 'var(--accent)',
-              color: currentPage >= totalPages ? '#999' : 'white',
+              color: currentPage >= totalPages ? 'var(--text-muted)' : '#fff',
               border: 'none',
-              borderRadius: '4px',
+              borderRadius: '6px',
               cursor: currentPage >= totalPages || loading ? 'not-allowed' : 'pointer',
               fontSize: '13px',
               fontWeight: '600'

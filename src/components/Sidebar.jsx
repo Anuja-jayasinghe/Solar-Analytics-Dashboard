@@ -183,11 +183,6 @@ function Sidebar({ onDevToolsToggle }) {
           transform: scale(1.05);
         }
 
-        @keyframes adminPortalSlide {
-          0% { transform: scale(0.9) translateY(24px); opacity: 0; }
-          100% { transform: scale(1) translateY(0); opacity: 1; }
-        }
-
         .logo-brand {
           font-size: clamp(1.25rem, 3.5vw, 1.45rem);
           margin: 0;
@@ -462,86 +457,6 @@ function Sidebar({ onDevToolsToggle }) {
       )}
 
       <style>{`
-        @keyframes adminPortalSlide {
-          0% {
-            transform: scale(0.8) translateY(50px);
-            opacity: 0;
-            filter: blur(10px);
-          }
-          50% {
-            transform: scale(1.05) translateY(-8px);
-          }
-          100% {
-            transform: scale(1) translateY(0);
-            opacity: 1;
-            filter: blur(0);
-          }
-        }
-        
-        @keyframes portalFadeIn {
-          0% {
-            opacity: 0;
-            backdrop-filter: blur(0px);
-          }
-          100% {
-            opacity: 1;
-            backdrop-filter: blur(25px);
-          }
-        }
-
-        @keyframes gridShift {
-          0% {
-            transform: translateY(0);
-          }
-          100% {
-            transform: translateY(40px);
-          }
-        }
-        
-        @keyframes techGlow {
-          0%, 100% {
-            transform: translateX(-100%);
-            opacity: 0;
-          }
-          50% {
-            opacity: 1;
-          }
-        }
-
-        @keyframes techGlowAdvanced {
-          0% {
-            transform: translateX(-100%) translateY(-50%);
-            opacity: 0;
-          }
-          50% {
-            opacity: 1;
-          }
-          100% {
-            transform: translateX(100%) translateY(50%);
-            opacity: 0;
-          }
-        }
-
-        @keyframes scanlines {
-          0% {
-            transform: translateY(0);
-          }
-          100% {
-            transform: translateY(4px);
-          }
-        }
-
-        @keyframes techPulse {
-          0%, 100% {
-            opacity: 0.6;
-            text-shadow: 0 0 10px rgba(0,212,170,0.3);
-          }
-          50% {
-            opacity: 1;
-            text-shadow: 0 0 20px rgba(0,212,170,0.7);
-          }
-        }
-
         @keyframes techLineFlow {
           0% {
             height: 0%;
