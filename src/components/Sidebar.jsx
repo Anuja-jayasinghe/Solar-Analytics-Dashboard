@@ -2,9 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ThemeContext } from "./ThemeContext";
 import { AuthContext } from "../contexts/AuthContext";
-import { AdminThemeContext, adminColorPresets } from "../contexts/AdminThemeContext";
 import { LogOut, User } from "lucide-react";
-import { getAdminTheme } from "./admin/adminTheme";
 
 // --- SVG Icons ---
 const DashboardIcon = ({ className }) => (
@@ -64,16 +62,12 @@ function Sidebar({ onDevToolsToggle }) {
   const devtoolsEnabled = (import.meta?.env?.VITE_ENABLE_DEVTOOLS ?? "true") === "true";
   const { theme, setTheme } = useContext(ThemeContext);
   const { signOut, user, isAdmin } = useContext(AuthContext);
-  const { selectedTheme, updateTheme } = useContext(AdminThemeContext);
   const navigate = useNavigate();
   const location = useLocation();
 
   const [showAdminPopup, setShowAdminPopup] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef(null);
-
-  // Get the current theme colors
-  const currentTheme = getAdminTheme(adminColorPresets[selectedTheme]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -354,86 +348,45 @@ function Sidebar({ onDevToolsToggle }) {
           style={{
             position: "fixed",
             inset: 0,
-            background: currentTheme.gradients.backdrop,
+            background: 'rgba(0,0,0,0.6)',
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
             zIndex: 9999,
-            backdropFilter: "blur(14px)",
+            backdropFilter: "blur(8px)",
             padding: "1rem",
-            animation: "portalFadeIn 0.25s ease-out",
           }}
           onClick={() => setShowAdminPopup(false)}
         >
           <div
             style={{
-              background: currentTheme.gradients.surface,
-              borderRadius: "14px",
-              padding: "clamp(1.2rem, 3vw, 1.8rem)",
-              color: currentTheme.colors.text,
-              maxWidth: "680px",
+              background: 'var(--card-bg-solid)',
+              borderRadius: "16px",
+              padding: "1.5rem",
+              color: 'var(--text-color)',
+              maxWidth: "420px",
               width: "100%",
-              boxShadow: currentTheme.shadows.panel,
-              border: `1px solid ${currentTheme.colors.borderStrong}`,
-              animation: "adminPortalSlide 0.45s ease-out",
-              position: "relative",
-              overflow: "hidden",
+              boxShadow: '0 8px 32px var(--card-shadow)',
+              border: '1px solid var(--border-color)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{
-              position: "absolute",
-              inset: 0,
-              background: currentTheme.gradients.grid,
-              opacity: 0.18,
-              pointerEvents: "none"
-            }} />
-
-            <div style={{ position: "relative" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.9rem" }}>
-                <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: currentTheme.colors.danger }} />
-                <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: currentTheme.colors.warning }} />
-                <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: currentTheme.colors.success }} />
-                <span style={{ marginLeft: "0.6rem", fontFamily: currentTheme.fonts.mono, fontSize: "12px", color: currentTheme.colors.textMuted }}>
-                  root@solar-edge:~$ admin-entry --secure
-                </span>
-              </div>
-
-              <div style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                border: `1px solid ${currentTheme.colors.borderStrong}`,
-                background: "rgba(0,0,0,0.35)",
-                borderRadius: "10px",
-                padding: "0.8rem 0.9rem",
-                marginBottom: "1rem"
-              }}>
-                <div>
-                  <div style={{ fontFamily: currentTheme.fonts.mono, fontSize: "11px", color: currentTheme.colors.accent, letterSpacing: "1px" }}>
-                    AUTH_GATEWAY
-                  </div>
-                  <div style={{ fontFamily: currentTheme.fonts.mono, fontSize: "18px", fontWeight: 700, color: currentTheme.colors.text }}>
-                    DEVELOPER CONTROL ENTRY
-                  </div>
-                </div>
-                <div style={{ fontFamily: currentTheme.fonts.mono, fontSize: "11px", color: currentTheme.colors.textMuted, textAlign: "right" }}>
-                  SESSION: {String(user?.email || "guest").split("@")[0].toUpperCase()}<br />
-                  NODE: PROD-AUTH-01
-                </div>
-              </div>
+            <h3 style={{ margin: '0 0 1rem 0', color: 'var(--accent)', fontSize: '18px' }}>
+              Admin Access
+            </h3>
 
             {isAdmin ? (
               <>
-                <div style={{ border: `1px solid ${currentTheme.colors.border}`, borderRadius: "10px", background: "rgba(9,20,42,0.52)", marginBottom: "1rem", overflow: "hidden" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "130px 1fr", fontFamily: currentTheme.fonts.mono, fontSize: "12px" }}>
-                    <div style={{ padding: "0.65rem 0.8rem", color: currentTheme.colors.textMuted, borderRight: `1px solid ${currentTheme.colors.border}`, borderBottom: `1px solid ${currentTheme.colors.border}` }}>AUTH_ROLE</div>
-                    <div style={{ padding: "0.65rem 0.8rem", color: "#93c5fd", borderBottom: `1px solid ${currentTheme.colors.border}` }}>ROOT_ADMIN</div>
-                    <div style={{ padding: "0.65rem 0.8rem", color: currentTheme.colors.textMuted, borderRight: `1px solid ${currentTheme.colors.border}`, borderBottom: `1px solid ${currentTheme.colors.border}` }}>TOKEN_STATE</div>
-                    <div style={{ padding: "0.65rem 0.8rem", color: "#93c5fd", borderBottom: `1px solid ${currentTheme.colors.border}` }}>VERIFIED</div>
-                    <div style={{ padding: "0.65rem 0.8rem", color: currentTheme.colors.textMuted, borderRight: `1px solid ${currentTheme.colors.border}` }}>CAPABILITIES</div>
-                    <div style={{ padding: "0.65rem 0.8rem", color: currentTheme.colors.text }}>USER_MGMT, CONFIG_WRITE, METRICS_READ</div>
-                  </div>
+                <div style={{
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '10px',
+                  background: 'var(--card-bg)',
+                  padding: '0.75rem 1rem',
+                  marginBottom: '1rem',
+                  fontSize: '13px',
+                  color: 'var(--text-secondary)'
+                }}>
+                  Signed in as <strong style={{ color: 'var(--text-color)' }}>{user?.email}</strong> with administrator privileges.
                 </div>
 
                 <button
@@ -443,132 +396,67 @@ function Sidebar({ onDevToolsToggle }) {
                   }}
                   style={{
                     width: "100%",
-                    background: currentTheme.gradients.accent,
-                    color: currentTheme.colors.text,
-                    border: `1px solid ${currentTheme.colors.borderStrong}`,
+                    background: 'var(--accent)',
+                    color: '#fff',
+                    border: 'none',
                     padding: "12px 14px",
-                    borderRadius: "4px",
-                    fontWeight: 700,
-                    letterSpacing: "0.9px",
+                    borderRadius: "8px",
+                    fontWeight: 600,
                     cursor: "pointer",
-                    textTransform: "uppercase",
                     marginBottom: "0.6rem",
-                    fontFamily: currentTheme.fonts.mono,
-                    boxShadow: currentTheme.shadows.glow
+                    fontSize: '14px'
                   }}
                 >
-                  [ EXEC ./admin-dashboard --mode=control ]
+                  Go to Admin Dashboard
                 </button>
 
                 <button
                   onClick={() => setShowAdminPopup(false)}
                   style={{
                     width: "100%",
-                    background: "rgba(255,255,255,0.03)",
-                    color: currentTheme.colors.textMuted,
-                    border: `1px solid ${currentTheme.colors.border}`,
+                    background: "transparent",
+                    color: 'var(--text-secondary)',
+                    border: '1px solid var(--border-color)',
                     padding: "11px 14px",
-                    borderRadius: "4px",
+                    borderRadius: "8px",
                     cursor: "pointer",
-                    textTransform: "uppercase",
-                    fontFamily: currentTheme.fonts.mono,
-                    letterSpacing: "0.8px",
-                    marginBottom: "1.5rem"
+                    fontSize: '14px'
                   }}
                 >
-                  [ ABORT ]
+                  Cancel
                 </button>
-
-                {/* Color Palette Selector - Moved to end and shrunk */}
-                <div style={{ 
-                  marginTop: "0.5rem", 
-                  padding: "0.4rem 0.6rem", 
-                  background: "rgba(0,0,0,0.2)", 
-                  border: `1px solid ${currentTheme.colors.border}`,
-                  borderRadius: "2px"
-                }}>
-                  <div style={{ 
-                    display: "flex", 
-                    justifyContent: "space-between", 
-                    alignItems: "center",
-                    marginBottom: "0.4rem"
-                  }}>
-                    <div style={{ fontFamily: currentTheme.fonts.mono, fontSize: "8px", color: currentTheme.colors.accent, letterSpacing: "1px", textTransform: "uppercase" }}>
-                      SYS_COLOR_CONFIG
-                    </div>
-                    <div style={{ fontFamily: currentTheme.fonts.mono, fontSize: "8px", color: currentTheme.colors.textMuted, opacity: 0.5 }}>
-                      ID: {selectedTheme.toUpperCase()}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap", justifyContent: "flex-start" }}>
-                    {Object.entries(adminColorPresets).map(([key, preset]) => (
-                      <button
-                        key={key}
-                        onClick={() => updateTheme(key)}
-                        title={preset.name}
-                        style={{
-                          width: "6px",
-                          height: "6px",
-                          borderRadius: "1px",
-                          background: preset.hex,
-                          border: "none",
-                          cursor: "pointer",
-                          transition: "all 0.2s ease",
-                          boxShadow: selectedTheme === key ? `0 0 4px ${preset.hex}` : "none",
-                          opacity: selectedTheme === key ? 1 : 0.15,
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Tech Metadata Flair */}
-                <div style={{ 
-                  marginTop: "1rem", 
-                  paddingTop: "0.5rem", 
-                  borderTop: `1px dashed ${currentTheme.colors.border}`,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontFamily: currentTheme.fonts.mono,
-                  fontSize: "9px",
-                  color: "rgba(255,255,255,0.2)"
-                }}>
-                  <div>ULID: 01H6...{Math.random().toString(36).substring(7).toUpperCase()}</div>
-                  <div style={{ color: currentTheme.colors.success }}>MEM_LOCAL: 42.8MB</div>
-                  <div>SEC_LAYER: V3_RSA</div>
-                </div>
               </>
             ) : (
               <>
-                <div style={{ border: `1px solid ${currentTheme.colors.borderStrong}`, borderRadius: "10px", background: "rgba(17,35,68,0.4)", padding: "0.9rem", marginBottom: "0.9rem", fontFamily: currentTheme.fonts.mono }}>
-                  <div style={{ fontSize: "12px", color: currentTheme.colors.accent, letterSpacing: "1px", textTransform: "uppercase", fontWeight: 700 }}>
-                    AUTHORIZATION_FAILED
-                  </div>
-                  <div style={{ fontSize: "12px", color: currentTheme.colors.textMuted, marginTop: "0.45rem" }}>
-                    Admin claim missing in current identity token. Contact platform owner for role escalation.
-                  </div>
+                <div style={{
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '10px',
+                  background: 'var(--card-bg)',
+                  padding: '0.9rem',
+                  marginBottom: '0.9rem',
+                  fontSize: '13px',
+                  color: 'var(--text-secondary)'
+                }}>
+                  Your account doesn't have administrator access. Contact the site owner if you believe this is a mistake.
                 </div>
 
                 <button
                   onClick={() => setShowAdminPopup(false)}
                   style={{
                     width: "100%",
-                    background: "rgba(255,255,255,0.04)",
-                    color: currentTheme.colors.textMuted,
-                    border: `1px solid ${currentTheme.colors.border}`,
+                    background: "transparent",
+                    color: 'var(--text-secondary)',
+                    border: '1px solid var(--border-color)',
                     padding: "11px 14px",
-                    borderRadius: "10px",
+                    borderRadius: "8px",
                     cursor: "pointer",
-                    textTransform: "uppercase",
-                    fontFamily: currentTheme.fonts.mono,
-                    letterSpacing: "0.8px",
+                    fontSize: '14px'
                   }}
                 >
-                  [ CLOSE ]
+                  Close
                 </button>
               </>
             )}
-            </div>
           </div>
         </div>
       )}
