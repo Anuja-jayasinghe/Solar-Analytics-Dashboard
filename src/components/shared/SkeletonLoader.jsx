@@ -1,17 +1,10 @@
-import React, { useContext } from 'react';
-import { AdminThemeContext } from '../../contexts/AdminThemeContext';
-import { getAdminTheme } from '../admin/adminTheme';
+import React from 'react';
 
 /**
- * High-Fidelity Retro Skeleton Loader
- * Uses the admin theme for a cohesive developer loading experience
+ * Skeleton Loader
+ * Loading-state placeholders styled to match the app's public design system
  */
 export default function SkeletonLoader({ count = 5, variant = 'table' }) {
-  const context = useContext(AdminThemeContext);
-  const activeTheme = context ? context.selectedTheme : 'purple';
-  const presets = context ? context.adminColorPresets : {};
-  const theme = getAdminTheme(presets[activeTheme]);
-
   const renderStatsSkeleton = () => (
     <div style={{
       display: 'grid',
@@ -21,9 +14,9 @@ export default function SkeletonLoader({ count = 5, variant = 'table' }) {
     }}>
       {Array.from({ length: 5 }).map((_, i) => (
         <div key={i} style={{
-          background: 'rgba(0,0,0,0.2)',
-          border: `1px solid ${theme.colors.border}`,
-          borderRadius: '2px',
+          background: 'var(--card-bg)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '10px',
           padding: '1rem',
           height: '100px',
           position: 'relative',
@@ -32,39 +25,39 @@ export default function SkeletonLoader({ count = 5, variant = 'table' }) {
           <div className="skeleton-pulse" style={{
             position: 'absolute',
             top: 0, left: 0, right: 0, bottom: 0,
-            background: `linear-gradient(90deg, transparent, ${theme.colors.accent}08, transparent)`,
+            background: 'linear-gradient(90deg, transparent, rgba(255, 122, 0, 0.08), transparent)',
             animation: 'skeleton-scan 2s infinite'
           }} />
-          <div style={{ height: '10px', width: '60%', background: 'rgba(255,255,255,0.05)', marginBottom: '15px' }} />
-          <div style={{ height: '30px', width: '40%', background: 'rgba(255,255,255,0.08)' }} />
+          <div style={{ height: '10px', width: '60%', background: 'rgba(255,255,255,0.08)', marginBottom: '15px', borderRadius: '4px' }} />
+          <div style={{ height: '30px', width: '40%', background: 'rgba(255,255,255,0.1)', borderRadius: '4px' }} />
         </div>
       ))}
     </div>
   );
 
   const renderTableSkeleton = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', border: `1px solid ${theme.colors.border}`, borderRadius: '2px', overflow: 'hidden' }}>
-      <div style={{ height: '35px', background: 'rgba(255,255,255,0.03)', borderBottom: `2px solid ${theme.colors.borderStrong}` }} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden' }}>
+      <div style={{ height: '35px', background: 'rgba(255,255,255,0.03)', borderBottom: '2px solid var(--border-color)' }} />
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} style={{
           display: 'flex',
           gap: '1rem',
           padding: '12px 1rem',
-          background: 'transparent',
-          borderBottom: `1px solid ${theme.colors.border}`,
+          background: 'var(--card-bg)',
+          borderBottom: '1px solid var(--border-color)',
           position: 'relative',
           overflow: 'hidden'
         }}>
           <div className="skeleton-pulse" style={{
             position: 'absolute',
             top: 0, left: 0, right: 0, bottom: 0,
-            background: `linear-gradient(90deg, transparent, ${theme.colors.accent}04, transparent)`,
+            background: 'linear-gradient(90deg, transparent, rgba(255, 122, 0, 0.05), transparent)',
             animation: 'skeleton-scan 2.5s infinite'
           }} />
-          <div style={{ flex: 2, height: '12px', background: 'rgba(255,255,255,0.05)' }} />
-          <div style={{ flex: 1, height: '12px', background: 'rgba(255,255,255,0.05)' }} />
-          <div style={{ flex: 1, height: '12px', background: 'rgba(255,255,255,0.05)' }} />
-          <div style={{ flex: 1, height: '12px', background: 'rgba(255,255,255,0.05)' }} />
+          <div style={{ flex: 2, height: '12px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px' }} />
+          <div style={{ flex: 1, height: '12px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px' }} />
+          <div style={{ flex: 1, height: '12px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px' }} />
+          <div style={{ flex: 1, height: '12px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px' }} />
         </div>
       ))}
     </div>
@@ -87,14 +80,12 @@ export function ChartSkeleton() {
   return (
     <div className="skeleton-box" style={{
       height: '320px',
-      background: 'rgba(0,0,0,0.2)',
-      borderRadius: '2px',
-      border: '1px solid rgba(255,255,255,0.1)',
+      background: 'var(--card-bg)',
+      borderRadius: '10px',
+      border: '1px solid var(--border-color)',
       position: 'relative',
       overflow: 'hidden'
-    }}>
-       {/* Simple pulse here too if needed */}
-    </div>
+    }} />
   );
 }
 
@@ -102,9 +93,9 @@ export function CardSkeleton() {
   return (
     <div className="skeleton-box" style={{
       height: '180px',
-      background: 'rgba(0,0,0,0.2)',
-      borderRadius: '2px',
-      border: '1px solid rgba(255,255,255,0.1)'
+      background: 'var(--card-bg)',
+      borderRadius: '10px',
+      border: '1px solid var(--border-color)'
     }} />
   );
 }
