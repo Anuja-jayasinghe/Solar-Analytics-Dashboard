@@ -1,10 +1,8 @@
-import React, { useContext } from 'react';
-import { AdminThemeContext } from '../../../contexts/AdminThemeContext';
-import { getAdminTheme } from '../adminTheme';
+import React from 'react';
 
 /**
  * CEB Data Form Component
- * Dedicated purely to NEW_RECORD_ENTRY to maintain direct DB editing feel
+ * Manual entry form for new CEB billing records
  */
 export default function CebForm({
   form = { bill_date: '', meter_reading: '', units_exported: '', earnings: '', account_number: '', billing_month: '' },
@@ -12,33 +10,28 @@ export default function CebForm({
   onSubmit = () => {},
   loading = false
 }) {
-  const { selectedTheme, adminColorPresets } = useContext(AdminThemeContext);
-  const theme = getAdminTheme(adminColorPresets[selectedTheme]);
-
   const inputStyle = {
-    padding: '10px',
-    borderRadius: '2px',
-    border: `1px solid ${theme.colors.borderStrong}`,
-    background: 'rgba(0,0,0,0.3)',
-    color: theme.colors.text,
-    fontSize: '13px',
-    fontFamily: theme.fonts.mono,
+    padding: '10px 12px',
+    borderRadius: '6px',
+    border: '1px solid var(--border-color)',
+    background: 'var(--card-bg-solid)',
+    color: 'var(--text-color)',
+    fontSize: '14px',
     outline: 'none',
     transition: 'border-color 0.2s ease'
   };
 
   const buttonStyle = {
-    background: theme.colors.accent,
-    color: '#000',
+    background: 'var(--accent)',
+    color: '#fff',
     border: 'none',
-    borderRadius: '2px',
+    borderRadius: '8px',
     padding: '10px',
-    cursor: 'pointer',
-    fontWeight: '700',
-    fontFamily: theme.fonts.mono,
-    fontSize: '12px',
-    transition: 'all 0.2s ease',
-    textTransform: 'uppercase'
+    cursor: loading ? 'not-allowed' : 'pointer',
+    fontWeight: '600',
+    fontSize: '14px',
+    opacity: loading ? 0.7 : 1,
+    transition: 'all 0.2s ease'
   };
 
   return (
@@ -49,25 +42,19 @@ export default function CebForm({
         gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
         gap: '12px',
         marginBottom: '2rem',
-        background: 'rgba(0,0,0,0.15)',
+        background: 'var(--card-bg)',
         padding: '1.25rem',
-        border: `1px solid ${theme.colors.border}`,
-        borderRadius: '4px',
-        position: 'relative'
+        border: '1px solid var(--border-color)',
+        borderRadius: '10px'
       }}
     >
-      <div style={{ 
-        position: 'absolute', 
-        top: '-10px', 
-        left: '15px', 
-        background: theme.colors.background, 
-        padding: '0 8px', 
-        fontSize: '10px', 
-        fontFamily: theme.fonts.mono, 
-        color: theme.colors.accent,
-        letterSpacing: '1px'
+      <div style={{
+        gridColumn: '1 / -1',
+        fontSize: '13px',
+        fontWeight: '600',
+        color: 'var(--accent)'
       }}>
-        [ NEW_DATA_TRANSACTION ]
+        Add New Record
       </div>
 
       <input
@@ -88,7 +75,7 @@ export default function CebForm({
       />
       <input
         type="text"
-        placeholder="ACCOUNT_NUMBER"
+        placeholder="Account Number"
         value={form.account_number}
         onChange={(e) => onFormChange({ ...form, account_number: e.target.value })}
         required
@@ -96,7 +83,7 @@ export default function CebForm({
       />
       <input
         type="text"
-        placeholder="BILLING_MONTH (YYYY MMM)"
+        placeholder="Billing Month (YYYY MMM)"
         value={form.billing_month}
         onChange={(e) => onFormChange({ ...form, billing_month: e.target.value })}
         required
@@ -104,7 +91,7 @@ export default function CebForm({
       />
       <input
         type="number"
-        placeholder="METER_READING"
+        placeholder="Meter Reading"
         value={form.meter_reading}
         onChange={(e) => onFormChange({ ...form, meter_reading: e.target.value })}
         required
@@ -112,7 +99,7 @@ export default function CebForm({
       />
       <input
         type="number"
-        placeholder="UNITS_EXPORTED"
+        placeholder="Units Exported"
         value={form.units_exported}
         onChange={(e) => onFormChange({ ...form, units_exported: e.target.value })}
         required
@@ -120,14 +107,14 @@ export default function CebForm({
       />
       <input
         type="number"
-        placeholder="EARNINGS_LKR"
+        placeholder="Earnings (LKR)"
         value={form.earnings}
         onChange={(e) => onFormChange({ ...form, earnings: e.target.value })}
         required
         style={inputStyle}
       />
       <button type="submit" disabled={loading} style={buttonStyle}>
-        {loading ? 'PUSHING_CMD...' : '[ COMMIT_NEW_RECORD ]'}
+        {loading ? 'Saving...' : 'Add Record'}
       </button>
     </form>
   );
