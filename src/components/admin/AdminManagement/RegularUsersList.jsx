@@ -76,12 +76,13 @@ export default function RegularUsersList({
               disabled={currentPage === 1 || loading}
               style={{
                 padding: '6px 12px',
-                backgroundColor: currentPage === 1 ? '#f0f0f0' : '#1976d2',
-                color: currentPage === 1 ? '#999' : 'white',
+                backgroundColor: currentPage === 1 ? 'var(--hover-bg)' : 'var(--accent)',
+                color: currentPage === 1 ? 'var(--text-muted)' : '#fff',
                 border: 'none',
-                borderRadius: '4px',
+                borderRadius: '6px',
                 cursor: currentPage === 1 || loading ? 'not-allowed' : 'pointer',
-                fontSize: '13px'
+                fontSize: '13px',
+                fontWeight: '600'
               }}
             >
               ← Prev
@@ -96,12 +97,13 @@ export default function RegularUsersList({
               disabled={currentPage >= totalPages || loading}
               style={{
                 padding: '6px 12px',
-                backgroundColor: currentPage >= totalPages ? '#f0f0f0' : '#1976d2',
-                color: currentPage >= totalPages ? '#999' : 'white',
+                backgroundColor: currentPage >= totalPages ? 'var(--hover-bg)' : 'var(--accent)',
+                color: currentPage >= totalPages ? 'var(--text-muted)' : '#fff',
                 border: 'none',
-                borderRadius: '4px',
+                borderRadius: '6px',
                 cursor: currentPage >= totalPages || loading ? 'not-allowed' : 'pointer',
-                fontSize: '13px'
+                fontSize: '13px',
+                fontWeight: '600'
               }}
             >
               Next →

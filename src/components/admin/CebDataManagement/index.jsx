@@ -7,6 +7,7 @@ import ConfirmDialog from "../../shared/ConfirmDialog";
 import CebForm from "./CebForm";
 import CebTable from "./CebTable";
 import VerificationQueue from "./VerificationQueue";
+import DocumentPreviewModal from "./DocumentPreviewModal";
 
 /**
  * CEB Data Management Component
@@ -41,6 +42,7 @@ const CebDataManagement = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewFileName, setPreviewFileName] = useState('document.pdf');
 
   // Pagination hook
   const {
@@ -389,6 +391,7 @@ const CebDataManagement = () => {
   const handlePreview = async (filePath) => {
     setPreviewLoading(true);
     setPreviewUrl(null);
+    setPreviewFileName(filePath.split('/').pop() || 'document.pdf');
     try {
       const { data, error } = await supabase
         .storage
@@ -397,6 +400,7 @@ const CebDataManagement = () => {
 
       if (error) throw error;
       setPreviewUrl(data.signedUrl);
+      setPreviewLoading(false);
     } catch (err) {
       setMessage(`❌ Error loading preview: ${err.message}`);
       console.error("Preview error:", err);
@@ -870,69 +874,13 @@ const CebDataManagement = () => {
       />
 
       {/* File Preview Modal */}
-      {(previewLoading || previewUrl) && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          zIndex: 1000,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          backdropFilter: 'blur(4px)'
-        }}>
-          <div style={{
-            background: 'var(--card-bg)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '8px',
-            width: '90%',
-            maxWidth: '900px',
-            height: '90vh',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              padding: '1rem',
-              borderBottom: '1px solid var(--border-color)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              background: 'rgba(0,0,0,0.2)'
-            }}>
-              <h3 style={{ margin: 0, color: 'var(--text-color)', fontSize: '16px' }}>📄 Document Preview</h3>
-              <button 
-                onClick={() => { setPreviewUrl(null); setPreviewLoading(false); }}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                  fontSize: '20px',
-                  lineHeight: 1
-                }}
-              >
-                ×
-              </button>
-            </div>
-            
-            <div style={{ flex: 1, position: 'relative', background: '#e0e0e0' }}>
-              {!previewUrl && previewLoading ? (
-                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#333' }}>
-                  Loading secure document link...
-                </div>
-              ) : (
-                <iframe 
-                  src={previewUrl} 
-                  title="Document Preview"
-                  style={{ width: '100%', height: '100%', border: 'none' }}
-                  onLoad={() => setPreviewLoading(false)}
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <DocumentPreviewModal
+        open={previewLoading || !!previewUrl}
+        url={previewUrl}
+        loading={previewLoading}
+        fileName={previewFileName}
+        onClose={() => { setPreviewUrl(null); setPreviewLoading(false); }}
+      />
     </div>
   );
 };
