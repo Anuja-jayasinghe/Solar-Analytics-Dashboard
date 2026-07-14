@@ -66,3 +66,4 @@ dist-ssr
 
 # This project uses pnpm (pnpm-lock.yaml) — ignore npm's lockfile
 package-lock.json
+.superpowers/
