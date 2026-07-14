@@ -4,7 +4,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "r
 import { ClerkProvider } from "@clerk/clerk-react";
 import ToastManager from './components/shared/ToastManager';
 import { ThemeProvider } from "./components/ThemeContext";
-import { AdminThemeProvider } from "./contexts/AdminThemeContext";
 import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 import { DataProvider } from "./contexts/DataContext";
 import Sidebar from "./components/Sidebar";
@@ -412,21 +411,19 @@ function App() {
   const clerkWrappedApp = (
     <ErrorBoundary>
       <AuthProvider>
-        <AdminThemeProvider>
-          <ThemeProvider>
-            <ErrorBoundary>
-              <DataProvider>
-                <Router>
-                  <ToastManager />
-                  <Analytics />
-                  <ErrorBoundary>
-                    <AppContent />
-                  </ErrorBoundary>
-                </Router>
-              </DataProvider>
-            </ErrorBoundary>
-          </ThemeProvider>
-        </AdminThemeProvider>
+        <ThemeProvider>
+          <ErrorBoundary>
+            <DataProvider>
+              <Router>
+                <ToastManager />
+                <Analytics />
+                <ErrorBoundary>
+                  <AppContent />
+                </ErrorBoundary>
+              </Router>
+            </DataProvider>
+          </ErrorBoundary>
+        </ThemeProvider>
       </AuthProvider>
     </ErrorBoundary>
   );
