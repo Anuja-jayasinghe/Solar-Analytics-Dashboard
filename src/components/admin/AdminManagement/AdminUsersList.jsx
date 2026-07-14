@@ -76,7 +76,7 @@ export default function AdminUsersList({
               disabled={currentPage === 1 || loading}
               style={{
                 padding: '6px 12px',
-                backgroundColor: currentPage === 1 ? '#f0f0f0' : '#1976d2',
+                backgroundColor: currentPage === 1 ? 'var(--hover-bg)' : 'var(--accent)',
                 color: currentPage === 1 ? '#999' : 'white',
                 border: 'none',
                 borderRadius: '4px',
@@ -96,7 +96,7 @@ export default function AdminUsersList({
               disabled={currentPage >= totalPages || loading}
               style={{
                 padding: '6px 12px',
-                backgroundColor: currentPage >= totalPages ? '#f0f0f0' : '#1976d2',
+                backgroundColor: currentPage >= totalPages ? 'var(--hover-bg)' : 'var(--accent)',
                 color: currentPage >= totalPages ? '#999' : 'white',
                 border: 'none',
                 borderRadius: '4px',
