@@ -1,10 +1,8 @@
-import React, { useContext } from 'react';
-import { AdminThemeContext } from '../../../contexts/AdminThemeContext';
-import { getAdminTheme } from '../adminTheme';
+import React from 'react';
 
 /**
  * CEB Data Table Component
- * Displays CEB records in a technical grid
+ * Displays CEB billing records with inline editing and pagination
  */
 export default function CebTable({
   data = [],
@@ -23,31 +21,27 @@ export default function CebTable({
   onCancelEdit = () => {},
   onPreview = () => {}
 }) {
-  const { selectedTheme, adminColorPresets } = useContext(AdminThemeContext);
-  const theme = getAdminTheme(adminColorPresets[selectedTheme]);
-  
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
 
   if (loading && data.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '3rem', color: theme.colors.accent, fontFamily: theme.fonts.mono }}>
-        <p>FETCHING_RECORDS [...............]</p>
+      <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+        <p>Loading records...</p>
       </div>
     );
   }
 
   if (data.length === 0) {
     return (
-      <div style={{ 
-        textAlign: 'center', 
-        padding: '3rem', 
-        color: theme.colors.textMuted, 
-        fontFamily: theme.fonts.mono,
-        border: `1px dashed ${theme.colors.border}`,
-        borderRadius: '4px'
+      <div style={{
+        textAlign: 'center',
+        padding: '3rem',
+        color: 'var(--text-secondary)',
+        border: '1px dashed var(--border-color)',
+        borderRadius: '10px'
       }}>
-        <p>NULL_SET: NO CEB DATA RECORDS FOUND</p>
+        <p>No CEB data records found</p>
       </div>
     );
   }
@@ -55,75 +49,66 @@ export default function CebTable({
   const headerStyle = {
     textAlign: 'left',
     padding: '0.9rem 1rem',
-    color: theme.colors.accent,
+    color: 'var(--accent)',
     fontWeight: '600',
-    fontSize: '11px',
-    textTransform: 'uppercase',
-    letterSpacing: '1.5px',
-    borderBottom: `2px solid ${theme.colors.borderStrong}`,
-    fontFamily: theme.fonts.mono
+    fontSize: '12px',
+    borderBottom: '2px solid var(--border-color)'
   };
 
   const cellStyle = {
     padding: '0.8rem 1rem',
-    color: theme.colors.text,
+    color: 'var(--text-color)',
     fontSize: '13px',
-    fontFamily: theme.fonts.mono,
-    borderBottom: `1px solid ${theme.colors.border}`,
+    borderBottom: '1px solid var(--border-color)',
     position: 'relative'
   };
 
   const inputStyle = {
     width: '100%',
-    background: 'rgba(0,0,0,0.4)',
-    border: `1px solid ${theme.colors.accent}40`,
-    color: theme.colors.text,
+    background: 'var(--card-bg-solid)',
+    border: '1px solid var(--border-color)',
+    color: 'var(--text-color)',
     padding: '4px 8px',
-    fontSize: '12px',
-    fontFamily: theme.fonts.mono,
+    fontSize: '13px',
     outline: 'none',
-    borderRadius: '1px'
+    borderRadius: '4px'
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      {/* Table Container */}
       <div style={{
-        background: 'rgba(0,0,0,0.15)',
-        border: `1px solid ${theme.colors.border}`,
-        borderRadius: '4px',
-        overflow: 'hidden',
+        background: 'var(--card-bg)',
+        border: '1px solid var(--border-color)',
+        borderRadius: '10px',
+        overflow: 'hidden'
       }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead style={{ background: 'rgba(255,255,255,0.03)' }}>
             <tr>
-              <th style={headerStyle}>STAMP_DATE</th>
-              <th style={headerStyle}>METER_VAL</th>
-              <th style={headerStyle}>EXPORT_UNIT</th>
-              <th style={headerStyle}>YIELD_LKR</th>
-              <th style={headerStyle}>SRC_TYPE</th>
-              <th style={headerStyle}>OP_CMDS</th>
+              <th style={headerStyle}>Date</th>
+              <th style={headerStyle}>Meter Reading</th>
+              <th style={headerStyle}>Units Exported</th>
+              <th style={headerStyle}>Earnings</th>
+              <th style={headerStyle}>Source</th>
+              <th style={headerStyle}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {data.map((row) => {
               const isEditing = editingId === row.id;
-              
+
               return (
                 <tr key={row.id} style={{
                   transition: 'all 0.2s ease',
-                  background: isEditing ? `${theme.colors.accent}08` : 'transparent',
-                  boxShadow: isEditing ? `inset 0 0 20px ${theme.colors.accent}12` : 'none',
-                  borderLeft: isEditing ? `3px solid ${theme.colors.accent}` : '3px solid transparent'
+                  background: isEditing ? 'rgba(255, 122, 0, 0.06)' : 'transparent',
+                  borderLeft: isEditing ? '3px solid var(--accent)' : '3px solid transparent'
                 }}
                 onMouseEnter={(e) => !isEditing && (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
                 onMouseLeave={(e) => !isEditing && (e.currentTarget.style.background = 'transparent')}
                 >
                   {isEditing ? (
                     <>
-                      {/* IN-LINE EDITING MODE */}
                       <td style={cellStyle}>
-                        <div style={{ position: 'absolute', top: '-10px', left: '10px', fontSize: '8px', color: theme.colors.accent, background: '#060d1a', padding: '0 4px', zIndex: 5 }}>EDIT_LOCK</div>
                         <input
                           type="date"
                           value={editForm.bill_date}
@@ -152,78 +137,72 @@ export default function CebTable({
                           type="number"
                           value={editForm.earnings}
                           onChange={(e) => onEditFormChange({ ...editForm, earnings: e.target.value })}
-                          style={{ ...inputStyle, color: theme.colors.success }}
+                          style={{ ...inputStyle, color: 'var(--success-color)' }}
                         />
                       </td>
                       <td style={cellStyle}>
-                         <div style={{ fontSize: '10px', color: theme.colors.textMuted }}>FIXED_SOURCE</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Fixed</div>
                       </td>
                       <td style={{ ...cellStyle, display: 'flex', gap: '0.6rem' }}>
                         <button
                           onClick={onSaveEdit}
                           disabled={loading}
                           style={{
-                            background: theme.colors.accent,
-                            color: '#000',
+                            background: 'var(--accent)',
+                            color: '#fff',
                             border: 'none',
-                            borderRadius: '1px',
+                            borderRadius: '6px',
                             padding: '4px 10px',
-                            fontSize: '10px',
-                            fontFamily: theme.fonts.mono,
+                            fontSize: '12px',
                             cursor: 'pointer',
-                            fontWeight: '700',
-                            textTransform: 'uppercase'
+                            fontWeight: '600'
                           }}
                         >
-                          {loading ? 'PUSH...' : 'COMMIT'}
+                          {loading ? 'Saving...' : 'Save'}
                         </button>
                         <button
                           onClick={onCancelEdit}
                           disabled={loading}
                           style={{
                             background: 'transparent',
-                            color: theme.colors.textMuted,
-                            border: `1px solid ${theme.colors.borderStrong}`,
-                            borderRadius: '1px',
+                            color: 'var(--text-secondary)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '6px',
                             padding: '4px 10px',
-                            fontSize: '10px',
-                            fontFamily: theme.fonts.mono,
-                            cursor: 'pointer',
-                            textTransform: 'uppercase'
+                            fontSize: '12px',
+                            cursor: 'pointer'
                           }}
                         >
-                          ROLLBACK
+                          Cancel
                         </button>
                       </td>
                     </>
                   ) : (
                     <>
-                      {/* STANDARD READ MODE */}
                       <td style={cellStyle}>{row.bill_date}</td>
                       <td style={cellStyle}>{String(row.meter_reading || 0).padStart(6, '0')}</td>
                       <td style={cellStyle}>{row.units_exported || 0}</td>
-                      <td style={{ ...cellStyle, color: theme.colors.success }}>
+                      <td style={{ ...cellStyle, color: 'var(--success-color)' }}>
                         {row.earnings ? `LKR ${row.earnings.toLocaleString()}` : 'LKR 00.00'}
                       </td>
                       <td style={cellStyle}>
                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ 
-                               fontSize: '9px', 
-                               padding: '2px 4px', 
-                               background: row.data_source === 'manual_entry' ? 'rgba(255,255,255,0.05)' : `${theme.colors.accent}20`,
-                               color: row.data_source === 'manual_entry' ? theme.colors.textMuted : theme.colors.accent,
-                               border: `1px solid ${row.data_source === 'manual_entry' ? theme.colors.border : theme.colors.accent}40`,
-                               borderRadius: '2px'
+                            <span style={{
+                               fontSize: '10px',
+                               padding: '2px 6px',
+                               background: row.data_source === 'manual_entry' ? 'rgba(255,255,255,0.05)' : 'rgba(255, 122, 0, 0.12)',
+                               color: row.data_source === 'manual_entry' ? 'var(--text-muted)' : 'var(--accent)',
+                               border: `1px solid ${row.data_source === 'manual_entry' ? 'var(--border-color)' : 'var(--accent)'}40`,
+                               borderRadius: '4px'
                             }}>
-                               {row.data_source === 'manual_entry' ? 'MANUAL' : 'PARSED'}
+                               {row.data_source === 'manual_entry' ? 'Manual' : 'Parsed'}
                             </span>
                             {row.file_path && (
                                <button
                                   onClick={() => onPreview && onPreview(row.file_path)}
                                   title="View Original Bill"
-                                  style={{ 
-                                    color: theme.colors.accent, 
-                                    textDecoration: 'none', 
+                                  style={{
+                                    color: 'var(--accent)',
                                     fontSize: '14px',
                                     background: 'transparent',
                                     border: 'none',
@@ -242,34 +221,30 @@ export default function CebTable({
                           disabled={loading}
                           style={{
                             background: 'transparent',
-                            color: theme.colors.accent,
-                            border: `1px solid ${theme.colors.accent}60`,
-                            borderRadius: '2px',
-                            padding: '4px 8px',
-                            fontSize: '10px',
-                            fontFamily: theme.fonts.mono,
-                            cursor: 'pointer',
-                            textTransform: 'uppercase'
+                            color: 'var(--accent)',
+                            border: '1px solid var(--accent)',
+                            borderRadius: '6px',
+                            padding: '4px 10px',
+                            fontSize: '12px',
+                            cursor: 'pointer'
                           }}
                         >
-                          [ EDIT ]
+                          Edit
                         </button>
                         <button
                           onClick={() => onDelete(row)}
                           disabled={loading}
                           style={{
                             background: 'transparent',
-                            color: theme.colors.danger,
-                            border: `1px solid ${theme.colors.danger}60`,
-                            borderRadius: '2px',
-                            padding: '4px 8px',
-                            fontSize: '10px',
-                            fontFamily: theme.fonts.mono,
-                            cursor: 'pointer',
-                            textTransform: 'uppercase'
+                            color: 'var(--error-color)',
+                            border: '1px solid var(--error-color)',
+                            borderRadius: '6px',
+                            padding: '4px 10px',
+                            fontSize: '12px',
+                            cursor: 'pointer'
                           }}
                         >
-                          [ DROP ]
+                          Delete
                         </button>
                       </td>
                     </>
@@ -281,7 +256,6 @@ export default function CebTable({
         </table>
       </div>
 
-      {/* Pagination Controls */}
       {totalItems > itemsPerPage && (
         <div style={{
           display: 'flex',
@@ -289,77 +263,75 @@ export default function CebTable({
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: '1rem',
-          padding: '0.8rem 1rem',
-          background: 'rgba(0,0,0,0.2)',
-          border: `1px solid ${theme.colors.border}`,
-          borderRadius: '4px',
-          fontSize: '11px',
-          fontFamily: theme.fonts.mono
+          padding: '1rem',
+          background: 'var(--card-bg)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '10px',
+          fontSize: '13px'
         }}>
-          <div style={{ color: theme.colors.textMuted }}>
-            RANGE: {startIndex + 1}-{Math.min(startIndex + itemsPerPage, totalItems)} / TOTAL: {totalItems}
+          <div style={{ color: 'var(--text-secondary)' }}>
+            Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, totalItems)} of {totalItems}
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <button
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage === 1 || loading}
               style={{
-                padding: '4px 10px',
-                background: 'transparent',
-                color: currentPage === 1 ? '#444' : theme.colors.accent,
-                border: `1px solid ${currentPage === 1 ? '#333' : theme.colors.accent}80`,
-                borderRadius: '2px',
+                padding: '6px 12px',
+                background: currentPage === 1 ? 'var(--hover-bg)' : 'var(--accent)',
+                color: currentPage === 1 ? 'var(--text-muted)' : '#fff',
+                border: 'none',
+                borderRadius: '6px',
                 cursor: currentPage === 1 || loading ? 'not-allowed' : 'pointer',
-                fontSize: '11px',
-                textTransform: 'uppercase'
+                fontSize: '13px',
+                fontWeight: '600'
               }}
             >
-              {'<< PREV'}
+              ← Prev
             </button>
 
-            <div style={{ color: theme.colors.text }}>
-              SEG: {currentPage} / {totalPages || 1}
+            <div style={{ color: 'var(--text-secondary)' }}>
+              Page {currentPage} of {totalPages || 1}
             </div>
 
             <button
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage >= totalPages || loading}
               style={{
-                padding: '4px 10px',
-                background: 'transparent',
-                color: currentPage >= totalPages ? '#444' : theme.colors.accent,
-                border: `1px solid ${currentPage >= totalPages ? '#333' : theme.colors.accent}80`,
-                borderRadius: '2px',
+                padding: '6px 12px',
+                background: currentPage >= totalPages ? 'var(--hover-bg)' : 'var(--accent)',
+                color: currentPage >= totalPages ? 'var(--text-muted)' : '#fff',
+                border: 'none',
+                borderRadius: '6px',
                 cursor: currentPage >= totalPages || loading ? 'not-allowed' : 'pointer',
-                fontSize: '11px',
-                textTransform: 'uppercase'
+                fontSize: '13px',
+                fontWeight: '600'
               }}
             >
-              {'NEXT >>'}
+              Next →
             </button>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ color: theme.colors.textMuted }}>SIZE:</span>
+            <span style={{ color: 'var(--text-secondary)' }}>Per page:</span>
             <select
               value={itemsPerPage}
               onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
               disabled={loading}
               style={{
-                background: 'rgba(0,0,0,0.3)',
-                color: theme.colors.text,
-                border: `1px solid ${theme.colors.borderStrong}`,
-                borderRadius: '2px',
-                padding: '2px 4px',
-                fontSize: '11px',
-                fontFamily: theme.fonts.mono,
+                background: 'var(--card-bg-solid)',
+                color: 'var(--text-color)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                padding: '4px 8px',
+                fontSize: '13px',
                 cursor: 'pointer'
               }}
             >
-              <option value={10}>10_PCS</option>
-              <option value={20}>20_PCS</option>
-              <option value={50}>50_PCS</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
             </select>
           </div>
         </div>
