@@ -1,7 +1,7 @@
 import React from 'react';
 import { formatDateDDMMYYYY } from '../../../lib/dateFormatter';
 
-export default function UserTable({ users, loading, onRoleChange, onAccessChange }) {
+export default function UserTable({ users, loading, onRoleChange, onAccessChange, selectedUsers, onToggleSelect, onSelectAll }) {
   if (users.length === 0) {
     return (
       <div style={{
@@ -44,6 +44,15 @@ export default function UserTable({ users, loading, onRoleChange, onAccessChange
         <table className="admin-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
+              <th style={{ ...headerStyle, width: '40px' }}>
+                <input
+                  type="checkbox"
+                  checked={selectedUsers.size === users.length && users.length > 0}
+                  onChange={onSelectAll}
+                  disabled={users.length === 0}
+                  style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                />
+              </th>
               <th style={headerStyle}>User</th>
               <th style={headerStyle}>Email</th>
               <th style={headerStyle}>Role</th>
@@ -60,6 +69,14 @@ export default function UserTable({ users, loading, onRoleChange, onAccessChange
                 onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
+                <td data-label="" style={cellStyle}>
+                  <input
+                    type="checkbox"
+                    checked={selectedUsers.has(user.id)}
+                    onChange={() => onToggleSelect(user.id)}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                  />
+                </td>
                 <td data-label="User" style={cellStyle}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <div style={{

@@ -3,6 +3,7 @@ import { useAuth } from '@clerk/clerk-react';
 import UserTable from './UserTable';
 import UserStats from './UserStats';
 import SearchBar from './SearchBar';
+import BulkOperations from './BulkOperations';
 import ConfirmDialog from '../../shared/ConfirmDialog';
 import SkeletonLoader from '../../shared/SkeletonLoader';
 import { useToast } from '../../shared/ToastManager';
@@ -26,6 +27,9 @@ export default function UserManagement() {
     userName: null,
     newValue: null
   });
+  const [selectedUsers, setSelectedUsers] = useState(new Set());
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkTargetAccess, setBulkTargetAccess] = useState(null);
 
   // Fetch users on mount
   useEffect(() => {
@@ -141,6 +145,62 @@ export default function UserManagement() {
     }
   };
 
+  const toggleUserSelection = (userId) => {
+    setSelectedUsers((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  };
+
+  const selectAllUsers = () => {
+    setSelectedUsers((prev) =>
+      prev.size === filteredUsers.length ? new Set() : new Set(filteredUsers.map((u) => u.id))
+    );
+  };
+
+  const requestBulkAccessChange = (newAccess) => {
+    if (selectedUsers.size === 0) return;
+    setBulkTargetAccess(newAccess);
+    setBulkConfirmOpen(true);
+  };
+
+  const confirmBulkAccessChange = async () => {
+    setBulkConfirmOpen(false);
+    setLoading(true);
+    setError('');
+    try {
+      const token = await fetchAuthToken();
+      if (!token) throw new Error('No auth token');
+
+      const userIds = Array.from(selectedUsers);
+      const responses = await Promise.all(
+        userIds.map((userId) =>
+          fetch(`/api/admin/users/${userId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ dashboardAccess: bulkTargetAccess })
+          })
+        )
+      );
+
+      if (!responses.every((r) => r.ok)) throw new Error('Some updates failed');
+
+      setSuccessMessage(`Updated ${userIds.length} user(s) to ${bulkTargetAccess} access`);
+      toast.success(`${userIds.length} user(s) updated`);
+      setSelectedUsers(new Set());
+      fetchUsers();
+    } catch (err) {
+      console.error('Bulk update error:', err);
+      setError(`Bulk update failed: ${err.message}`);
+      toast.error('Bulk update failed');
+    } finally {
+      setLoading(false);
+      setBulkTargetAccess(null);
+    }
+  };
+
   const filteredUsers = allUsers.filter(user => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -207,6 +267,15 @@ export default function UserManagement() {
         </div>
       )}
 
+      {selectedUsers.size > 0 && (
+        <BulkOperations
+          selectedCount={selectedUsers.size}
+          onGrantRealAccess={() => requestBulkAccessChange('real')}
+          onSetDemo={() => requestBulkAccessChange('demo')}
+          loading={loading}
+        />
+      )}
+
       {/* User Table */}
       {loading && allUsers.length === 0 ? (
         <SkeletonLoader count={8} variant="table" />
@@ -216,6 +285,9 @@ export default function UserManagement() {
           loading={loading}
           onRoleChange={handleRoleChange}
           onAccessChange={handleAccessChange}
+          selectedUsers={selectedUsers}
+          onToggleSelect={toggleUserSelection}
+          onSelectAll={selectAllUsers}
         />
       )}
 
@@ -230,6 +302,17 @@ export default function UserManagement() {
         }
         onConfirm={confirmChange}
         onCancel={() => setConfirmDialog({ open: false, action: null, userId: null, userName: null, newValue: null })}
+      />
+
+      {/* Bulk Confirm Dialog */}
+      <ConfirmDialog
+        open={bulkConfirmOpen}
+        title="Confirm Bulk Update"
+        message={`Update ${selectedUsers.size} user(s) to ${bulkTargetAccess} access?`}
+        onConfirm={confirmBulkAccessChange}
+        onCancel={() => { setBulkConfirmOpen(false); setBulkTargetAccess(null); }}
+        isLoading={loading}
+        isDangerous={true}
       />
     </div>
   );
