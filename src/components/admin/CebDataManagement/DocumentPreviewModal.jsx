@@ -51,6 +51,7 @@ const DocumentPreviewModal = ({ open, url, loading, fileName = 'document', onClo
   const modalContent = (
     <div
       onClick={onClose}
+      className="doc-preview-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -198,7 +199,10 @@ const DocumentPreviewModal = ({ open, url, loading, fileName = 'document', onClo
       </div>
 
       <style>{`
-        @media (max-width: 640px) {
+        @media (max-width: 768px) {
+          .doc-preview-overlay {
+            padding: 0 !important;
+          }
           .doc-preview-modal {
             width: 100% !important;
             height: 100% !important;
