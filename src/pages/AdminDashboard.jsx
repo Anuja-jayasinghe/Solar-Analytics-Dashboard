@@ -2,6 +2,8 @@ import React, { useContext } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { AuthContext } from "../contexts/AuthContext";
 import ErrorBoundary from "../components/shared/ErrorBoundary";
+import AdminBottomNav from "../components/admin/AdminBottomNav";
+import "../styles/admin.css";
 
 const tabs = [
   { path: "users", label: "User Management" },
@@ -45,6 +47,8 @@ function AdminDashboard() {
           <Outlet />
         </ErrorBoundary>
       </div>
+
+      <AdminBottomNav />
     </div>
   );
 }
