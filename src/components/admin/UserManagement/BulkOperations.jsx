@@ -41,8 +41,6 @@ export default function BulkOperations({
           opacity: loading ? 0.6 : 1,
           transition: 'all 0.2s ease'
         }}
-        onMouseEnter={(e) => !loading && (e.target.style.background = '#219653')}
-        onMouseLeave={(e) => !loading && (e.target.style.background = '#28a745')}
       >
         ✅ Grant Real Access
       </button>
@@ -62,8 +60,6 @@ export default function BulkOperations({
           opacity: loading ? 0.6 : 1,
           transition: 'all 0.2s ease'
         }}
-        onMouseEnter={(e) => !loading && (e.target.style.background = '#e0a800')}
-        onMouseLeave={(e) => !loading && (e.target.style.background = '#ffc107')}
       >
         🧪 Set to Demo
       </button>
