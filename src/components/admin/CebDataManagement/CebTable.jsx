@@ -82,7 +82,7 @@ export default function CebTable({
         borderRadius: '10px',
         overflow: 'hidden'
       }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table className="admin-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead style={{ background: 'rgba(255,255,255,0.03)' }}>
             <tr>
               <th style={headerStyle}>Date</th>
@@ -108,7 +108,7 @@ export default function CebTable({
                 >
                   {isEditing ? (
                     <>
-                      <td style={cellStyle}>
+                      <td data-label="Date" style={cellStyle}>
                         <input
                           type="date"
                           value={editForm.bill_date}
@@ -116,7 +116,7 @@ export default function CebTable({
                           style={inputStyle}
                         />
                       </td>
-                      <td style={cellStyle}>
+                      <td data-label="Meter Reading" style={cellStyle}>
                         <input
                           type="number"
                           value={editForm.meter_reading}
@@ -124,7 +124,7 @@ export default function CebTable({
                           style={inputStyle}
                         />
                       </td>
-                      <td style={cellStyle}>
+                      <td data-label="Units Exported" style={cellStyle}>
                         <input
                           type="number"
                           value={editForm.units_exported}
@@ -132,7 +132,7 @@ export default function CebTable({
                           style={inputStyle}
                         />
                       </td>
-                      <td style={cellStyle}>
+                      <td data-label="Earnings" style={cellStyle}>
                         <input
                           type="number"
                           value={editForm.earnings}
@@ -140,10 +140,10 @@ export default function CebTable({
                           style={{ ...inputStyle, color: 'var(--success-color)' }}
                         />
                       </td>
-                      <td style={cellStyle}>
+                      <td data-label="Source" style={cellStyle}>
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Fixed</div>
                       </td>
-                      <td style={{ ...cellStyle, display: 'flex', gap: '0.6rem' }}>
+                      <td data-label="Actions" style={{ ...cellStyle, display: 'flex', gap: '0.6rem' }}>
                         <button
                           onClick={onSaveEdit}
                           disabled={loading}
@@ -179,13 +179,13 @@ export default function CebTable({
                     </>
                   ) : (
                     <>
-                      <td style={cellStyle}>{row.bill_date}</td>
-                      <td style={cellStyle}>{String(row.meter_reading || 0).padStart(6, '0')}</td>
-                      <td style={cellStyle}>{row.units_exported || 0}</td>
-                      <td style={{ ...cellStyle, color: 'var(--success-color)' }}>
+                      <td data-label="Date" style={cellStyle}>{row.bill_date}</td>
+                      <td data-label="Meter Reading" style={cellStyle}>{String(row.meter_reading || 0).padStart(6, '0')}</td>
+                      <td data-label="Units Exported" style={cellStyle}>{row.units_exported || 0}</td>
+                      <td data-label="Earnings" style={{ ...cellStyle, color: 'var(--success-color)' }}>
                         {row.earnings ? `LKR ${row.earnings.toLocaleString()}` : 'LKR 00.00'}
                       </td>
-                      <td style={cellStyle}>
+                      <td data-label="Source" style={cellStyle}>
                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{
                                fontSize: '10px',
@@ -215,7 +215,7 @@ export default function CebTable({
                             )}
                          </div>
                       </td>
-                      <td style={{ ...cellStyle, display: 'flex', gap: '0.6rem' }}>
+                      <td data-label="Actions" style={{ ...cellStyle, display: 'flex', gap: '0.6rem' }}>
                         <button
                           onClick={() => onEdit(row)}
                           disabled={loading}

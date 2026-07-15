@@ -469,13 +469,11 @@ const CebDataManagement = () => {
   };
 
   return (
-    <div style={{ padding: "2rem", maxWidth: "1000px", margin: "0 auto", color: "var(--text-color)" }}>
+    <div className="admin-section" style={{ maxWidth: "1000px" }}>
       {/* Header */}
-      <div style={{ marginBottom: "2rem" }}>
-        <h2 style={{ color: "var(--accent)", margin: "0 0 0.5rem 0", fontSize: "28px" }}>
-          ⚙️ CEB Data Management
-        </h2>
-        <p style={{ color: "var(--text-secondary)", margin: 0, fontSize: "14px" }}>
+      <div className="admin-section-header">
+        <h2 className="admin-section-title">⚙️ CEB Data Management</h2>
+        <p className="admin-section-subtitle">
           Manage your monthly CEB export readings and earnings.
           Current Tariff: <span style={{ color: "var(--accent)", fontWeight: "bold" }}>
             {rate ? `LKR ${rate}/kWh` : "Not set"}
@@ -730,7 +728,7 @@ const CebDataManagement = () => {
                   borderRadius: "4px",
                   background: "rgba(0,0,0,0.2)"
                 }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                  <table className="admin-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
                     <thead style={{ position: "sticky", top: 0, background: "var(--card-bg)", zIndex: 1 }}>
                       <tr>
                         <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid var(--border-color)" }}>Date</th>
@@ -752,18 +750,18 @@ const CebDataManagement = () => {
                         
                         return (
                           <tr key={row.id}>
-                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)", fontSize: '11px' }}>
+                            <td data-label="Date" style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)", fontSize: '11px' }}>
                               {row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "-"}
                             </td>
-                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-color)", fontWeight: '500' }}>
+                            <td data-label="File" style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-color)", fontWeight: '500' }}>
                               {row.name}
                             </td>
-                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)" }}>
-                               <span style={{ 
-                                  padding: '2px 6px', 
-                                  borderRadius: '4px', 
-                                  fontSize: '10px', 
-                                  textTransform: 'uppercase', 
+                            <td data-label="Status" style={{ padding: "8px", borderBottom: "1px solid var(--border-color)" }}>
+                               <span style={{
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  fontSize: '10px',
+                                  textTransform: 'uppercase',
                                   fontWeight: 'bold',
                                   background: `${statusColor}22`,
                                   color: statusColor,
@@ -772,16 +770,16 @@ const CebDataManagement = () => {
                                   {row.status.replace('_', ' ')}
                                </span>
                             </td>
-                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "#38bdf8", fontWeight: 'bold' }}>
+                            <td data-label="Month" style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "#38bdf8", fontWeight: 'bold' }}>
                               {ext.billing_month || '-'}
                             </td>
-                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-color)" }}>
+                            <td data-label="Units" style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "var(--text-color)" }}>
                               {ext.units_exported || '-'}
                             </td>
-                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "#4caf50" }}>
+                            <td data-label="Earnings" style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", color: "#4caf50" }}>
                               {ext.earnings ? `Rs. ${ext.earnings}` : '-'}
                             </td>
-                            <td style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", textAlign: "right" }}>
+                            <td data-label="Actions" style={{ padding: "8px", borderBottom: "1px solid var(--border-color)", textAlign: "right" }}>
                               {row.status !== 'approved' && (
                                 <>
                                   <button onClick={() => handleExtractFromStorage(row.id)} style={{ background: 'transparent', color: '#2196f3', border: '1px solid #2196f3', borderRadius: '4px', padding: '2px 8px', fontSize: '10px', marginRight: '4px', cursor: 'pointer' }}>Parse</button>

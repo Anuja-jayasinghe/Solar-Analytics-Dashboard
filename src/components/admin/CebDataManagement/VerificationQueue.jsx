@@ -292,7 +292,19 @@ const VerificationQueue = ({ onApproveSuccess }) => {
 
   return (
     <div style={{ marginTop: '2rem', border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden' }}>
-      <div style={{ background: 'rgba(255, 193, 7, 0.1)', borderBottom: '1px solid var(--border-color)', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .verification-queue-fields-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .verification-queue-header {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 0.75rem;
+          }
+        }
+      `}</style>
+      <div className="verification-queue-header" style={{ background: 'rgba(255, 193, 7, 0.1)', borderBottom: '1px solid var(--border-color)', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
          <div>
             <h3 style={{ margin: 0, color: '#ffc107', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span>🔍</span> Parsing Review Queue ({queue.length})
@@ -416,7 +428,7 @@ const VerificationQueue = ({ onApproveSuccess }) => {
                              )}
 
                              {/* Editable Fields Grid */}
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                              <div className="verification-queue-fields-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                                   <div>
                                       <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>Account Number</label>
                                       <input type="text" value={formData.account_number} onChange={e => handleFormChange(item.id, 'account_number', e.target.value)} style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)', borderRadius: '4px' }} />
