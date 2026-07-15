@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { Download, ExternalLink, X } from 'lucide-react';
 
+const PdfPreview = lazy(() => import('./PdfPreview'));
+
+const isPdfFile = (fileName) => /\.pdf$/i.test(fileName || '');
+
 /**
  * Document Preview Modal
- * Renders a signed Supabase Storage URL (PDF) in an iframe.
- * Mobile browsers render PDF-in-iframe inconsistently, so an
- * "Open document" fallback is always available, promoted to the
- * primary action on small screens.
+ * Renders a signed Supabase Storage URL — PDFs via react-pdf (consistent
+ * across every browser and on mobile), images via a plain <img>.
  */
 const DocumentPreviewModal = ({ open, url, loading, fileName = 'document', onClose }) => {
   const [iconHover, setIconHover] = useState(null);
@@ -69,7 +71,7 @@ const DocumentPreviewModal = ({ open, url, loading, fileName = 'document', onClo
           border: '1px solid var(--border-color)',
           borderRadius: '12px',
           width: '100%',
-          maxWidth: '900px',
+          maxWidth: '1000px',
           height: '90vh',
           display: 'flex',
           flexDirection: 'column',
@@ -159,44 +161,49 @@ const DocumentPreviewModal = ({ open, url, loading, fileName = 'document', onClo
               <div className="doc-preview-spinner" />
               <span style={{ fontSize: '0.9rem' }}>Loading secure document link…</span>
             </div>
+          ) : isPdfFile(fileName) ? (
+            <Suspense
+              fallback={
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#ccc',
+                  }}
+                >
+                  Loading previewer…
+                </div>
+              }
+            >
+              <PdfPreview url={url} />
+            </Suspense>
           ) : (
-            <iframe
-              src={url}
-              title="Document Preview"
-              className="doc-preview-iframe"
-              style={{ width: '100%', height: '100%', border: 'none' }}
-            />
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'auto',
+              }}
+            >
+              <img src={url} alt={fileName} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+            </div>
           )}
         </div>
-
-        {url && (
-          <a href={url} target="_blank" rel="noopener noreferrer" className="doc-preview-mobile-action">
-            Open document
-          </a>
-        )}
       </div>
 
       <style>{`
-        .doc-preview-mobile-action {
-          display: none;
-        }
         @media (max-width: 640px) {
           .doc-preview-modal {
             width: 100% !important;
             height: 100% !important;
             max-width: 100% !important;
             border-radius: 0 !important;
-          }
-          .doc-preview-mobile-action {
-            display: block;
-            text-align: center;
-            padding: 0.75rem;
-            border-top: 1px solid var(--border-color);
-            background: var(--accent, #4caf50);
-            color: #fff;
-            font-weight: 600;
-            font-size: 0.9rem;
-            text-decoration: none;
           }
         }
         .doc-preview-spinner {

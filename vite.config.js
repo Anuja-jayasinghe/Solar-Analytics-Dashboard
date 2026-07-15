@@ -23,6 +23,13 @@ export default defineConfig(({ mode }) => {
         manualChunks: (id) => {
           // Vendor chunks
           if (id.includes('node_modules')) {
+            // Leave react-pdf/pdfjs-dist out of the manual vendor buckets so
+            // Rollup's default chunking respects the dynamic import boundary
+            // in PdfPreview.jsx (lazy-loaded) instead of bundling this ~1MB+
+            // dependency into an eagerly-loaded vendor chunk.
+            if (id.includes('react-pdf') || id.includes('pdfjs-dist')) {
+              return undefined;
+            }
             if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
               return 'react-vendor';
             }
@@ -50,6 +57,13 @@ export default defineConfig(({ mode }) => {
             return 'dashboard';
           }
           
+          // PdfPreview.jsx is lazy-loaded (React.lazy) specifically to keep
+          // its react-pdf/pdfjs-dist dependency out of the eager admin
+          // bundle - excluded here so that dynamic import boundary holds.
+          if (id.includes('src/components/admin/CebDataManagement/PdfPreview')) {
+            return undefined;
+          }
+
           if (id.includes('src/components/admin/') || id.includes('src/pages/Admin')) {
             return 'admin';
           }
