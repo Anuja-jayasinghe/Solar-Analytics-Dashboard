@@ -1,6 +1,6 @@
 // App.js
 import React, { useState, useEffect, useContext, Suspense, lazy } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, Outlet } from "react-router-dom";
 import { ClerkProvider } from "@clerk/clerk-react";
 import ToastManager from './components/shared/ToastManager';
 import { ThemeProvider } from "./components/ThemeContext";
@@ -32,6 +32,8 @@ const AccessRequest = lazy(() => import("./pages/AccessRequest"));
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const Signup = lazy(() => import("./pages/Signup"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const UserManagement = lazy(() => import("./components/admin/UserManagement"));
+const CebDataManagement = lazy(() => import("./components/admin/CebDataManagement"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 import BottomNav from "./components/BottomNav";
@@ -310,7 +312,11 @@ const AppContent = React.memo(() => {
               <AdminDashboard />
             </RequireAdmin>
           }
-        />
+        >
+          <Route index element={<Navigate to="/admin/dashboard/users" replace />} />
+          <Route path="users" element={<UserManagement />} />
+          <Route path="ceb-billing" element={<CebDataManagement />} />
+        </Route>
         <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="/admin/*" element={<NotFound />} />
 
