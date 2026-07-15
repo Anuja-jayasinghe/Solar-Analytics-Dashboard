@@ -41,7 +41,7 @@ export default function UserTable({ users, loading, onRoleChange, onAccessChange
       overflow: 'hidden'
     }}>
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table className="admin-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
               <th style={headerStyle}>User</th>
@@ -60,7 +60,7 @@ export default function UserTable({ users, loading, onRoleChange, onAccessChange
                 onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                <td style={cellStyle}>
+                <td data-label="User" style={cellStyle}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <div style={{
                       width: '32px',
@@ -83,10 +83,10 @@ export default function UserTable({ users, loading, onRoleChange, onAccessChange
                     </div>
                   </div>
                 </td>
-                <td style={cellStyle}>
+                <td data-label="Email" style={cellStyle}>
                   <span style={{ color: 'var(--text-secondary)' }}>{user.email || 'No email'}</span>
                 </td>
-                <td style={cellStyle}>
+                <td data-label="Role" style={cellStyle}>
                   <select
                     value={user.role || 'user'}
                     onChange={(e) => onRoleChange(user.id, e.target.value, user.firstName || user.email)}
@@ -107,7 +107,7 @@ export default function UserTable({ users, loading, onRoleChange, onAccessChange
                     <option value="admin">Admin</option>
                   </select>
                 </td>
-                <td style={cellStyle}>
+                <td data-label="Access" style={cellStyle}>
                   <select
                     value={user.dashboardAccess || 'demo'}
                     onChange={(e) => onAccessChange(user.id, e.target.value, user.firstName || user.email)}
@@ -128,12 +128,12 @@ export default function UserTable({ users, loading, onRoleChange, onAccessChange
                     <option value="real">Real</option>
                   </select>
                 </td>
-                <td style={cellStyle}>
+                <td data-label="Joined" style={cellStyle}>
                   <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                     {formatDateDDMMYYYY(user.createdAt)}
                   </span>
                 </td>
-                <td style={cellStyle}>
+                <td data-label="Last Sign-in" style={cellStyle}>
                   <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                     {formatDateDDMMYYYY(user.lastSignInAt, 'Never')}
                   </span>

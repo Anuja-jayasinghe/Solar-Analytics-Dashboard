@@ -154,15 +154,11 @@ export default function UserManagement() {
   });
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
+    <div className="admin-section">
       {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ color: 'var(--accent)', margin: '0 0 0.5rem 0', fontSize: '28px' }}>
-          👥 User Management
-        </h2>
-        <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '14px' }}>
-          Manage user roles and dashboard access
-        </p>
+      <div className="admin-section-header">
+        <h2 className="admin-section-title">👥 User Management</h2>
+        <p className="admin-section-subtitle">Manage user roles and dashboard access</p>
       </div>
 
       {/* Stats */}
