@@ -19,26 +19,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
+          cache: pnpm
 
       - name: Install
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       # --if-present means a repo without this script passes rather than fails.
       - name: Lint
-        run: npm run lint --if-present
+        run: pnpm run lint --if-present
 
       - name: Typecheck
-        run: npm run typecheck --if-present
+        run: pnpm run typecheck --if-present
 
       - name: Test
-        run: npm test --if-present
+        run: pnpm test --if-present
 
       - name: Build
-        run: npm run build --if-present
+        run: pnpm run build --if-present
 
   secrets:
     runs-on: ubuntu-latest
