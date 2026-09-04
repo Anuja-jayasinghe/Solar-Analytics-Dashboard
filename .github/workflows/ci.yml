@@ -32,17 +32,18 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # --if-present means a repo without this script passes rather than fails.
+      # pnpm (unlike npm) requires --if-present before the script name.
       - name: Lint
-        run: pnpm run lint --if-present
+        run: pnpm run --if-present lint
 
       - name: Typecheck
-        run: pnpm run typecheck --if-present
+        run: pnpm run --if-present typecheck
 
       - name: Test
-        run: pnpm test --if-present
+        run: pnpm run --if-present test
 
       - name: Build
-        run: pnpm run build --if-present
+        run: pnpm run --if-present build
 
   secrets:
     runs-on: ubuntu-latest
