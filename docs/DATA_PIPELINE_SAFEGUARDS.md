@@ -2,7 +2,7 @@
 
 **Added:** 2026-09-07 · **Context:** [`RECOVERY_STATUS_2026-09.md`](./RECOVERY_STATUS_2026-09.md)
 
-Why inverter data collection died for five months without anyone noticing, and the three
+Why inverter data collection died for five months without anyone noticing, and the five
 mechanisms now in place so it cannot happen the same way twice.
 
 ---
@@ -149,6 +149,57 @@ to be.
 The general rule this encodes, worth applying to any job added later:
 
 > A batch job that processes nothing has not succeeded. It has failed to find its input.
+
+## Safeguard 5 — Snapshot before you write
+
+`.github/workflows/db-snapshot.yml` → `scripts/snapshot_db.js`
+
+Read-only export of `ceb_data`, `ceb_bill_ingestions`, `ceb_bill_extractions`,
+`inverter_data_daily_summary`, `inverter_data_live` and `system_settings` to JSON, uploaded as
+a downloadable workflow artifact. Run it before any operation that writes to the database — a
+backfill, a migration, a bulk approval.
+
+Actions tab → *DB Snapshot* → Run workflow.
+
+It applies the same rule as safeguard 4, for the same reason. A snapshot taken with an
+RLS-bound key comes back **empty rather than erroring**, which would hand you a restore point
+containing nothing. So tables that should hold data must return rows or the run fails:
+
+```
+❌ SNAPSHOT NOT TRUSTWORTHY — do not treat this as a restore point.
+   Unexpectedly empty: ceb_data, system_settings
+```
+
+> This is a safety net, not an authoritative backup. For a true point-in-time restore use
+> **Supabase Dashboard → Database → Backups**. The snapshot captures only what the configured
+> key is permitted to read.
+
+---
+
+## Verifying a backfill before it writes
+
+`scripts/backfill_all_missing_daily.js --dry` reports which dates are missing **and what
+values it would write** — totals, mean daily generation, peak range, and a sample of dated
+rows you can check against the Solis portal.
+
+It also flags one real accuracy trap. When Solis returns no record for a date, the script
+still inserts a row with `total_generation_kwh: 0`. Per
+[`LR-001`](./logic-registry/LR-001-ceb-vs-inverter-monthly-alignment.md) that is wrong:
+
+> `null` means unavailable/pending · `0` means an actual measured zero
+
+A zero-filled row asserts "this system generated nothing that day" when the truth is "we don't
+know". On the dashboard it reads as a real zero and drags monthly averages down. The dry run
+now counts these separately and lists the dates:
+
+```
+│ Rows to insert        : 145
+│   backed by Solis data: 141
+│   zero-filled         :   4
+│ ⚠️  4 date(s) would be written as 0 kWh despite Solis returning no record
+```
+
+Decide what those dates should be before running without `--dry`.
 
 ---
 
