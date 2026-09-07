@@ -163,8 +163,12 @@ async function main() {
   console.log('     (state `disabled_inactivity` means GitHub switched them off)');
   console.log('  2. Did the last runs fail?');
   console.log('     gh run list --workflow=fetch-live-inverter-data.yml --limit 5');
-  console.log('  3. Are the SOLIS_* / SUPABASE_* repo secrets still valid?');
-  console.log('  4. Is the Supabase project active (free tier pauses when idle)?');
+  console.log('  3. Is SUPABASE_SERVICE_KEY actually a service_role key?');
+  console.log('     A "violates row-level security policy" error on insert means the key is');
+  console.log('     being evaluated against RLS — which a real service_role key never is.');
+  console.log('     This exact failure took the pipeline down in 2026-09.');
+  console.log('  4. Are the SOLIS_* secrets still valid?');
+  console.log('  5. Is the Supabase project active (free tier pauses when idle)?');
   console.log('');
   console.log('Once collection is restored, refill the gap:');
   console.log('  node scripts/backfill_all_missing_daily.js --dry');

@@ -11,12 +11,20 @@ Re-orientation and triage after ~5 months away. Read this before touching anythi
 You came back for the CEB bill parser. That is real and it is broken — but it is **not the
 worst thing wrong with this project**.
 
-Your inverter data collection has been dead since **2026-04-15**. Both scheduled GitHub
-Actions workflows are in state `disabled_inactivity` and have not run in ~5 months. Every
-number on the dashboard that comes from the inverter side is frozen at April.
+Inverter data collection has been dead since **2026-04-15**, and it turned out to be three
+faults stacked on top of each other, not one:
 
-Fix that first. You cannot judge whether the CEB pipeline is producing correct numbers when
-the other half of every comparison is empty.
+1. **Both scheduled workflows were disabled** by GitHub after an 88-day commit gap on `main`.
+   *(Fixed 2026-09-07 — they are `active` again.)*
+2. **`SUPABASE_SERVICE_KEY` is not a service_role key.** Even re-enabled, every insert into
+   `inverter_data_live` is refused by row-level security. The Solis side is perfectly
+   healthy — the inverter generated 163.3 kWh today. *(Still open. One secret to fix.)*
+3. **The daily summary job reports SUCCESS while writing nothing** — 30 days skipped, exit 0,
+   green checkmark. This is why nobody noticed for five months. *(Fixed — it now fails.)*
+
+**Do #2 before anything else.** It is a two-minute change and every other inverter-side task
+is blocked behind it. And you cannot judge whether the CEB pipeline produces correct numbers
+while the other half of every comparison is empty.
 
 ---
 
@@ -107,8 +115,79 @@ through May and July without this being noticed.
 It went unnoticed because **a disabled workflow does not fail — it produces nothing.** No run,
 no red X, no email. Nothing was checking whether data had actually arrived.
 
-Both workflows are now `active` again. Prevention and detection are covered in
-[`DATA_PIPELINE_SAFEGUARDS.md`](./DATA_PIPELINE_SAFEGUARDS.md).
+Both workflows are now `active` again — **but that did not restore collection.** See below.
+
+### 🔴 Breakage 1b — `SUPABASE_SERVICE_KEY` is not a service_role key
+
+Discovered by manually dispatching the live fetcher after re-enabling it
+(run `34147289895`, 2026-09-07). It still fails:
+
+```
+✅ API Response Success
+   Found 1 inverter(s)
+   1. SN: 1811040244070066 | Power: 0 kW | Generation Today: 163.3 kWh | Status: 2
+💾 Inserting into Supabase table: inverter_data_live
+💥 Error: Supabase upsert failed:
+   new row violates row-level security policy for table "inverter_data_live"
+```
+
+Read that carefully — it is good news and bad news:
+
+- **The SolisCloud credentials are fine.** The inverter is alive and generated 163.3 kWh
+  today. Nothing upstream is broken.
+- **Supabase is rejecting the write under RLS.** A genuine `service_role` key *bypasses RLS
+  entirely, on every table*. So whatever is in the `SUPABASE_SERVICE_KEY` repo secret is
+  currently being evaluated as a normal role — almost certainly the **anon** key.
+
+Corroborating evidence: `scripts/sql/2026-04-23_ceb_bill_ingestions_anon_mode_policies.sql`
+opens with *"Use this script only when backend uses SUPABASE_ANON_KEY instead of
+service_role"* — dated eight days after collection stopped. The project was being operated in
+anon-key mode. `inverter_data_live` has no anon-insert policy, so inserts are refused; the
+`api_logs` insert in the same run succeeded, which is what proves the key authenticates fine
+and is simply subject to RLS.
+
+**The fix is one secret.** Supabase dashboard → Project Settings → API → copy the
+`service_role` (secret) key → `gh secret set SUPABASE_SERVICE_KEY`. If it already is that key,
+then the project has migrated to Supabase's new API key system and the legacy JWT no longer
+carries `service_role` — reissue it there instead.
+
+### 🔴 Breakage 1c — the daily summary job reports success while doing nothing
+
+Dispatching `Generate Daily Inverter Summary` (run `34147368607`) returned a **green
+checkmark** and this:
+
+```
+⚠️  No live data rows found     ← ×30, once per day in the window
+📊 Summary:
+   • Total Days Checked: 30
+   • New Records Inserted: 0
+   • Records Updated: 0
+   • Records Unchanged: 0
+   • Days Skipped: 30
+ DAILY SUMMARY GENERATOR - SUCCESS
+```
+
+It aggregates `inverter_data_live`. That table is empty, so it has nothing to aggregate —
+and it exits `0` anyway. **This is the single biggest reason the outage lasted five months.**
+Even after the workflows were disabled, anyone glancing at the Actions tab after re-enabling
+them would have seen green.
+
+Fixed in `functions/generate_daily_summary/index.js`: reconciling zero days across the whole
+window now throws instead of reporting success.
+
+### The full failure chain
+
+```
+1. Jan 20 – Apr 18: no commits on main (88 days)
+2. GitHub disables both scheduled workflows for inactivity     → collection stops Apr 15
+3. Re-enabling them is not enough: SUPABASE_SERVICE_KEY is an
+   anon key, so every insert into inverter_data_live is refused by RLS
+4. inverter_data_daily_summary therefore has nothing to aggregate
+5. ...and the summary job reports SUCCESS anyway, exit 0, green check
+6. Dashboard shows a five-month gap while CI stays green
+```
+
+Prevention and detection for all of it: [`DATA_PIPELINE_SAFEGUARDS.md`](./DATA_PIPELINE_SAFEGUARDS.md).
 
 There is no fallback path: `vercel.json` declares no `crons`, so `api/fetch-inverter-data.js`
 only ever runs when something calls it.
@@ -201,13 +280,34 @@ Not blocking, but they cost time if you hit them unaware.
 
 Sequenced so each step unblocks the next.
 
-**1 · Re-enable the two workflows and backfill the gap** — *partly done 2026-09-07*
+**1 · Fix `SUPABASE_SERVICE_KEY`** — *~2 min, blocks everything else*
 
-✅ **Done.** Both workflows are `active` again; live collection resumed on the next 5-minute
-tick. Safeguards against recurrence are in `DATA_PIPELINE_SAFEGUARDS.md`.
+This is now the top of the list, ahead of the backfill. Until the key can actually write,
+nothing else on the inverter side can make progress:
 
-⏳ **Backfill still outstanding.** The ~5-month hole in `inverter_data_daily_summary` is
-recoverable but has not been filled yet — it needs credentials. Two ways:
+```bash
+# Supabase dashboard → Project Settings → API → service_role (secret) key
+gh secret set SUPABASE_SERVICE_KEY
+
+# then confirm the write path is open again
+gh workflow run fetch-live-inverter-data.yml
+gh run watch "$(gh run list --workflow=fetch-live-inverter-data.yml --limit 1 \
+                  --json databaseId --jq '.[0].databaseId')" --exit-status
+```
+
+Expect `✅ Successfully upserted 1 record(s)`. If it still reports an RLS violation, the key
+is right but the project has moved to Supabase's new API key system — reissue a secret key
+there.
+
+**2 · Re-enable the workflows** — ✅ *done 2026-09-07*
+
+Both are `active` again. Safeguards against recurrence: `DATA_PIPELINE_SAFEGUARDS.md`.
+
+**3 · Backfill the five-month gap** — *blocked on step 1*
+
+The hole in `inverter_data_daily_summary` is recoverable — the backfill reads from the Solis
+month-history API, not from the (empty) live table — but the write will hit the same RLS wall
+until step 1 lands. The **dry run is read-only and can be run right now** to size the gap:
 
 ```bash
 # (a) locally, once .env has SUPABASE_URL / SUPABASE_SERVICE_KEY / SOLIS_*
@@ -218,30 +318,30 @@ node scripts/backfill_all_missing_daily.js
 gh workflow run backfill-daily-summaries.yml -f dry_run=true
 ```
 
-Do this before anything else. Until the inverter side has data, you cannot tell a CEB parsing
-bug from a missing-data artifact.
+Steps 1-3 come before anything else. Until the inverter side has data, you cannot tell a
+CEB parsing bug from a missing-data artifact.
 
-**2 · Restore `.env` and refresh `vercel.env.example`** — *~15 min*
+**4 · Restore `.env` and refresh `vercel.env.example`** — *~15 min*
 
 Nothing local runs without it, and the example file will mislead you again next time.
 
-**3 · Get a new-format bill and see what actually changed** — *blocked on you*
+**5 · Get a new-format bill and see what actually changed** — *blocked on you*
 
 Provide one new-format CEB bill PDF, plus an old one if you still have it. First move is a
 text-dump harness — a small script running pdf-parse 2.4.5 over a bill and writing the raw
 text to disk — so the new anchors can be read directly instead of guessed at. Then diff old vs
 new and answer: still a text PDF, or now a scan?
 
-**4 · Rewrite the extractor against the new format** — *scoped once step 3 lands*
+**6 · Rewrite the extractor against the new format** — *scoped once step 5 lands*
 
 Whatever the shape, do it with a checked-in fixture and a test this time, so the next CEB
 redesign is a ten-minute fix.
 
-**5 · Revisit the tariff validation rule** — *small, do alongside 4*
+**7 · Revisit the tariff validation rule** — *small, do alongside 6*
 
 Confirm the new bill's rate structure before assuming flat-rate math still holds.
 
-**6 · Then the debt** — issue #114, delete `AuthContext.adapter.jsx`, dump the `ceb_data`
+**8 · Then the debt** — issue #114, delete `AuthContext.adapter.jsx`, dump the `ceb_data`
 schema, prune the docs index.
 
 ---

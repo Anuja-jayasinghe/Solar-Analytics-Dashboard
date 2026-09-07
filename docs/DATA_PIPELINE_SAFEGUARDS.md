@@ -18,8 +18,33 @@ mechanisms now in place so it cannot happen the same way twice.
 | **Why re-activity didn't fix it** | Committing again does **not** re-enable them. They stay off until someone manually turns them back on |
 | **Duration** | ~5 months (2026-04-15 → 2026-09-07) |
 
-The central lesson: **the outage was invisible because the monitoring watched the machinery,
-not the output.** Nothing was checking whether data had actually arrived.
+### …and two more faults hiding underneath
+
+Re-enabling the workflows on 2026-09-07 did **not** restore collection. Manually dispatching
+them exposed two further problems that the five-month silence had been concealing:
+
+**`SUPABASE_SERVICE_KEY` is not a service_role key.** The live fetcher now reaches Solis fine
+(the inverter is alive and generating) but Supabase refuses the write:
+`new row violates row-level security policy for table "inverter_data_live"`. A genuine
+`service_role` key bypasses RLS on every table, so the key in that secret is being evaluated
+as a normal role — almost certainly the anon key. The `api_logs` insert in the same run
+succeeded, which proves the key authenticates and is simply subject to RLS.
+`scripts/sql/2026-04-23_ceb_bill_ingestions_anon_mode_policies.sql` — *"use this script only
+when backend uses SUPABASE_ANON_KEY instead of service_role"* — confirms the project was
+being run in anon-key mode.
+
+**The daily summary job reported SUCCESS while doing nothing.** It aggregates
+`inverter_data_live`; that table was empty, so it logged "No live data rows found" thirty
+times, wrote nothing, printed `DAILY SUMMARY GENERATOR - SUCCESS` and exited `0`.
+
+That last one is the important one. Even once someone *did* look at the Actions tab, they
+would have seen green.
+
+### The central lesson
+
+**The outage was invisible because the monitoring watched the machinery, not the output** —
+and where it did watch the machinery, the machinery lied. Nothing was checking whether data
+had actually arrived. Every safeguard below follows from that.
 
 ---
 
@@ -105,6 +130,25 @@ and as a downloadable artifact.
 > Only daily summaries are recoverable. `inverter_data_live` has no upstream history endpoint
 > and cannot be backfilled — but it only ever represents "right now", so a gap in it has no
 > lasting effect on the dashboard.
+
+---
+
+## Safeguard 4 — Jobs may not report success for doing nothing
+
+`functions/generate_daily_summary/index.js`
+
+The freshness check catches a dead pipeline within a day. This closes the gap *inside* the job
+itself: reconciling zero days across the whole 30-day window now throws instead of printing
+`SUCCESS`.
+
+A healthy run classifies every past day as insert / update / unchanged, so touching **zero**
+days means the upstream source is empty and something is wrong. The error message names the
+likely cause directly — an anon key being rejected by RLS — because that is what it turned out
+to be.
+
+The general rule this encodes, worth applying to any job added later:
+
+> A batch job that processes nothing has not succeeded. It has failed to find its input.
 
 ---
 
