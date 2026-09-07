@@ -1,0 +1,159 @@
+name: Data Freshness Check
+
+# =============================================================
+# WHY THIS EXISTS
+# =============================================================
+# The keepalive workflow prevents the *specific* failure that took collection down in
+# April 2026 (scheduled workflows disabled for repository inactivity). This one catches
+# every other way collection can stop, because it asserts on the DATA rather than on any
+# particular mechanism:
+#
+#   - workflows disabled or deleted
+#   - SOLIS_* / SUPABASE_* secrets rotated or expired
+#   - SolisCloud API contract change
+#   - Supabase project paused (free tier pauses when idle)
+#   - silent partial failures that still exit 0
+#
+# All of those look identical from the dashboard's point of view: rows stop arriving.
+# When that happens, this opens a GitHub issue — which emails you — instead of failing
+# quietly into a run log nobody reads.
+# =============================================================
+
+on:
+  schedule:
+    # 08:00 Sri Lanka time (UTC+5:30) => 02:30 UTC. After the 07:00 local summary run,
+    # so a healthy night produces a fresh row before this check looks.
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: data-freshness-check
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    name: Check inverter data freshness
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📚 Install Dependencies
+        run: pnpm install --no-frozen-lockfile --prefer-offline
+
+      - name: 🔍 Check Data Freshness
+        id: freshness
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          set -o pipefail
+          node scripts/check_data_freshness.js 2>&1 | tee freshness-report.txt
+
+      # ----------------------------------------------------------
+      # Failure path: raise a visible, deduplicated alert.
+      # ----------------------------------------------------------
+      - name: 🚨 Open or update outage issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          gh label create data-outage \
+            --description "Inverter data collection has stopped" \
+            --color B60205 2>/dev/null || true
+
+          REPORT=$(cat freshness-report.txt 2>/dev/null || echo "(no report produced — the check itself failed to run)")
+
+          BODY=$(cat <<EOF
+          Automated alert from \`Data Freshness Check\`.
+
+          Inverter data has stopped arriving in Supabase. The dashboard is now showing stale
+          or missing numbers on every inverter-derived card and chart.
+
+          <details><summary>Freshness report</summary>
+
+          \`\`\`
+          $REPORT
+          \`\`\`
+
+          </details>
+
+          **Run:** $RUN_URL
+
+          ### Triage
+
+          1. \`gh workflow list --all\` — is anything \`disabled_inactivity\`?
+             If so: \`gh workflow enable "<name>"\`, and check why keepalive did not prevent it.
+          2. \`gh run list --workflow=fetch-live-inverter-data.yml --limit 5\` — are runs failing?
+          3. Are the \`SOLIS_*\` / \`SUPABASE_*\` repo secrets still valid?
+          4. Is the Supabase project awake?
+
+          ### Recovery
+
+          Daily summaries can be rebuilt from the Solis API month history:
+
+          \`\`\`
+          node scripts/backfill_all_missing_daily.js --dry
+          node scripts/backfill_all_missing_daily.js
+          \`\`\`
+
+          Or run the **Backfill Daily Summaries** workflow from the Actions tab.
+
+          _This issue is reused for repeat alerts. Close it once data is flowing again._
+          EOF
+          )
+
+          EXISTING=$(gh issue list --repo "$REPO" --label data-outage --state open \
+                       --limit 1 --json number --jq '.[0].number // empty')
+
+          if [ -n "$EXISTING" ]; then
+            echo "Existing outage issue #$EXISTING — adding a comment instead of opening a duplicate"
+            gh issue comment "$EXISTING" --repo "$REPO" --body "$BODY"
+          else
+            gh issue create --repo "$REPO" \
+              --title "🔴 Inverter data collection has stopped" \
+              --label data-outage \
+              --body "$BODY"
+          fi
+
+      # ----------------------------------------------------------
+      # Recovery path: close the alert once data is flowing again.
+      # ----------------------------------------------------------
+      - name: ✅ Close outage issue if recovered
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          EXISTING=$(gh issue list --repo "$REPO" --label data-outage --state open \
+                       --limit 1 --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            gh issue close "$EXISTING" --repo "$REPO" \
+              --comment "✅ Data is fresh again as of $(date -u +"%Y-%m-%d %H:%M UTC"). Closing automatically."
+          else
+            echo "No open outage issue — nothing to close."
+          fi

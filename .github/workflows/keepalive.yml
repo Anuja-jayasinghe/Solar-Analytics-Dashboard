@@ -1,0 +1,107 @@
+name: Keepalive (Prevent Workflow Auto-Disable)
+
+# =============================================================
+# WHY THIS EXISTS
+# =============================================================
+# GitHub disables *scheduled* workflows in a repository after 60 days with no repository
+# activity. Workflow runs themselves do not count as activity — only commits do.
+#
+# That is exactly what happened here: `main` had no commits between 2026-01-20 and
+# 2026-04-18 (88 days). GitHub disabled both data-collection workflows, collection stopped
+# on 2026-04-15, and because a disabled workflow produces no failures — it simply produces
+# nothing — the outage went unnoticed for five months.
+#
+# This workflow closes that hole from two directions:
+#
+#   1. PREVENT  — a heartbeat commit every 10 days keeps the repository "active", so the
+#                 60-day clock never runs out and nothing is ever disabled.
+#
+#   2. SELF-HEAL — the re-enable job also runs on every push to `main`. Push events are
+#                 never disabled by GitHub, so even if every scheduled workflow in this repo
+#                 gets switched off, the next commit anyone makes turns them back on.
+#
+# Deleting this workflow re-opens the original failure mode.
+# =============================================================
+
+on:
+  schedule:
+    # Every 10 days at 03:17 UTC. Well inside GitHub's 60-day window.
+    - cron: '17 3 */10 * *'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+
+jobs:
+  # -----------------------------------------------------------
+  # Idempotent. Enabling an already-enabled workflow is a no-op.
+  # Runs on every push to main, which is the self-healing path.
+  # -----------------------------------------------------------
+  reenable-scheduled-workflows:
+    name: Re-enable scheduled workflows
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: 🔌 Ensure data-collection workflows are enabled
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          for wf in fetch-live-inverter-data.yml generate-daily-inverter-summary.yml data-freshness-check.yml; do
+            state=$(gh api "repos/$REPO/actions/workflows/$wf" --jq '.state' 2>/dev/null || echo "not_found")
+            if [ "$state" = "not_found" ]; then
+              echo "⚠️  $wf — not found on this ref, skipping"
+              continue
+            fi
+            if [ "$state" = "active" ]; then
+              echo "✅ $wf — already active"
+            else
+              echo "🔁 $wf — state was '$state', re-enabling"
+              gh api --method PUT "repos/$REPO/actions/workflows/$wf/enable"
+              echo "✅ $wf — re-enabled"
+            fi
+          done
+
+  # -----------------------------------------------------------
+  # The heartbeat commit. Skipped on push events, because a push
+  # already *is* the activity this job exists to manufacture.
+  # -----------------------------------------------------------
+  heartbeat-commit:
+    name: Heartbeat commit
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: 💓 Write heartbeat and push
+        run: |
+          set -euo pipefail
+          mkdir -p .github
+          cat > .github/last-keepalive <<EOF
+          # Written by .github/workflows/keepalive.yml — do not edit by hand.
+          # Its only purpose is to be a commit, so GitHub does not disable this
+          # repository's scheduled workflows for inactivity. See that file for why.
+          last_heartbeat: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          EOF
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/last-keepalive
+
+          if git diff --staged --quiet; then
+            echo "No change to commit (unexpected — timestamp should always differ)"
+            exit 0
+          fi
+
+          git commit -m "chore: keepalive heartbeat [skip ci]"
+          git push
+          echo "✅ Heartbeat pushed — inactivity clock reset"
