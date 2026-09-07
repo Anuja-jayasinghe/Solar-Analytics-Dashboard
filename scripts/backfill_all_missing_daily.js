@@ -234,16 +234,31 @@ async function backfillAllMissing() {
       const monthArr = monthDataMap.get(mKey) || [];
       const dayRec = monthArr.find(r => r.dateStr === dateStr);
 
+      // Solis has no record for this date. Previously we inserted a 0 kWh row here, which
+      // per LR-001 is a lie: 0 means a MEASURED zero, null/absent means unavailable. A
+      // fabricated zero reads as a real one on the dashboard and drags monthly averages
+      // down. Leaving the row absent is the honest representation, and the alignment logic
+      // already handles missing days correctly.
       if (!dayRec) {
         noDataDates.push(dateStr);
-        console.warn(`   ⚠️  No Solis data for ${dateStr}, inserting zero row`);
+        console.warn(`   ⚠️  No Solis data for ${dateStr} — skipping (not writing a false zero)`);
+        continue;
       }
 
       prepared.push({
         inverter_sn: sn,
         summary_date: dateStr,
-        total_generation_kwh: dayRec?.energy || 0,
-        peak_power_kw: dayRec?.maxPower || 0,
+        total_generation_kwh: dayRec.energy || 0,
+        // NOTE: /v1/api/inverterMonth returns no peak-power field — verified 2026-09-07 by
+        // dumping all 45 keys of a day record. `maxPower` is always undefined here, so this
+        // resolves to 0 on every backfilled row: a claimed measured peak of 0 kW on a day
+        // that generated 150+ kWh. Peak is only ever real when derived from the 5-minute
+        // inverter_data_live series by functions/generate_daily_summary.
+        //
+        // Writing null would be the honest value, but peak_power_kw has no confirmed
+        // nullable constraint (no existing row is null), so that change needs a schema
+        // check first. See docs/DATA_PIPELINE_SAFEGUARDS.md.
+        peak_power_kw: dayRec.maxPower || 0,
         created_at: new Date().toISOString()
       });
 
@@ -258,18 +273,22 @@ async function backfillAllMissing() {
 
       // 1. What would actually be written — values, not just dates. Without this the dry
       //    run only proves which rows are missing, never that the numbers are right.
-      const withData = prepared.filter(r => !noDataDates.includes(r.summary_date));
+      const withData = prepared;
       const totalKwh = withData.reduce((s, r) => s + Number(r.total_generation_kwh || 0), 0);
       const peaks = withData.map(r => Number(r.peak_power_kw || 0));
 
+      console.log(`│ Dates missing         : ${missingDates.length}`);
       console.log(`│ Rows to insert        : ${prepared.length}`);
-      console.log(`│   backed by Solis data: ${withData.length}`);
-      console.log(`│   zero-filled         : ${noDataDates.length}`);
+      console.log(`│   skipped, no Solis   : ${noDataDates.length}`);
       console.log(`│ Total generation      : ${totalKwh.toFixed(2)} kWh`);
       if (withData.length > 0) {
         const avg = totalKwh / withData.length;
         console.log(`│ Mean daily generation : ${avg.toFixed(2)} kWh/day`);
         console.log(`│ Peak power range      : ${Math.min(...peaks).toFixed(2)} – ${Math.max(...peaks).toFixed(2)} kW`);
+        if (Math.max(...peaks) === 0) {
+          console.log('│   ⚠️  every peak is 0 — inverterMonth exposes no peak field, so');
+          console.log('│      these rows will claim a measured 0 kW peak. See below.');
+        }
       }
       console.log('│');
 
@@ -294,11 +313,9 @@ async function backfillAllMissing() {
       const zeroButClaimedReal = withData.filter(r => Number(r.total_generation_kwh) === 0);
 
       if (noDataDates.length > 0) {
-        console.log(`│ ⚠️  ${noDataDates.length} date(s) would be written as 0 kWh despite Solis`);
-        console.log('│    returning no record for them. Per LR-001 a 0 means a MEASURED');
-        console.log('│    zero and null means unavailable — so these rows assert something');
-        console.log('│    the data does not support, and will read as real zeros on the');
-        console.log('│    dashboard. Review before running without --dry.');
+        console.log(`│ ℹ️  ${noDataDates.length} date(s) skipped — Solis returned no record for them.`);
+        console.log('│    Left absent rather than written as 0 kWh: per LR-001 a 0 means a');
+        console.log('│    MEASURED zero, and absent means unavailable.');
         const preview = noDataDates.slice(0, 10).join(', ');
         console.log(`│    ${preview}${noDataDates.length > 10 ? `, … (+${noDataDates.length - 10})` : ''}`);
         console.log('│');

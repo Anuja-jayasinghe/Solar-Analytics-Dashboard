@@ -201,6 +201,54 @@ now counts these separately and lists the dates:
 
 Decide what those dates should be before running without `--dry`.
 
+### Verification results — 2026-09-07
+
+Snapshot taken first (run `34149094327`, 803 rows), then the dry run (run `34149193757`).
+
+**Scope — correct.** The dry run's figures were checked independently against the snapshot:
+
+| | Dry run | Snapshot | |
+|---|---|---|---|
+| Existing rows | 621 | 621 | ✅ |
+| Expected rows | 766 | 766 | ✅ |
+| Missing dates | 145 | 145 | ✅ |
+| Gap boundaries | 2026-04-15 → 2026-09-06 | same, one contiguous run | ✅ |
+
+No other gaps exist anywhere in the 766-day history. The gap starts the day after the last
+successful workflow run and ends yesterday — exactly the outage window, nothing more.
+
+**Generation values — accurate.** Total 18,409.90 kWh over 145 days; mean 127.85 kWh/day
+against a historical mean of 124.4 (+2.7%). Every sampled value falls inside the historical
+envelope (max 198.9 kWh). Field mapping confirmed against a raw Solis record:
+`energy` → `total_generation_kwh`.
+
+**Peak power — NOT accurate. Unresolved.** Every backfilled row would carry
+`peak_power_kw = 0.00`. Dumping all 45 keys of a Solis day record confirms that
+`/v1/api/inverterMonth` **exposes no peak-power field at all** — `maxPower` is always
+`undefined`, so `|| 0` writes a claimed *measured* peak of 0 kW on days that generated
+150+ kWh.
+
+Peak is only ever real when derived from the 5-minute `inverter_data_live` series by
+`generate_daily_summary`. That series was never collected during the outage, so **daily peak
+power for 2026-04-15 → 2026-09-06 is unrecoverable.** No API call brings it back.
+
+This is not a new defect — it has already affected **424 existing rows** (2024-08-02 →
+2025-10-12) that report generation above zero alongside a 0 kW peak. Genuine peaks exist only
+from 2025-04-04 onward (182 rows, mean 27.03 kW, max 39.12 kW against a 40 kW array).
+
+The honest value is `null`, not `0`. That change is **not** made yet: no existing row has a
+null `peak_power_kw`, so the column's nullability is unproven and a blind switch could fail
+the entire backfill. Confirm the constraint, then change one line:
+
+```js
+peak_power_kw: dayRec.maxPower ?? null,
+```
+
+**Zero-filling — fixed.** One date (2026-06-03) had no Solis record — June returned 29 records
+for a 30-day month. It is now skipped rather than written as 0 kWh.
+
+**Net effect:** the real run will insert **144 rows**, not 145.
+
 ---
 
 ## Alerting policy
