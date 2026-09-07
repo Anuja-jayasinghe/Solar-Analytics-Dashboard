@@ -303,6 +303,30 @@ async function main() {
       console.log('✅ Prune completed (older than 14 days removed)');
     }
 
+    // -----------------------------------------------------------------
+    // Guard: reconciling nothing is not success.
+    //
+    // This job aggregates `inverter_data_live`. When that table is empty it
+    // logs "No live data rows found" for every day, writes nothing, prints
+    // SUCCESS and exits 0 — a green checkmark on a dead pipeline. That is
+    // exactly how the 2026-04 outage stayed invisible for five months: the
+    // live fetcher was failing, and this job cheerfully reported success on
+    // top of the silence.
+    //
+    // A healthy run reconciles every past day as insert/update/unchanged, so
+    // touching zero days across the whole window means the upstream source is
+    // empty. Fail loudly and let the workflow raise an issue.
+    // -----------------------------------------------------------------
+    const daysReconciled = totalInserts + totalUpdates + totalUnchanged;
+    if (daysReconciled === 0) {
+      throw new Error(
+        `No daily summaries reconciled across ${BACKFILL_DAYS} days (${totalSkipped} skipped). ` +
+        `inverter_data_live appears to be empty — the live fetcher is not writing. ` +
+        `Check its most recent runs and confirm SUPABASE_SERVICE_KEY is a service_role key ` +
+        `(an anon key is subject to RLS and will be rejected on insert).`
+      );
+    }
+
     await logInfo('generate_daily_summary_success', `Processed ${BACKFILL_DAYS} days: ${totalInserts} inserts, ${totalUpdates} updates, ${totalUnchanged} unchanged, ${totalSkipped} skipped`);
 
     const duration = ((Date.now() - execStart) / 1000).toFixed(2);

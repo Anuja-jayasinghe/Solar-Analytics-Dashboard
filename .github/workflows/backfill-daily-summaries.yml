@@ -1,0 +1,106 @@
+name: Backfill Daily Summaries
+
+# =============================================================
+# WHY THIS EXISTS
+# =============================================================
+# `scripts/backfill_all_missing_daily.js` rebuilds `inverter_data_daily_summary` from the
+# SolisCloud month-history API, so any gap in daily generation data is recoverable — but it
+# needs the SOLIS_* and SUPABASE_* credentials to run, and those live as repo secrets rather
+# than on anyone's laptop.
+#
+# This workflow runs it here, with the secrets already in place, so recovering a gap does not
+# depend on having a working local .env.
+#
+# DRY RUN IS THE DEFAULT. It reads from Solis and Supabase, reports exactly which dates are
+# missing, and writes nothing. Re-run with dry_run unchecked to actually insert the rows.
+#
+# Note: only DAILY SUMMARIES are recoverable this way. `inverter_data_live` (the 5-minute
+# series) has no history endpoint upstream and cannot be backfilled — but it only ever
+# represents "right now", so a gap in it has no lasting effect.
+# =============================================================
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Preview only — report the gap without writing anything'
+        type: boolean
+        required: true
+        default: true
+
+concurrency:
+  group: backfill-daily-summaries
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  backfill:
+    name: ${{ inputs.dry_run && 'Preview gap (no writes)' || 'Backfill missing daily summaries' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📚 Install Dependencies
+        run: pnpm install --no-frozen-lockfile --prefer-offline
+
+      - name: 🧾 Show mode
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "💧 DRY RUN — reads only, nothing will be written to Supabase."
+          else
+            echo "✍️  WRITE MODE — missing rows will be inserted into inverter_data_daily_summary."
+          fi
+
+      - name: 🔁 Run backfill
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SOLIS_API_URL: ${{ secrets.SOLIS_API_URL }}
+          SOLIS_API_ID: ${{ secrets.SOLIS_API_ID }}
+          SOLIS_API_SECRET: ${{ secrets.SOLIS_API_SECRET }}
+        run: |
+          set -o pipefail
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            node scripts/backfill_all_missing_daily.js --dry 2>&1 | tee backfill-report.txt
+          else
+            node scripts/backfill_all_missing_daily.js 2>&1 | tee backfill-report.txt
+          fi
+
+      - name: 📄 Publish report to run summary
+        if: always()
+        run: |
+          {
+            echo "## Backfill report"
+            echo ""
+            echo "**Mode:** ${{ inputs.dry_run && 'dry run (no writes)' || 'write' }}"
+            echo ""
+            echo '```'
+            cat backfill-report.txt 2>/dev/null || echo "(no report produced)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 📎 Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-report
+          path: backfill-report.txt
+          if-no-files-found: warn

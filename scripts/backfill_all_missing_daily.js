@@ -225,15 +225,20 @@ async function backfillAllMissing() {
     const prepared = [];
     const addedDates = [];
     
+    // Dates where Solis returned no record at all. These get a 0 kWh row, which is NOT the
+    // same thing as a measured zero — see the verification block below.
+    const noDataDates = [];
+
     for (const dateStr of missingDates) {
       const mKey = monthKey(dateStr);
       const monthArr = monthDataMap.get(mKey) || [];
       const dayRec = monthArr.find(r => r.dateStr === dateStr);
-      
+
       if (!dayRec) {
+        noDataDates.push(dateStr);
         console.warn(`   ⚠️  No Solis data for ${dateStr}, inserting zero row`);
       }
-      
+
       prepared.push({
         inverter_sn: sn,
         summary_date: dateStr,
@@ -241,13 +246,74 @@ async function backfillAllMissing() {
         peak_power_kw: dayRec?.maxPower || 0,
         created_at: new Date().toISOString()
       });
-      
+
       addedDates.push(dateStr);
     }
 
     console.log(`🧮 Prepared ${prepared.length} row(s) for insertion`);
 
     if (dry) {
+      console.log('');
+      console.log('┌─ VERIFICATION ─────────────────────────────────────────────');
+
+      // 1. What would actually be written — values, not just dates. Without this the dry
+      //    run only proves which rows are missing, never that the numbers are right.
+      const withData = prepared.filter(r => !noDataDates.includes(r.summary_date));
+      const totalKwh = withData.reduce((s, r) => s + Number(r.total_generation_kwh || 0), 0);
+      const peaks = withData.map(r => Number(r.peak_power_kw || 0));
+
+      console.log(`│ Rows to insert        : ${prepared.length}`);
+      console.log(`│   backed by Solis data: ${withData.length}`);
+      console.log(`│   zero-filled         : ${noDataDates.length}`);
+      console.log(`│ Total generation      : ${totalKwh.toFixed(2)} kWh`);
+      if (withData.length > 0) {
+        const avg = totalKwh / withData.length;
+        console.log(`│ Mean daily generation : ${avg.toFixed(2)} kWh/day`);
+        console.log(`│ Peak power range      : ${Math.min(...peaks).toFixed(2)} – ${Math.max(...peaks).toFixed(2)} kW`);
+      }
+      console.log('│');
+
+      // 2. Sample the actual values so they can be eyeballed against the Solis portal.
+      const sample = withData.length <= 12
+        ? withData
+        : [...withData.slice(0, 6), null, ...withData.slice(-6)];
+      console.log('│ Sample of values that would be written:');
+      console.log('│   DATE          GENERATION      PEAK');
+      for (const row of sample) {
+        if (row === null) { console.log('│   ...'); continue; }
+        console.log(
+          `│   ${row.summary_date}  ` +
+          `${String(Number(row.total_generation_kwh).toFixed(2)).padStart(9)} kWh  ` +
+          `${String(Number(row.peak_power_kw).toFixed(2)).padStart(6)} kW`
+        );
+      }
+      console.log('│');
+
+      // 3. Sanity checks — flag anything that would poison the dashboard.
+      const suspicious = withData.filter(r => Number(r.total_generation_kwh) > 500);
+      const zeroButClaimedReal = withData.filter(r => Number(r.total_generation_kwh) === 0);
+
+      if (noDataDates.length > 0) {
+        console.log(`│ ⚠️  ${noDataDates.length} date(s) would be written as 0 kWh despite Solis`);
+        console.log('│    returning no record for them. Per LR-001 a 0 means a MEASURED');
+        console.log('│    zero and null means unavailable — so these rows assert something');
+        console.log('│    the data does not support, and will read as real zeros on the');
+        console.log('│    dashboard. Review before running without --dry.');
+        const preview = noDataDates.slice(0, 10).join(', ');
+        console.log(`│    ${preview}${noDataDates.length > 10 ? `, … (+${noDataDates.length - 10})` : ''}`);
+        console.log('│');
+      }
+      if (zeroButClaimedReal.length > 0) {
+        console.log(`│ ℹ️  ${zeroButClaimedReal.length} date(s) report a genuine 0 kWh from Solis.`);
+        console.log('│');
+      }
+      if (suspicious.length > 0) {
+        console.log(`│ ⚠️  ${suspicious.length} date(s) exceed 500 kWh/day — implausible for this`);
+        console.log('│    system. Check the Solis response before writing.');
+        console.log('│');
+      }
+
+      console.log('└────────────────────────────────────────────────────────────');
       console.log('💧 Dry run: skipping DB upsert');
       allAddedDates.set(sn, addedDates);
       console.log('');

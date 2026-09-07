@@ -99,12 +99,22 @@ jobs:
           DEBUG: ${{ github.event.inputs.debug || 'false' }}
 
       # ============================================
-      # STEP 6: NOTIFY ON FAILURE (Optional)
+      # STEP 6: NOTIFY ON FAILURE
       # ============================================
-      - name: 📧 Notify on Failure
+      # Deliberately log-only. This job runs 288 times a day, so raising an issue or a
+      # notification per failure would bury the signal in noise — a single transient
+      # SolisCloud timeout is not worth waking anyone for.
+      #
+      # Sustained failure is caught instead by `data-freshness-check.yml`, which runs daily,
+      # looks at whether rows actually landed in Supabase, and opens a `data-outage` issue.
+      # That is the alert to trust. This step is here for post-hoc log reading only.
+      - name: 📧 Log Failure
         if: failure()
         run: |
           echo "❌ Live data fetch failed at $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
           echo "Check the logs above for error details"
           echo "Workflow: ${{ github.workflow }}"
           echo "Run ID: ${{ github.run_id }}"
+          echo ""
+          echo "Not alerting on a single failure by design — see the comment in this file."
+          echo "If this persists, data-freshness-check.yml will open a 'data-outage' issue."

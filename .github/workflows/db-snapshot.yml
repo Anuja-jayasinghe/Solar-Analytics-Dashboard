@@ -1,0 +1,93 @@
+name: DB Snapshot
+
+# =============================================================
+# Read-only export of the Supabase tables to a downloadable artifact.
+#
+# Run this BEFORE anything that writes to the database — a backfill, a migration, a bulk
+# approval — so there is a restore point if the write goes wrong.
+#
+# ⚠️  This is a safety net, not an authoritative backup. It captures only what the configured
+# key can SELECT, and an RLS-filtered table comes back empty rather than erroring. The script
+# fails the run if a table that should hold data comes back empty, so an empty snapshot can
+# never masquerade as a good one — but for a true point-in-time restore use
+# Supabase Dashboard → Database → Backups.
+# =============================================================
+
+on:
+  workflow_dispatch:
+    inputs:
+      retention_days:
+        description: 'How long to keep the snapshot artifact'
+        type: choice
+        required: true
+        default: '90'
+        options: ['7', '30', '90']
+
+concurrency:
+  group: db-snapshot
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    name: Export Supabase tables
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📚 Install Dependencies
+        run: pnpm install --no-frozen-lockfile --prefer-offline
+
+      - name: 📸 Snapshot database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          set -o pipefail
+          node scripts/snapshot_db.js --out snapshot 2>&1 | tee snapshot-report.txt
+
+      - name: 📄 Publish manifest to run summary
+        if: always()
+        run: |
+          {
+            echo "## Database snapshot"
+            echo ""
+            echo '```'
+            cat snapshot-report.txt 2>/dev/null || echo "(no report produced)"
+            echo '```'
+            echo ""
+            echo "### Manifest"
+            echo ""
+            echo '```json'
+            cat snapshot/manifest.json 2>/dev/null || echo "{}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 📎 Upload snapshot artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-snapshot-${{ github.run_id }}
+          path: |
+            snapshot/
+            snapshot-report.txt
+          retention-days: ${{ fromJSON(inputs.retention_days) }}
+          if-no-files-found: warn
