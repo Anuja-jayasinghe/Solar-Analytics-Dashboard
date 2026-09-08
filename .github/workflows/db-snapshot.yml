@@ -56,6 +56,17 @@ jobs:
       - name: 📚 Install Dependencies
         run: pnpm install --no-frozen-lockfile --prefer-offline
 
+      # Schema is part of the database's state. A snapshot of rows without it is only half a
+      # restore point — and `ceb_data` / `inverter_data_daily_summary` have no checked-in
+      # migration, so this is the only record of their shape.
+      - name: 🧬 Inspect schema
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          set -o pipefail
+          node scripts/inspect_schema.js --out snapshot/schema.json 2>&1 | tee schema-report.txt
+
       - name: 📸 Snapshot database
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -74,6 +85,12 @@ jobs:
             cat snapshot-report.txt 2>/dev/null || echo "(no report produced)"
             echo '```'
             echo ""
+            echo "### Schema"
+            echo ""
+            echo '```'
+            cat schema-report.txt 2>/dev/null || echo "(no schema report produced)"
+            echo '```'
+            echo ""
             echo "### Manifest"
             echo ""
             echo '```json'
@@ -89,5 +106,6 @@ jobs:
           path: |
             snapshot/
             snapshot-report.txt
+            schema-report.txt
           retention-days: ${{ fromJSON(inputs.retention_days) }}
           if-no-files-found: warn

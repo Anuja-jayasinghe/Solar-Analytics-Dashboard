@@ -222,30 +222,40 @@ against a historical mean of 124.4 (+2.7%). Every sampled value falls inside the
 envelope (max 198.9 kWh). Field mapping confirmed against a raw Solis record:
 `energy` → `total_generation_kwh`.
 
-**Peak power — NOT accurate. Unresolved.** Every backfilled row would carry
+**Peak power — unrecoverable, now written as `null`.** Every backfilled row previously carried
 `peak_power_kw = 0.00`. Dumping all 45 keys of a Solis day record confirms that
 `/v1/api/inverterMonth` **exposes no peak-power field at all** — `maxPower` is always
-`undefined`, so `|| 0` writes a claimed *measured* peak of 0 kW on days that generated
+`undefined`, so `|| 0` wrote a claimed *measured* peak of 0 kW on days that generated
 150+ kWh.
 
 Peak is only ever real when derived from the 5-minute `inverter_data_live` series by
 `generate_daily_summary`. That series was never collected during the outage, so **daily peak
 power for 2026-04-15 → 2026-09-06 is unrecoverable.** No API call brings it back.
 
-This is not a new defect — it has already affected **424 existing rows** (2024-08-02 →
-2025-10-12) that report generation above zero alongside a 0 kW peak. Genuine peaks exist only
-from 2025-04-04 onward (182 rows, mean 27.03 kW, max 39.12 kW against a 40 kW array).
-
-The honest value is `null`, not `0`. That change is **not** made yet: no existing row has a
-null `peak_power_kw`, so the column's nullability is unproven and a blind switch could fail
-the entire backfill. Confirm the constraint, then change one line:
+The script now writes `null` — unavailable — which is what LR-001 prescribes and what the
+dashboard can distinguish from a real zero:
 
 ```js
 peak_power_kw: dayRec.maxPower ?? null,
 ```
 
+This requires `peak_power_kw` to be nullable. If it is not, the write is rejected and the run
+now **fails loudly** with the exact ALTER statement and the one-line revert, rather than
+silently reporting success. To restore the old behaviour, write `dayRec.maxPower || 0`.
+
+The same defect already affects **424 existing rows** (2024-08-02 → 2025-10-12) that report
+generation above zero alongside a 0 kW peak. Those are not touched by the backfill — they
+would need a separate correction pass, and the honest fix there is also `null`.
+
+Genuine peaks exist only from 2025-04-04 onward: 182 rows, mean 27.03 kW, max 39.12 kW
+against a 40 kW array.
+
 **Zero-filling — fixed.** One date (2026-06-03) had no Solis record — June returned 29 records
 for a 30-day month. It is now skipped rather than written as 0 kWh.
+
+**A write run that writes nothing now fails.** Rejected upserts were previously logged and
+stepped over, so a run where every write bounced still printed `BACKFILL COMPLETE` and exited
+0 — the same green-checkmark-on-a-dead-pipeline problem as safeguard 4. It now exits non-zero.
 
 **Net effect:** the real run will insert **144 rows**, not 145.
 

@@ -124,6 +124,7 @@ async function backfillAllMissing() {
   let totalMissingFound = 0;
   let totalRowsInserted = 0;
   const allAddedDates = new Map(); // inverter_sn -> array of dates
+  const upsertFailures = [];       // writes rejected by the database
 
   for (const inverter of inverters) {
     const sn = inverter.sn;
@@ -249,16 +250,18 @@ async function backfillAllMissing() {
         inverter_sn: sn,
         summary_date: dateStr,
         total_generation_kwh: dayRec.energy || 0,
-        // NOTE: /v1/api/inverterMonth returns no peak-power field — verified 2026-09-07 by
-        // dumping all 45 keys of a day record. `maxPower` is always undefined here, so this
-        // resolves to 0 on every backfilled row: a claimed measured peak of 0 kW on a day
-        // that generated 150+ kWh. Peak is only ever real when derived from the 5-minute
-        // inverter_data_live series by functions/generate_daily_summary.
+        // /v1/api/inverterMonth returns no peak-power field — verified 2026-09-07 by dumping
+        // all 45 keys of a day record. `maxPower` is always undefined here, so peak power
+        // for a backfilled day is genuinely UNKNOWN, not zero.
         //
-        // Writing null would be the honest value, but peak_power_kw has no confirmed
-        // nullable constraint (no existing row is null), so that change needs a schema
-        // check first. See docs/DATA_PIPELINE_SAFEGUARDS.md.
-        peak_power_kw: dayRec.maxPower || 0,
+        // It used to be written as 0, which asserted a measured peak of 0 kW on days that
+        // generated 150+ kWh, and reads as real on the dashboard. Per LR-001, null means
+        // unavailable and 0 means a measured zero — so null is the honest value.
+        //
+        // Peak is only ever real when derived from the 5-minute inverter_data_live series by
+        // functions/generate_daily_summary. For any day that series did not cover, no API
+        // can recover it.
+        peak_power_kw: dayRec.maxPower ?? null,
         created_at: new Date().toISOString()
       });
 
@@ -275,7 +278,8 @@ async function backfillAllMissing() {
       //    run only proves which rows are missing, never that the numbers are right.
       const withData = prepared;
       const totalKwh = withData.reduce((s, r) => s + Number(r.total_generation_kwh || 0), 0);
-      const peaks = withData.map(r => Number(r.peak_power_kw || 0));
+      const knownPeaks = withData.map(r => r.peak_power_kw).filter(v => v !== null && v !== undefined).map(Number);
+      const nullPeaks = withData.length - knownPeaks.length;
 
       console.log(`│ Dates missing         : ${missingDates.length}`);
       console.log(`│ Rows to insert        : ${prepared.length}`);
@@ -284,10 +288,15 @@ async function backfillAllMissing() {
       if (withData.length > 0) {
         const avg = totalKwh / withData.length;
         console.log(`│ Mean daily generation : ${avg.toFixed(2)} kWh/day`);
-        console.log(`│ Peak power range      : ${Math.min(...peaks).toFixed(2)} – ${Math.max(...peaks).toFixed(2)} kW`);
-        if (Math.max(...peaks) === 0) {
-          console.log('│   ⚠️  every peak is 0 — inverterMonth exposes no peak field, so');
-          console.log('│      these rows will claim a measured 0 kW peak. See below.');
+        if (knownPeaks.length > 0) {
+          console.log(`│ Peak power range      : ${Math.min(...knownPeaks).toFixed(2)} – ${Math.max(...knownPeaks).toFixed(2)} kW`);
+        }
+        if (nullPeaks > 0) {
+          console.log(`│ Peak power            : null on all ${nullPeaks} row(s)`);
+          console.log('│   ⓘ inverterMonth exposes no peak field, so peak for these days is');
+          console.log('│     genuinely unknown. Written as null (unavailable) rather than 0,');
+          console.log('│     which would assert a measured zero. Requires peak_power_kw to be');
+          console.log('│     nullable — the run fails loudly with the fix if it is not.');
         }
       }
       console.log('│');
@@ -300,10 +309,13 @@ async function backfillAllMissing() {
       console.log('│   DATE          GENERATION      PEAK');
       for (const row of sample) {
         if (row === null) { console.log('│   ...'); continue; }
+        const peak = row.peak_power_kw === null || row.peak_power_kw === undefined
+          ? '  null   '
+          : `${String(Number(row.peak_power_kw).toFixed(2)).padStart(6)} kW`;
         console.log(
           `│   ${row.summary_date}  ` +
           `${String(Number(row.total_generation_kwh).toFixed(2)).padStart(9)} kWh  ` +
-          `${String(Number(row.peak_power_kw).toFixed(2)).padStart(6)} kW`
+          peak
         );
       }
       console.log('│');
@@ -344,6 +356,21 @@ async function backfillAllMissing() {
 
     if (upsertErr) {
       console.error(`💥 Upsert failed: ${upsertErr.message}`);
+      // Record it. Previously this only logged and moved on, so a run where every write was
+      // rejected still printed "BACKFILL COMPLETE" and exited 0 — the same green-checkmark-
+      // on-a-dead-pipeline problem that hid the 2026-04 outage for five months.
+      upsertFailures.push({ sn, rows: prepared.length, message: upsertErr.message });
+
+      if (/violates not-null constraint/i.test(upsertErr.message) &&
+          /peak_power_kw/i.test(upsertErr.message)) {
+        console.error('');
+        console.error('   ⓘ peak_power_kw is NOT NULL in the schema, so the honest "unknown"');
+        console.error('     value cannot be stored. Either make the column nullable:');
+        console.error('       alter table inverter_data_daily_summary');
+        console.error('         alter column peak_power_kw drop not null;');
+        console.error('     or revert this one line to write 0 instead of null:');
+        console.error('       peak_power_kw: dayRec.maxPower || 0');
+      }
       console.log('');
       continue;
     }
@@ -385,6 +412,26 @@ async function backfillAllMissing() {
   }
 
   console.log('╚════════════════════════════════════════════════════════════╝\n');
+
+  // -----------------------------------------------------------------
+  // A write run that wrote nothing has not succeeded. Exit non-zero so the workflow goes
+  // red and the alerting picks it up, instead of printing COMPLETE over a total failure.
+  // -----------------------------------------------------------------
+  if (!dry) {
+    if (upsertFailures.length > 0) {
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error(`❌ ${upsertFailures.length} upsert(s) were REJECTED by the database:`);
+      for (const f of upsertFailures) {
+        console.error(`   ${f.sn}: ${f.rows} row(s) — ${f.message}`);
+      }
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      process.exit(1);
+    }
+    if (totalMissingFound > 0 && totalRowsInserted === 0) {
+      console.error('❌ Missing dates were found but nothing was written. Treating as failure.');
+      process.exit(1);
+    }
+  }
 }
 
 // Run
