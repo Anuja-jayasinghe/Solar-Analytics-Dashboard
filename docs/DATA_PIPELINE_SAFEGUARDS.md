@@ -239,9 +239,25 @@ dashboard can distinguish from a real zero:
 peak_power_kw: dayRec.maxPower ?? null,
 ```
 
-This requires `peak_power_kw` to be nullable. If it is not, the write is rejected and the run
-now **fails loudly** with the exact ALTER statement and the one-line revert, rather than
-silently reporting success. To restore the old behaviour, write `dayRec.maxPower || 0`.
+This requires `peak_power_kw` to be nullable, **which could not be verified**. No existing row
+is null, and `scripts/inspect_schema.js` could not read the schema either — PostgREST returned
+`401 Unauthorized` for the OpenAPI description on all three Accept variants, which is itself
+further evidence that `SUPABASE_SERVICE_KEY` is not a service_role key.
+
+So the constraint is unknown until the first real write. That is handled rather than gambled
+on: if the column is `NOT NULL`, the upsert is rejected and the run **fails loudly** with the
+exact ALTER statement and the one-line revert, instead of reporting success over a total
+failure. Nothing is partially written — the backfill upserts all rows in one call.
+
+```sql
+alter table inverter_data_daily_summary
+  alter column peak_power_kw drop not null;
+```
+
+To restore the old behaviour instead, write `dayRec.maxPower || 0`.
+
+Once the key is fixed, `scripts/inspect_schema.js` will answer the nullability question
+directly and the snapshot workflow will start capturing the schema alongside the rows.
 
 The same defect already affects **424 existing rows** (2024-08-02 → 2025-10-12) that report
 generation above zero alongside a 0 kW peak. Those are not touched by the backfill — they
