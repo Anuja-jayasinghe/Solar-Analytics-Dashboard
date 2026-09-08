@@ -50,19 +50,50 @@ function parseArgs() {
   };
 }
 
-async function fetchOpenApi() {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/`, {
-    headers: {
-      apikey: SUPABASE_SERVICE_KEY,
-      Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
-      Accept: 'application/openapi+json'
-    }
-  });
+// Supabase is inconsistent about which Accept header it will serve the OpenAPI description
+// for, and an anon-role key may be refused outright. Try the variants in order and report
+// which one worked rather than guessing.
+const ACCEPT_VARIANTS = [
+  'application/openapi+json',
+  'application/json',
+  null // send no Accept header at all
+];
 
-  if (!res.ok) {
-    throw new Error(`PostgREST returned HTTP ${res.status} ${res.statusText}`);
+async function fetchOpenApi() {
+  const attempts = [];
+
+  for (const accept of ACCEPT_VARIANTS) {
+    const headers = {
+      apikey: SUPABASE_SERVICE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`
+    };
+    if (accept) headers.Accept = accept;
+
+    let res;
+    try {
+      res = await fetch(`${SUPABASE_URL}/rest/v1/`, { headers });
+    } catch (err) {
+      attempts.push(`Accept: ${accept || '(none)'} → network error: ${err.message}`);
+      continue;
+    }
+
+    if (res.ok) {
+      console.log(`ℹ️  OpenAPI description retrieved with Accept: ${accept || '(none)'}\n`);
+      return res.json();
+    }
+    attempts.push(`Accept: ${accept || '(none)'} → HTTP ${res.status} ${res.statusText}`);
   }
-  return res.json();
+
+  const err = new Error(
+    'Could not retrieve the PostgREST OpenAPI description.\n' +
+    attempts.map(a => `      ${a}`).join('\n') +
+    '\n\n      A 401 here usually means the key is an anon key and the project does not\n' +
+    '      expose the schema description to it. Fix SUPABASE_SERVICE_KEY (see\n' +
+    '      docs/RECOVERY_STATUS_2026-09.md) or read the schema from the Supabase\n' +
+    '      dashboard: Database → Tables → inverter_data_daily_summary.'
+  );
+  err.soft = true;
+  throw err;
 }
 
 async function main() {

@@ -59,7 +59,10 @@ jobs:
       # Schema is part of the database's state. A snapshot of rows without it is only half a
       # restore point — and `ceb_data` / `inverter_data_daily_summary` have no checked-in
       # migration, so this is the only record of their shape.
+      # Supplementary. If the key cannot read the schema description, that must not stop the
+      # row snapshot — the rows are the restore point.
       - name: 🧬 Inspect schema
+        continue-on-error: true
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
