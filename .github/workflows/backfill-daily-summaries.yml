@@ -97,10 +97,13 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # Secondary — the report is already published to the run summary above, so an artifact
+      # storage hiccup must not turn a good backfill into a red run.
       - name: 📎 Upload report artifact
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: backfill-report
+          name: backfill-report-${{ github.run_id }}
           path: backfill-report.txt
           if-no-files-found: warn
