@@ -1,6 +1,12 @@
+// SECURITY: this endpoint previously had no authentication and no method check. It runs with
+// the Supabase service-role key and calls the SolisCloud API, so anyone on the internet could
+// invoke it repeatedly to burn our Solis quota and Vercel execution time. It has no callers
+// anywhere in the repo — it is operator-triggered only — so it is now admin-gated.
 // Vercel Serverless Function: Fetch inverter data and store in Supabase
 import { createClient } from '@supabase/supabase-js';
 import { solisFetch } from '../src/lib/solisAuth.js';
+import { verifyAdminToken } from './middleware/verifyAdminToken.js';
+import { handlePreflightAndMethod } from './_lib/httpSecurity.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -97,6 +103,11 @@ async function archiveAllLiveData() {
 }
 
 export default async function handler(req, res) {
+  if (handlePreflightAndMethod(req, res, ['POST'])) return;
+
+  const adminUser = await verifyAdminToken(req, res);
+  if (!adminUser) return; // verifyAdminToken has already sent 401/403
+
   try {
     const inverters = await getInverterList();
     if (inverters.length === 0) return res.status(200).json({ ok: true, message: 'No inverters found' });
