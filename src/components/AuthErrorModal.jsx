@@ -36,7 +36,7 @@ const AuthErrorModal = () => {
 
   return (
     <>
-      <div style={overlayStyle} onClick={handleDismiss} />
+      <div aria-hidden="true" style={overlayStyle} onClick={handleDismiss} />
       <div style={modalStyle}>
         <div style={modalHeaderStyle}>
           <span style={iconStyle}>🔒</span>

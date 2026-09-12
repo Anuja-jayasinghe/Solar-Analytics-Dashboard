@@ -1461,3 +1461,37 @@ body.light-theme .recharts-bar {
     transform: translate(-50%, -50%);
   }
 }
+/* ===========================================================================
+   Keyboard focus visibility
+   ---------------------------------------------------------------------------
+   Audit finding U1. Before this, the app had six :focus rules across ~17,500
+   lines of JSX — and one of them (`input:focus { outline: none }`) actively
+   removed the browser default. 114 buttons and every link had no visible focus
+   state at all, which makes the app effectively unusable by keyboard.
+
+   :focus-visible rather than :focus, so mouse users don't get a ring on click
+   while keyboard and assistive-tech users do.
+   =========================================================================== */
+
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* The inputs above clear the native outline to style their border instead;
+   give them the ring back for keyboard users. */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+
+/* Focus must stay visible against dark panels and coloured buttons alike. */
+@media (prefers-contrast: more) {
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline-width: 3px;
+  }
+}

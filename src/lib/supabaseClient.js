@@ -4,13 +4,10 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-// Log environment configuration (for debugging)
-console.log('🔍 Supabase Configuration:', {
-  url: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : '❌ MISSING',
-  key: supabaseKey ? `${supabaseKey.substring(0, 10)}...` : '❌ MISSING',
-  environment: import.meta.env.MODE,
-  isProduction: import.meta.env.PROD
-});
+// Configuration is no longer logged on every page load. It printed the Supabase URL and a
+// key prefix to the console of every visitor — harmless, since the anon key is public, but
+// noise that signalled more than it needed to. Missing-credential warnings below remain.
+
 
 // Warn if credentials are missing
 if (!supabaseUrl || !supabaseKey) {

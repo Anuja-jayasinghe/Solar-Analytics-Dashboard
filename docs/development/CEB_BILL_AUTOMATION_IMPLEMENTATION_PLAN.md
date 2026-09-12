@@ -1,3 +1,20 @@
+> # ⚠️ NOT IMPLEMENTED — HISTORICAL PROPOSAL
+>
+> **This document describes a Google Document AI architecture that was never built.**
+>
+> AI-based extraction was tried and deliberately abandoned as unreliable for these
+> statistics — see commit `ba7bf51`. The `@google/generative-ai` dependency it assumed was
+> removed in the 2026-09 audit.
+>
+> **What actually runs:** `pdf-parse@2.4.5` text extraction plus six regexes pinned to the
+> exact text layout of the pre-2026 bill. See `api/_lib/cebBillParser.js` and
+> `tests/cebBillParser.test.js`.
+>
+> Kept for the design reasoning and the data model, both of which were implemented.
+> Treat the tooling choices as historical.
+
+---
+
 # CEB Bill Automation Implementation Plan
 
 ## 1. Purpose

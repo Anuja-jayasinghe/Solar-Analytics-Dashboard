@@ -573,50 +573,19 @@ export const DataProvider = ({ children }) => {
     refreshData();
   }, [refreshData]);
 
-  // Live-update settings (solar_grid_capacity, rate_per_kwh) without page refresh
-  useEffect(() => {
-    const channel = supabase.channel('system-settings-live');
-
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'system_settings',
-        filter: 'setting_name=in.(solar_grid_capacity,rate_per_kwh)'
-      },
-      (payload) => {
-        const name = payload?.new?.setting_name;
-        const raw = payload?.new?.setting_value;
-        const val = parseFloat(raw);
-
-        if (name === 'solar_grid_capacity') {
-          setGridCapacity(Number.isFinite(val) ? val : 40);
-        }
-
-        // When relevant settings change, refresh live data to recalc derived values
-        if (name === 'solar_grid_capacity' || name === 'rate_per_kwh') {
-          try {
-            fetchDataRef.current && fetchDataRef.current('live', true);
-          } catch (err) {
-            console.warn('[DataContext] Failed to refresh live after settings change', err);
-          }
-        }
-      }
-    );
-
-    channel.subscribe((status) => {
-      console.log('[DataContext] Settings realtime status:', status);
-    });
-
-    return () => {
-      try {
-        supabase.removeChannel(channel);
-      } catch (err) {
-        console.warn('[DataContext] Failed to remove settings channel', err);
-      }
-    };
-  }, []);
+  // Cross-tab live settings sync was removed here.
+  //
+  // This used to subscribe to postgres_changes on system_settings so a tariff or capacity
+  // change would propagate without a refresh. It could never fire: supabaseClient.js
+  // replaces the realtime transport with a no-op class and sets eventsPerSecond to 0, so
+  // the channel never connected. The README advertised it as a working feature.
+  //
+  // The admin who makes the change already gets a refresh — Settings.jsx calls
+  // refreshData('live') after a successful save. Only OTHER open tabs were ever affected.
+  //
+  // To restore it properly, remove the transport stub in supabaseClient.js and re-add the
+  // subscription. That opens a real WebSocket, so weigh it against the cost and the ws
+  // advisories that come with @supabase/realtime-js.
 
   const value = {
     energyChartsData,
