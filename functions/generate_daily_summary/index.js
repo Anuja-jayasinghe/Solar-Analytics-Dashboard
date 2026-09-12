@@ -319,11 +319,42 @@ async function main() {
     // -----------------------------------------------------------------
     const daysReconciled = totalInserts + totalUpdates + totalUnchanged;
     if (daysReconciled === 0) {
-      throw new Error(
-        `No daily summaries reconciled across ${BACKFILL_DAYS} days (${totalSkipped} skipped). ` +
-        `inverter_data_live appears to be empty — the live fetcher is not writing. ` +
-        `Check its most recent runs and confirm SUPABASE_SERVICE_KEY is a service_role key ` +
-        `(an anon key is subject to RLS and will be rejected on insert).`
+      // Reconciling nothing is not automatically a failure. There are two very different
+      // reasons for it, and only one is a problem:
+      //
+      //   (a) inverter_data_live is empty        -> the fetcher is dead. Fail.
+      //   (b) live data exists but none is ready -> collection resumed recently, or today's
+      //       row is still held back until MIN_HOUR_FOR_TODAY_UPDATE. Nothing is wrong.
+      //
+      // (b) is the normal state right after a recovery: the daily summaries were restored by
+      // the backfill, the live series is only just refilling, and the 14-day prune has
+      // cleared anything older. Failing here would raise an alert every run until 30 days of
+      // live history accumulates — and an alert that cries wolf is one nobody reads, which
+      // is the exact failure this guard exists to prevent.
+      const windowStart = new Date(Date.now() - BACKFILL_DAYS * 24 * 60 * 60 * 1000);
+      const { count: liveRowCount, error: liveCountErr } = await supabase
+        .from('inverter_data_live')
+        .select('id', { count: 'exact', head: true })
+        .gte('data_timestamp', windowStart.toISOString());
+
+      if (liveCountErr) {
+        throw new Error(`Could not verify whether inverter_data_live holds data: ${liveCountErr.message}`);
+      }
+
+      if (!liveRowCount) {
+        throw new Error(
+          `No daily summaries reconciled across ${BACKFILL_DAYS} days (${totalSkipped} skipped), ` +
+          `and inverter_data_live holds no rows in that window — the live fetcher is not writing. ` +
+          `Check its most recent runs and confirm SUPABASE_SERVICE_KEY is a service_role key ` +
+          `(an anon key is subject to RLS and will be rejected on insert).`
+        );
+      }
+
+      console.log(
+        `\nℹ️  Nothing to reconcile, but inverter_data_live holds ${liveRowCount} row(s) in the ` +
+        `last ${BACKFILL_DAYS} days, so the fetcher is alive and there is simply nothing new to ` +
+        `aggregate yet. Today's summary is held until ${MIN_HOUR_FOR_TODAY_UPDATE}:00 Sri Lanka ` +
+        `time. Not treating this as a failure.`
       );
     }
 
