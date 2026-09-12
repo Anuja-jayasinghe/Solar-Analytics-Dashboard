@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useAuth } from '@clerk/clerk-react';
 import { useData } from '../contexts/DataContext';
 import { formatDateDDMMYYYY } from '../lib/dateFormatter';
 
@@ -183,6 +184,7 @@ function buildUptimeForDay(dayIso, points) {
 }
 
 export default function SolisExplorer({ open, onClose }) {
+  const { getToken } = useAuth();
   const panelRef = useRef(null);
   const [activeTab, setActiveTab] = useState('pipeline');
   const [expandedLedgerKey, setExpandedLedgerKey] = useState(null);
@@ -293,9 +295,22 @@ export default function SolisExplorer({ open, onClose }) {
   }, [sourceRows]);
 
   const runExplore = useCallback(async (endpointKey, params) => {
+    // /api/solis/explore is admin-gated. It previously accepted any caller, which made it an
+    // open proxy to SolisCloud on our API credentials, so a verified Clerk token is now
+    // required. Matches the token pattern used by the CEB admin screens.
+    const template = import.meta.env.VITE_CLERK_JWT_TEMPLATE_NAME;
+    const token = (template && (await getToken({ template }))) || (await getToken());
+
+    if (!token) {
+      throw new Error('You must be signed in as an admin to run Solis API calls.');
+    }
+
     const response = await fetch('/api/solis/explore', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({ endpointKey, params }),
     });
 
@@ -318,7 +333,7 @@ export default function SolisExplorer({ open, onClose }) {
     }
 
     return parsed.solisResponse;
-  }, []);
+  }, [getToken]);
 
   const fetchInverterInsights = useCallback(async () => {
     setInverterLoading(true);

@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { verifyAdminToken } from '../middleware/verifyAdminToken.js'
 import { buildStoragePath, createSha256, parseMultipartForm } from '../_lib/cebBillUploadUtils.js'
+import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVER_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
@@ -10,15 +11,6 @@ const ALLOWED_TYPES = new Set(['application/pdf', 'image/png', 'image/jpeg'])
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVER_KEY)
 
-function setCorsHeaders(res) {
-  res.setHeader('Access-Control-Allow-Credentials', true)
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS')
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
-  )
-}
 
 function getAdminIdentity(user) {
   const email = user?.emailAddresses?.[0]?.emailAddress
@@ -29,17 +21,7 @@ function getAdminIdentity(user) {
 }
 
 export default async function handler(req, res) {
-  setCorsHeaders(res)
-
-  if (req.method === 'OPTIONS') {
-    res.status(200).end()
-    return
-  }
-
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' })
-    return
-  }
+  if (handlePreflightAndMethod(req, res, ['POST'])) return;
 
   const startedAt = Date.now()
 

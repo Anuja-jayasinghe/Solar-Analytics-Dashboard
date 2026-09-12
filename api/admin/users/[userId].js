@@ -6,21 +6,10 @@
 
 import { clerkClient } from '@clerk/clerk-sdk-node';
 import { verifyAdminToken } from '../../middleware/verifyAdminToken.js';
+import { handlePreflightAndMethod } from '../../_lib/httpSecurity.js';
 
 export default async function handler(req, res) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
-  );
-
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+  if (handlePreflightAndMethod(req, res, ['GET', 'POST', 'PATCH', 'DELETE'])) return;
 
   console.log('🔍 User API Request:', {
     method: req.method,

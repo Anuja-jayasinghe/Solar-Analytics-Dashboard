@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { verifyAdminToken } from '../middleware/verifyAdminToken.js';
 import { PDFParse } from 'pdf-parse';
+import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVER_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
@@ -65,27 +66,9 @@ function validateExtraction(result, latestDbRecord, currentTariff = 37.00) {
     };
 }
 
-function setCorsHeaders(res) {
-  res.setHeader('Access-Control-Allow-Credentials', true)
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS')
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
-  )
-}
 
 export default async function handler(req, res) {
-  setCorsHeaders(res)
-
-  if (req.method === 'OPTIONS') {
-    res.status(200).end()
-    return
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+  if (handlePreflightAndMethod(req, res, ['POST'])) return;
 
   try {
     const adminUser = await verifyAdminToken(req, res)

@@ -11,6 +11,8 @@
 
 import { solisFetch } from '../../src/lib/solisAuth.js';
 import validator from '../_lib/solisExplorerValidator.js';
+import { verifyAdminToken } from '../middleware/verifyAdminToken.js';
+import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
 
 // Simple in-memory rate limiter (per Vercel function invocation)
 const requestLogs = {};
@@ -47,17 +49,21 @@ function checkRateLimit(limitKey, limit = 30, windowMs = 60000) {
 }
 
 /**
- * Extract user info from Clerk headers or request
+ * Identify the caller from a *verified* Clerk user.
+ *
+ * This previously read `x-clerk-user-id` / `x-user-id` / `x-authenticated` straight off the
+ * request and derived an `isAuthenticated` flag that was then never checked — so the endpoint
+ * was an open proxy to SolisCloud on our API credentials, and the rate limiter (keyed on that
+ * same spoofable id) could be reset at will by rotating a header.
+ *
+ * The user object now comes from verifyAdminToken, which validates the Clerk session/JWT and
+ * confirms the admin role, so the id cannot be forged.
  */
-function getUserInfo(req) {
-  // Try Clerk headers first
-  const clerküserId = req.headers['x-clerk-user-id'] || req.headers.get?.('x-clerk-user-id');
-
-  // Fallback to custom headers
-  const userId = clerküserId || req.headers['x-user-id'];
-  const isAuthenticated = Boolean(clerküserId) || req.headers['x-authenticated'] === 'true';
-
-  return { userId, isAuthenticated };
+function getUserInfo(adminUser) {
+  return {
+    userId: adminUser?.id || 'unknown_admin',
+    email: adminUser?.emailAddresses?.[0]?.emailAddress || null
+  };
 }
 
 /**
@@ -90,30 +96,25 @@ function auditLog(userId, endpointKey, success, statusCode, durationMs, errorMsg
  * Main handler
  */
 export default async function handler(req, res) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, X-Clerk-User-Id');
-
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+  if (handlePreflightAndMethod(req, res, ['POST'])) return;
 
   const startTime = Date.now();
-  const userInfo = getUserInfo(req);
-  const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
-  const limitKey = getRateLimitKey(userInfo.userId, clientIp);
+  // Hoisted so the catch block can still attribute an audit entry if we fail before or
+  // during authentication.
+  let userInfo = { userId: 'unauthenticated', email: null };
 
   try {
-    // 1. Check method
-    if (req.method !== 'POST') {
-      auditLog(userInfo.userId, 'unknown', false, 405, Date.now() - startTime, 'Method not allowed');
-      return res.status(405).json({ error: 'Method not allowed. Use POST.' });
-    }
+    // 1. Authenticate FIRST. Everything downstream — the Solis call, the rate-limit identity,
+    //    the audit trail — depends on knowing who this actually is.
+    const adminUser = await verifyAdminToken(req, res);
+    if (!adminUser) return; // verifyAdminToken has already sent 401/403
 
-    // 2. Rate limit check (before auth for DDoS protection)
+    userInfo = getUserInfo(adminUser);
+    const clientIp =
+      req.headers['x-forwarded-for']?.split(',')[0] || req.socket?.remoteAddress || 'unknown';
+    const limitKey = getRateLimitKey(userInfo.userId, clientIp);
+
+    // 2. Rate limit, now keyed on a verified identity rather than a spoofable header.
     const rateLimitCheck = checkRateLimit(limitKey);
     if (!rateLimitCheck.allowed) {
       auditLog(userInfo.userId, 'unknown', false, 429, Date.now() - startTime, 'Rate limit exceeded');
