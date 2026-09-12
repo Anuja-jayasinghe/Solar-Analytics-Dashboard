@@ -145,32 +145,28 @@ const VerificationQueue = ({ onApproveSuccess }) => {
             file_path: item.ceb_bill_ingestions?.file_path || null
         };
 
-        const { error: upsertError } = await supabase
-            .from('ceb_data')
-            .upsert([cleanData], { 
-                onConflict: 'account_number, billing_month' 
-            });
+        // Approval used to be three separate browser-side writes with the public anon key,
+        // which required ceb_data / ceb_bill_* to allow anon writes. It is now one
+        // admin-authenticated call that performs all three server-side.
+        const token = import.meta.env.VITE_CLERK_JWT_TEMPLATE_NAME
+            ? await getToken({ template: import.meta.env.VITE_CLERK_JWT_TEMPLATE_NAME })
+            : await getToken();
 
-        if (upsertError) throw upsertError;
-
-        const { error: extError } = await supabase
-            .from('ceb_bill_extractions')
-            .update({ 
-                review_status: 'approved',
-                meter_reading: cleanData.meter_reading,
-                units_exported: cleanData.units_exported,
-                earnings: cleanData.earnings,
-                billing_period_start: cleanData.billing_period_start,
-                billing_period_end: cleanData.billing_period_end
+        const response = await fetch('/api/ceb-bills/records', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+                extractionId: item.id,
+                ingestionId: item.ingestion_id,
+                record: cleanData
             })
-            .eq('id', item.id);
-        
-        if (extError) throw extError;
+        });
 
-        await supabase
-            .from('ceb_bill_ingestions')
-            .update({ status: 'approved' })
-            .eq('id', item.ingestion_id);
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            const detail = Array.isArray(payload.details) ? payload.details.join('; ') : payload.details;
+            throw new Error(detail || payload.error || `Approve failed (${response.status})`);
+        }
 
         setMessage({ type: 'success', text: `Bill approved and data saved!` });
         fetchQueue();

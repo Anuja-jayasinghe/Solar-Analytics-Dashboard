@@ -357,22 +357,29 @@ const CebDataManagement = () => {
         data_source: editingId ? undefined : 'manual_entry'
       };
 
-      if (editingId) {
-        // update
-        const { error } = await supabase
-          .from("ceb_data")
-          .update(recordData)
-          .eq("id", editingId);
+      // Writes go through the admin API rather than straight to Supabase — writing from the
+      // browser required ceb_data to allow anon INSERT/UPDATE, which let any visitor forge
+      // billing rows.
+      const token = await fetchAuthToken();
+      const send = async (method, body) => {
+        const response = await fetch('/api/ceb-bills/records', {
+          method,
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(body)
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const detail = Array.isArray(payload.details) ? payload.details.join('; ') : payload.details;
+          throw new Error(detail || payload.error || `Request failed (${response.status})`);
+        }
+        return payload;
+      };
 
-        if (error) throw error;
+      if (editingId) {
+        await send('PATCH', { id: editingId, record: recordData });
         setMessage("✅ Record updated successfully.");
       } else {
-        // insert new with upsert check
-        const { error } = await supabase
-            .from("ceb_data")
-            .upsert([recordData], { onConflict: 'account_number, billing_month' });
-            
-        if (error) throw error;
+        await send('POST', { record: recordData });
         setMessage("✅ Record added successfully (Synced).");
       }
 
