@@ -470,47 +470,6 @@ export async function getMonthlyGenerationData(forceRefresh = false) {
 }
 
 /**
- * Get total generation data with caching
- */
-export async function getTotalGenerationData(forceRefresh = false) {
-  const cacheKey = 'total_generation';
-  
-  // Return cached data if available and not forcing refresh
-  if (!forceRefresh && cacheService.has('daily', cacheKey)) {
-    return cacheService.get('daily', cacheKey);
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from("system_metrics")
-      .select("metric_value")
-      .eq("metric_name", "total_generation")
-      .single();
-
-    if (error) throw new Error(`Total generation fetch failed: ${error.message}`);
-
-    const result = {
-      total: Number(data.metric_value) || 0,
-      timestamp: Date.now()
-    };
-
-    // Cache the result
-    cacheService.set('daily', cacheKey, result);
-    
-    return result;
-  } catch (error) {
-    console.error('Error fetching total generation data:', error);
-    // Return cached data if available, even if expired
-    const cached = cacheService.get('daily', cacheKey);
-    if (cached) {
-      console.warn('Using cached total generation data due to fetch error');
-      return cached;
-    }
-    throw error;
-  }
-}
-
-/**
  * Get total earnings data with caching
  */
 export async function getTotalEarningsData(forceRefresh = false) {

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
+import { useAuth } from '@clerk/clerk-react';
 import { supabase } from '../lib/supabaseClient';
 import { ThemeContext } from '../components/ThemeContext';
 import { AuthContext } from '../contexts/AuthContext';
@@ -14,6 +15,31 @@ const Settings = () => {
   const { dashboardAccess, hasRealAccess } = useContext(AuthContext);
   const [blockOpen, setBlockOpen] = useState(false);
   const { refreshData } = useData();
+  const { getToken } = useAuth();
+
+  // Settings writes go through the admin API rather than straight to Supabase. Writing from
+  // the browser required `system_settings` to allow anon UPDATE, which meant any visitor
+  // could change rate_per_kwh — and every earnings figure derives from it.
+  const authedFetch = async (url, options = {}) => {
+    const template = import.meta.env.VITE_CLERK_JWT_TEMPLATE_NAME;
+    const token = (template && (await getToken({ template }))) || (await getToken());
+    if (!token) throw new Error('You must be signed in as an admin to change settings.');
+
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        ...(options.headers || {})
+      }
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.error || payload.details || `Request failed (${response.status})`);
+    }
+    return payload;
+  };
 
   useEffect(() => {
     fetchSettings();
@@ -68,14 +94,12 @@ const Settings = () => {
       return;
     }
     const { id, setting_value } = setting;
-    const { error } = await supabase
-      .from('system_settings')
-      .update({ setting_value, updated_at: new Date() })
-      .eq('id', id);
-    if (error) {
-      console.error('Save error:', error);
-      setMessage(`❌ Failed to save ${setting.setting_name}: ${error.message}`);
-    } else {
+    try {
+      await authedFetch('/api/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ id, setting_value })
+      });
+
       setMessage(`✅ ${setting.setting_name} updated successfully`);
       // apply theme immediately if changed
       if (setting.setting_name === 'theme') {
@@ -96,6 +120,9 @@ const Settings = () => {
       } catch (err) {
         console.warn('Failed to refresh live data after settings save', err);
       }
+    } catch (err) {
+      console.error('Save error:', err);
+      setMessage(`❌ Failed to save ${setting.setting_name}: ${err.message}`);
     }
   };
 
@@ -110,18 +137,14 @@ const Settings = () => {
     ];
 
     try {
-      const { error } = await supabase
-        .from('system_settings')
-        .insert(defaultSettings);
-      
-      if (error) {
-        console.error('Insert error:', error);
-        setMessage(`❌ Failed to add settings: ${error.message}`);
-      } else {
-        setMessage('✅ Default settings added successfully!');
-        fetchSettings(); // Refresh the settings list
-        setTimeout(() => setMessage(''), 3000);
-      }
+      await authedFetch('/api/settings', {
+        method: 'POST',
+        body: JSON.stringify({ settings: defaultSettings })
+      });
+
+      setMessage('✅ Default settings added successfully!');
+      fetchSettings(); // Refresh the settings list
+      setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('Unexpected error:', err);
       setMessage(`❌ Unexpected error: ${err.message}`);
