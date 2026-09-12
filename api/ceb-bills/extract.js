@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { verifyAdminToken } from '../middleware/verifyAdminToken.js';
 import { PDFParse } from 'pdf-parse';
+import { parseCebBillText, validateExtraction } from '../_lib/cebBillParser.js';
 import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -9,62 +10,6 @@ const BUCKET = process.env.SUPABASE_STORAGE_BUCKET_BILLS || 'ceb_bills';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVER_KEY);
 
-function validateExtraction(result, latestDbRecord, currentTariff = 37.00) {
-    const errors = [];
-    let status = "auto_approved";
-
-    // Track which critical fields were cleanly extracted for confidence scoring
-    const fieldChecks = {
-        account_number: !!result.account_number,
-        billing_month: !!result.billing_month,
-        billing_period_start: !!result.billing_period_start,
-        billing_period_end: !!result.billing_period_end,
-        meter_reading_current: result.meter_reading_current > 0,
-        meter_reading_previous: result.meter_reading_previous >= 0,
-        units_exported: result.units_exported > 0,
-        earnings: result.earnings > 0
-    };
-    const extractedCount = Object.values(fieldChecks).filter(Boolean).length;
-    let confidence_score = Math.round((extractedCount / Object.keys(fieldChecks).length) * 100);
-
-    // 1. Sanity Checks
-    if (!result.meter_reading_current || result.meter_reading_current <= 0) errors.push("Invalid current meter reading");
-    if (!result.units_exported || result.units_exported < 0) errors.push("Invalid exported units");
-    if (!result.earnings || result.earnings < 0) errors.push("Invalid earnings");
-    if (!result.billing_month) errors.push("Missing billing month");
-
-    // 2. Proofing checks (math validation)
-    const expectedEarnings = (result.units_exported * currentTariff).toFixed(2);
-    const earningsDifference = Math.abs(parseFloat(expectedEarnings) - result.earnings);
-    if (earningsDifference >= 1.00) { 
-        errors.push(`Math mismatch: ${result.units_exported} units at Rs.${currentTariff} should be Rs.${expectedEarnings}, but extracted Rs.${result.earnings}`);
-        confidence_score = Math.max(0, confidence_score - 20); // Penalise confidence for math errors
-    }
-
-    // 3. Meter delta check
-    const calculatedUnits = result.meter_reading_current - result.meter_reading_previous;
-    if (result.meter_reading_previous > 0 && calculatedUnits !== result.units_exported) { 
-        errors.push(`Meter mismatch: Current (${result.meter_reading_current}) - Prev (${result.meter_reading_previous}) = ${calculatedUnits}, but extracted units = ${result.units_exported}`);
-        confidence_score = Math.max(0, confidence_score - 15);
-    }
-
-    if (result.billing_period_start && result.billing_period_end) {
-        if (new Date(result.billing_period_start) >= new Date(result.billing_period_end)) {
-            errors.push("Timeline error: Billing period start is not before end date.");
-        }
-    } else {
-        errors.push("Missing billing period dates.");
-    }
-
-    if (errors.length > 0) status = "pending_review";
-
-    return { 
-        status, 
-        validation_errors: errors,
-        confidence_score: Math.min(100, Math.max(0, confidence_score)),
-        clean_data: result 
-    };
-}
 
 
 export default async function handler(req, res) {
@@ -124,70 +69,15 @@ export default async function handler(req, res) {
     const text = pdfData.text;
     await parser.destroy();
 
-    // --- REGEX EXTRACTION ---
-    // Account Number: "Electricity A/C No.: 4924089702"
-    const accountMatch   = text.match(/Electricity A\/C No\.:\s*(\d+)/i);
-    // v2.4.5 raw: "2024 SEP\tMonth:\n"  — tab between year+month and "Month:"
-    const monthMatch     = text.match(/([0-9]{4} [A-Z]{3})\s+Month:/i);
-    // Bill Date is clean: "Bill Date: 9/5/2024 9:59:05 AM"
-    const issueDateMatch = text.match(/Bill Date:\s*([0-9/]+)/i);
+    // Parsing lives in api/_lib/cebBillParser.js so it can be covered by fixtures without a
+    // database or a live upload. See the tests in tests/cebBillParser.test.js.
+    const extractedData = parseCebBillText(text);
 
-    // Units exported: "No. of Units Exported (kWh) 3676" (space-separated on same line)
-    const unitsMatch    = text.match(/No\. of Units Exported \(kWh\)\s+(\d+)/i);
-    // Earnings: "Charge for Units Exported (Rs.) 136,012.00"
-    const earningsMatch = text.match(/Charge for Units Exported \(Rs\.\)\s+([\d,]+\.\d{2})/i);
-
-    // --- METER READING EXTRACTION ---
-    // v2.4.5 raw meter rows: "14\t3679\t2024-09-05"
-    // Pattern: capture tab-separated reading and date on the same line
-    const meterReadingPattern = /\t(\d+)\t(\d{4}-\d{2}-\d{2})/g;
-    let meterMatches = [];
-    let hit;
-
-    while ((hit = meterReadingPattern.exec(text)) !== null) {
-        meterMatches.push({ reading: parseInt(hit[1]), date: hit[2] });
-    }
-    // Sort by date ascending: first entry = previous reading, last = current reading
-    meterMatches.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-
-    const unitsExported = unitsMatch ? parseInt(unitsMatch[1]) : 0;
-    let readingPrev = 0;
-    let readingCurr = 0;
-    let periodStart = null;
-    let periodEnd   = null;
-
-    if (meterMatches.length >= 2) {
-        readingPrev = meterMatches[0].reading;
-        readingCurr = meterMatches[meterMatches.length - 1].reading;
-        periodStart = meterMatches[0].date;
-        periodEnd   = meterMatches[meterMatches.length - 1].date;
-    } else if (meterMatches.length === 1) {
-        readingCurr = meterMatches[0].reading;
-        periodEnd   = meterMatches[0].date;
-    }
-
-    const extractedData = {
-        account_number: accountMatch ? accountMatch[1] : null,
-        billing_month: monthMatch ? monthMatch[1].toUpperCase() : null,
-        bill_issue_date: issueDateMatch ? issueDateMatch[1] : null,
-        billing_period_start: periodStart,
-        billing_period_end: periodEnd,
-        units_exported: unitsExported,
-        earnings: earningsMatch ? parseFloat(earningsMatch[1].replace(/,/g, '')) : 0,
-        meter_reading_current: readingCurr,
-        meter_reading_previous: readingPrev
-    };
-
-    // 4. Fetch the latest DB record for validation history
-    const { data: latestDbRecord } = await supabase
-       .from('ceb_data')
-       .select('*')
-       .order('bill_date', { ascending: false })
-       .limit(1)
-       .maybeSingle();
-
-    // Fetch the current tariff
+    // 4. Fetch the current tariff
+    //
+    // A `select * from ceb_data order by bill_date desc limit 1` used to run here too, passed
+    // into validateExtraction as `latestDbRecord` and then never read by it. Removed — it was
+    // a round-trip per upload for nothing.
     const { data: settingsRow } = await supabase
        .from('system_settings')
        .select('setting_value')
@@ -197,7 +87,7 @@ export default async function handler(req, res) {
     const currentTariff = settingsRow ? parseFloat(settingsRow.setting_value) : 37.00;
 
     // 5. Run Validation
-    const validationResult = validateExtraction(extractedData, latestDbRecord, currentTariff);
+    const validationResult = validateExtraction(extractedData, currentTariff);
 
     // 6. Save to ceb_bill_extractions & update status
     const extractionPayload = {

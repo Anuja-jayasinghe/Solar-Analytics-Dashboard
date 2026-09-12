@@ -71,6 +71,15 @@ export default defineConfig(({ mode }) => {
       }
     },
     chunkSizeWarningLimit: 1000
+  },
+
+  // Vitest. Node environment: the current suites cover pure logic — the CEB bill parser,
+  // the LR-001 alignment rule and the CORS helper — none of which need a DOM. Add
+  // jsdom/@testing-library if component tests are introduced later.
+  test: {
+    environment: 'node',
+    include: ['tests/**/*.test.js'],
+    reporters: 'default'
   }
-  
+
 }})

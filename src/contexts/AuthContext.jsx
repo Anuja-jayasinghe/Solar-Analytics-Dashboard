@@ -4,7 +4,7 @@ import { createAuthAdapter, isClerkEnabled } from "../lib/auth/AuthFactory";
 
 export const AuthContext = createContext();
 
-export function AuthProvider({ children }) {
+function AuthProviderInner({ children, clerkUser, clerkAuth, clerk }) {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -12,10 +12,8 @@ export function AuthProvider({ children }) {
   const [dashboardAccess, setDashboardAccess] = useState('real'); // 'demo' | 'real'
   const [authAdapter, setAuthAdapter] = useState(null);
   
-  // Clerk hooks (only used if Clerk is enabled)
-  const clerkUser = isClerkEnabled() ? useUser() : { user: null, isLoaded: true };
-  const clerkAuth = isClerkEnabled() ? useAuth() : { isLoaded: true };
-  const clerk = isClerkEnabled() ? useClerk() : null;
+  // Clerk values arrive as props. See the note at the bottom of this file for why they are
+  // no longer read from conditionally-called hooks here.
 
   // Initialize auth adapter on mount
   useEffect(() => {
@@ -192,4 +190,54 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Why this is split in two
+//
+// AuthProviderInner used to call the Clerk hooks conditionally:
+//
+//   const clerkUser = isClerkEnabled() ? useUser() : { user: null, isLoaded: true }
+//
+// That breaks the rules of hooks. It happened not to crash, because isClerkEnabled() reads
+// a build-time env flag and so never changes between renders — but the rule had been
+// downgraded to a lint *warning* precisely to let this through, and a warning is not a
+// guarantee. (Issue #114.)
+//
+// The hooks cannot simply be hoisted: <ClerkProvider> is only mounted when the flag is on
+// (see App.jsx), and Clerk's hooks throw without it. So the branch moves up a level — each
+// component below calls its hooks unconditionally, and which component renders is what
+// varies. That is legal, and it lets rules-of-hooks go back to being an error.
+// ---------------------------------------------------------------------------
+
+/** Only ever rendered inside <ClerkProvider>, so these hooks are always safe here. */
+function ClerkAuthProvider({ children }) {
+  const clerkUser = useUser();
+  const clerkAuth = useAuth();
+  const clerk = useClerk();
+
+  return (
+    <AuthProviderInner clerkUser={clerkUser} clerkAuth={clerkAuth} clerk={clerk}>
+      {children}
+    </AuthProviderInner>
+  );
+}
+
+/** Legacy Supabase auth path. Calls no Clerk hooks at all. */
+function SupabaseAuthProvider({ children }) {
+  return (
+    <AuthProviderInner
+      clerkUser={{ user: null, isLoaded: true }}
+      clerkAuth={{ isLoaded: true }}
+      clerk={null}
+    >
+      {children}
+    </AuthProviderInner>
+  );
+}
+
+export function AuthProvider({ children }) {
+  return isClerkEnabled()
+    ? <ClerkAuthProvider>{children}</ClerkAuthProvider>
+    : <SupabaseAuthProvider>{children}</SupabaseAuthProvider>;
 }
