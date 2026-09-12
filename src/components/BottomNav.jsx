@@ -215,7 +215,7 @@ export default function BottomNav({ onDevToolsToggle, canAccessOpsPanel = false 
             </div>
 
             {/* Slide-up Drawer */}
-            <div className={`mobile-menu-overlay ${showMenu ? 'open' : ''}`} onClick={() => setShowMenu(false)} />
+            <div aria-hidden="true" className={`mobile-menu-overlay ${showMenu ? 'open' : ''}`} onClick={() => setShowMenu(false)} />
 
             <div className={`mobile-drawer ${showMenu ? 'open' : ''}`}>
                 <div className="drawer-header">

@@ -1,3 +1,7 @@
+> **Scope note:** this indexes the *local Clerk auth dev tooling* only, not the project.
+> It was previously named `DOCUMENTATION_INDEX.md`, which made it look like the entry point
+> for the whole repo. For project orientation see [`START_HERE.md`](./START_HERE.md).
+
 # 📖 Local Clerk Authentication - Complete Documentation Index
 
 ## 🔎 Logic Documentation (New)

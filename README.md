@@ -57,7 +57,7 @@ Solar Analytics Dashboard was born out of the need to efficiently monitor solar 
 * 📅 **Billing Period Alignment** for accurate tracking
 * 🛡️ **Error Resilience** with circuit breaker pattern
 * 💾 **Dual-layer Cache** (Memory + LocalStorage)
-* ⚙️ **Unified Settings Sync** - Reactively synced daily targets via data context
+* ⚙️ **Settings Sync** - Tariff and capacity changes refresh the dashboard on save
 * ⚙️ **Admin Panel** for CEB data management
 * 📱 **Responsive Design** for all devices
 
