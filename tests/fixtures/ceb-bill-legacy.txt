@@ -1,0 +1,20 @@
+CEYLON ELECTRICITY BOARD
+NET PLUS PLUS - MONTHLY STATEMENT
+
+Electricity A/C No.: 4924089702
+Bill Date: 9/5/2024 9:59:05 AM
+2024 SEP	Month:
+
+Tariff Category	D-1 DOMESTIC
+Meter No	CEB0099123
+
+METER READING HISTORY
+Seq	Reading	Date
+13	3	2024-08-06
+14	3679	2024-09-05
+
+EXPORT SUMMARY
+No. of Units Exported (kWh) 3676
+Charge for Units Exported (Rs.) 136,012.00
+
+Total Payable (Rs.) 0.00

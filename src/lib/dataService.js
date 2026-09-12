@@ -14,6 +14,20 @@ function toDateOnly(value) {
   return date
 }
 
+// Serialise a Date as YYYY-MM-DD using its LOCAL components.
+//
+// toDateOnly() returns a local-midnight Date. Calling .toISOString() on that converts to
+// UTC, which rolls the date back a day for any timezone east of UTC — including
+// Asia/Colombo (UTC+5:30), where this app runs. That made every periodStart/periodEnd
+// reported by the alignment rule one day early. Caught by tests/energyAlignment.test.js.
+function toLocalIsoDate(date) {
+  if (!date) return null
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 function formatShortDate(value) {
   return formatDateDDMMYYYY(value, 'Unknown')
 }
@@ -41,6 +55,7 @@ function isSameOrBefore(date, compare) {
 
 function sumDailyGeneration(rows, startDate, endDate) {
   if (!startDate || !endDate) return null
+  if (!Array.isArray(rows)) return 0
   return rows.reduce((sum, row) => {
     if (isSameOrAfter(row.summary_date, startDate) && isSameOrBefore(row.summary_date, endDate)) {
       return sum + Number(row.total_generation_kwh || 0)
@@ -49,7 +64,9 @@ function sumDailyGeneration(rows, startDate, endDate) {
   }, 0)
 }
 
-function buildAlignedEnergyComparisonRows(year, dailyRows, cebRows, today = new Date()) {
+// Exported for tests: this is the LR-001 alignment rule, the core business logic of the
+// dashboard. See tests/energyAlignment.test.js and docs/logic-registry/LR-001-*.md
+export function buildAlignedEnergyComparisonRows(year, dailyRows, cebRows, today = new Date()) {
   const selectedYear = Number(year) || today.getFullYear()
   const currentYear = today.getFullYear()
   const currentMonthIndex = today.getMonth()
@@ -89,8 +106,8 @@ function buildAlignedEnergyComparisonRows(year, dailyRows, cebRows, today = new 
         ceb: Number(bill.units_exported || 0),
         periodLabel: `${formatShortDate(periodStart)} – ${formatShortDate(periodEnd)}`,
         status: 'finalized',
-        periodStart: periodStart ? periodStart.toISOString().split('T')[0] : null,
-        periodEnd: periodEnd ? periodEnd.toISOString().split('T')[0] : null,
+        periodStart: toLocalIsoDate(periodStart),
+        periodEnd: toLocalIsoDate(periodEnd),
         billDate: bill.bill_date
       }
     }
@@ -110,8 +127,8 @@ function buildAlignedEnergyComparisonRows(year, dailyRows, cebRows, today = new 
         ceb: null,
         periodLabel: `${formatShortDate(periodStart)} – ${formatShortDate(periodEnd)}`,
         status: 'provisional',
-        periodStart: periodStart ? periodStart.toISOString().split('T')[0] : null,
-        periodEnd: periodEnd ? periodEnd.toISOString().split('T')[0] : null,
+        periodStart: toLocalIsoDate(periodStart),
+        periodEnd: toLocalIsoDate(periodEnd),
         billDate: null
       }
     }
@@ -139,8 +156,8 @@ function buildAlignedEnergyComparisonRows(year, dailyRows, cebRows, today = new 
       ceb: null,
       periodLabel: `${formatShortDate(monthStart)} – ${formatShortDate(monthEnd)}`,
       status: 'missing_bill',
-      periodStart: monthStart ? monthStart.toISOString().split('T')[0] : null,
-      periodEnd: monthEnd ? monthEnd.toISOString().split('T')[0] : null,
+      periodStart: toLocalIsoDate(monthStart),
+      periodEnd: toLocalIsoDate(monthEnd),
       billDate: null
     }
   })

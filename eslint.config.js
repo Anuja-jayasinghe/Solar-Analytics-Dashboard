@@ -27,7 +27,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['api/**/*.js', 'functions/**/*.js', 'scripts/**/*.js', 'vite.config.js', 'src/lib/solisAuth.js'],
+    files: ['api/**/*.js', 'functions/**/*.js', 'scripts/**/*.js', 'tests/**/*.js', 'vite.config.js', 'src/lib/solisAuth.js'],
     languageOptions: {
       globals: globals.node,
     },
@@ -48,7 +48,7 @@ export default defineConfig([
     ],
     rules: {
       'react-refresh/only-export-components': 'warn',
-      'react-hooks/rules-of-hooks': 'warn',
+      'react-hooks/rules-of-hooks': 'error',
     },
   },
 ])

@@ -31,19 +31,29 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      # --if-present means a repo without this script passes rather than fails.
-      # pnpm (unlike npm) requires --if-present before the script name.
+      # These used to run with --if-present, which means "pass silently if the script does
+      # not exist". `test` and `typecheck` were never defined, so two of the four gates were
+      # theatre: CI went green having verified nothing. They are now invoked directly, so a
+      # missing script fails the build rather than being waved through.
+      #
+      # `typecheck` is deliberately absent: this is a plain JavaScript project with no
+      # tsconfig, so there is nothing to typecheck. Adding a step back would just recreate
+      # the no-op. If TypeScript or checkJs is introduced later, add it here for real.
       - name: Lint
-        run: pnpm run --if-present lint
-
-      - name: Typecheck
-        run: pnpm run --if-present typecheck
+        run: pnpm run lint
 
       - name: Test
-        run: pnpm run --if-present test
+        run: pnpm run test
 
       - name: Build
-        run: pnpm run --if-present build
+        run: pnpm run build
+
+      # 61 advisories — two of them critical — accumulated unnoticed because nothing ever
+      # looked. Fails only on production-reachable problems: the dev toolchain (vite, rollup,
+      # eslint, babel) carries a long tail of advisories that never reach a user, and gating
+      # on those would train everyone to ignore this step.
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level high
 
   secrets:
     runs-on: ubuntu-latest
