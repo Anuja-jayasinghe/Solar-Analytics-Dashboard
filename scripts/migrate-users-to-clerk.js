@@ -2,7 +2,9 @@
 // Usage: node scripts/migrate-users-to-clerk.js [--dry-run] [--batch-size 50]
 // Creates Clerk accounts from Supabase user export
 
-import { clerkClient } from '@clerk/clerk-sdk-node';
+// @clerk/clerk-sdk-node is deprecated by the vendor; this uses @clerk/backend, which needs
+// the client to be constructed explicitly rather than imported as a pre-built singleton.
+import { createClerkClient } from '@clerk/backend';
 import { promises as fs } from 'fs';
 import path from 'path';
 import 'dotenv/config';
@@ -13,6 +15,8 @@ if (!CLERK_SECRET_KEY) {
   console.error('❌ Missing CLERK_SECRET_KEY environment variable');
   process.exit(1);
 }
+
+const clerkClient = createClerkClient({ secretKey: CLERK_SECRET_KEY });
 
 // Parse command line arguments
 const isDryRun = process.argv.includes('--dry-run');
