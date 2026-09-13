@@ -291,6 +291,7 @@ tests/                    91 tests across 6 files
 | [API Reference](docs/API.md) | Every endpoint, auth model, request and error shapes |
 | [Runbook](docs/RUNBOOK.md) | Operating procedures and incident response |
 | [Logic Registry](docs/logic-registry) | Specifications for the non-obvious domain rules |
+| [UI Redesign Direction](docs/UI_REDESIGN_DIRECTION.md) | Competitive teardown and the design decisions for the next version |
 
 The repository also keeps a deliberate historical record — the
 [project audit](docs/PROJECT_AUDIT_2026-09.md), the

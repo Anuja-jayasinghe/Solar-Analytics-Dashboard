@@ -128,6 +128,12 @@ Reference — how it works now:
 - `docs/RUNBOOK.md` — operating procedures and incident response
 - `docs/logic-registry/` — specs for the non-obvious domain rules
 
+Decided, not yet built:
+
+- `docs/UI_REDESIGN_DIRECTION.md` — the SolisCloud v4 teardown and what the redesign takes,
+  adapts and refuses. **Read before touching the UI.** Note D7: it deliberately reverses the
+  orange/teal role mapping used in ARCHITECTURE.md, and says why.
+
 History — why it is the way it is:
 
 - `docs/PROJECT_AUDIT_2026-09.md` — full audit: security, API, data, UI, CI, docs
