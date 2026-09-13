@@ -116,6 +116,7 @@ human before it becomes data.
 
 ## The rule that governs everything
 
+> [!IMPORTANT]
 > **A bill received in month N reports generation from month N−1.**
 
 Comparison windows come from bill dates, never calendar months:
