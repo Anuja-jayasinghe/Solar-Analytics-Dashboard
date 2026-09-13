@@ -518,7 +518,7 @@ const styles = {
     background: 'var(--accent)',
     border: 'none',
     borderRadius: '8px',
-    color: '#fff',
+    color: 'var(--on-accent)',
     fontSize: '0.95rem',
     fontWeight: '600',
     cursor: 'pointer',
@@ -582,7 +582,7 @@ const styles = {
     background: 'var(--accent)',
     border: 'none',
     borderRadius: '12px',
-    color: '#fff',
+    color: 'var(--on-accent)',
     fontSize: '1.125rem',
     fontWeight: '600',
     cursor: 'pointer',
@@ -778,7 +778,7 @@ const styles = {
     background: 'var(--accent)',
     border: 'none',
     borderRadius: '12px',
-    color: '#fff',
+    color: 'var(--on-accent)',
     fontSize: '1.25rem',
     fontWeight: '600',
     cursor: 'pointer',
@@ -852,7 +852,7 @@ const keyframes = `
     
     .headerButton:hover {
       background: var(--accent);
-      color: #fff;
+      color: var(--on-accent);
     }
     
     .ctaButton:hover {

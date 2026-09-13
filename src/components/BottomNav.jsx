@@ -157,7 +157,7 @@ export default function BottomNav({ onDevToolsToggle, canAccessOpsPanel = false 
           height: 40px;
           border-radius: 50%;
           background: var(--accent);
-          color: white;
+          color: var(--on-accent);
           display: flex;
           justify-content: center;
           align-items: center;

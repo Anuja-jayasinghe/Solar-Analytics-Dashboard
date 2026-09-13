@@ -66,7 +66,7 @@ const staleBadge = {
 
 const retryButton = {
   background: "var(--accent)",
-  color: "white",
+  color: 'var(--on-accent)',
   border: "none",
   borderRadius: "4px",
   padding: "0.2rem 0.4rem",

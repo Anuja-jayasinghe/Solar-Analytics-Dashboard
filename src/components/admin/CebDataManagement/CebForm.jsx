@@ -23,7 +23,7 @@ export default function CebForm({
 
   const buttonStyle = {
     background: 'var(--accent)',
-    color: '#fff',
+    color: 'var(--on-accent)',
     border: 'none',
     borderRadius: '8px',
     padding: '10px',

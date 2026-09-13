@@ -45,7 +45,7 @@ Everything on the comparison charts follows from that. Full spec:
 
 ## Getting it running
 
-1. Copy `../vercel.env.example` to `.env` and fill it in. Every variable is documented there.
+1. Copy `../.env.example` to `.env` and fill it in. Every variable is documented there.
 2. `pnpm install && pnpm dev`
 
 `SUPABASE_SERVICE_KEY` must be the **service_role** key, not the anon key. Getting that wrong

@@ -1,0 +1,21 @@
+# Solar Analytics Dashboard — https://solaredge.anujajay.com
+#
+# This file must exist as a real file in public/. vercel.json rewrites
+# /((?!api).*) to /index.html, so a missing robots.txt is served as the SPA's
+# HTML — which is what made Lighthouse report 25 robots.txt syntax errors.
+
+User-agent: *
+
+# Everything behind authentication. Crawling these yields a login redirect at
+# best and wastes crawl budget at worst.
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /access
+Disallow: /demodashbaard
+Disallow: /demosettings
+Disallow: /api/
+
+Allow: /
+
+Sitemap: https://solaredge.anujajay.com/sitemap.xml

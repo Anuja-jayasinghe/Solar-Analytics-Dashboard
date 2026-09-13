@@ -149,7 +149,7 @@ export default function CebTable({
                           disabled={loading}
                           style={{
                             background: 'var(--accent)',
-                            color: '#fff',
+                            color: 'var(--on-accent)',
                             border: 'none',
                             borderRadius: '6px',
                             padding: '4px 10px',
