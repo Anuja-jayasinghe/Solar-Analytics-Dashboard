@@ -1,12 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
 import { verifyAdminToken } from '../middleware/verifyAdminToken.js';
 import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
+import { supabase, blockOnConfigProblem } from '../_lib/supabaseServer.js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVER_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET_BILLS || 'ceb_bills';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVER_KEY);
 
 export default async function handler(req, res) {
   if (handlePreflightAndMethod(req, res, ['POST','DELETE'])) return;
@@ -17,6 +14,8 @@ export default async function handler(req, res) {
 
     const adminUser = await verifyAdminToken(req, res);
     if (!adminUser) return;
+
+    if (blockOnConfigProblem(res)) return;
 
     try {
         const { recordId } = req.body;
