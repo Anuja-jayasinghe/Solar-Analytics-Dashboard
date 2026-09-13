@@ -1,10 +1,23 @@
 import CryptoJS from 'crypto-js';
 
-// Helper to read environment variables safely
+// ============================================================================
+// SERVER-ONLY. Do not import this from anything under src/.
+//
+// This file used to live in src/lib/ and read its credentials with a computed key:
+//
+//   function getEnv(key) { ... import.meta.env[key] ... }
+//
+// Vite can only statically replace `import.meta.env.LITERAL`. Given a computed key it
+// inlines the ENTIRE env object instead — so any client import of this module would have
+// published every VITE_ value, including VITE_SOLIS_API_SECRET, into the browser bundle.
+//
+// Nothing in the client graph reached it (verified against the built bundle), but the only
+// thing preventing it was that src/lib/testSolisAPI.js — its sole src/ importer — happened
+// to be dead code. Moving the file here removes the possibility rather than relying on that.
+// ============================================================================
+
 function getEnv(key) {
-  if (typeof process !== 'undefined' && process.env[key]) return process.env[key];
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) return import.meta.env[key];
-  return undefined;
+  return typeof process !== 'undefined' ? process.env[key] : undefined;
 }
 
 /**
@@ -14,8 +27,8 @@ function getEnv(key) {
  * @param {string} method - HTTP method (default POST)
  */
 export async function buildSolisHeaders(apiPath, body = '', method = 'POST') {
-  const apiId = getEnv('SOLIS_API_ID') || getEnv('VITE_SOLIS_API_ID');
-  const apiSecret = getEnv('SOLIS_API_SECRET') || getEnv('VITE_SOLIS_API_SECRET');
+  const apiId = getEnv('SOLIS_API_ID');
+  const apiSecret = getEnv('SOLIS_API_SECRET');
   if (!apiId || !apiSecret) throw new Error('❌ Missing Solis API credentials.');
 
   const path = `/${apiPath.replace(/^\/+/, '')}`;
@@ -61,7 +74,6 @@ export async function buildSolisHeaders(apiPath, body = '', method = 'POST') {
 export async function solisFetch(apiPath, body = {}, method = 'POST') {
   const apiUrl =
     getEnv('SOLIS_API_URL') ||
-    getEnv('VITE_SOLIS_API_URL') ||
     'https://www.soliscloud.com:13333';
 
   const DEBUG = (process?.env?.NODE_ENV !== 'production') && ((typeof import.meta !== 'undefined' && import.meta?.env?.DEV) || (process?.env?.DEBUG === 'true'));
