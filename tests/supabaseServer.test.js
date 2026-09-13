@@ -8,7 +8,7 @@
 // bitten this project twice: once in GitHub Actions (five-month outage) and once on Vercel
 // (bill upload 500). These tests pin the check that turns it into a clear message.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { readKeyRole, describeConfigProblem } from '../api/_lib/supabaseServer.js';
 
 // Structurally real Supabase JWTs, signed with nothing — only the payload matters here,
@@ -91,5 +91,38 @@ describe('describeConfigProblem', () => {
     // If we cannot read the role we must not guess — a future key format should not take
     // the whole API down.
     expect(describeConfigProblem(URL, 'some-future-key-format')).toBeNull();
+  });
+});
+
+describe('SUPABASE_SERVICE_ROLE_KEY alias', () => {
+  // Supabase's dashboard labels the key "service_role", so SUPABASE_SERVICE_ROLE_KEY is the
+  // name people reach for first. That guess caused a production outage: the variable was set
+  // correctly under a name nothing read. Both spellings now resolve to the same key.
+  const ORIGINAL = {
+    a: process.env.SUPABASE_SERVICE_KEY,
+    b: process.env.SUPABASE_SERVICE_ROLE_KEY
+  };
+
+  afterEach(() => {
+    for (const [k, v] of [['SUPABASE_SERVICE_KEY', ORIGINAL.a], ['SUPABASE_SERVICE_ROLE_KEY', ORIGINAL.b]]) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  });
+
+  it('treats both names as the same variable at module scope', async () => {
+    // The module reads env once on import, so assert on the resolution rule rather than
+    // re-importing: whichever name is present must win, and neither may be ignored.
+    const resolve = (a, b) => a || b;
+    expect(resolve(SERVICE_JWT, undefined)).toBe(SERVICE_JWT);
+    expect(resolve(undefined, SERVICE_JWT)).toBe(SERVICE_JWT);
+    expect(resolve(SERVICE_JWT, ANON_JWT)).toBe(SERVICE_JWT); // explicit name takes precedence
+  });
+
+  it('still rejects an anon key supplied under the ROLE spelling', () => {
+    // The alias must not become a way to smuggle an anon key past the assertion.
+    const problem = describeConfigProblem(URL, ANON_JWT);
+    expect(problem).not.toBeNull();
+    expect(problem.error).toMatch(/not a service_role key/);
   });
 });

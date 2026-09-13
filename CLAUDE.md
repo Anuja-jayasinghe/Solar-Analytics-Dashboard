@@ -59,8 +59,16 @@ text layout of the pre-2026 bill — see `api/_lib/cebBillParser.js`.
   which bypasses RLS. Never reintroduce a client-side `.insert()` / `.update()` / `.upsert()`.
 - Authorization is Clerk `publicMetadata.role === 'admin'`, verified server-side in
   `api/middleware/verifyAdminToken.js`. The `admin_users` table is legacy and unused.
-- `SUPABASE_SERVICE_KEY` must be the **service_role** key. An anon key there fails every
-  insert with "violates row-level security policy" — this caused a five-month outage.
+- `SUPABASE_SERVICE_KEY` must be the **service_role** key (`SUPABASE_SERVICE_ROLE_KEY` is
+  accepted as an alias). An anon key there fails every insert with "violates row-level
+  security policy" — this caused a five-month outage, then a second one on Vercel.
+  `api/_lib/supabaseServer.js` asserts the key's role claim and names the problem.
+- **Never prefix a secret with `VITE_`.** Vite compiles those into the browser bundle.
+  `api/_lib/solisAuth.js` is server-only and lives outside `src/` for exactly this reason: it
+  reads env with a *computed* key, so Vite inlines the **entire** env object wherever it is
+  bundled — one client import would publish every `VITE_` value.
+- Vercel and GitHub Actions hold **separate** copies of the secrets. Fixing one does not fix
+  the other.
 
 ---
 
@@ -68,7 +76,7 @@ text layout of the pre-2026 bill — see `api/_lib/cebBillParser.js`.
 
 ```bash
 pnpm dev        # dev server
-pnpm test       # vitest, 45 tests
+pnpm test       # vitest, 77 tests
 pnpm lint       # eslint — 0 errors expected
 pnpm build      # production build
 pnpm audit --prod --audit-level high   # the CI security gate

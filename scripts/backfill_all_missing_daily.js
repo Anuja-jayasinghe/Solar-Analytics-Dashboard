@@ -16,7 +16,7 @@
 //   7. Report detailed summary of what was added.
 
 import { createClient } from '@supabase/supabase-js';
-import { solisFetch } from '../src/lib/solisAuth.js';
+import { solisFetch } from '../api/_lib/solisAuth.js';
 import 'dotenv/config';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;

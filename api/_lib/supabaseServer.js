@@ -29,7 +29,14 @@
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+
+// Two accepted names for the SAME privileged key. This is NOT the old anon fallback: both
+// names mean "the service-role key", and the role assertion below rejects an anon value under
+// either. Supabase's dashboard labels the key `service_role`, so SUPABASE_SERVICE_ROLE_KEY is
+// the name people reach for first — that guess cost a production outage once already, and
+// there is no reason for the variable's spelling to matter.
+const SUPABASE_SERVICE_KEY =
+  process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 /**
  * Read the `role` claim from a Supabase JWT without verifying the signature.
@@ -71,7 +78,8 @@ export function describeConfigProblem(url = SUPABASE_URL, key = SUPABASE_SERVICE
     return {
       error: 'Missing Supabase server configuration',
       details:
-        'SUPABASE_SERVICE_KEY is not set on this deployment. It must be the service_role ' +
+        'Neither SUPABASE_SERVICE_KEY nor SUPABASE_SERVICE_ROLE_KEY is set on this ' +
+        'deployment. It must be the service_role ' +
         '(secret) key from Supabase → Project Settings → API. There is deliberately no ' +
         'fallback to the anon key: an anon client is rejected by row-level security on write ' +
         'and produces a confusing 500 rather than a clear failure.'

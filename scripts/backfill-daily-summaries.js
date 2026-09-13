@@ -11,7 +11,7 @@
 //  - Logs progress and totals clearly
 
 import { createClient } from '@supabase/supabase-js';
-import { solisFetch } from '../src/lib/solisAuth.js';
+import { solisFetch } from '../api/_lib/solisAuth.js';
 import 'dotenv/config';
 
 // --- Config ---

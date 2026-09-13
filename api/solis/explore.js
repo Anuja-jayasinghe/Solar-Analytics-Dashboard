@@ -9,7 +9,7 @@
  * - Requires authentication via Clerk
  */
 
-import { solisFetch } from '../../src/lib/solisAuth.js';
+import { solisFetch } from '../_lib/solisAuth.js';
 import validator from '../_lib/solisExplorerValidator.js';
 import { verifyAdminToken } from '../middleware/verifyAdminToken.js';
 import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
