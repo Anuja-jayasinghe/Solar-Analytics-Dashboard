@@ -1,6 +1,6 @@
 # UI Redesign Direction
 
-**Status:** Decided, not yet implemented
+**Status:** Decided, not yet implemented — all open questions resolved 2026-09-13
 **Date:** 2026-09-13
 **Baseline:** `v2.1.0` — the last known-good state before this work begins
 **Trigger:** The dashboard reads as 2020-era. A competitive teardown of SolisCloud v4 was run
@@ -215,9 +215,11 @@ granularity; the header states the real date span.
 
 ### D6 — Adopt the human context, selectively
 
-- **Installation photo** — adopt. Cheap, and the strongest "this is *my* system" signal on the
-  vendor's page.
-- **Weather** — adopt. Genuinely explanatory: it answers "why was yesterday low".
+*Resolved 2026-09-13 — see §7.*
+
+- **Installation photo** — **rejected.** Not wanted.
+- **Weather** — **adopted, with a hard constraint.** Open-Meteo, validated against 242 days of
+  this plant's own output (§7.2). It may explain, it may never compare.
 - **Environmental benefits** — already present in this project. Restyle, do not re-derive.
 
 ### D7 — Keep our palette, borrow the discipline
@@ -329,15 +331,108 @@ missed its one free opportunity.
 
 ---
 
-## 7. Open questions
+## 7. Resolved questions
 
-- Does the installation photo (D6) live in Supabase Storage or ship as a build-time asset?
-  Storage means an upload path and an RLS policy; a build asset means a redeploy to change it.
-- Which weather provider? SolisCloud's forecast is not exposed through the API this project
-  uses.
-- Does the reconciliation hero show the most recent **finalised** period, or the in-progress
-  one with the CEB side still `null`? LR-001 requires those to render differently — `null` is
-  not `0`.
+All three open questions from the first draft were answered on 2026-09-13. The reasoning is
+kept because two of the answers carry constraints that are easy to violate later.
+
+### 7.1 Installation photo — dropped
+
+Not wanted. D6 loses its photo element entirely; no Storage path, no RLS policy, no build
+asset. The "this is *my* system" job falls to the reconciliation hero instead, which is a
+better carrier for it anyway — it shows something true about this specific installation rather
+than a picture of a box on a wall.
+
+### 7.2 Weather — Open-Meteo, and it may explain but never compare
+
+**Chosen:** [Open-Meteo](https://open-meteo.com). No API key, no signup, no attribution
+requirement, CORS-enabled, free for non-commercial use. It returns `Asia/Colombo` correctly
+(+19800s) and — unlike a general weather API — exposes **solar irradiance**
+(`shortwave_radiation_sum`, `direct_normal_irradiance`), which is the causal variable behind
+generation rather than a proxy for it.
+
+**It was validated rather than assumed.** Open-Meteo's archive irradiance was correlated
+against 242 days of this plant's own measured output (2026-01-01 to 2026-08-31,
+`inverter_data_daily_summary`):
+
+| Metric | Result |
+|---|---|
+| Pearson r | **0.730** |
+| Variance explained (r²) | **53.3%** |
+| Linear fit | `kWh ≈ 7.06 × MJ/m² − 10.8` |
+| Mean absolute error | **17.3 kWh** against a 132.6 kWh mean — roughly **13%** |
+| Days within 15% | 165 / 242 (**68%**) |
+
+The extremes behave correctly — the four dullest days produced 24–48 kWh, the four brightest
+179–199 kWh — so the signal is real and correctly signed.
+
+**But r² of 53% means it explains about half the variance, and a typical day is ~13% off.**
+That is entirely expected: a reanalysis grid cell is roughly 10 km across and knows nothing
+about local cloud, panel soiling, shading, or inverter clipping. It is not a defect in
+Open-Meteo; it is the ceiling of what gridded irradiance can tell you about one roof.
+
+> **The constraint that follows, and it is not negotiable.** Weather is **explanatory context
+> only**. It may sit near a generation chart to answer "why was yesterday low". It may **never**
+> appear as, next to, or feeding any comparison figure.
+>
+> The reconciliation hero reports variances around 4%. A weather-derived "expected output"
+> carrying ~13% typical error, rendered anywhere near it, would be a number that looks like
+> evidence and is not. This project has already been damaged twice by figures that looked like
+> data and were not — fabricated zeros — and that is the same failure in a new costume.
+>
+> No "expected vs actual" panel. No weather-adjusted performance ratio. No estimated-loss
+> figure. If someone later wants those, they need a modelled PV yield calibrated to this array,
+> not a public irradiance grid.
+
+**If accuracy were the bar for keeping it, it would fail.** The feature survives because the
+bar for *explanation* is lower than the bar for *comparison*, and it is being held to the
+lower one deliberately.
+
+Implementation notes:
+
+- Two endpoints: `api.open-meteo.com` (forecast) and `archive-api.open-meteo.com` (history).
+  The archive lags real time by several days; the forecast endpoint covers recent past days.
+- **The CSP in `vercel.json` must be extended.** `connect-src` currently allows Supabase and
+  Clerk only, so a browser-side call is blocked with no visible error — the failure mode is a
+  silently empty panel. Add both Open-Meteo hosts, or proxy server-side.
+- Coordinates: `7.0713 N, 80.0088 E`. Open-Meteo snaps to its nearest grid point
+  (`7.065, 80.042`, about 4 km away) — worth knowing, and part of why the error floor exists.
+- Weather is decoration in the load-bearing sense: if the request fails, the panel disappears.
+  Nothing else on the page may depend on it.
+
+### 7.3 Hero shows the in-progress period, CEB side `null`
+
+**Decided:** the hero shows the **current, in-progress** period — not the last finalised one.
+
+This is the more useful default (it answers "how am I doing *now*"), and it is also the harder
+state to render honestly, which is why it is specified here rather than left to implementation.
+
+LR-001 defines three states and the hero must distinguish them visually, not just numerically:
+
+| State | Inverter | CEB | Variance |
+|---|---|---|---|
+| Finalised | complete sum | from the bill | computed and shown |
+| **In progress** (default) | partial sum, period start → today | **`null`** | **not computed** |
+| Future | not started | `null` | not shown |
+
+For the in-progress state:
+
+- The inverter figure is a **partial** sum and must be labelled as such — a running total across
+  an incomplete window, never presented as a period result.
+- The CEB side renders as **"awaiting bill"**, or similar language. It renders as
+  `null`-meaning-unavailable. **It must not render as `0`, as an em dash implying zero, or as a
+  projection.**
+- The variance row is **absent or explicitly suppressed**. It is not `0`, not "—", not
+  "pending 0 kWh". A variance against an unknown is undefined, and rendering any number there
+  invents one.
+- The period header still states the real span (`5 Aug – ongoing`), per D5.
+
+A link to the most recent finalised period sits alongside, since that is the figure with a real
+variance attached.
+
+> `null` is not `0`. It is the rule this codebase has broken twice and the one the hero is most
+> exposed to, because the hero's whole job is to show a comparison during the weeks when half of
+> it does not exist yet.
 
 ---
 
