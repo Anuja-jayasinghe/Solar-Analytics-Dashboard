@@ -209,6 +209,55 @@ select bill_date, count(*) from ceb_data group by bill_date having count(*) > 1;
 `units_exported` should equal the total meter delta across the whole span — an independent
 checksum, since it comes from different fields.
 
+### Pruning duplicate bill files
+
+The `ceb_bills` bucket can accumulate objects that no ingestion row references — test uploads,
+or files whose ingestion was deleted. They are invisible in the UI and carry the account
+holder's name, address and phone number, so they are worth removing.
+
+**Never delete by "looks unreferenced" alone.** Prove by content hash that nothing unique is
+lost:
+
+```sql
+-- how many objects are unreferenced?
+select count(*) from storage.objects o
+where o.bucket_id = 'ceb_bills'
+  and not exists (select 1 from ceb_bill_ingestions i where i.file_path = o.name);
+```
+
+Then, for each unreferenced object, download it, SHA-256 it, and compare against
+`ceb_bill_ingestions.file_sha256`. Delete **only** the ones that match a bill you keep; leave
+anything whose content is not otherwise held, and investigate it instead.
+
+Afterwards the object count should equal the ingestion count exactly.
+
+> As of 2026-09-13 there are 19 such objects, all verified byte-identical to bills already
+> kept. They are safe to remove and have not been removed yet.
+
+### Reading Edge Function failures
+
+`solis-live-data` backs the live-power widget. When it misbehaves, the status code says whose
+fault it is:
+
+| Status | Meaning |
+|---|---|
+| `500` | **Ours** — a Supabase secret is missing. The body names which. |
+| `502` | **SolisCloud** — rejected us, declined, or was unreachable after 3 attempts |
+
+It retries transport failures and 5xx three times with exponential backoff and full jitter,
+8s timeout per attempt. It does **not** retry 4xx or a `success: false` body — a bad signature
+and a declined request do not improve on repetition.
+
+```sql
+-- in Supabase → Logs, or via the MCP log query
+select timestamp, event_message from logs
+where source = 'function_logs' and event_message ilike '%Solis%'
+order by timestamp desc limit 20;
+```
+
+A run of `SolisCloud returned 502 (attempt 1/3)` warnings followed by a 200 is the retry
+working as designed, not an incident.
+
 ### Rotating credentials
 
 Each secret lives in **two or three** places, configured separately. Missing one is the
