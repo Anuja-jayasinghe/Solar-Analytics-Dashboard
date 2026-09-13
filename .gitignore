@@ -67,3 +67,14 @@ dist-ssr
 # This project uses pnpm (pnpm-lock.yaml) — ignore npm's lockfile
 package-lock.json
 .superpowers/
+
+# Real CEB bills — they carry the account holder's name, address and phone number.
+# Never commit these. Redacted fixtures for tests live in tests/fixtures/ instead.
+#
+# Note the shape: `resources/*` excludes the CONTENTS, which allows the negation below.
+# `resources/` would exclude the directory itself, and git cannot re-include a file whose
+# parent directory is excluded.
+resorces/
+resources/*
+!resources/README.md
+*.bill.pdf
