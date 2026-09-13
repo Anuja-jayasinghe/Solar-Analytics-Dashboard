@@ -231,8 +231,20 @@ anything whose content is not otherwise held, and investigate it instead.
 
 Afterwards the object count should equal the ingestion count exactly.
 
-> As of 2026-09-13 there are 19 such objects, all verified byte-identical to bills already
-> kept. They are safe to remove and have not been removed yet.
+`scripts/prune-orphaned-bill-files.mjs` does exactly this. **Dry run by default** — read its
+output before passing `--apply`:
+
+```bash
+node scripts/prune-orphaned-bill-files.mjs            # report only
+node scripts/prune-orphaned-bill-files.mjs --apply    # delete proven duplicates
+```
+
+It refuses to run with an anon key. That is not paranoia: storage `list()` under an anon key
+returns zero objects rather than an error, so the script would report "nothing to prune" and
+exit successfully having done nothing — a silent no-op indistinguishable from success.
+
+> Run on 2026-09-13: 19 objects removed, 17.5 MB. The bucket now reconciles at 25 objects
+> against 25 ingestion rows, with nothing unreferenced.
 
 ### Reading Edge Function failures
 

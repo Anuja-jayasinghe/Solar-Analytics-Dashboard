@@ -151,13 +151,13 @@ Deliberately deferred, because that surface is about to be rewritten:
 
 Lighthouse otherwise: Accessibility 100, Best Practices 100, SEO 100.
 
-Genuinely open:
+Genuinely open: nothing.
 
-- **19 duplicate PDFs in the `ceb_bills` bucket.** Unreferenced by any ingestion row and
-  verified byte-identical (SHA-256) to bills already kept, so they hold no unique content —
-  but they are real bills carrying the account holder's name, address and phone number, so
-  they should go. Deleting them needs a bulk storage `remove()`; see RUNBOOK § Pruning
-  duplicate bill files.
+The `ceb_bills` bucket reconciles exactly — 25 ingestions, 25 extractions, 25 `ceb_data`
+rows, 25 storage objects, no unreferenced files and no ingestion pointing at a missing one.
+The 19 duplicate PDFs left over from pipeline development were pruned on 2026-09-13 with
+`scripts/prune-orphaned-bill-files.mjs`, after each was proven byte-identical by SHA-256 to
+a bill still held.
 
 ## Corrected notes (2026-09-13)
 
