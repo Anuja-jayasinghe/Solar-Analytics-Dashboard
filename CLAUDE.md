@@ -76,7 +76,7 @@ text layout of the pre-2026 bill — see `api/_lib/cebBillParser.js`.
 
 ```bash
 pnpm dev        # dev server
-pnpm test       # vitest, 77 tests
+pnpm test       # vitest, 89 tests
 pnpm lint       # eslint — 0 errors expected
 pnpm build      # production build
 pnpm audit --prod --audit-level high   # the CI security gate

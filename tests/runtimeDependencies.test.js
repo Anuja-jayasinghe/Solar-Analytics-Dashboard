@@ -81,10 +81,21 @@ describe('api/ runtime dependencies', () => {
     expect(violations).toEqual([]);
   });
 
-  it('keeps pdf-parse in dependencies specifically', () => {
-    // Called out by name because this is the one that actually broke production, and the
-    // extractor is the most load-bearing thing in api/.
-    expect(prodDeps.has('pdf-parse')).toBe(true);
+  it('keeps pdfjs-dist in dependencies — the extractor depends on it', () => {
+    // api/_lib/pdfText.js imports pdfjs-dist at runtime. It is also used by react-pdf on the
+    // client, so it is easy to assume it is "a frontend package" and move it.
+    expect(prodDeps.has('pdfjs-dist')).toBe(true);
+    expect(devDeps.has('pdfjs-dist')).toBe(false);
+  });
+
+  it('does not reintroduce pdf-parse', () => {
+    // pdf-parse pulls in @napi-rs/canvas, a NATIVE binary, purely to render pages to images —
+    // something this project never does. A native module has to be traced into the serverless
+    // bundle per platform, and when it fails it fails at MODULE level: the import throws
+    // before the handler runs, so the endpoint returns Vercel's HTML error page instead of our
+    // JSON. That is what made the 500 so hard to diagnose. pdfjs-dist is pure JS and produces
+    // text this parser reads identically.
+    expect(prodDeps.has('pdf-parse')).toBe(false);
     expect(devDeps.has('pdf-parse')).toBe(false);
   });
 

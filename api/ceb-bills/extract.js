@@ -1,5 +1,5 @@
 import { verifyAdminToken } from '../middleware/verifyAdminToken.js';
-import { PDFParse } from 'pdf-parse';
+import { extractPdfText } from '../_lib/pdfText.js';
 import { parseCebBillText, validateExtraction } from '../_lib/cebBillParser.js';
 import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
 import { supabase, blockOnConfigProblem } from '../_lib/supabaseServer.js';
@@ -60,13 +60,9 @@ export default async function handler(req, res) {
     const arrayBuffer = await fileData.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
-    // 3. Parse PDF using pdf-parse v2.4.5 class-based API
-    // PDFParse accepts { data: Buffer } and getText() returns a TextResult with .text
-    const parser = new PDFParse({ data: buffer });
-    const pdfData = await parser.getText();
-    // Use raw text directly — v2.4.5 preserves real tabs as delimiters
-    const text = pdfData.text;
-    await parser.destroy();
+    // 3. Extract text. pdfjs-dist directly — see api/_lib/pdfText.js for why not pdf-parse.
+    //    Tabs between table cells are load-bearing for the meter-reading regex.
+    const text = await extractPdfText(buffer);
 
     // Parsing lives in api/_lib/cebBillParser.js so it can be covered by fixtures without a
     // database or a live upload. See the tests in tests/cebBillParser.test.js.
