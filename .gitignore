@@ -68,8 +68,13 @@ dist-ssr
 package-lock.json
 .superpowers/
 
-# Real CEB bills — contain the account holder's name, address and phone number.
+# Real CEB bills — they carry the account holder's name, address and phone number.
 # Never commit these. Redacted fixtures for tests live in tests/fixtures/ instead.
+#
+# Note the shape: `resources/*` excludes the CONTENTS, which allows the negation below.
+# `resources/` would exclude the directory itself, and git cannot re-include a file whose
+# parent directory is excluded.
 resorces/
-resources/
+resources/*
+!resources/README.md
 *.bill.pdf
