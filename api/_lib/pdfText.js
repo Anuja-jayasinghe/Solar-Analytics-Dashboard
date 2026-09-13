@@ -22,17 +22,9 @@
 // The `legacy` build is deliberate — it targets plain Node without requiring DOM globals.
 // ============================================================================
 
-/**
- * Extract the text of a PDF, one line per visual line, cells separated by tabs.
- *
- * The tab separation is load-bearing: the CEB meter-reading regex matches
- * `\t(\d+)\t(\d{4}-\d{2}-\d{2})`, i.e. it depends on table cells arriving tab-delimited.
- * pdfjs marks the end of a visual line with `hasEOL`, so items are accumulated until then
- * and joined with a tab — which is the same shape pdf-parse produced.
- *
- * @param {Buffer|Uint8Array} data  Raw PDF bytes
- * @returns {Promise<string>}
- */
+import { createRequire } from 'module';
+import { pathToFileURL } from 'url';
+
 /**
  * pdfjs expects a handful of browser globals. Most matter only for rendering, but some builds
  * touch them while setting up a document — and on Vercel the bundler does not necessarily
@@ -89,12 +81,49 @@ function ensurePdfjsGlobals() {
   }
 }
 
+/**
+ * Point pdfjs at its worker explicitly.
+ *
+ * pdfjs resolves the worker with a dynamic import built from a computed path, which Vercel's
+ * file tracer cannot follow — so `pdf.worker.mjs` was omitted from the serverless bundle and
+ * document setup failed with:
+ *
+ *   Setting up fake worker failed: "Cannot find module '…/pdf.worker.mjs'"
+ *
+ * `require.resolve` with a LITERAL specifier is something the tracer does understand, so this
+ * both locates the file at runtime and gets it included at build time. `vercel.json` carries
+ * an `includeFiles` rule as a second line of defence.
+ */
+function resolveWorkerSrc() {
+  try {
+    const require = createRequire(import.meta.url);
+    return pathToFileURL(require.resolve('pdfjs-dist/legacy/build/pdf.worker.mjs')).href;
+  } catch {
+    // Not fatal: pdfjs falls back to its own resolution, which may still work outside Vercel.
+    return null;
+  }
+}
+
+/**
+ * Extract the text of a PDF, one line per visual line, cells separated by tabs.
+ *
+ * The tab separation is load-bearing: the CEB meter-reading regex matches
+ * `	(d+)	(d{4}-d{2}-d{2})`, i.e. it depends on table cells arriving tab-delimited.
+ * pdfjs marks the end of a visual line with `hasEOL`, so items are accumulated until then
+ * and joined with a tab.
+ *
+ * @param {Buffer|Uint8Array} data  Raw PDF bytes
+ * @returns {Promise<string>}
+ */
 export async function extractPdfText(data) {
   ensurePdfjsGlobals();
 
   // Imported lazily and by path so a resolution problem surfaces as a catchable error inside
   // the caller rather than as a module-load crash that bypasses all error handling.
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+
+  const workerSrc = resolveWorkerSrc();
+  if (workerSrc && pdfjs.GlobalWorkerOptions) pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
   // pdfjs rejects a Node Buffer explicitly ("Please provide binary data as `Uint8Array`"),
   // and `instanceof Uint8Array` is true for Buffer — it is a subclass — so that check alone

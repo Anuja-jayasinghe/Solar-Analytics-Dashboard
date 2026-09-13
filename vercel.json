@@ -4,34 +4,63 @@
       "source": "/api/admin/users",
       "destination": "/api/admin/users/[userId]"
     },
-    { 
-      "source": "/((?!api).*)", 
-      "destination": "/index.html" 
+    {
+      "source": "/((?!api).*)",
+      "destination": "/index.html"
     }
   ],
   "headers": [
     {
       "source": "/assets/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/index.html",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
       ]
     },
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
-        { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=()" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; img-src 'self' data: https://*.clerk.com https://*.clerk.accounts.dev https://clerk.solaredge.anujajay.com https://vercel.live; style-src 'self' 'unsafe-inline' https://*.clerk.com https://clerk.solaredge.anujajay.com https://vercel.live; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://*.clerk.accounts.dev https://clerk.solaredge.anujajay.com https://vercel.live https://*.vercel.live; worker-src 'self' blob:; connect-src 'self' https://*.supabase.co https://*.supabase.in https://*.clerk.com https://*.clerk.accounts.dev https://api.clerk.com https://clerk.solaredge.anujajay.com wss://*.clerk.com https://vercel.live wss://vercel.live; frame-src https://*.clerk.com https://*.clerk.accounts.dev https://clerk.solaredge.anujajay.com https://vercel.live https://*.supabase.co https://*.supabase.in; frame-ancestors 'self'; base-uri 'self';" }
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "geolocation=(), microphone=(), camera=()"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; img-src 'self' data: https://*.clerk.com https://*.clerk.accounts.dev https://clerk.solaredge.anujajay.com https://vercel.live; style-src 'self' 'unsafe-inline' https://*.clerk.com https://clerk.solaredge.anujajay.com https://vercel.live; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://*.clerk.accounts.dev https://clerk.solaredge.anujajay.com https://vercel.live https://*.vercel.live; worker-src 'self' blob:; connect-src 'self' https://*.supabase.co https://*.supabase.in https://*.clerk.com https://*.clerk.accounts.dev https://api.clerk.com https://clerk.solaredge.anujajay.com wss://*.clerk.com https://vercel.live wss://vercel.live; frame-src https://*.clerk.com https://*.clerk.accounts.dev https://clerk.solaredge.anujajay.com https://vercel.live https://*.supabase.co https://*.supabase.in; frame-ancestors 'self'; base-uri 'self';"
+        }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/**/*.js": {
+      "includeFiles": "node_modules/**/pdfjs-dist/legacy/build/pdf.worker.mjs"
+    }
+  }
 }
