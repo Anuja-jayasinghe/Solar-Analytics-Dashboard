@@ -15,7 +15,7 @@
 // Keeping the parsing pure means a fixture can prove it works. When the new format arrives,
 // add its extracted text as a second fixture and both are covered permanently.
 //
-// The input is whatever pdf-parse@2.4.5's getText() returns for the PDF.
+// The input is whatever api/_lib/pdfText.js returns for the PDF.
 
 /**
  * Anchors, each documented with the text it matches.
