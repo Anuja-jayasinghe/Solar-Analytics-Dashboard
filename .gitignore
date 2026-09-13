@@ -24,14 +24,8 @@ dist-ssr
 *.sw?
 
 # Env files
-.env
-.env.*
-.env
-.env
-.env
-.env
+.env*
 .vercel
-.env*.local
 # AI IDE & Agent Specific Folders
 .adal/
 .augment/
@@ -62,7 +56,6 @@ dist-ssr
 .vibe/
 .windsurf/
 .zencoder/
-.env*
 
 # This project uses pnpm (pnpm-lock.yaml) — ignore npm's lockfile
 package-lock.json
