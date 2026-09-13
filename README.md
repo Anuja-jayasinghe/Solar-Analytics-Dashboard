@@ -1,314 +1,333 @@
-# ☀️ Solar Analytics Dashboard
+<div align="center">
 
-**Solar Analytics Dashboard** is a modern web application that helps you monitor real-time solar power generation, track earnings, and visualize energy data with interactive charts. Built with React, Vite, and Supabase, it offers intelligent caching, billing period tracking, and admin management—all in a sleek dark/light theme UI.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="public/logo_wText.png">
+  <img alt="SolarEdge" src="public/logo_bText.png" width="300">
+</picture>
 
-### 🚀 **Live Website:**  
-&nbsp;&nbsp;&nbsp;&nbsp;[![Website](https://img.shields.io/badge/solaredge.anujajay.com-000000?style=flat&logo=google-chrome&logoColor=white)](https://solaredge.anujajay.com/)  
+### Solar Analytics Dashboard
 
-### 💻 **GitHub Repo:**  
-&nbsp;&nbsp;&nbsp;&nbsp;[![GitHub](https://img.shields.io/badge/Solar--Analytics--Dashboard-100000?style=flat&logo=github&logoColor=white)](https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard)
+**Does what your solar array generated match what the utility actually paid for?**
 
-### 📊 **Badges:**
-![Version](https://img.shields.io/badge/version-2.1.0-blue)
-![React](https://img.shields.io/badge/react-19.1.1-blue)
-![Vite](https://img.shields.io/badge/vite-7.1.7-purple)
-![License](https://img.shields.io/badge/license-MIT-green)
+A production monitoring dashboard for a 40 kW rooftop array in Sri Lanka. It reconciles
+inverter telemetry against Ceylon Electricity Board bills — so under-billing becomes visible
+instead of invisible.
+
+[**Live site**](https://solaredge.anujajay.com) · [**Architecture**](docs/ARCHITECTURE.md) · [**API**](docs/API.md) · [**Runbook**](docs/RUNBOOK.md)
+
+<br>
+
+![Version](https://img.shields.io/badge/version-2.1.0-FF7A00?style=flat-square)
+![React](https://img.shields.io/badge/React-19-149ECA?style=flat-square&logo=react&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=flat-square&logo=vite&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?style=flat-square&logo=supabase&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-00C2A8?style=flat-square)
+
+![Tests](https://img.shields.io/badge/tests-91_passing-2F7D4F?style=flat-square)
+![Accessibility](https://img.shields.io/badge/Lighthouse_a11y-100-2F7D4F?style=flat-square)
+![Best Practices](https://img.shields.io/badge/best_practices-100-2F7D4F?style=flat-square)
+![SEO](https://img.shields.io/badge/SEO-100-2F7D4F?style=flat-square)
+
+</div>
 
 ---
 
-## 📖 Documentation
+## Overview
 
-| Document | What it covers |
+Most solar dashboards show you one number: what your inverter produced. That number is easy to
+get and, on its own, tells you nothing about whether you were paid correctly.
+
+This project tracks **two** independent accounts of the same sunlight and holds them against
+each other:
+
+| | Source | Cadence | Access |
+| --- | --- | --- | --- |
+| **Generation** | Solis inverter via SolisCloud API | every 5 minutes | automated |
+| **Payment** | CEB export meter via monthly PDF bill | monthly | manual upload, parsed |
+
+Joining them is harder than it sounds. The two sources share no identifiers, no schedule, and
+no definition of a "month" — and only one of them has an API. Nearly every design decision in
+this codebase follows from that asymmetry.
+
+**Scope:** one site, one inverter (SN `1811040244070066`), one utility account. This is
+production software with a single operator, not a multi-tenant product.
+
+---
+
+## How it works
+
+```mermaid
+graph LR
+    PV["40 kW array"]
+    INV["Solis inverter"]
+    MTR["CEB export meter"]
+
+    PV --> INV
+    PV --> MTR
+
+    INV --> API["SolisCloud API"]
+    MTR --> PDF["Monthly PDF bill"]
+
+    API -->|"every 5 min"| GHA["GitHub Actions"]
+    PDF -->|"uploaded by hand"| FN["Serverless API"]
+
+    GHA --> DB[("Supabase")]
+    FN --> DB
+    DB -->|"read only"| UI["React dashboard"]
+```
+
+### Pipeline A — inverter telemetry
+
+Runs unattended. A GitHub Actions cron signs an HMAC-SHA1 request to SolisCloud every five
+minutes and writes to `inverter_data_live`; a second job aggregates that into daily totals. A
+Supabase Edge Function serves the live-power widget directly, retrying SolisCloud's gateway —
+which fails roughly 13% of the time — with exponential backoff and jitter.
+
+### Pipeline B — CEB bills
+
+Has a human in it, on purpose.
+
+```mermaid
+flowchart LR
+    A["Upload PDF"] --> B["SHA-256 dedupe"]
+    B --> C["Text extraction"]
+    C --> D["9 regex anchors"]
+    D --> E{"Validate"}
+    E -->|"consistent"| F["Review queue"]
+    E -->|"errors"| F
+    F -->|"admin approves"| G[("ceb_data")]
+```
+
+**The extractor is not OCR and not AI.** It is `pdfjs-dist` text extraction plus nine regex
+anchors pinned to the bill's text layout. Validation cross-checks three things:
+
+| Check | Assertion |
 | --- | --- |
-| [**Architecture**](docs/ARCHITECTURE.md) | System design, both data pipelines, data model, security model — with diagrams. **Start here.** |
-| [**API Reference**](docs/API.md) | Every endpoint, auth model, request/response shapes, error codes |
-| [**Runbook**](docs/RUNBOOK.md) | Operating procedures and incident response |
-| [**Logic Registry**](docs/logic-registry) | Specs for the non-obvious domain rules |
-| [Project Audit](docs/PROJECT_AUDIT_2026-09.md) · [Recovery](docs/RECOVERY_STATUS_2026-09.md) · [Safeguards](docs/DATA_PIPELINE_SAFEGUARDS.md) | Historical record — why things are the way they are |
+| Tariff maths | `units_exported × rate == earnings` (±Rs 1) |
+| Meter delta | `meter_current − meter_previous == units_exported` |
+| Timeline | `period_start < period_end` |
 
-**Health:** [`/healthz`](https://solaredge.anujajay.com/healthz) (liveness) ·
-[`/ready`](https://solaredge.anujajay.com/ready) (readiness — config + database)
-
----
-
-## 📌 Overview
-
-Solar Analytics Dashboard was born out of the need to efficiently monitor solar panel performance and earnings. This modern energy tracker eliminates spreadsheet chaos with a comprehensive, real-time dashboard. Built for homeowners and businesses wanting clarity in their solar investment, it transforms raw inverter data into actionable insights—with elegant theming and performance optimization.
-
-> "Why guess your solar performance when Solar Analytics Dashboard tracks, visualizes, and optimizes it for you?"
+Passing all three proves a bill is *internally consistent*. It cannot prove the right bill was
+parsed, or that the regexes latched onto the right table rows — so every extraction reaches a
+human before it becomes data.
 
 ---
 
-## 📚 Tech Stack
+## The rule that governs everything
 
-| Category           | Tech Used                                  |
-| ------------------ | ------------------------------------------ |
-| Framework          | [React 19.1.1](https://react.dev/)        |
-| Build Tool         | [Vite 7.1.7](https://vitejs.dev/)         |
-| Language           | JavaScript (ES6+)                          |
-| UI Library         | [Chakra UI 3.29.0](https://chakra-ui.com/) |
-| Styling            | Custom CSS with CSS Variables              |
-| Backend            | [Supabase](https://supabase.com/)          |
-| Charts             | [Recharts 3.3.0](https://recharts.org/)    |
-| Routing            | React Router DOM 7.9.1                     |
-| API Integration    | Solis Cloud API                            |
-| State Management   | React Context API                          |
-| Caching            | SWR (Stale-While-Revalidate)              |
-| Icons              | Lucide React 0.545.0                       |
+> **A bill received in month N reports generation from month N−1.**
 
----
-
-## ✨ Features
-
-* 🔐 **Admin Authentication** with Google OAuth
-* 📊 **Real-time Dashboard** for solar monitoring
-* ⚡ **Live Power Tracking** with 5-minute updates
-* 💰 **Earnings Calculator** with CEB billing integration
-* 📈 **Interactive Charts** (Bar, Line, Area)
-* 🌍 **Environmental Impact** metrics (CO2 savings)
-* 🎯 **Daily Target Tracker** with progress visualization
-* 🚀 **Advanced Caching** with SWR strategy
-* 🎨 **Dark/Light Theme** with persistence
-* 📅 **Billing Period Alignment** for accurate tracking
-* 🛡️ **Error Resilience** with circuit breaker pattern
-* 💾 **Dual-layer Cache** (Memory + LocalStorage)
-* ⚙️ **Settings Sync** - Tariff and capacity changes refresh the dashboard on save
-* ⚙️ **Admin Panel** for CEB data management
-* 📱 **Responsive Design** for all devices
-
----
-
-## 📁 Project Structure
+Comparison windows come from bill dates, never calendar months:
 
 ```
-.
-├── src/
-│   ├── components/     # Reusable React components
-│   ├── contexts/       # Context providers (Auth, Data, Theme)
-│   ├── hooks/          # Custom React hooks
-│   ├── lib/            # Utilities and services
-│   ├── pages/          # Route components
-│   └── assets/         # Static assets
-├── api/                # Serverless API functions
-├── docs/               # Documentation hub
-├── public/             # Public static files
-├── scripts/            # Utility scripts
-├── package.json        # Project metadata and scripts
-└── vite.config.js      # Vite configuration
+periodEnd   = bill_date
+periodStart = previous bill_date + 1 day     (fallback: bill_date − 30 days)
+inverter    = Σ daily generation within that window
 ```
+
+Why it matters:
+
+```
+          Jul 1              Aug 1              Sep 1
+Calendar  |──── July ─────────|──── August ───────|
+                                                   
+Bills           |─ bill 4 Aug ─|─ bill 3 Sep ──────|
+                6 Jul → 4 Aug   5 Aug → 3 Sep
+```
+
+Label the 3 September bill "September generation" and you attribute a month of August sunshine
+to September. Every figure downstream is then wrong by one month — and because solar output
+varies seasonally, wrong in a way that still looks entirely plausible.
+
+**`null` is not `0`.** `null` means unavailable; `0` means a measured zero. A fabricated zero
+is indistinguishable from a real one once stored, and drags every average down while looking
+like data.
+
+Full specification: [`docs/logic-registry/LR-001`](docs/logic-registry).
 
 ---
 
-## 🛠 Development Commands
+## Architecture
 
-* `npm run dev` — Start dev server
-* `npm run build` — Create production build
-* `npm run preview` — Preview production build
-* `npm run lint` — Check for code issues
+```mermaid
+graph TB
+    subgraph Browser
+        SPA["React SPA"]
+    end
+    subgraph Vercel
+        FN["Serverless functions"]
+    end
+    subgraph Supabase
+        PG[("Postgres + RLS")]
+        ST[("Storage")]
+    end
+    CLERK["Clerk"]
+    GHA["GitHub Actions"]
+
+    SPA -->|"anon key — SELECT only"| PG
+    SPA -->|"session token"| CLERK
+    SPA -->|"writes, Bearer token"| FN
+    FN -->|"verify"| CLERK
+    FN -->|"service_role"| PG
+    FN --> ST
+    GHA -->|"service_role"| PG
+```
+
+Three credential scopes, and keeping them apart *is* the security model:
+
+| Actor | Credential | Permitted |
+| --- | --- | --- |
+| Browser | `VITE_SUPABASE_ANON_KEY` — public, ships in the bundle | `SELECT` only, enforced by RLS |
+| Serverless function | `SUPABASE_SERVICE_KEY` — secret | Everything; behind admin auth |
+| GitHub Actions | `SUPABASE_SERVICE_KEY` — secret, configured separately | Everything |
+
+**The browser never writes.** Every mutation goes through an admin-authenticated `/api/*`
+endpoint. Authorization is Clerk `publicMetadata.role === 'admin'`, verified server-side,
+failing closed.
 
 ---
 
-## 📌 Pages Overview
+## Tech stack
 
-| Page                | Description                              |
-| ------------------- | ---------------------------------------- |
-| `/`                 | Main dashboard / Landing                 |
-| `/dashboard`        | Private dashboard with full analytics    |
-| `/settings`         | System configuration and preferences     |
-| `/admin`            | Admin authentication                     |
-| `/admin/dashboard`  | Admin panel for CEB data management      |
-
----
-
-## 🏗️ Architecture Details
-
-### Data Flow
-```
-User → Dashboard → DataContext (SWR) → Cache Check
-                          ↓
-                    Cache Hit? → Return Instantly
-                          ↓
-                    Background Fetch → Supabase/Solis API
-                          ↓
-                    Update State → Cache → UI Refresh
-```
-
-### Error Handling Flow
-```
-API Error → Classify (auth/rate-limit/server/transient)
-     ↓
-Retryable? → Yes → Schedule Retry (exponential backoff)
-     ↓                    ↓
-     No              Max Retries? → Circuit Breaker (30m pause)
-     ↓                    ↓
-Show Error Badge    ErrorBanner (>5min outage)
-```
-
-### ⚙️ Settings & Daily Target Flow
-
-System settings (such as the daily generation target `dailyGenerationTarget`) are managed dynamically:
-1. **Supabase Database** holds the source-of-truth configuration settings.
-2. **DataContext (`DataContext.jsx`)** fetches settings on initialization and handles caching/refetching.
-3. **Reactive Synchronization**: Sub-components like `DailyTargetTracker.jsx` consume `dailyGenerationTarget` reactively from context. Any updates in settings are immediately reflected across the entire dashboard without manual page refreshes.
-
-### 🎨 Polished Brand Presentation
-- The main header features a sleek double-orange gradient brand name (`SolarEdge`) styled in high-contrast text.
-- An online status visual is integrated with a vibrant pulsing green breathing status indicator, showcasing premium layout aesthetics and dynamic state reflection.
+| Layer | Choice |
+| --- | --- |
+| Framework | React 19, JavaScript ESM (no TypeScript) |
+| Build | Vite 7 |
+| Hosting | Vercel — SPA + serverless functions |
+| Database | Supabase Postgres with row-level security |
+| Storage | Supabase Storage (bill PDFs) |
+| Auth | Clerk |
+| Charts | Recharts 3 |
+| UI | Chakra UI 3, custom CSS variables for theming |
+| PDF | pdfjs-dist (parsing) · react-pdf (preview) |
+| Icons | Lucide |
+| Scheduling | GitHub Actions cron |
+| Testing | Vitest — 91 tests |
+| Data fetching | Custom stale-while-revalidate cache with circuit breaker |
 
 ---
 
-## 🚀 Getting Started
+## Features
 
-### Prerequisites
-- Node.js 18+ 
-- npm or pnpm
-- Supabase account
-- Solis Cloud API credentials
+**Monitoring**
+- Live power, daily generation and inverter status, refreshed every 5 minutes
+- Interactive generation and earnings charts across bill-aligned periods
+- Daily target tracking and environmental impact estimates
+- Dark and light themes, responsive to mobile
 
-### Environment Variables
-Create a `.env` file:
-```env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_SOLIS_API_KEY=your_solis_api_key
-VITE_SOLIS_API_SECRET=your_solis_secret
-VITE_SOLIS_BASE_URL=https://www.soliscloud.com:13333
-```
+**Bill pipeline**
+- PDF upload with SHA-256 deduplication before storage
+- Automatic extraction with confidence scoring and three-way validation
+- Human verification queue with inline editing
+- Supports both the pre-2026 and 2026 `ebill-edl-v.1.0.2` bill formats
 
-### Installation
+**Operations**
+- `/healthz` liveness and `/ready` readiness probes
+- Automated freshness alerting — opens an issue when data stops arriving
+- Manual database snapshots and gap backfill, dry-run by default
+- Keepalive to stop GitHub disabling scheduled workflows for inactivity
+
+---
+
+## Getting started
+
+**Requires Node.js 22+ and pnpm.**
 
 ```bash
-# Clone repository
-git clone <repository-url>
+git clone https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard.git
 cd Solar-Analytics-Dashboard
-
-# Install dependencies
-npm install
-# or
 pnpm install
 
-# Start development server
-npm run dev
+cp .env.example .env      # every variable is documented inline
+pnpm dev
 ```
 
-### Database Setup
+| Command | Purpose |
+| --- | --- |
+| `pnpm dev` | Development server |
+| `pnpm test` | Vitest — 91 tests |
+| `pnpm lint` | ESLint — 0 errors expected |
+| `pnpm build` | Production build |
+| `pnpm audit --prod --audit-level high` | The CI security gate |
 
-Run these SQL commands in Supabase:
+CI runs lint, test, build and the production audit. All four must pass.
 
-```sql
--- Billing period settings
-INSERT INTO system_settings (setting_name, setting_value) 
-VALUES 
-  ('last_billing_date', '2025-11-05'),
-  ('billing_cycle_days', '30'),
-  ('rate_per_kwh', '37')
-ON CONFLICT (setting_name) DO UPDATE 
-SET setting_value = EXCLUDED.setting_value;
+---
 
--- Create tables if not exists
-CREATE TABLE IF NOT EXISTS inverter_data_daily_summary (
-  id SERIAL PRIMARY KEY,
-  summary_date DATE NOT NULL,
-  total_generation_kwh NUMERIC(10, 3),
-  created_at TIMESTAMP DEFAULT NOW()
-);
+## Project structure
 
-CREATE TABLE IF NOT EXISTS ceb_data (
-  id SERIAL PRIMARY KEY,
-  month_year VARCHAR(20),
-  earnings NUMERIC(10, 2),
-  created_at TIMESTAMP DEFAULT NOW()
-);
+```
+api/                      Vercel serverless functions (10 of 12 used)
+├── _lib/                 Shared code — excluded from the function count
+│   ├── supabaseServer.js   One server client, with a key-role assertion
+│   ├── cebBillParser.js    Pure regex parser and validator
+│   ├── pdfText.js          pdfjs-dist text extraction
+│   └── httpSecurity.js     CORS allowlist and method gating
+├── ceb-bills/            upload · extract · records · ingestions · delete
+└── health.js             /healthz and /ready
 
--- Create RPC function for monthly comparison
-CREATE OR REPLACE FUNCTION get_monthly_comparison()
-RETURNS TABLE (
-  month_label TEXT,
-  period_label TEXT,
-  inverter_kwh NUMERIC,
-  ceb_kwh NUMERIC
-) AS $$
-BEGIN
-  -- Your RPC logic here
-END;
-$$ LANGUAGE plpgsql;
+src/
+├── lib/dataService.js    Read layer and bill-period alignment
+├── contexts/             Auth, data and theme providers
+├── pages/                Landing · dashboards · settings · admin
+└── components/           UI, including the bill verification queue
+
+functions/                GitHub Actions collectors
+supabase/functions/       Supabase Edge Functions (Deno)
+scripts/sql/              Schema baseline and RLS migrations
+docs/                     Architecture, API, runbook, logic registry
+tests/                    91 tests across 6 files
 ```
 
-## 📦 Deployment
+---
 
-* **Frontend**: Deployed on [Vercel](https://vercel.com) at [solaredge.anujajay.com](https://solaredge.anujajay.com/)
-* **Backend**: Powered by Supabase + Solis Cloud API
-* **Admin Security**: Google OAuth + Database role verification
+## Documentation
+
+| Document | Contents |
+| --- | --- |
+| [Architecture](docs/ARCHITECTURE.md) | System design, both pipelines, data model, security — with diagrams |
+| [API Reference](docs/API.md) | Every endpoint, auth model, request and error shapes |
+| [Runbook](docs/RUNBOOK.md) | Operating procedures and incident response |
+| [Logic Registry](docs/logic-registry) | Specifications for the non-obvious domain rules |
+
+The repository also keeps a deliberate historical record — the
+[project audit](docs/PROJECT_AUDIT_2026-09.md), the
+[recovery write-up](docs/RECOVERY_STATUS_2026-09.md) and the
+[pipeline safeguards](docs/DATA_PIPELINE_SAFEGUARDS.md) — documenting a five-month silent data
+outage and the countermeasures built afterwards. Where the record and the reference documents
+disagree, the reference documents are current.
 
 ---
 
-## 📊 Performance Metrics
+## Project status
 
-| Metric              | Target  | Status |
-| ------------------- | ------- | ------ |
-| First Load          | < 3s    | ✅     |
-| Cached Load         | < 1s    | ✅     |
-| Time to Interactive | < 3s    | ✅     |
-| Bundle Size         | < 500KB | ✅     |
-| Cache Hit Rate      | > 80%   | ✅     |
+Version 2.1.0 is the last known-good state before a planned UI redesign.
 
-**Optimizations:**
-* Lazy loading for chart components
-* Code splitting by route
-* SWR caching strategy
-* Memoized calculations
-* Debounced API calls
+| | |
+| --- | --- |
+| Bills reconciled | 25, from 2024-09-05 to 2026-09-03, no duplicates |
+| Verification | Every field diffed against both source PDF and database |
+| Independent checksum | Summed `units_exported` equals the 19,799 kWh meter delta |
+| Lighthouse | Performance 70 · Accessibility 100 · Best Practices 100 · SEO 100 |
+
+Performance is deliberately held at 70: LCP is dominated by render delay rather than network
+(TTFB is ~900 ms), and that render path is what the upcoming redesign rewrites.
 
 ---
 
-## 📝 Documentation
+## License
 
-For comprehensive guides and development documentation, visit the **[Documentation Hub](./docs/README.md)**
-
-### Quick Links:
-* **[CEB Bill Entry Guide](./docs/guides/CEB_BILL_ENTRY_GUIDE.md)** - Manual and OCR Ingestion
-* **[Testing Guide](./docs/guides/TESTING_GUIDE.md)** - Test procedures and checklists
-* **[Deployment Checklist](./docs/guides/DEPLOYMENT_CHECKLIST.md)** - Production deployment
-* **[Caching Guide](./docs/guides/DATA_REFRESH_AND_CACHING_GUIDE.md)** - Cache strategy
-* **[Admin Improvements](./docs/development/ADMIN_IMPROVEMENT_NOTES.md)** - Future enhancements
-* **[Changelog](./CHANGELOG.md)** - Version history
+Released under the [MIT License](LICENSE).
 
 ---
 
-## 🤝 Contributing
+<div align="center">
 
-Solar Analytics Dashboard is open to contributions! Feel free to fork, open issues, or submit pull requests. Ideas and suggestions are always welcome. 🛠️
+**Built by [Anuja Jayasinghe](https://anujajay.com)**
 
----
+Software Engineering undergraduate · SWE Intern at WSO2
 
-## 📄 License
+[**Portfolio**](https://anujajay.com) · [**GitHub**](https://github.com/Anuja-jayasinghe) · [**Live project**](https://solaredge.anujajay.com)
 
-This project is licensed under the MIT License — see the LICENSE file for more info.
-
----
-
-## 👤 Author
-
-* Developed by **Anuja Jayasinghe**
-  🌐 [anujajay.com](https://anujajay.com)
-
-  [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/anuja-jayasinghe/) [![GitHub](https://img.shields.io/badge/GitHub-100000?style=flat&logo=github&logoColor=white)](https://github.com/Anuja-jayasinghe)
-
----
-
-> Crafted with ☀️ to bring clarity to solar energy monitoring and maximize your renewable investment.
-
----
-
-## 📋 Document History
-
-**Maintainer:** Anuja Jayasinghe  
-
-### Change Log
-- **Created:** November 17, 2025 - Initial v2.0.0 documentation
-- **Updated:** November 19, 2025 - Corrected dependency versions (React 19.1.1, Vite 7.1.7, Chakra UI 3.29.0, Recharts 3.3.0), added Chakra UI to tech stack, added maintainer log
-- **Updated:** May 21, 2026 - Documented unified settings reactive flow, premium brand header with breathing green online pulse indicator, and bumped version to v2.1.0
-
-**Last Updated:** May 21, 2026  
-**Version:** 2.1.0  
-**Status:** Production Ready ✅ 
+</div>
