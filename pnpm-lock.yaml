@@ -38,6 +38,9 @@ importers:
       lucide-react:
         specifier: ^0.545.0
         version: 0.545.0(react@19.3.0)
+      pdf-parse:
+        specifier: 2.4.5
+        version: 2.4.5
       pdfjs-dist:
         specifier: ^5.4.296
         version: 5.4.296
@@ -87,9 +90,6 @@ importers:
       globals:
         specifier: ^16.4.0
         version: 16.4.0
-      pdf-parse:
-        specifier: 2.4.5
-        version: 2.4.5
       vite:
         specifier: ^7.1.7
         version: 7.1.10(@types/node@24.8.1)(terser@5.44.1)(yaml@2.8.1)
