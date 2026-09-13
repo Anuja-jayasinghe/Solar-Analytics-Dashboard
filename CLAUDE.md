@@ -146,11 +146,36 @@ Next up is a **UI redesign**. `v2.1.0` is tagged as the last known-good state be
 
 Deliberately deferred, because that surface is about to be rewritten:
 
-- LCP 6.2s, of which 5,281ms is render delay (Lighthouse Performance 67)
+- LCP 5.7s, almost entirely render delay — TTFB is a healthy ~900ms (Lighthouse Performance 70)
 - 393 KiB of unused JavaScript; react-vendor is 785 KiB
+
+Lighthouse otherwise: Accessibility 100, Best Practices 100, SEO 100.
 
 Genuinely open:
 
-- ~20 unapproved `ceb_bill_ingestions` rows to clean up, including an orphaned June row
-  pointing at a deleted file
-- Supabase Edge Function `solis-live-data` returns 500 (unused by the current data path)
+- **19 duplicate PDFs in the `ceb_bills` bucket.** Unreferenced by any ingestion row and
+  verified byte-identical (SHA-256) to bills already kept, so they hold no unique content —
+  but they are real bills carrying the account holder's name, address and phone number, so
+  they should go. Deleting them needs a bulk storage `remove()`; see RUNBOOK § Pruning
+  duplicate bill files.
+
+## Corrected notes (2026-09-13)
+
+Two long-standing entries in this file were wrong. Recorded here so they are not
+reintroduced from memory:
+
+- *"~20 unapproved `ceb_bill_ingestions` rows, including an orphaned June row pointing at a
+  deleted file."* There was no orphan — every ingestion had its file, its extraction and its
+  `ceb_data` row. The 20 rows were **fully promoted bills whose status label never advanced
+  past `auto_approved`**; deleting them would have destroyed real data. They are now
+  `approved`, which also protects them, since `/extract` refuses to re-parse an approved
+  ingestion. All 25 ingestions now reconcile 25/25/25.
+- *"Edge Function `solis-live-data` returns 500 (unused by the current data path)."* Wrong on
+  both counts. It is called by `DataContext.jsx` and `dataService.js` for the live-power
+  widget, and 48 of 55 calls succeeded — every failure was an upstream SolisCloud 502/504
+  surfacing as a 500 because one failed fetch threw straight to the catch block. It now
+  retries three times with exponential backoff and full jitter, times out at 8s per attempt,
+  and returns 502 (not 500) when SolisCloud is genuinely down.
+
+The function's source now lives in `supabase/functions/solis-live-data/`. For its first 29
+versions it existed only in the Supabase dashboard — production code with no history.

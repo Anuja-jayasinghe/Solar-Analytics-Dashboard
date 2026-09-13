@@ -151,6 +151,20 @@ SolisCloud authenticates with an HMAC-SHA1 signature over a canonical request st
 precisely because anything under `src/` can be imported into the browser bundle, and a signing
 secret in the bundle is a published secret.
 
+### The live-power widget takes a third path
+
+Separate from the cron collectors, the dashboard's current-power reading comes from a Supabase
+**Edge Function**, `solis-live-data` (`supabase/functions/solis-live-data/`), called by
+`DataContext.jsx`. It signs its own SolisCloud request in Deno rather than reusing
+`solisAuth.js`, because it runs on a different platform entirely.
+
+SolisCloud's gateway fails roughly 13% of the time with a 502 or 504. Originally a single
+failed fetch threw straight to the catch block, so every upstream blip became a 500 from us —
+which is why this function was recorded as "broken" when 48 of 55 calls were succeeding. It
+now retries three times with exponential backoff and full jitter, caps each attempt at 8s, and
+returns **502** when SolisCloud is genuinely unreachable, reserving **500** for a missing
+secret. The distinction is the point: one is upstream, the other is ours.
+
 ### The two guards on this pipeline
 
 Both exist because this pipeline died silently for five months.
@@ -478,6 +492,8 @@ src/
 └── components/             UI, incl. admin/CebDataManagement/VerificationQueue.jsx
 
 functions/                  GitHub Actions collectors (devDeps available here)
+supabase/functions/         Supabase Edge Functions (Deno)
+└── solis-live-data/        Live-power widget; retries SolisCloud's flaky gateway
 .github/workflows/          7 workflows — see RUNBOOK.md
 scripts/sql/                Schema baseline + RLS migrations
 docs/logic-registry/        Specs for non-obvious domain rules
