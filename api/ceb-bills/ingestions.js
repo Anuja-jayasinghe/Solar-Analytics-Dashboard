@@ -1,27 +1,19 @@
-import { createClient } from '@supabase/supabase-js'
 import { verifyAdminToken } from '../middleware/verifyAdminToken.js'
 import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
+import { supabase, blockOnConfigProblem } from '../_lib/supabaseServer.js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL
-const SUPABASE_SERVER_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVER_KEY)
 
 
 export default async function handler(req, res) {
   if (handlePreflightAndMethod(req, res, ['GET'])) return;
 
   try {
-    if (!SUPABASE_URL || !SUPABASE_SERVER_KEY) {
-      res.status(500).json({
-        error: 'Missing Supabase server configuration',
-        details: 'Set SUPABASE_URL and either SUPABASE_SERVICE_KEY or SUPABASE_ANON_KEY'
-      })
-      return
-    }
 
     const adminUser = await verifyAdminToken(req, res)
     if (!adminUser) return
+
+    if (blockOnConfigProblem(res)) return;
 
     const requestedLimit = Number(req.query?.limit || 12)
     const limit = Number.isFinite(requestedLimit)

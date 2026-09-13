@@ -1,15 +1,12 @@
-import { createClient } from '@supabase/supabase-js'
 import { verifyAdminToken } from '../middleware/verifyAdminToken.js'
 import { buildStoragePath, createSha256, parseMultipartForm } from '../_lib/cebBillUploadUtils.js'
 import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
+import { supabase, blockOnConfigProblem } from '../_lib/supabaseServer.js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL
-const SUPABASE_SERVER_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET_BILLS || 'ceb_bills'
 const MAX_BYTES = 10 * 1024 * 1024
 const ALLOWED_TYPES = new Set(['application/pdf', 'image/png', 'image/jpeg'])
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVER_KEY)
 
 
 function getAdminIdentity(user) {
@@ -26,16 +23,11 @@ export default async function handler(req, res) {
   const startedAt = Date.now()
 
   try {
-    if (!SUPABASE_URL || !SUPABASE_SERVER_KEY) {
-      res.status(500).json({
-        error: 'Missing Supabase server configuration',
-        details: 'Set SUPABASE_URL and either SUPABASE_SERVICE_KEY or SUPABASE_ANON_KEY'
-      })
-      return
-    }
 
     const adminUser = await verifyAdminToken(req, res)
     if (!adminUser) return
+
+    if (blockOnConfigProblem(res)) return;
 
     const { fields, files } = await parseMultipartForm(req, MAX_BYTES)
     const file = files.file

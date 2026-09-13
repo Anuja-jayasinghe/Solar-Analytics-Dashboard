@@ -14,14 +14,11 @@
 // PUT   { id, setting_value }  -> update one setting
 // POST  { settings: [...] }    -> insert defaults (used by the "add default settings" action)
 
-import { createClient } from '@supabase/supabase-js';
 import { verifyAdminToken } from './middleware/verifyAdminToken.js';
 import { handlePreflightAndMethod } from './_lib/httpSecurity.js';
+import { supabase, blockOnConfigProblem } from './_lib/supabaseServer.js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVER_KEY = process.env.SUPABASE_SERVICE_KEY;
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVER_KEY);
 
 // Only these may be written through this endpoint. An allowlist keeps a compromised admin
 // session from introducing arbitrary rows into a table the dashboard trusts.
@@ -53,13 +50,7 @@ export default async function handler(req, res) {
   const adminUser = await verifyAdminToken(req, res);
   if (!adminUser) return; // verifyAdminToken has already sent 401/403
 
-  if (!SUPABASE_URL || !SUPABASE_SERVER_KEY) {
-    res.status(500).json({
-      error: 'Missing Supabase server configuration',
-      details: 'Set SUPABASE_URL and SUPABASE_SERVICE_KEY'
-    });
-    return;
-  }
+    if (blockOnConfigProblem(res)) return;
 
   try {
     if (req.method === 'PUT') {
