@@ -17,24 +17,67 @@
 //
 // The input is whatever pdf-parse@2.4.5's getText() returns for the PDF.
 
-/** Anchors for the pre-2026 CEB bill layout. Each is documented with the text it matches. */
-export const LEGACY_PATTERNS = {
-  // "Electricity A/C No.: 4924089702"
+/**
+ * Anchors, each documented with the text it matches.
+ *
+ * Verified against two real formats — the pre-2026 bill and the 2026 `ebill-edl-v.1.0.2`
+ * redesign. All but one survived the redesign unchanged; see BILL_REF_DATE below.
+ */
+export const PATTERNS = {
+  // legacy: "Electricity A/C No.: 4924089702"
+  // 2026:   "Electricity A/C No.: 4924089702\tWPN"
   accountNumber: /Electricity A\/C No\.:\s*(\d+)/i,
-  // "2024 SEP\tMonth:" — tab between the year+month and the label
+  // legacy: "2024 SEP\tMonth:"   2026: "2026 SEP\tMonth:"
   billingMonth: /([0-9]{4} [A-Z]{3})\s+Month:/i,
-  // "Bill Date: 9/5/2024 9:59:05 AM"
-  billIssueDate: /Bill Date:\s*([0-9/]+)/i,
-  // "No. of Units Exported (kWh) 3676"
+  // legacy only: "Bill Date: 9/5/2024 9:59:05 AM". The 2026 bill dropped this label.
+  billDateLabel: /Bill Date:\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i,
+  // 2026 replacement: "Bill Ref: 457-4924089702-20260903082730"
+  //                                             ^^^^^^^^ YYYYMMDD (+ HHMMSS)
+  billRefDate: /Bill Ref:\s*\d+-\d+-(\d{4})(\d{2})(\d{2})\d{6}/i,
+  // both: "No. of Units Exported (kWh) 4007"
   unitsExported: /No\. of Units Exported \(kWh\)\s+(\d+)/i,
-  // "Charge for Units Exported (Rs.) 136,012.00"
+  // both: "Charge for Units Exported (Rs.) 148,259.00"
   earnings: /Charge for Units Exported \(Rs\.\)\s+([\d,]+\.\d{2})/i,
-  // Meter rows: "14\t3679\t2024-09-05" — reading and date separated by literal tabs.
-  // This is the most fragile anchor in the set: it depends on pdf-parse emitting real tabs
-  // between table cells, which is a property of the PDF's internal text layout rather than
-  // anything visible on the page.
+  // 2026 only: "Export Rate (Rs.) 37.00" — the bill now states its own export tariff.
+  exportRate: /Export Rate \(Rs\.\)\s+([\d,]+\.\d{2})/i,
+  // 2026 only: "No. of Units Consumed (kWh) 5"
+  unitsConsumed: /No\. of Units Consumed \(kWh\)\s+(\d+)/i,
+  // Meter rows — legacy: "14\t3679\t2024-09-05", 2026: "129\t97597\t2026-09-03".
+  // The most fragile anchor in the set: it depends on pdf-parse emitting real tabs between
+  // table cells, which is a property of the PDF's internal text layout rather than anything
+  // visible on the page. It survived the 2026 redesign, but that was luck, not design.
   meterRow: /\t(\d+)\t(\d{4}-\d{2}-\d{2})/g
 };
+
+// Kept as an alias so existing imports keep working.
+export const LEGACY_PATTERNS = PATTERNS;
+
+/**
+ * The bill's issue date, as ISO `YYYY-MM-DD`.
+ *
+ * The 2026 redesign removed the "Bill Date:" label — this was the ONLY field the new format
+ * broke. The date is still present, encoded in the bill reference
+ * (`457-4924089702-20260903082730`), so we read it from there.
+ *
+ * Legacy dates were previously returned raw as `9/5/2024`, which is ambiguous and was being
+ * written straight into a DATE column. Both paths now normalise to ISO.
+ */
+export function extractBillIssueDate(text) {
+  const labelled = text.match(PATTERNS.billDateLabel);
+  if (labelled) {
+    // CEB writes this as M/D/YYYY.
+    const [, month, day, year] = labelled;
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+
+  const fromRef = text.match(PATTERNS.billRefDate);
+  if (fromRef) {
+    const [, year, month, day] = fromRef;
+    return `${year}-${month}-${day}`;
+  }
+
+  return null;
+}
 
 /**
  * Extract the meter readings, sorted oldest-first.
@@ -48,7 +91,7 @@ export const LEGACY_PATTERNS = {
  * @returns {{reading: number, date: string}[]}
  */
 export function extractMeterReadings(text) {
-  const pattern = new RegExp(LEGACY_PATTERNS.meterRow.source, 'g');
+  const pattern = new RegExp(PATTERNS.meterRow.source, 'g');
   const matches = [];
   let hit;
 
@@ -77,17 +120,20 @@ export function parseCebBillText(text) {
       billing_period_start: null,
       billing_period_end: null,
       units_exported: 0,
+      units_consumed: null,
       earnings: 0,
+      export_rate: null,
       meter_reading_current: 0,
       meter_reading_previous: 0
     };
   }
 
-  const accountMatch = text.match(LEGACY_PATTERNS.accountNumber);
-  const monthMatch = text.match(LEGACY_PATTERNS.billingMonth);
-  const issueDateMatch = text.match(LEGACY_PATTERNS.billIssueDate);
-  const unitsMatch = text.match(LEGACY_PATTERNS.unitsExported);
-  const earningsMatch = text.match(LEGACY_PATTERNS.earnings);
+  const accountMatch = text.match(PATTERNS.accountNumber);
+  const monthMatch = text.match(PATTERNS.billingMonth);
+  const unitsMatch = text.match(PATTERNS.unitsExported);
+  const earningsMatch = text.match(PATTERNS.earnings);
+  const consumedMatch = text.match(PATTERNS.unitsConsumed);
+  const rateMatch = text.match(PATTERNS.exportRate);
 
   const meterMatches = extractMeterReadings(text);
 
@@ -109,11 +155,16 @@ export function parseCebBillText(text) {
   return {
     account_number: accountMatch ? accountMatch[1] : null,
     billing_month: monthMatch ? monthMatch[1].toUpperCase() : null,
-    bill_issue_date: issueDateMatch ? issueDateMatch[1] : null,
+    bill_issue_date: extractBillIssueDate(text),
     billing_period_start: periodStart,
     billing_period_end: periodEnd,
     units_exported: unitsMatch ? parseInt(unitsMatch[1], 10) : 0,
+    // 2026 format only — null on older bills, which did not report consumption here.
+    units_consumed: consumedMatch ? parseInt(consumedMatch[1], 10) : null,
     earnings: earningsMatch ? parseFloat(earningsMatch[1].replace(/,/g, '')) : 0,
+    // 2026 format only. When present this is authoritative: the bill states the rate it was
+    // actually billed at, so validation no longer has to assume system_settings matches.
+    export_rate: rateMatch ? parseFloat(rateMatch[1].replace(/,/g, '')) : null,
     meter_reading_current: readingCurr,
     meter_reading_previous: readingPrev
   };
@@ -122,16 +173,41 @@ export function parseCebBillText(text) {
 /**
  * Score and sanity-check an extraction.
  *
- * The tariff check assumes ONE FLAT EXPORT RATE. If CEB moves to tiered or time-of-use export
- * rates, or adds levies, every bill will flag for review even when the extraction is perfect.
- * That is a separate decision from whether the parsing worked.
+ * Tariff source, in order of preference:
+ *
+ *   1. `result.export_rate` — the rate printed on the bill itself. The 2026 format states it
+ *      ("Export Rate (Rs.) 37.00"), which makes the maths check self-contained: we compare
+ *      the bill against itself rather than against whatever `system_settings` happens to say.
+ *   2. `currentTariff` — `system_settings.rate_per_kwh`, for older bills that omit the rate.
+ *
+ * This removes a real fragility. Previously a tariff change would make every correctly-parsed
+ * bill fail validation until someone remembered to update the setting, which looks identical
+ * to a parsing failure.
  *
  * @param {object} result        Output of parseCebBillText
- * @param {number} currentTariff Rs per kWh, from system_settings.rate_per_kwh
+ * @param {number} currentTariff Fallback Rs per kWh, from system_settings.rate_per_kwh
  */
 export function validateExtraction(result, currentTariff = 37.0) {
   const errors = [];
   let status = 'auto_approved';
+
+  const billStatesRate = Number.isFinite(result.export_rate) && result.export_rate > 0;
+  const tariff = billStatesRate ? result.export_rate : currentTariff;
+
+  // Notes are surfaced to the reviewer but do NOT block auto-approval. `errors` decides
+  // status, so anything informational has to live separately — otherwise a advisory message
+  // silently downgrades a perfectly good extraction to pending_review.
+  const notes = [];
+
+  // A rate on the bill that disagrees with our configured one is worth surfacing — it is how
+  // a tariff change announces itself — but the bill's own maths is still internally
+  // consistent, so it is not an extraction problem.
+  if (billStatesRate && Number.isFinite(currentTariff) && Math.abs(result.export_rate - currentTariff) > 0.001) {
+    notes.push(
+      `Tariff changed: bill states Rs.${result.export_rate}/kWh but system_settings.rate_per_kwh is Rs.${currentTariff}. ` +
+      `Validated against the bill. Update the setting so dashboard projections match.`
+    );
+  }
 
   const fieldChecks = {
     account_number: !!result.account_number,
@@ -156,11 +232,11 @@ export function validateExtraction(result, currentTariff = 37.0) {
   if (!result.billing_month) errors.push('Missing billing month');
 
   // 2. Tariff maths
-  const expectedEarnings = (result.units_exported * currentTariff).toFixed(2);
+  const expectedEarnings = (result.units_exported * tariff).toFixed(2);
   const earningsDifference = Math.abs(parseFloat(expectedEarnings) - result.earnings);
   if (earningsDifference >= 1.0) {
     errors.push(
-      `Math mismatch: ${result.units_exported} units at Rs.${currentTariff} should be Rs.${expectedEarnings}, but extracted Rs.${result.earnings}`
+      `Math mismatch: ${result.units_exported} units at Rs.${tariff} should be Rs.${expectedEarnings}, but extracted Rs.${result.earnings}`
     );
     confidence_score = Math.max(0, confidence_score - 20);
   }
@@ -183,11 +259,14 @@ export function validateExtraction(result, currentTariff = 37.0) {
     errors.push('Missing billing period dates.');
   }
 
+  // Status is decided by blocking errors only. Notes ride along in validation_errors so the
+  // reviewer still sees them in the queue.
   if (errors.length > 0) status = 'pending_review';
 
   return {
     status,
-    validation_errors: errors,
+    validation_errors: [...errors, ...notes],
+    notes,
     confidence_score: Math.min(100, Math.max(0, confidence_score)),
     clean_data: result
   };
