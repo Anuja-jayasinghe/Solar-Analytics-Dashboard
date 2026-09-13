@@ -91,8 +91,12 @@ function ensurePdfjsGlobals() {
  *   Setting up fake worker failed: "Cannot find module '…/pdf.worker.mjs'"
  *
  * `require.resolve` with a LITERAL specifier is something the tracer does understand, so this
- * both locates the file at runtime and gets it included at build time. `vercel.json` carries
- * an `includeFiles` rule as a second line of defence.
+ * both locates the file at runtime and gets it included at build time.
+ *
+ * An `includeFiles` rule in `vercel.json` was tried as a second line of defence and had to be
+ * reverted: pnpm's symlinked node_modules makes Vercel reject the deployment package outright
+ * ("framework produced an invalid deployment package… symlinked directories"). Do not retry
+ * it. The literal require.resolve below is the whole mechanism.
  */
 function resolveWorkerSrc() {
   try {

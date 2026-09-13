@@ -7,7 +7,7 @@
 // clerkClient now comes from the middleware, which builds it with @clerk/backend's
 // createClerkClient. @clerk/clerk-sdk-node is deprecated by the vendor and carried a critical
 // authorization-bypass advisory.
-import { verifyAdminToken, clerkClient } from '../../middleware/verifyAdminToken.js';
+import { verifyAdminToken, clerkClient } from '../../_lib/verifyAdminToken.js';
 import { handlePreflightAndMethod } from '../../_lib/httpSecurity.js';
 
 export default async function handler(req, res) {
