@@ -5,6 +5,14 @@
       "destination": "/api/admin/users/[userId]"
     },
     {
+      "source": "/healthz",
+      "destination": "/api/health?probe=live"
+    },
+    {
+      "source": "/ready",
+      "destination": "/api/health?probe=ready"
+    },
+    {
       "source": "/((?!api).*)",
       "destination": "/index.html"
     }

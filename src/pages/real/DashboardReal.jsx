@@ -48,7 +48,7 @@ export default function DashboardReal() {
             style={{
               padding: '12px 24px',
               background: 'var(--accent)',
-              color: 'white',
+              color: 'var(--on-accent)',
               border: 'none',
               borderRadius: '8px',
               cursor: 'pointer',
@@ -102,7 +102,7 @@ export default function DashboardReal() {
             style={{
               padding: '12px 24px',
               background: 'var(--accent)',
-              color: 'white',
+              color: 'var(--on-accent)',
               border: 'none',
               borderRadius: '8px',
               cursor: 'pointer',

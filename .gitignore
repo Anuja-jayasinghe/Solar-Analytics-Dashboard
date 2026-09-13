@@ -25,6 +25,10 @@ dist-ssr
 
 # Env files
 .env*
+# ...except the template, which carries no values. Renamed from vercel.env.example:
+# the old name dodged the .env* rule by accident rather than by intent, and every
+# other project of mine calls this .env.example.
+!.env.example
 .vercel
 # AI IDE & Agent Specific Folders
 .adal/

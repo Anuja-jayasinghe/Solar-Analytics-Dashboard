@@ -87,7 +87,7 @@ export default function UserTable({ users, loading, onRoleChange, onAccessChange
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: '#fff',
+                      color: 'var(--on-accent)',
                       fontWeight: '700',
                       fontSize: '13px'
                     }}>

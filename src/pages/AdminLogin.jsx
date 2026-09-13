@@ -74,7 +74,7 @@ export default function AdminLogin() {
             }}
             style={{ 
               background: "var(--accent)", 
-              color: "#fff", 
+              color: 'var(--on-accent)', 
               padding: "12px 24px", 
               border: "none",
               borderRadius: "8px",

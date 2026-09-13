@@ -9,6 +9,36 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!--
+      Both origins are contacted by the very first render: Clerk to resolve the
+      session, Supabase to fetch dashboard data. Without these hints the browser
+      only discovers them after the JS bundle parses, and Lighthouse measured
+      312ms (Clerk) + 300ms (Supabase) of avoidable connection setup.
+
+      Neither host is a secret: the Supabase project ref and the Clerk domain
+      already ship inside the client bundle via VITE_ vars.
+    -->
+    <link rel="preconnect" href="https://clerk.solaredge.anujajay.com" crossorigin />
+    <link rel="preconnect" href="https://mqrlrkerjtfsjypaeppf.supabase.co" crossorigin />
+    <link rel="dns-prefetch" href="https://clerk.solaredge.anujajay.com" />
+    <link rel="dns-prefetch" href="https://mqrlrkerjtfsjypaeppf.supabase.co" />
+
+    <link rel="canonical" href="https://solaredge.anujajay.com/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SolarEdge" />
+    <meta property="og:title" content="SolarEdge — Solar Analytics Dashboard" />
+    <meta property="og:description" content="Compare what a 40 kW solar array actually generated against what the electricity utility paid for." />
+    <meta property="og:url" content="https://solaredge.anujajay.com/" />
+    <meta property="og:image" content="https://solaredge.anujajay.com/logo_bText.png" />
+    <meta property="og:image:alt" content="SolarEdge logo" />
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="SolarEdge — Solar Analytics Dashboard" />
+    <meta name="twitter:description" content="Compare what a 40 kW solar array actually generated against what the electricity utility paid for." />
+    <meta name="twitter:image" content="https://solaredge.anujajay.com/logo_bText.png" />
+
     <title>SolarEdge</title>
   </head>
   <body>

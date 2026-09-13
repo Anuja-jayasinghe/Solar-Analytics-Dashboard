@@ -108,7 +108,7 @@ const styles = {
   button: {
     padding: '0.75rem 2rem',
     background: 'var(--accent)',
-    color: '#fff',
+    color: 'var(--on-accent)',
     border: 'none',
     borderRadius: '8px',
     fontSize: '1rem',

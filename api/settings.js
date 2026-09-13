@@ -14,7 +14,7 @@
 // PUT   { id, setting_value }  -> update one setting
 // POST  { settings: [...] }    -> insert defaults (used by the "add default settings" action)
 
-import { verifyAdminToken } from './middleware/verifyAdminToken.js';
+import { verifyAdminToken } from './_lib/verifyAdminToken.js';
 import { handlePreflightAndMethod } from './_lib/httpSecurity.js';
 import { supabase, blockOnConfigProblem } from './_lib/supabaseServer.js';
 

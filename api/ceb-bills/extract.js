@@ -1,4 +1,4 @@
-import { verifyAdminToken } from '../middleware/verifyAdminToken.js';
+import { verifyAdminToken } from '../_lib/verifyAdminToken.js';
 import { extractPdfText } from '../_lib/pdfText.js';
 import { parseCebBillText, validateExtraction } from '../_lib/cebBillParser.js';
 import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';

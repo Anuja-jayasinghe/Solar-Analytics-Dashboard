@@ -3,6 +3,22 @@
   --accent-secondary: #00c2a8;
   --error-color: #ff4444;
 
+  /*
+   * Foreground for anything sitting ON --accent.
+   *
+   * White text on #ff7a00 is 2.61:1 — it fails WCAG AA (4.5:1) and Lighthouse
+   * flagged three buttons for it. The fix is the text, not the orange: keeping
+   * #ff7a00 and darkening the foreground to #241000 gives 6.99:1, which clears
+   * AA comfortably and leaves the brand colour, logo and gradients untouched.
+   *
+   * Darkening --accent itself was the alternative and was rejected: the best
+   * white-compatible variant (#b35400) only reached 5.02:1 while visibly
+   * changing every chart series, border and gradient that references it.
+   *
+   * Same value in both themes — it is read against --accent, not the page.
+   */
+  --on-accent: #241000;
+
   /* Dark theme defaults */
   --bg-color: #0d0d0d;
   --text-color: #ffffff;
@@ -370,7 +386,7 @@ body {
 /* Button styling */
 button {
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
   border: none;
   padding: 8px 16px;
   border-radius: 4px;
@@ -414,7 +430,7 @@ button:active {
   margin-bottom: 20px;
   padding: 10px 20px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border: none;
   border-radius: 5px;
   cursor: pointer;
@@ -1158,7 +1174,7 @@ body.light-theme .recharts-bar {
 .google-signin-btn {
   width: 100%;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   padding: 14px 20px;
   border: none;
   border-radius: 8px;
@@ -1244,7 +1260,7 @@ body.light-theme .recharts-bar {
 
 .magic-link-btn {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   padding: 12px 20px;
   border: none;
   border-radius: 8px;
@@ -1323,7 +1339,7 @@ body.light-theme .recharts-bar {
 
 .logout-btn {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border: none;
   padding: 10px 20px;
   border-radius: 6px;

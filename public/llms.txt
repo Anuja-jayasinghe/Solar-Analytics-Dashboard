@@ -1,0 +1,41 @@
+# Solar Analytics Dashboard
+
+> A single-site solar monitoring dashboard for a 40 kW rooftop array in Sri Lanka.
+> It compares what the inverter **generated** against what the electricity utility
+> (Ceylon Electricity Board) actually **paid for**, so under-billing is visible.
+
+Not a product or a service. One owner, one inverter, one utility account.
+
+## What it does
+
+- Polls the SolisCloud API every 5 minutes for live inverter telemetry.
+- Aggregates that into daily generation totals.
+- Ingests monthly CEB bill PDFs, extracts the figures with regex-based text
+  parsing, and routes every extraction through human review before it is stored.
+- Charts the two series against each other on a shared, bill-derived timeline.
+
+## The one domain rule worth knowing
+
+A bill received in month N reports generation from month N−1. Comparison
+periods are therefore derived from bill dates, never from calendar months:
+
+    periodEnd   = bill_date
+    periodStart = previous bill_date + 1 day   (fallback: bill_date − 30 days)
+
+`null` means "unavailable". `0` means "a measured zero". These are never
+interchangeable — conflating them has corrupted this dataset before.
+
+## Docs
+
+- [Architecture](https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard/blob/main/docs/ARCHITECTURE.md) — system design, data flow, diagrams
+- [API reference](https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard/blob/main/docs/API.md) — every endpoint, auth model, error shapes
+- [Runbook](https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard/blob/main/docs/RUNBOOK.md) — operating and incident procedures
+- [Logic registry](https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard/tree/main/docs/logic-registry) — specifications for the non-obvious rules
+
+## Notes for automated readers
+
+The extractor is neither OCR nor an LLM. It is `pdfjs-dist` text extraction plus
+a small set of regexes pinned to the bill's text layout. A bill redesign breaks
+it, which is the failure this project has already lived through once.
+
+Source: https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard

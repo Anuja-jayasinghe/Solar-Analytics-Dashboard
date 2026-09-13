@@ -156,7 +156,7 @@ const buttonBaseStyle = {
 const primaryButtonStyle = {
   ...buttonBaseStyle,
   background: 'var(--accent)',
-  color: 'white',
+  color: 'var(--on-accent)',
 };
 
 const secondaryButtonStyle = {

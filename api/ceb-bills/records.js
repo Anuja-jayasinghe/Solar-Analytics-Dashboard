@@ -15,7 +15,7 @@
 //                                    -> approve a parsed bill: upsert ceb_data, then mark the
 //                                       extraction and ingestion approved, as one operation
 
-import { verifyAdminToken } from '../middleware/verifyAdminToken.js';
+import { verifyAdminToken } from '../_lib/verifyAdminToken.js';
 import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
 import { supabase, blockOnConfigProblem } from '../_lib/supabaseServer.js';
 

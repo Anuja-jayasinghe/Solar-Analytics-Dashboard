@@ -11,7 +11,7 @@
 
 import { solisFetch } from '../_lib/solisAuth.js';
 import validator from '../_lib/solisExplorerValidator.js';
-import { verifyAdminToken } from '../middleware/verifyAdminToken.js';
+import { verifyAdminToken } from '../_lib/verifyAdminToken.js';
 import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
 
 // Simple in-memory rate limiter (per Vercel function invocation)

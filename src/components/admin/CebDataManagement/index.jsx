@@ -530,7 +530,7 @@ const CebDataManagement = () => {
             disabled={uploading || selectedBillFiles.length === 0}
             style={{
               background: "var(--accent)",
-              color: "white",
+              color: 'var(--on-accent)',
               border: "none",
               borderRadius: "8px",
               padding: "0.6rem 1rem",

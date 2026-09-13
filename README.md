@@ -16,6 +16,21 @@
 
 ---
 
+## 📖 Documentation
+
+| Document | What it covers |
+| --- | --- |
+| [**Architecture**](docs/ARCHITECTURE.md) | System design, both data pipelines, data model, security model — with diagrams. **Start here.** |
+| [**API Reference**](docs/API.md) | Every endpoint, auth model, request/response shapes, error codes |
+| [**Runbook**](docs/RUNBOOK.md) | Operating procedures and incident response |
+| [**Logic Registry**](docs/logic-registry) | Specs for the non-obvious domain rules |
+| [Project Audit](docs/PROJECT_AUDIT_2026-09.md) · [Recovery](docs/RECOVERY_STATUS_2026-09.md) · [Safeguards](docs/DATA_PIPELINE_SAFEGUARDS.md) | Historical record — why things are the way they are |
+
+**Health:** [`/healthz`](https://solaredge.anujajay.com/healthz) (liveness) ·
+[`/ready`](https://solaredge.anujajay.com/ready) (readiness — config + database)
+
+---
+
 ## 📌 Overview
 
 Solar Analytics Dashboard was born out of the need to efficiently monitor solar panel performance and earnings. This modern energy tracker eliminates spreadsheet chaos with a comprehensive, real-time dashboard. Built for homeowners and businesses wanting clarity in their solar investment, it transforms raw inverter data into actionable insights—with elegant theming and performance optimization.

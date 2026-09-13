@@ -392,7 +392,7 @@ function Sidebar({ onDevToolsToggle }) {
                   style={{
                     width: "100%",
                     background: 'var(--accent)',
-                    color: '#fff',
+                    color: 'var(--on-accent)',
                     border: 'none',
                     padding: "12px 14px",
                     borderRadius: "8px",

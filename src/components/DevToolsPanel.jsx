@@ -242,7 +242,7 @@ const tabButtonStyle = {
 };
 const tabActiveStyle = {
   background: 'var(--accent)',
-  color: '#fff',
+  color: 'var(--on-accent)',
   borderColor: 'var(--accent)'
 };
 
