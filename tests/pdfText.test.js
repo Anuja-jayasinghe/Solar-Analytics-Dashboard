@@ -82,3 +82,42 @@ describe('pdf text assembly', () => {
     expect(text.match(/No\. of Units Exported \(kWh\)\s+(\d+)/)[1]).toBe('4007');
   });
 });
+
+describe('pdfjs DOM globals', () => {
+  // Production failed with a bare "DOMMatrix is not defined" while the same code passed
+  // locally. pdfjs expects browser globals that Vercel's Node runtime does not provide, and
+  // the bundler does not reliably preserve the `legacy` build that avoids them. We only ever
+  // call getTextContent(), so minimal stand-ins are enough.
+  it('installs DOMMatrix, Path2D and ImageData when the runtime lacks them', async () => {
+    const saved = {
+      DOMMatrix: globalThis.DOMMatrix,
+      Path2D: globalThis.Path2D,
+      ImageData: globalThis.ImageData
+    };
+    delete globalThis.DOMMatrix;
+    delete globalThis.Path2D;
+    delete globalThis.ImageData;
+
+    try {
+      const mod = await import('../api/_lib/pdfText.js');
+      // extractPdfText installs the globals before importing pdfjs. Calling it with an
+      // invalid PDF still exercises that setup, which is the part under test.
+      await mod.extractPdfText(new Uint8Array([1, 2, 3])).catch(() => {});
+
+      expect(typeof globalThis.DOMMatrix).toBe('function');
+      expect(typeof globalThis.Path2D).toBe('function');
+      expect(typeof globalThis.ImageData).toBe('function');
+
+      // The stand-in must behave like an identity matrix, not throw on property access.
+      const m = new globalThis.DOMMatrix();
+      expect(m.a).toBe(1);
+      expect(m.d).toBe(1);
+      expect(m.e).toBe(0);
+    } finally {
+      for (const [k, v] of Object.entries(saved)) {
+        if (v === undefined) delete globalThis[k];
+        else globalThis[k] = v;
+      }
+    }
+  });
+});
