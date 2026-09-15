@@ -328,8 +328,8 @@ Released under the [MIT License](LICENSE).
 
 **Built by [Anuja Jayasinghe](https://anujajay.com)**
 
-Software Engineering undergraduate · SWE Intern at WSO2
+Software Engineering undergraduate ·
 
-[**Portfolio**](https://anujajay.com) · [**GitHub**](https://github.com/Anuja-jayasinghe) · [**Live project**](https://solaredge.anujajay.com)
+· [**GitHub**](https://github.com/Anuja-jayasinghe) · [**Live project**](https://solaredge.anujajay.com)
 
 </div>
