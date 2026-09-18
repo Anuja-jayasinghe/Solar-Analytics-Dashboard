@@ -27,6 +27,10 @@ const Landing = lazy(() => import("./pages/Landing"));
 const DashboardDemo = lazy(() => import("./pages/demo/DashboardDemo"));
 const SettingsDemo = lazy(() => import("./pages/demo/SettingsDemo"));
 const DashboardReal = lazy(() => import("./pages/real/DashboardReal"));
+// Preview of the redesigned dashboard (docs/UI_REDESIGN_DIRECTION.md). Additive route only —
+// DashboardReal/Dashboard above are untouched, so /dashboard keeps serving the production UI
+// unchanged while this is polished at /dashboard/v2.
+const DashboardV2Real = lazy(() => import("./pages/real/DashboardV2Real"));
 const SettingsReal = lazy(() => import("./pages/real/SettingsReal"));
 const AccessRequest = lazy(() => import("./pages/AccessRequest"));
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
@@ -356,6 +360,7 @@ const AppContent = React.memo(() => {
                       {/* Real routes */}
                       <Route index element={<DashboardReal />} />
                       <Route path="dashboard" element={<DashboardReal />} />
+                      <Route path="dashboard/v2" element={<DashboardV2Real />} />
                       <Route path="settings" element={<SettingsReal />} />
                       <Route path="access" element={<AccessRequest />} />
 
