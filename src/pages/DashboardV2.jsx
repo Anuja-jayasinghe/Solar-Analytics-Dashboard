@@ -47,7 +47,7 @@ export default function DashboardV2() {
   const isOnline = status === 'Online';
 
   return (
-    <div className="dv2" style={{ padding: '26px 30px', minHeight: '100%' }}>
+    <div className="dv2 dv2-page" style={{ minHeight: '100%' }}>
       <div className="mobile-hidden">
         <RefreshIndicator />
       </div>
@@ -82,7 +82,7 @@ export default function DashboardV2() {
       </div>
 
       {/* Row A: daily generation (primary) + live gauges */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 18, marginBottom: 18 }}>
+      <div className="dv2-row-2col" style={{ marginBottom: 18 }}>
         <DailyGenerationPanel series={dailySeries} loading={dailySeriesLoading} error={dailySeriesError} />
         <LiveGauges
           currentPower={livePowerData?.currentPower?.value}
@@ -105,7 +105,7 @@ export default function DashboardV2() {
       </div>
 
       {/* Row C: weather + environmental impact (minor) */}
-      <div style={{ display: 'grid', gridTemplateColumns: weather ? '1.35fr 1fr' : '1fr', gap: 18 }}>
+      <div className={`dv2-row-2col-minor${weather ? '' : ' dv2-single-col'}`}>
         <WeatherStrip weather={weather} error={weatherError} />
         <EnvironmentalImpactStrip co2Avoided={environmentalImpact?.co2Avoided} treesPlanted={environmentalImpact?.treesPlanted} />
       </div>

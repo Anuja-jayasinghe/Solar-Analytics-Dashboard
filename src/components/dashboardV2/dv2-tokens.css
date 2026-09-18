@@ -101,3 +101,96 @@ body.light-theme .dv2 {
 @media (prefers-reduced-motion: reduce) {
   .dv2 * { animation: none !important; }
 }
+
+/* ----------------------------------------------------------------------
+ * Responsive layout
+ *
+ * Everything above this point was verified against real production data
+ * and both themes. This section exists because that verification pass also
+ * checked the one thing the mockups never had to answer: what happens under
+ * 768px, the breakpoint the rest of this app already uses (see the three
+ * `@media (max-width: 768px)` rules in src/index.css). The grids below were
+ * plain inline styles with no breakpoint at all — fine at desktop width,
+ * unreadable on a phone. Structural, width-sensitive layout now lives here
+ * as classes so a media query can reach it; colours, spacing and everything
+ * else stay as inline styles on the elements.
+ * ---------------------------------------------------------------------- */
+
+.dv2-row-2col {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 18px;
+}
+
+.dv2-row-2col-minor {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 18px;
+}
+
+.dv2-row-2col-minor.dv2-single-col {
+  grid-template-columns: 1fr;
+}
+
+.dv2-daycards {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.dv2-daycards > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.dv2-income-grid {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr 1fr;
+  gap: 24px;
+}
+
+.dv2-income-side {
+  border-left: 1px solid var(--dv2-divider);
+  padding-left: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.dv2-page {
+  padding: 26px 30px;
+}
+
+@media (max-width: 768px) {
+  .dv2-page {
+    padding: 16px;
+  }
+
+  .dv2-row-2col,
+  .dv2-row-2col-minor,
+  .dv2-income-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dv2-daycards {
+    flex-wrap: wrap;
+  }
+
+  .dv2-daycards > * {
+    flex: 1 1 calc(33.333% - 7px);
+    min-width: 92px;
+  }
+
+  .dv2-income-side {
+    border-left: none;
+    border-top: 1px solid var(--dv2-divider);
+    padding-left: 0;
+    padding-top: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dv2-daycards > * {
+    flex: 1 1 calc(50% - 5px);
+  }
+}
