@@ -49,7 +49,7 @@ export default function IncomeComparison({ income, loading, error }) {
         </span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.7fr 1fr 1fr', gap: 24 }}>
+      <div className="dv2-income-grid">
         <div>
           <div className="dv2-label" style={{ marginBottom: 12 }}>
             {periodLabel ? `Last settled · ${periodLabel}` : 'No settled period yet'}
@@ -84,7 +84,7 @@ export default function IncomeComparison({ income, loading, error }) {
           )}
         </div>
 
-        <div style={{ borderLeft: '1px solid var(--dv2-divider)', paddingLeft: 24, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div className="dv2-income-side">
           <div className="dv2-label">Last-period difference</div>
           <div className="dv2-tnum" style={{ fontFamily: 'Outfit, sans-serif', fontSize: 30, fontWeight: 700, color: diffColor, lineHeight: 1.1, marginTop: 6 }}>
             {diffLast === null ? '—' : `${diffLast >= 0 ? '+' : ''}${money(diffLast)}`}
@@ -104,7 +104,7 @@ export default function IncomeComparison({ income, loading, error }) {
           )}
         </div>
 
-        <div style={{ borderLeft: '1px solid var(--dv2-divider)', paddingLeft: 24, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div className="dv2-income-side">
           <div className="dv2-label">Lifetime paid</div>
           <div className="dv2-tnum" style={{ fontFamily: 'Outfit, sans-serif', fontSize: 26, fontWeight: 700, lineHeight: 1.1, marginTop: 6 }}>
             {money(lifetimeActual)}

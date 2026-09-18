@@ -33,7 +33,9 @@ function DayCard({ day, maxKw }) {
     <div
       className="dv2-tile"
       style={{
-        flex: 1,
+        // flex-basis is set by .dv2-daycards > * in dv2-tokens.css, which the 768px
+        // breakpoint overrides — an inline `flex: 1` here would out-specificity that
+        // media query and the cards would never wrap on a phone.
         padding: '12px 12px 10px',
         outline: day.isToday ? '1.5px solid rgba(255,138,61,.5)' : 'none',
         outlineOffset: -1.5,
@@ -123,7 +125,7 @@ export default function DailyGenerationPanel({ series, loading, error }) {
         {series.length} consecutive days · each dot is a real inverter reading
       </div>
 
-      <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
+      <div className="dv2-daycards">
         {series.map((day) => (
           <DayCard key={day.date} day={day} maxKw={maxKw} />
         ))}
