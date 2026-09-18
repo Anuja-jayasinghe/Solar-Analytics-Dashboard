@@ -12,6 +12,7 @@
 // before this was written, the same way the rest of this project verifies rather than assumes.
 
 import { supabase } from './supabaseClient';
+import { getAlignedEnergyComparisonData } from './dataService';
 
 // This project is single-site (CLAUDE.md: "Single site, single inverter"), so the plant's
 // coordinates are fixed metadata, not user input — same fallback-constant pattern as
@@ -53,13 +54,19 @@ function localIsoDate(date) {
  * @param {Array<{data_timestamp: string, power_ac: number}>} liveRows
  * @param {Array<{summary_date: string, total_generation_kwh: number, peak_power_kw: number}>} summaryRows
  * @param {number} days
- * @param {Date} today
+ * @param {Date} windowEnd     the last (most recent) day the window should show — lets the
+ *   ‹ › stepper page backward through history without today's isToday flag ever moving
+ * @param {Date} realToday     the actual current date, used ONLY to decide which day (if any)
+ *   in the window is "today" and to compute totalKwh for it from the live reading. Kept
+ *   separate from windowEnd on purpose: paging into the past must never make a past day
+ *   masquerade as today.
  * @param {{value: number}|null} liveDailyGeneration  today's running total from the live edge
  *   function (DataContext's livePowerData.dailyGeneration) — there is no daily_summary row for
  *   today until the aggregation job runs, so today's total comes from the live reading instead.
  */
-export function buildDailySeries(liveRows, summaryRows, days, today, liveDailyGeneration) {
-  const normalizedToday = toDateOnlyLocal(today);
+export function buildDailySeries(liveRows, summaryRows, days, windowEnd, realToday, liveDailyGeneration) {
+  const normalizedEnd = toDateOnlyLocal(windowEnd);
+  const normalizedToday = toDateOnlyLocal(realToday);
   const summaryByDate = new Map((summaryRows || []).map((r) => [r.summary_date, r]));
 
   const samplesByDate = new Map();
@@ -77,7 +84,7 @@ export function buildDailySeries(liveRows, summaryRows, days, today, liveDailyGe
 
   const out = [];
   for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(normalizedToday);
+    const date = new Date(normalizedEnd);
     date.setDate(date.getDate() - i);
     const dateKey = localIsoDate(date);
     const isToday = dateKey === localIsoDate(normalizedToday);
@@ -107,30 +114,91 @@ export function buildDailySeries(liveRows, summaryRows, days, today, liveDailyGe
   return out;
 }
 
-export async function fetchDailySeriesInputs(days = 5) {
-  const today = new Date();
-  const start = new Date(today);
+export async function fetchDailySeriesInputs(days = 5, windowEnd = new Date()) {
+  const end = toDateOnlyLocal(windowEnd);
+  const start = new Date(end);
   start.setDate(start.getDate() - (days - 1));
-  start.setHours(0, 0, 0, 0);
-  const startIso = start.toISOString();
+  // Exclusive upper bound at the day AFTER the window's end — without this, paging back to a
+  // past window would still pull in every live sample between then and now, since the
+  // original version of this query only ever had a lower bound (it could assume "end" was
+  // always today, so there was never anything newer to accidentally include).
+  const exclusiveEnd = new Date(end);
+  exclusiveEnd.setDate(exclusiveEnd.getDate() + 1);
 
   const [{ data: liveRows, error: liveError }, { data: summaryRows, error: summaryError }] = await Promise.all([
     supabase
       .from('inverter_data_live')
       .select('data_timestamp, power_ac')
-      .gte('data_timestamp', startIso)
+      .gte('data_timestamp', start.toISOString())
+      .lt('data_timestamp', exclusiveEnd.toISOString())
       .order('data_timestamp', { ascending: true }),
     supabase
       .from('inverter_data_daily_summary')
       .select('summary_date, total_generation_kwh, peak_power_kw')
       .gte('summary_date', localIsoDate(start))
+      .lte('summary_date', localIsoDate(end))
       .order('summary_date', { ascending: true })
   ]);
 
   if (liveError) throw new Error(`inverter_data_live fetch failed: ${liveError.message}`);
   if (summaryError) throw new Error(`inverter_data_daily_summary fetch failed: ${summaryError.message}`);
 
-  return { liveRows: liveRows || [], summaryRows: summaryRows || [], today };
+  return { liveRows: liveRows || [], summaryRows: summaryRows || [], windowEnd: end };
+}
+
+// ============================================================================
+// Daily generation — Month mode
+// ============================================================================
+//
+// Small multiples stop making sense past ~7 cards, so Month mode switches to a single chart
+// of daily totals across a calendar month instead of one card per day. Built only from
+// inverter_data_daily_summary — no need for the sparse live table here, since a whole
+// calendar month of history already has its daily totals aggregated.
+
+/**
+ * @param {Array<{summary_date: string, total_generation_kwh: number}>} summaryRows
+ * @param {number} year
+ * @param {number} month     0-11
+ * @param {Date} realToday
+ */
+export function buildMonthSummarySeries(summaryRows, year, month, realToday) {
+  const summaryByDate = new Map((summaryRows || []).map((r) => [r.summary_date, r]));
+  const today = toDateOnlyLocal(realToday);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const out = [];
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day);
+    const dateKey = localIsoDate(date);
+    const isFuture = date.getTime() > today.getTime();
+    const isToday = date.getTime() === today.getTime();
+    const summary = summaryByDate.get(dateKey);
+    out.push({
+      date: dateKey,
+      day,
+      isToday,
+      // A future day is not "unknown", it's "hasn't happened" — kept distinct from a past
+      // day the daily-summary job simply hasn't covered, even though both render as null.
+      isFuture,
+      totalKwh: isFuture ? null : (summary ? Number(summary.total_generation_kwh) : null)
+    });
+  }
+  return out;
+}
+
+export async function fetchMonthSummaryInputs(year, month) {
+  const start = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+  const end = localIsoDate(new Date(year, month + 1, 0));
+
+  const { data, error } = await supabase
+    .from('inverter_data_daily_summary')
+    .select('summary_date, total_generation_kwh')
+    .gte('summary_date', start)
+    .lte('summary_date', end)
+    .order('summary_date', { ascending: true });
+
+  if (error) throw new Error(`inverter_data_daily_summary fetch failed: ${error.message}`);
+  return data || [];
 }
 
 // ============================================================================
@@ -156,16 +224,74 @@ export function buildOverlapSeries(alignedRows) {
       status: r.status
     }));
 
-  // Deliberately NOT clamped to 0. This chart exists to make a ~1-5% monthly shortfall
-  // visible (the whole reason bar and line versions of this were rejected as "feels empty" —
-  // the values are close enough that a 0-based axis flattens them into one indistinguishable
-  // line). A tight domain around the actual values is what makes the overlap technique work;
-  // the component adds a small padding fraction on top of this for headroom.
+  return withDomain(points);
+}
+
+// Deliberately NOT clamped to 0, for both month and year series. This chart exists to make a
+// ~1-5% shortfall visible (the whole reason bar and line versions were rejected as "feels
+// empty" — the values are close enough that a 0-based axis flattens them into one
+// indistinguishable line). A tight domain around the actual values is what makes the overlap
+// technique work; the component adds a small padding fraction on top of this for headroom.
+function withDomain(points) {
   const allValues = points.flatMap((p) => [p.inverter, p.ceb]).filter((v) => v !== null && Number.isFinite(v));
   const maxKwh = allValues.length ? Math.max(...allValues) : 0;
   const minKwh = allValues.length ? Math.min(...allValues) : 0;
-
   return { points, maxKwh, minKwh };
+}
+
+// ============================================================================
+// Generation vs CEB — Year mode
+// ============================================================================
+//
+// getYearlyData()/aggregateYearly() already exist in dataService.js but read from a table
+// (`inverter_data`) that no longer exists in this project's schema — verified live against
+// the anon key (404, "Could not find the table"). That path is dead code, not something to
+// build on. This reuses getAlignedEnergyComparisonData() instead — the same tested,
+// LR-001-aligned monthly rows the Month view already uses — and sums twelve real months per
+// year rather than querying a table that isn't there.
+//
+// A year's CEB total is reported ONLY once every one of its twelve months has an actual bill
+// (ceb !== null on all twelve rows). Otherwise ceb is null for that year — never a sum of
+// whichever months happened to be billed, presented as if it were the full year. A partial
+// sum silently standing in for a total is exactly the kind of figure that looks like data and
+// isn't; this dataset currently has exactly one complete year (2025) to prove the distinction
+// matters, not just in theory.
+
+/**
+ * @param {Array<{year: number, rows: Array}>} yearRowsList  one buildAlignedEnergyComparisonRows
+ *   result (12 rows) per year
+ */
+export function buildYearlyOverlapSeries(yearRowsList) {
+  const points = (yearRowsList || [])
+    .map(({ year, rows }) => {
+      const withInverter = (rows || []).filter((r) => r.inverter !== null);
+      if (withInverter.length === 0) return null; // nothing at all for this year — omit it
+
+      const inverterSum = withInverter.reduce((sum, r) => sum + r.inverter, 0);
+      const fullyBilled = rows.every((r) => r.ceb !== null);
+      const cebSum = fullyBilled ? rows.reduce((sum, r) => sum + r.ceb, 0) : null;
+      const anyProvisional = rows.some((r) => r.status === 'provisional');
+
+      return {
+        label: String(year),
+        inverter: inverterSum,
+        ceb: cebSum,
+        status: fullyBilled ? 'finalized' : anyProvisional ? 'provisional' : 'missing_bill'
+      };
+    })
+    .filter(Boolean);
+
+  return withDomain(points);
+}
+
+/**
+ * @param {number[]} years
+ */
+export async function fetchYearlyOverlapInputs(years) {
+  const yearRowsList = await Promise.all(
+    years.map(async (year) => ({ year, rows: await getAlignedEnergyComparisonData(year) }))
+  );
+  return yearRowsList;
 }
 
 // ============================================================================

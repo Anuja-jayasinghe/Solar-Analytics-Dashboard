@@ -23,17 +23,35 @@ function scaleY(value, min, max) {
   return PAD_T + usable - ((value - min) / (max - min)) * usable;
 }
 
-export default function GenerationVsCebChart({ series }) {
-  const { points, maxKwh, minKwh } = series || { points: [], maxKwh: 0, minKwh: 0 };
+const MODES = [
+  { key: 'day', label: 'Day', disabled: true, title: "CEB bills a period, not a day — there's no real daily figure to compare against" },
+  { key: 'month', label: 'Month' },
+  { key: 'year', label: 'Year' }
+];
 
-  if (!points.length) {
-    return (
-      <div className="dv2-card" style={{ padding: 20, color: 'var(--dv2-ink-faint)' }}>
-        Not enough billed history yet to compare generation against CEB.
-      </div>
-    );
-  }
+function StepperButton({ direction, onClick, disabled }) {
+  const isBack = direction === 'back';
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={isBack ? 'Earlier' : 'Later'}
+      style={{
+        width: 24, height: 24, border: 'none', background: 'transparent', borderRadius: 6,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: disabled ? 'var(--dv2-ink-faintest)' : 'var(--dv2-ink-soft)',
+        cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1
+      }}
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+        <path d={isBack ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </button>
+  );
+}
 
+function ChartBody({ points, maxKwh, minKwh }) {
   const usableW = VB_W - PAD_L - PAD_R;
   const xStep = points.length > 1 ? usableW / (points.length - 1) : 0;
   const xAt = (i) => PAD_L + i * xStep;
@@ -84,23 +102,7 @@ export default function GenerationVsCebChart({ series }) {
     : null;
 
   return (
-    <div className="dv2-card" style={{ padding: '20px 22px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 16, fontWeight: 600 }}>
-          Generation vs CEB paid <span style={{ color: 'var(--dv2-ink-faint)', fontWeight: 400 }}>· kWh</span>
-        </div>
-      </div>
-      <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 6 }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ width: 12, height: 10, borderRadius: 2, background: 'var(--dv2-inverter-fill)' }} />
-          <span className="dv2-mono" style={{ fontSize: 10.5, color: 'var(--dv2-ink-soft)' }}>Inverter generated</span>
-        </span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ width: 12, height: 10, borderRadius: 2, background: 'var(--dv2-ceb-fill)' }} />
-          <span className="dv2-mono" style={{ fontSize: 10.5, color: 'var(--dv2-ink-soft)' }}>CEB paid</span>
-        </span>
-      </div>
-
+    <>
       <svg viewBox={`0 0 ${VB_W} ${VB_H}`} style={{ width: '100%', height: 210, display: 'block' }}>
         <line x1={PAD_L} y1={PAD_T} x2={VB_W - PAD_R} y2={PAD_T} stroke="var(--dv2-divider)" />
         <line x1={PAD_L} y1={(PAD_T + VB_H - PAD_B) / 2} x2={VB_W - PAD_R} y2={(PAD_T + VB_H - PAD_B) / 2} stroke="var(--dv2-divider)" />
@@ -115,11 +117,19 @@ export default function GenerationVsCebChart({ series }) {
         {inverterAreaPath && <path d={inverterAreaPath} fill="var(--dv2-inverter-fill)" />}
         {cebAreaPath && <path d={cebAreaPath} fill="var(--dv2-ceb-fill)" />}
 
-        {cebCoords.length > 1 && (
+        {cebCoords.length > 1 ? (
           <path d={`M ${pathFrom(cebCoords)}`} fill="none" stroke="var(--dv2-ceb)" strokeWidth="2.2" strokeLinejoin="round" />
+        ) : (
+          // Year mode's comparison window is only 3 years wide, so a lone fully-billed year
+          // surrounded by partial ones is common — a path needs 2+ points, but the single
+          // year's real, verified CEB figure shouldn't disappear just because it can't join a
+          // line. A dot says exactly as much as the data supports: this one point is real.
+          cebCoords.map(([x, y]) => <circle key={`ceb-${x}`} cx={x} cy={y} r="3.5" fill="var(--dv2-ceb)" />)
         )}
-        {settledInverterCoords.length > 1 && (
+        {settledInverterCoords.length > 1 ? (
           <path d={`M ${pathFrom(settledInverterCoords)}`} fill="none" stroke="var(--dv2-inverter)" strokeWidth="2.4" strokeLinejoin="round" />
+        ) : (
+          settledInverterCoords.map(([x, y]) => <circle key={`inv-${x}`} cx={x} cy={y} r="3.5" fill="var(--dv2-inverter)" />)
         )}
         {partialInverterCoords.length > 1 && (
           <path
@@ -152,6 +162,87 @@ export default function GenerationVsCebChart({ series }) {
           widest gap {worst.label} {worst.diff >= 0 ? '+' : ''}{Math.round(worst.diff)} kWh
           {avgDiff !== null && ` · avg ${avgDiff >= 0 ? '+' : ''}${Math.round(avgDiff)} kWh/mo`}
         </div>
+      )}
+    </>
+  );
+}
+
+export default function GenerationVsCebChart({
+  series,
+  mode,
+  onModeChange,
+  rangeLabel,
+  onStepBack,
+  onStepForward,
+  canStepBack,
+  canStepForward,
+  error
+}) {
+  const { points, maxKwh, minKwh } = series || { points: [], maxKwh: 0, minKwh: 0 };
+
+  return (
+    <div className="dv2-card" style={{ padding: '20px 22px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 16, fontWeight: 600 }}>
+          Generation vs CEB paid <span style={{ color: 'var(--dv2-ink-faint)', fontWeight: 400 }}>· kWh</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {rangeLabel && (
+            <div className="dv2-tile" style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '3px 4px' }}>
+              <StepperButton direction="back" onClick={onStepBack} disabled={!canStepBack} />
+              <span className="dv2-mono" style={{ fontSize: 12, color: 'var(--dv2-ink)', minWidth: 60, textAlign: 'center' }}>{rangeLabel}</span>
+              <StepperButton direction="forward" onClick={onStepForward} disabled={!canStepForward} />
+            </div>
+          )}
+          <div className="dv2-tile" style={{ display: 'flex', padding: 3 }}>
+            {MODES.map((m) => (
+              <button
+                key={m.key}
+                type="button"
+                title={m.title}
+                disabled={m.disabled}
+                onClick={() => !m.disabled && onModeChange(m.key)}
+                className="dv2-mono"
+                style={{
+                  fontSize: 11, padding: '4px 11px', borderRadius: 6, border: 'none',
+                  cursor: m.disabled ? 'not-allowed' : 'pointer',
+                  background: mode === m.key ? 'var(--dv2-inverter)' : 'transparent',
+                  color: m.disabled ? 'var(--dv2-ink-faintest)' : mode === m.key ? 'var(--on-accent)' : 'var(--dv2-ink-faint)',
+                  fontWeight: mode === m.key ? 600 : 400,
+                  opacity: m.disabled ? 0.5 : 1
+                }}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 6 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 12, height: 10, borderRadius: 2, background: 'var(--dv2-inverter-fill)' }} />
+          <span className="dv2-mono" style={{ fontSize: 10.5, color: 'var(--dv2-ink-soft)' }}>Inverter generated</span>
+        </span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 12, height: 10, borderRadius: 2, background: 'var(--dv2-ceb-fill)' }} />
+          <span className="dv2-mono" style={{ fontSize: 10.5, color: 'var(--dv2-ink-soft)' }}>CEB paid</span>
+        </span>
+        {mode === 'year' && (
+          <span className="dv2-mono" style={{ fontSize: 10, color: 'var(--dv2-ink-faintest)' }}>
+            CEB shown only for a fully-billed calendar year — never a partial-year sum
+          </span>
+        )}
+      </div>
+
+      {error ? (
+        <div style={{ color: 'var(--dv2-bad)', padding: '20px 0' }}>Couldn't load this range: {error.message}</div>
+      ) : !points.length ? (
+        <div style={{ color: 'var(--dv2-ink-faint)', padding: '20px 0' }}>
+          {mode === 'year' ? 'No complete year of history yet.' : 'Not enough billed history yet to compare generation against CEB.'}
+        </div>
+      ) : (
+        <ChartBody points={points} maxKwh={maxKwh} minKwh={minKwh} />
       )}
     </div>
   );

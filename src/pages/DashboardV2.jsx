@@ -31,10 +31,25 @@ const PLANT_NAME = 'CN00079 · 40 kW · SN 1811040244070066';
 export default function DashboardV2() {
   const { livePowerData, gridCapacity, dailyGenerationTarget, environmentalImpact } = useData();
   const {
+    dailyMode,
+    setDailyMode,
+    stepDaily,
+    canStepDailyForward,
+    dailyRangeLabel,
     dailySeries,
     dailySeriesError,
     dailySeriesLoading,
-    overlapSeries,
+    monthSeries,
+    monthSeriesError,
+    monthSeriesLoading,
+    comparisonMode,
+    setComparisonMode,
+    comparisonSeries,
+    comparisonRangeLabel,
+    stepComparisonYear,
+    canStepComparisonForward,
+    canStepComparisonBack,
+    yearlySeriesError,
     income,
     incomeError,
     incomeLoading,
@@ -83,7 +98,20 @@ export default function DashboardV2() {
 
       {/* Row A: daily generation (primary) + live gauges */}
       <div className="dv2-row-2col" style={{ marginBottom: 18 }}>
-        <DailyGenerationPanel series={dailySeries} loading={dailySeriesLoading} error={dailySeriesError} />
+        <DailyGenerationPanel
+          mode={dailyMode}
+          onModeChange={setDailyMode}
+          onStepBack={() => stepDaily(-1)}
+          onStepForward={() => stepDaily(1)}
+          canStepForward={canStepDailyForward}
+          rangeLabel={dailyRangeLabel}
+          series={dailySeries}
+          loading={dailySeriesLoading}
+          error={dailySeriesError}
+          monthSeries={monthSeries}
+          monthLoading={monthSeriesLoading}
+          monthError={monthSeriesError}
+        />
         <LiveGauges
           currentPower={livePowerData?.currentPower?.value}
           status={status}
@@ -96,7 +124,17 @@ export default function DashboardV2() {
 
       {/* Row A2: generation vs CEB, kWh */}
       <div style={{ marginBottom: 18 }}>
-        <GenerationVsCebChart series={overlapSeries} />
+        <GenerationVsCebChart
+          series={comparisonSeries}
+          mode={comparisonMode}
+          onModeChange={setComparisonMode}
+          rangeLabel={comparisonRangeLabel}
+          onStepBack={() => stepComparisonYear(-1)}
+          onStepForward={() => stepComparisonYear(1)}
+          canStepBack={canStepComparisonBack}
+          canStepForward={canStepComparisonForward}
+          error={yearlySeriesError}
+        />
       </div>
 
       {/* Row B: income */}
