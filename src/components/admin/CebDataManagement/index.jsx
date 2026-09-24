@@ -400,12 +400,18 @@ const CebDataManagement = () => {
     setPreviewUrl(null);
     setPreviewFileName(filePath.split('/').pop() || 'document.pdf');
     try {
-      const { data, error } = await supabase
-        .storage
-        .from('ceb_bills')
-        .createSignedUrl(filePath, 300); // 5 minutes expiry
+      const token = await fetchAuthToken();
+      if (!token) throw new Error('No auth token');
 
-      if (error) throw error;
+      // Signed server-side: the bill bucket is closed to the public anon key.
+      const response = await fetch('/api/ceb-bills/signed-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ filePath })
+      });
+      const data = await readApiResponse(response);
+      if (!response.ok) throw new Error(data.error || 'Could not create a preview link');
+
       setPreviewUrl(data.signedUrl);
       setPreviewLoading(false);
     } catch (err) {
@@ -428,7 +434,7 @@ const CebDataManagement = () => {
 
     try {
       const token = await fetchAuthToken();
-      const response = await fetch('/api/ceb-bills/delete-record', {
+      const response = await fetch('/api/ceb-bills/delete', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -520,7 +526,7 @@ const CebDataManagement = () => {
           <input
             type="file"
             multiple
-            accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+            accept=".pdf,application/pdf"
             onChange={(e) => setSelectedBillFiles(Array.from(e.target.files || []))}
             disabled={uploading}
           />

@@ -225,7 +225,7 @@ Two properties of this design are worth internalising:
 
 - **A bill redesign breaks it.** That already happened once. CEB shipped
   `ebill-edl-v.1.0.2` in 2026 and the `Bill Date:` label vanished; the date is now recovered
-  from the bill reference (`457-4924089702-20260903082730`). Eight of nine anchors survived —
+  from the bill reference (`457-0000000000-20260903082730`). Eight of nine anchors survived —
   which was luck.
 - **The most fragile anchor is invisible on the page.** `meterRow` matches
   `\t(\d+)\t(\d{4}-\d{2}-\d{2})` — it depends on table cells arriving *tab-delimited*, which is

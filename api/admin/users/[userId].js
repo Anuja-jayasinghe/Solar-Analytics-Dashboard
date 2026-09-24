@@ -9,16 +9,26 @@
 // authorization-bypass advisory.
 import { verifyAdminToken, clerkClient } from '../../_lib/verifyAdminToken.js';
 import { handlePreflightAndMethod } from '../../_lib/httpSecurity.js';
+import { validateUserPatch } from '../../_lib/userMetadataRules.js';
+
+// Clerk returns at most 100 users per call. Page through them rather than silently dropping the rest.
+const PAGE_SIZE = 100;
+const MAX_PAGES = 10;
+
+function toUserSummary(user) {
+  return {
+    id: user.id,
+    email: user.emailAddresses[0]?.emailAddress,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.publicMetadata?.role || 'user',
+    dashboardAccess: user.publicMetadata?.dashboardAccess || 'demo',
+    createdAt: user.createdAt
+  };
+}
 
 export default async function handler(req, res) {
-  if (handlePreflightAndMethod(req, res, ['GET', 'POST', 'PATCH', 'DELETE'])) return;
-
-  console.log('🔍 User API Request:', {
-    method: req.method,
-    userId: req.query?.userId,
-    hasBody: !!req.body,
-    bodyKeys: req.body ? Object.keys(req.body) : []
-  });
+  if (handlePreflightAndMethod(req, res, ['GET', 'PATCH', 'DELETE'])) return;
 
   try {
     // Verify admin session and role
@@ -30,36 +40,24 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       // GET /api/admin/users - List all users
       if (!userId) {
-        const userList = await clerkClient.users.getUserList({
-          limit: 100,
-          orderBy: '-created_at'
-        });
-
-        const users = userList.data.map(user => ({
-          id: user.id,
-          email: user.emailAddresses[0]?.emailAddress,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.publicMetadata?.role || 'user',
-          dashboardAccess: user.publicMetadata?.dashboardAccess || 'demo',
-          createdAt: user.createdAt
-        }));
+        const users = [];
+        for (let page = 0; page < MAX_PAGES; page += 1) {
+          const { data, totalCount } = await clerkClient.users.getUserList({
+            limit: PAGE_SIZE,
+            offset: page * PAGE_SIZE,
+            orderBy: '-created_at'
+          });
+          users.push(...data.map(toUserSummary));
+          if (data.length < PAGE_SIZE || users.length >= totalCount) break;
+        }
 
         return res.status(200).json({ users });
       }
 
       // GET /api/admin/users/[userId] - Get specific user
       const user = await clerkClient.users.getUser(userId);
-      
-      return res.status(200).json({
-        id: user.id,
-        email: user.emailAddresses[0]?.emailAddress,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.publicMetadata?.role || 'user',
-        dashboardAccess: user.publicMetadata?.dashboardAccess || 'demo',
-        createdAt: user.createdAt
-      });
+
+      return res.status(200).json(toUserSummary(user));
     }
 
     if (req.method === 'PATCH') {
@@ -68,29 +66,17 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'User ID required' });
       }
 
-      const { role, dashboardAccess } = req.body;
-
-      // Validate input
-      if (!role && !dashboardAccess) {
-        return res.status(400).json({ error: 'No updates provided' });
+      const validation = validateUserPatch(req.body, {
+        targetUserId: userId,
+        actingUserId: adminUser.id
+      });
+      if (!validation.ok) {
+        return res.status(400).json({ error: validation.error });
       }
 
-      // Get current user metadata
+      // Merge into the existing metadata so unrelated keys (e.g. accessGrantedDate) survive.
       const user = await clerkClient.users.getUser(userId);
-      const currentMetadata = user.publicMetadata || {};
-
-      // Update metadata
-      const updatedMetadata = {
-        ...currentMetadata
-      };
-
-      if (role !== undefined) {
-        updatedMetadata.role = role;
-      }
-
-      if (dashboardAccess !== undefined) {
-        updatedMetadata.dashboardAccess = dashboardAccess;
-      }
+      const updatedMetadata = { ...(user.publicMetadata || {}), ...validation.updates };
 
       // Update user in Clerk
       await clerkClient.users.updateUser(userId, {
@@ -127,9 +113,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
     console.error('Admin API Error:', error);
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      message: error.message 
-    });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

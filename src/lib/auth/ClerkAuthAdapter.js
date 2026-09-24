@@ -117,13 +117,6 @@ export class ClerkAuthAdapter extends AuthAdapter {
     
     // Check Clerk publicMetadata.role (set in Clerk Dashboard)
     const role = user.raw?.publicMetadata?.role || user.metadata?.role;
-    console.log('🔍 checkIsAdmin:', { 
-      userId: user.id, 
-      email: user.email,
-      role, 
-      publicMetadata: user.raw?.publicMetadata,
-      isAdmin: role === 'admin' 
-    });
     return role === 'admin';
   }
 
@@ -164,14 +157,6 @@ export class ClerkAuthAdapter extends AuthAdapter {
     
     // Read directly from Clerk publicMetadata
     const access = user.raw?.publicMetadata?.dashboardAccess || user.metadata?.dashboardAccess;
-    console.log('🔍 getDashboardAccess:', { 
-      userId: user.id,
-      email: user.email, 
-      access,
-      publicMetadata: user.raw?.publicMetadata,
-      result: access === 'real' ? 'real' : 'demo'
-    });
-    
     // Default to demo if not set
     return access === 'real' ? 'real' : 'demo';
   }
