@@ -82,7 +82,7 @@ JSON — which is what made a 500 here take several deploy cycles to diagnose.
 
 ```bash
 pnpm dev        # dev server
-pnpm test       # vitest, 91 tests
+pnpm test       # vitest
 pnpm lint       # eslint — 0 errors expected
 pnpm build      # production build
 pnpm audit --prod --audit-level high   # the CI security gate

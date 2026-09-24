@@ -16,7 +16,7 @@ curl -s https://solaredge.anujajay.com/ready   | jq   # can it serve?
 
 # Local
 pnpm dev                                # dev server
-pnpm test                               # 91 tests
+pnpm test                               # vitest
 pnpm lint                               # 0 errors expected
 pnpm build                              # production build
 pnpm audit --prod --audit-level high    # the CI security gate

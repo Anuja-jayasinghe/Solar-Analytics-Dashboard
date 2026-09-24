@@ -474,13 +474,15 @@ failures rarer.
 api/                        Vercel serverless functions (10 of 12 used)
 ├── _lib/                   Shared — excluded from the function count
 │   ├── supabaseServer.js   The one server client + config assertion
-│   ├── solisAuth.js        HMAC-SHA1 signing. Server-only, deliberately
+│   ├── solisAuth.js        HMAC-SHA1 signing (node:crypto). Server-only, deliberately
+│   ├── serviceKeyGuard.js  Start-up check for jobs and scripts: reject an anon key
 │   ├── pdfText.js          pdfjs-dist text extraction
-│   ├── cebBillParser.js    Pure regex parser + validator
+│   ├── cebBillParser.js    Pure regex parser + validator (null ≠ 0)
+│   ├── cebRecordRules.js   ceb_data record validation
+│   ├── userMetadataRules.js  role / access allowlist for user admin
+│   ├── verifyAdminToken.js Clerk verification, fails closed
 │   └── httpSecurity.js     CORS allowlist, preflight, method gate
-├── middleware/
-│   └── verifyAdminToken.js Clerk verification, fails closed
-├── ceb-bills/              upload · extract · records · ingestions · delete · delete-record
+├── ceb-bills/              upload · extract · records · ingestions · signed-url · delete
 ├── admin/users/[userId].js User management
 ├── solis/explore.js        Debug proxy for SolisCloud
 ├── settings.js             system_settings writes
@@ -497,7 +499,7 @@ supabase/functions/         Supabase Edge Functions (Deno)
 .github/workflows/          7 workflows — see RUNBOOK.md
 scripts/sql/                Schema baseline + RLS migrations
 docs/logic-registry/        Specs for non-obvious domain rules
-tests/                      91 tests, 6 files
+tests/                      Vitest — parser, alignment, API validation, security helpers
 ```
 
 ---
