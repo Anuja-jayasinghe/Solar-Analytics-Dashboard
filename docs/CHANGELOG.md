@@ -46,6 +46,12 @@ The three SQL migrations it adds are **not applied automatically** — see
   `crypto-js`, `@types/react`, `@types/react-dom`. Non-PDF JavaScript 1,557 KB → 1,194 KB;
   `react-vendor` 776 KB → 263 KB. `pnpm audit --prod` is now clean.
 - The dashboard v2 preview and its design-direction document (PR #143). They remain in git history.
+- The finished Clerk-migration scripts (`migrate-users-to-clerk.js`, `export-users.js`).
+- The vendor agent-skill packs are no longer tracked (`.agents/`, `skills/` are gitignored);
+  `skills-lock.json` remains.
+
+### Added
+- `2026-09-24_drop_cascade_trigger.sql` — drops the redundant, undocumented live-only trigger.
 
 ### Documentation
 - `SECURITY.md`, `MIGRATIONS.md`, `guides/LOCAL_DEVELOPMENT.md` added; `START_HERE`, `docs/README`,

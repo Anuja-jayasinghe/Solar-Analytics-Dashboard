@@ -171,7 +171,8 @@ a person with database access:
   the policy query in `docs/SECURITY.md`.
 - `ceb_data` is publicly readable and its rows include `account_number` and `file_path`. Not
   fixed; needs a decision (a display-columns view).
-- The live-only trigger `trg_cascade_delete_ceb_data` is redundant and undocumented.
+- The live-only trigger `trg_cascade_delete_ceb_data` is redundant; `2026-09-24_drop_cascade_trigger.sql` drops it (not applied — read its header first).
+- The redesign should end with one `ErrorBoundary` and one `SkeletonLoader` (there are two of each).
 - `@clerk/clerk-react` is deprecated by the vendor in favour of `@clerk/react`.
 
 The `ceb_bills` bucket reconciles exactly — 25 ingestions, 25 extractions, 25 `ceb_data`
