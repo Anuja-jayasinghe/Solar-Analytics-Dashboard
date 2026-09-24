@@ -209,12 +209,13 @@ browser's anon key is public — see [`SECURITY.md`](./SECURITY.md).
 server-side. `filePath` must belong to a known ingestion (`404` otherwise) — the endpoint will
 not sign an arbitrary path in the bucket.
 
-### `POST` | `PATCH` | `PUT /api/ceb-bills/records`
+### `GET` | `POST` | `PATCH` | `PUT /api/ceb-bills/records`
 
-Promotes a reviewed extraction into `ceb_data` — the canonical billing table.
+Reads and writes `ceb_data` — the canonical billing table.
 
 | Method | Purpose | Body |
 |---|---|---|
+| `GET` | Every row, all columns, newest bill first → `{ records: [...] }`. This is the admin table's data source: the public anon key may read only `id`, `bill_date`, `earnings` and `units_exported` | — |
 | `POST` | Upsert a manually entered record (on `account_number, billing_month`) | `{ record }` |
 | `PATCH` | Edit an existing one | `{ id, record }` |
 | `PUT` | Approve a parsed bill: upsert `ceb_data` and mark the extraction and ingestion `approved`, **in one transaction** | `{ extractionId, ingestionId, record }` |

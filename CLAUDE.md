@@ -169,8 +169,9 @@ a person with database access:
   Apply `2026-09-24_revoke_anon_bill_access.sql` only *after* the code with `/signed-url` and
   `?view=queue` is deployed. **Until then, whether anon can read bill PDFs is unverified** — run
   the policy query in `docs/SECURITY.md`.
-- `ceb_data` is publicly readable and its rows include `account_number` and `file_path`. Not
-  fixed; needs a decision (a display-columns view).
+- `ceb_data` is publicly readable including `account_number` and `file_path`.
+  `2026-09-24_ceb_data_public_columns.sql` limits `anon` to four columns (not applied — deploy the
+  code with `GET /api/ceb-bills/records` first).
 - The live-only trigger `trg_cascade_delete_ceb_data` is redundant; `2026-09-24_drop_cascade_trigger.sql` drops it (not applied — read its header first).
 - The redesign should end with one `ErrorBoundary` and one `SkeletonLoader` (there are two of each).
 - `@clerk/clerk-react` is deprecated by the vendor in favour of `@clerk/react`.

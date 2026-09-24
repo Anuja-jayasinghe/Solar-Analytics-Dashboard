@@ -50,7 +50,15 @@ The three SQL migrations it adds are **not applied automatically** — see
 - The vendor agent-skill packs are no longer tracked (`.agents/`, `skills/` are gitignored);
   `skills-lock.json` remains.
 
+### Security (continued)
+- **`ceb_data` no longer exposes the account number or file path to the public anon key.**
+  `2026-09-24_ceb_data_public_columns.sql` limits `anon` to the four columns the dashboard reads.
+  The admin CEB table now loads through `GET /api/ceb-bills/records`. Deploy the code first.
+
 ### Added
+- `2026-09-24_ceb_data_public_columns.sql` — the column grants above.
+- Handler-level tests for `/api/ceb-bills/records`: authentication first, bad input never reaches
+  the database, approval is one RPC, and the fallback works while the function is missing.
 - `2026-09-24_drop_cascade_trigger.sql` — drops the redundant, undocumented live-only trigger.
 
 ### Documentation

@@ -43,6 +43,7 @@ except the two `2026-04-23_…anon…` files, which are superseded (see the ledg
 | `2026-09-12_revoke_anon_writes.sql` | Removed `anon` INSERT/UPDATE on `ceb_data` and `system_settings`, and the `admin_users` policies | **Not recorded — verify** with the policy query in [`SECURITY.md`](./SECURITY.md) |
 | `2026-09-24_revoke_anon_bill_access.sql` | Closes the bill tables and the `ceb_bills` bucket to `anon`. **Deploy the code that adds `/signed-url` and `?view=queue` first** | **Not applied** |
 | `2026-09-24_approve_ceb_extraction.sql` | `approve_ceb_extraction()` — bill approval in one transaction. Safe before or after the code; the API falls back and warns until it is installed | **Not applied** |
+| `2026-09-24_ceb_data_public_columns.sql` | Limits `anon` to four `ceb_data` columns (`id`, `bill_date`, `earnings`, `units_exported`). **Deploy the code that adds `GET /api/ceb-bills/records` first** — the old admin table did `select *` from the browser | **Not applied** |
 | `2026-09-24_drop_cascade_trigger.sql` | Drops the live-only `trg_cascade_delete_ceb_data` trigger, now redundant. Read its header first: snapshot, deploy the merged `/delete` endpoint, read the definition | **Not applied** |
 | `2026-09-24_ceb_schema_drift.sql` | Adds `confidence_score` and `meter_reading_previous`, which the code writes but no migration declared. No-op on the live project | **Not applied** (no-op if the columns exist) |
 
@@ -57,12 +58,12 @@ When you apply one, change its last cell to `Yes — YYYY-MM-DD`.
    loads and a bill preview opens.
 4. `2026-09-24_revoke_anon_bill_access.sql` — then the verification query in `SECURITY.md`, and
    reload the review queue and a preview once more.
-5. `2026-09-24_drop_cascade_trigger.sql` — once the merged `/delete` endpoint is live. Read its
+5. `2026-09-24_ceb_data_public_columns.sql` — needs the same deployed code as step 4. Afterwards
+   reload the admin CEB table and the public dashboard, and run the column check in `SECURITY.md`.
+6. `2026-09-24_drop_cascade_trigger.sql` — once the merged `/delete` endpoint is live. Read its
    header first; it asks you to record the trigger's definition before dropping it.
 
 ## Things deliberately not migrated yet
 
 - A foreign key from `ceb_data.ingestion_id` to `ceb_bill_ingestions(id)`, and a fix for the
   unique index treating NULL account numbers as distinct. Both are described in the same file.
-- A view exposing only the display columns of `ceb_data`. See *Known limitation* in
-  [`SECURITY.md`](./SECURITY.md).
