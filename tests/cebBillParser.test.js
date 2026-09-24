@@ -90,8 +90,10 @@ describe('parseCebBillText — failure behaviour', () => {
   it('returns a fully-null shape for empty input rather than throwing', () => {
     const parsed = parseCebBillText('');
     expect(parsed.account_number).toBeNull();
-    expect(parsed.units_exported).toBe(0);
-    expect(parsed.meter_reading_current).toBe(0);
+    expect(parsed.units_exported).toBeNull();
+    expect(parsed.earnings).toBeNull();
+    expect(parsed.meter_reading_current).toBeNull();
+    expect(parsed.meter_reading_previous).toBeNull();
   });
 
   it('returns a fully-null shape for non-string input', () => {
@@ -99,7 +101,7 @@ describe('parseCebBillText — failure behaviour', () => {
     expect(parseCebBillText(null).billing_month).toBeNull();
   });
 
-  it('degrades to zeros — never partial garbage — if every label were to change', () => {
+  it('degrades to nulls — never fabricated zeros — if every label were to change', () => {
     // This is what a redesigned bill looks like to the current parser: the numbers are all
     // present, but under different wording, so every anchor misses.
     const newFormat = [
@@ -112,9 +114,11 @@ describe('parseCebBillText — failure behaviour', () => {
 
     const parsed = parseCebBillText(newFormat);
     expect(parsed.account_number).toBeNull();
-    expect(parsed.units_exported).toBe(0);
-    expect(parsed.earnings).toBe(0);
-    expect(parsed.meter_reading_current).toBe(0);
+    // null, not 0: "the regexes found nothing" must not look like "the bill printed zero".
+    expect(parsed.units_exported).toBeNull();
+    expect(parsed.earnings).toBeNull();
+    expect(parsed.meter_reading_current).toBeNull();
+    expect(parsed.meter_reading_previous).toBeNull();
   });
 });
 
@@ -161,6 +165,54 @@ describe('validateExtraction', () => {
       37
     );
     expect(result.validation_errors.join(' ')).toMatch(/Timeline error/);
+  });
+
+  describe('null versus zero', () => {
+    it('treats a measured zero-export month as valid, not as an extraction failure', () => {
+      const zeroMonth = {
+        ...good,
+        units_exported: 0,
+        earnings: 0,
+        meter_reading_current: 1000,
+        meter_reading_previous: 1000
+      };
+      const result = validateExtraction(zeroMonth, 37);
+      expect(result.validation_errors).toEqual([]);
+      expect(result.status).toBe('auto_approved');
+    });
+
+    it('flags a MISSING export figure even though 0 would be a valid one', () => {
+      const missing = validateExtraction({ ...good, units_exported: null, earnings: null }, 37);
+      expect(missing.status).toBe('pending_review');
+      expect(missing.validation_errors).toContain('Invalid exported units');
+      expect(missing.validation_errors).toContain('Invalid earnings');
+    });
+
+    it('does not count a null reading as extracted (null >= 0 is true in JavaScript)', () => {
+      const result = validateExtraction({ ...good, meter_reading_previous: null }, 37);
+      expect(result.confidence_score).toBeLessThan(100);
+    });
+
+    it('does not run the meter-delta check against a reading that was not found', () => {
+      const result = validateExtraction({ ...good, meter_reading_previous: null }, 37);
+      expect(result.validation_errors.join(' ')).not.toMatch(/Meter mismatch/);
+    });
+  });
+
+  describe('tariff availability', () => {
+    it('reports a missing tariff instead of validating against an invented one', () => {
+      const noRate = { ...good, export_rate: null };
+      for (const tariff of [null, undefined, NaN]) {
+        const result = validateExtraction(noRate, tariff);
+        expect(result.status).toBe('pending_review');
+        expect(result.validation_errors.join(' ')).toMatch(/No tariff available/);
+      }
+    });
+
+    it('needs no configured tariff when the bill states its own rate', () => {
+      const result = validateExtraction({ ...good, export_rate: 37 }, null);
+      expect(result.status).toBe('auto_approved');
+    });
   });
 
   it('honours a changed tariff — a flat-rate assumption the new bill may break', () => {

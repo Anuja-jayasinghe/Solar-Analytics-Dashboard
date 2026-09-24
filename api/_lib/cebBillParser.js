@@ -105,9 +105,11 @@ export function extractMeterReadings(text) {
 /**
  * Parse the text of a CEB bill into the extraction payload.
  *
- * Always returns an object. Fields it cannot find come back as null or 0 — the caller is
- * expected to run validateExtraction() and route low-confidence results to human review
- * rather than trusting this blindly.
+ * Always returns an object. A field it cannot find comes back as `null` — never `0`. A `0` in
+ * the result means the bill printed a zero. Conflating the two fabricates data (this project has
+ * been corrupted by fabricated zeros twice), and it made a bill that exported nothing
+ * indistinguishable from a bill whose text the regexes failed to read. The caller is expected to
+ * run validateExtraction() and route low-confidence results to human review.
  *
  * @param {string} text  Raw text from pdf-parse
  */
@@ -119,12 +121,12 @@ export function parseCebBillText(text) {
       bill_issue_date: null,
       billing_period_start: null,
       billing_period_end: null,
-      units_exported: 0,
+      units_exported: null,
       units_consumed: null,
-      earnings: 0,
+      earnings: null,
       export_rate: null,
-      meter_reading_current: 0,
-      meter_reading_previous: 0
+      meter_reading_current: null,
+      meter_reading_previous: null
     };
   }
 
@@ -137,8 +139,8 @@ export function parseCebBillText(text) {
 
   const meterMatches = extractMeterReadings(text);
 
-  let readingPrev = 0;
-  let readingCurr = 0;
+  let readingPrev = null;
+  let readingCurr = null;
   let periodStart = null;
   let periodEnd = null;
 
@@ -158,10 +160,10 @@ export function parseCebBillText(text) {
     bill_issue_date: extractBillIssueDate(text),
     billing_period_start: periodStart,
     billing_period_end: periodEnd,
-    units_exported: unitsMatch ? parseInt(unitsMatch[1], 10) : 0,
+    units_exported: unitsMatch ? parseInt(unitsMatch[1], 10) : null,
     // 2026 format only — null on older bills, which did not report consumption here.
     units_consumed: consumedMatch ? parseInt(consumedMatch[1], 10) : null,
-    earnings: earningsMatch ? parseFloat(earningsMatch[1].replace(/,/g, '')) : 0,
+    earnings: earningsMatch ? parseFloat(earningsMatch[1].replace(/,/g, '')) : null,
     // 2026 format only. When present this is authoritative: the bill states the rate it was
     // actually billed at, so validation no longer has to assume system_settings matches.
     export_rate: rateMatch ? parseFloat(rateMatch[1].replace(/,/g, '')) : null,
@@ -185,14 +187,24 @@ export function parseCebBillText(text) {
  * to a parsing failure.
  *
  * @param {object} result        Output of parseCebBillText
- * @param {number} currentTariff Fallback Rs per kWh, from system_settings.rate_per_kwh
+ * @param {number|null} currentTariff Fallback Rs per kWh, from system_settings.rate_per_kwh.
+ *                     `null` when the setting is unavailable — there is deliberately no default,
+ *                     because a guessed tariff would validate wrong bills as right.
  */
-export function validateExtraction(result, currentTariff = 37.0) {
+export function validateExtraction(result, currentTariff = null) {
   const errors = [];
   let status = 'auto_approved';
 
   const billStatesRate = Number.isFinite(result.export_rate) && result.export_rate > 0;
-  const tariff = billStatesRate ? result.export_rate : currentTariff;
+  const tariff = billStatesRate
+    ? result.export_rate
+    : Number.isFinite(currentTariff)
+      ? currentTariff
+      : null;
+
+  // `null` = the extractor did not find it; `0` = the bill printed zero. Only a real number
+  // counts as extracted. (`null >= 0` is true in JavaScript, which is why these are explicit.)
+  const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
 
   // Notes are surfaced to the reviewer but do NOT block auto-approval. `errors` decides
   // status, so anything informational has to live separately — otherwise a advisory message
@@ -214,40 +226,47 @@ export function validateExtraction(result, currentTariff = 37.0) {
     billing_month: !!result.billing_month,
     billing_period_start: !!result.billing_period_start,
     billing_period_end: !!result.billing_period_end,
-    meter_reading_current: result.meter_reading_current > 0,
-    meter_reading_previous: result.meter_reading_previous >= 0,
-    units_exported: result.units_exported > 0,
-    earnings: result.earnings > 0
+    meter_reading_current: isNum(result.meter_reading_current) && result.meter_reading_current >= 0,
+    meter_reading_previous: isNum(result.meter_reading_previous) && result.meter_reading_previous >= 0,
+    units_exported: isNum(result.units_exported) && result.units_exported >= 0,
+    earnings: isNum(result.earnings) && result.earnings >= 0
   };
 
   const extractedCount = Object.values(fieldChecks).filter(Boolean).length;
   let confidence_score = Math.round((extractedCount / Object.keys(fieldChecks).length) * 100);
 
-  // 1. Sanity
-  if (!result.meter_reading_current || result.meter_reading_current <= 0) {
-    errors.push('Invalid current meter reading');
-  }
-  if (!result.units_exported || result.units_exported < 0) errors.push('Invalid exported units');
-  if (!result.earnings || result.earnings < 0) errors.push('Invalid earnings');
+  // 1. Sanity — missing or negative. A measured zero is valid.
+  if (!fieldChecks.meter_reading_current) errors.push('Invalid current meter reading');
+  if (!fieldChecks.units_exported) errors.push('Invalid exported units');
+  if (!fieldChecks.earnings) errors.push('Invalid earnings');
   if (!result.billing_month) errors.push('Missing billing month');
 
-  // 2. Tariff maths
-  const expectedEarnings = (result.units_exported * tariff).toFixed(2);
-  const earningsDifference = Math.abs(parseFloat(expectedEarnings) - result.earnings);
-  if (earningsDifference >= 1.0) {
+  // 2. Tariff maths — only when there is something to compare.
+  if (tariff === null) {
     errors.push(
-      `Math mismatch: ${result.units_exported} units at Rs.${tariff} should be Rs.${expectedEarnings}, but extracted Rs.${result.earnings}`
+      'No tariff available to validate earnings: the bill does not state a rate and ' +
+      'system_settings.rate_per_kwh is not set.'
     );
-    confidence_score = Math.max(0, confidence_score - 20);
+  } else if (fieldChecks.units_exported && fieldChecks.earnings) {
+    const expectedEarnings = (result.units_exported * tariff).toFixed(2);
+    const earningsDifference = Math.abs(parseFloat(expectedEarnings) - result.earnings);
+    if (earningsDifference >= 1.0) {
+      errors.push(
+        `Math mismatch: ${result.units_exported} units at Rs.${tariff} should be Rs.${expectedEarnings}, but extracted Rs.${result.earnings}`
+      );
+      confidence_score = Math.max(0, confidence_score - 20);
+    }
   }
 
-  // 3. Meter delta
-  const calculatedUnits = result.meter_reading_current - result.meter_reading_previous;
-  if (result.meter_reading_previous > 0 && calculatedUnits !== result.units_exported) {
-    errors.push(
-      `Meter mismatch: Current (${result.meter_reading_current}) - Prev (${result.meter_reading_previous}) = ${calculatedUnits}, but extracted units = ${result.units_exported}`
-    );
-    confidence_score = Math.max(0, confidence_score - 15);
+  // 3. Meter delta — only when both readings were found and the previous one is real.
+  if (fieldChecks.meter_reading_current && fieldChecks.meter_reading_previous && fieldChecks.units_exported) {
+    const calculatedUnits = result.meter_reading_current - result.meter_reading_previous;
+    if (result.meter_reading_previous > 0 && calculatedUnits !== result.units_exported) {
+      errors.push(
+        `Meter mismatch: Current (${result.meter_reading_current}) - Prev (${result.meter_reading_previous}) = ${calculatedUnits}, but extracted units = ${result.units_exported}`
+      );
+      confidence_score = Math.max(0, confidence_score - 15);
+    }
   }
 
   // 4. Timeline

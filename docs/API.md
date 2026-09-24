@@ -137,8 +137,10 @@ body limit on serverless functions; bills are far smaller than either in practic
 ```
 
 Downloads the PDF from Storage, extracts text with `pdfjs-dist`, runs the nine regex anchors,
-validates, and writes a `ceb_bill_extractions` row. Re-running deletes prior extractions for
-that ingestion first, so it is idempotent.
+validates, and writes a `ceb_bill_extractions` row. Re-running is idempotent: the new
+extraction is saved first and only then are the ones it replaces removed, so a failed re-parse
+leaves the previous result in place. Nothing is changed until the file has been downloaded,
+parsed and validated.
 
 Returns `200` with `{ success, extraction, validation }`:
 
@@ -167,13 +169,21 @@ Validation cross-checks three things:
 | Timeline | `billing_period_start < billing_period_end` |
 
 The rate comes from the bill itself when present (the 2026 format prints
-`Export Rate (Rs.) 37.00`), falling back to `system_settings.rate_per_kwh`. Preferring the
+`Export Rate (Rs.) 37.00`), falling back to `system_settings.rate_per_kwh`. If neither is
+available the extraction is sent to review with a "No tariff available" error — there is no
+built-in default rate to validate against. Preferring the
 on-bill rate makes the check self-contained: a tariff change no longer makes every
 correctly-parsed bill fail validation in a way that looks exactly like a parser fault.
 
+**Null is not zero.** A figure the extractor could not find is `null` in the result and is
+reported as missing; a `0` means the bill printed zero and is valid. Earlier versions returned
+`0` for both, so a bill whose text the regexes failed to read looked like a bill that exported
+nothing.
+
 `400` if `ingestionId` is missing, the file isn't a PDF, or the ingestion is already
-`approved`. On any internal failure the ingestion is marked `failed_extraction` rather than
-left stuck at `received`.
+`approved`; `404` if it does not exist. On an internal failure an ingestion that was never
+extracted is marked `failed_extraction` rather than left stuck at `received`; one that already
+has an extraction keeps its status.
 
 ### `GET /api/ceb-bills/ingestions`
 
@@ -207,10 +217,19 @@ Promotes a reviewed extraction into `ceb_data` — the canonical billing table.
 |---|---|---|
 | `POST` | Upsert a manually entered record (on `account_number, billing_month`) | `{ record }` |
 | `PATCH` | Edit an existing one | `{ id, record }` |
-| `PUT` | Approve a parsed bill: upsert `ceb_data`, then mark the extraction and ingestion `approved` | `{ extractionId, ingestionId, record }` |
+| `PUT` | Approve a parsed bill: upsert `ceb_data` and mark the extraction and ingestion `approved`, **in one transaction** | `{ extractionId, ingestionId, record }` |
 
 `400` returns `{ error: "Invalid record", details: [...] }` listing each field that failed
-validation.
+validation. Required: `bill_date` (a real `YYYY-MM-DD` date), `meter_reading`, `units_exported`,
+`earnings` (non-negative numbers; **`0` is accepted, a missing value is not**). Optional columns
+are whitelisted, type-checked and length-capped; `ingestion_id` must be a UUID; a period that
+runs backwards is rejected.
+
+`PUT` calls the `approve_ceb_extraction()` database function
+(`scripts/sql/2026-09-24_approve_ceb_extraction.sql`), so the three writes cannot be left
+half-done. It also rejects an `extractionId` that does not belong to `ingestionId`. If the
+function has not been installed yet, the handler logs a warning and falls back to the old
+sequential writes.
 
 This endpoint exists because these writes used to happen from the browser. They cannot: the
 anon key has `SELECT` and nothing else.

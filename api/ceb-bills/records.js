@@ -12,55 +12,51 @@
 //   POST  { record }                 -> upsert on (account_number, billing_month)
 //   PATCH { id, record }             -> update one row by id
 //   PUT   { extractionId, ingestionId, record }
-//                                    -> approve a parsed bill: upsert ceb_data, then mark the
-//                                       extraction and ingestion approved, as one operation
+//                                    -> approve a parsed bill: upsert ceb_data and mark the
+//                                       extraction and ingestion approved, in ONE transaction
+//                                       (public.approve_ceb_extraction, see
+//                                       scripts/sql/2026-09-24_approve_ceb_extraction.sql)
 
 import { verifyAdminToken } from '../_lib/verifyAdminToken.js';
 import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
 import { supabase, blockOnConfigProblem } from '../_lib/supabaseServer.js';
+import { sanitizeRecord } from '../_lib/cebRecordRules.js';
 
-
-
-const NUMERIC_FIELDS = ['meter_reading', 'units_exported', 'earnings'];
+// PostgREST answers PGRST202 when the RPC it was asked to call is not installed.
+const isMissingFunction = (error) =>
+  error?.code === 'PGRST202' || /could not find the function/i.test(error?.message || '');
 
 /**
- * Whitelist and coerce the incoming record. The client is not trusted to decide which columns
- * exist, and a non-numeric reading would poison every chart that averages these values.
+ * The pre-transaction approval path, kept only so the API keeps working on a database that does
+ * not yet have approve_ceb_extraction(). Three independent writes: a failure part-way leaves
+ * the earlier ones in place. Remove once the function is installed everywhere.
  */
-function sanitizeRecord(input = {}) {
-  const errors = [];
-  const record = {};
+async function approveSequentially({ extractionId, ingestionId, record }) {
+  const { error: upsertError } = await supabase
+    .from('ceb_data')
+    .upsert([record], { onConflict: 'account_number, billing_month' });
+  if (upsertError) throw new Error(`Approve failed writing ceb_data: ${upsertError.message}`);
 
-  if (!input.bill_date) errors.push('bill_date is required');
-  else record.bill_date = String(input.bill_date);
+  const { error: extractionError } = await supabase
+    .from('ceb_bill_extractions')
+    .update({
+      review_status: 'approved',
+      meter_reading: record.meter_reading,
+      units_exported: record.units_exported,
+      earnings: record.earnings,
+      billing_period_start: record.billing_period_start || null,
+      billing_period_end: record.billing_period_end || null
+    })
+    .eq('id', extractionId);
+  if (extractionError) throw new Error(`Approve failed updating extraction: ${extractionError.message}`);
 
-  for (const field of NUMERIC_FIELDS) {
-    if (input[field] === undefined || input[field] === null || input[field] === '') {
-      errors.push(`${field} is required`);
-      continue;
-    }
-    const n = Number(input[field]);
-    if (!Number.isFinite(n) || n < 0) {
-      errors.push(`${field} must be a non-negative number`);
-      continue;
-    }
-    record[field] = n;
+  if (ingestionId) {
+    const { error: ingestionError } = await supabase
+      .from('ceb_bill_ingestions')
+      .update({ status: 'approved' })
+      .eq('id', ingestionId);
+    if (ingestionError) throw new Error(`Approve failed updating ingestion: ${ingestionError.message}`);
   }
-
-  // Optional passthrough columns.
-  for (const field of [
-    'account_number',
-    'billing_month',
-    'billing_period_start',
-    'billing_period_end',
-    'data_source',
-    'file_path',
-    'ingestion_id'
-  ]) {
-    if (input[field] !== undefined) record[field] = input[field] || null;
-  }
-
-  return { record, errors };
 }
 
 export default async function handler(req, res) {
@@ -69,7 +65,7 @@ export default async function handler(req, res) {
   const adminUser = await verifyAdminToken(req, res);
   if (!adminUser) return; // verifyAdminToken has already sent 401/403
 
-    if (blockOnConfigProblem(res)) return;
+  if (blockOnConfigProblem(res)) return;
 
   const actor = adminUser?.emailAddresses?.[0]?.emailAddress || adminUser?.id || 'unknown_admin';
 
@@ -117,43 +113,29 @@ export default async function handler(req, res) {
     const { record, errors } = sanitizeRecord(raw);
     if (errors.length) return res.status(400).json({ error: 'Invalid record', details: errors });
 
-    const { error: upsertError } = await supabase
-      .from('ceb_data')
-      .upsert([record], { onConflict: 'account_number, billing_month' });
+    // One transaction: ceb_data, the extraction and the ingestion are approved together or not
+    // at all. Three separate writes could leave a bill promoted into ceb_data with an ingestion
+    // still labelled `auto_approved` — the state 20 ingestions were found in.
+    const { error: rpcError } = await supabase.rpc('approve_ceb_extraction', {
+      p_extraction_id: extractionId,
+      p_ingestion_id: ingestionId || null,
+      p_record: record
+    });
 
-    if (upsertError) throw new Error(`Approve failed writing ceb_data: ${upsertError.message}`);
-
-    const { error: extractionError } = await supabase
-      .from('ceb_bill_extractions')
-      .update({
-        review_status: 'approved',
-        meter_reading: record.meter_reading,
-        units_exported: record.units_exported,
-        earnings: record.earnings,
-        billing_period_start: record.billing_period_start || null,
-        billing_period_end: record.billing_period_end || null
-      })
-      .eq('id', extractionId);
-
-    if (extractionError) {
-      throw new Error(`Approve failed updating extraction: ${extractionError.message}`);
-    }
-
-    if (ingestionId) {
-      const { error: ingestionError } = await supabase
-        .from('ceb_bill_ingestions')
-        .update({ status: 'approved' })
-        .eq('id', ingestionId);
-
-      if (ingestionError) {
-        throw new Error(`Approve failed updating ingestion: ${ingestionError.message}`);
-      }
+    if (rpcError && isMissingFunction(rpcError)) {
+      console.warn(
+        'approve_ceb_extraction() is not installed — approving with sequential, non-atomic ' +
+          'writes. Apply scripts/sql/2026-09-24_approve_ceb_extraction.sql.'
+      );
+      await approveSequentially({ extractionId, ingestionId, record });
+    } else if (rpcError) {
+      throw new Error(`Approve failed: ${rpcError.message}`);
     }
 
     console.log('ceb bill approved', { extractionId, ingestionId, by: actor });
     return res.status(200).json({ approved: true, extractionId, ingestionId });
   } catch (error) {
     console.error('CEB record write failed', { message: error?.message });
-    return res.status(500).json({ error: 'Failed to write CEB record', details: error?.message });
+    return res.status(500).json({ error: 'Failed to write CEB record' });
   }
 }
