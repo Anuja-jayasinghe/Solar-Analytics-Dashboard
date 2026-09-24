@@ -3,12 +3,19 @@
 // Admin-authenticated writes to `ceb_data` — the canonical billing table the whole analytics
 // layer reads.
 //
-// Why this exists: the admin screens previously wrote to Supabase directly from the browser
+// Why GET is here: the public dashboard reads only four columns of `ceb_data` (id, bill_date,
+// earnings, units_exported), and the `anon` role is granted exactly those — see
+// scripts/sql/2026-09-24_ceb_data_public_columns.sql. The admin table needs the rest
+// (account number, file path, ingestion id), which it now gets through this admin-authenticated
+// call instead of a browser query with the public key.
+//
+// Why writes are here: the admin screens previously wrote to Supabase directly from the browser
 // with the public anon key, which forced `ceb_data` to carry `INSERT ... WITH CHECK (true)`
 // and `UPDATE ... USING (true)` policies for `anon`. The anon key ships in the JS bundle, so
 // any visitor could insert or overwrite billing rows.
 //
-// Two operations, both service-role:
+// Operations, all service-role:
+//   GET                              -> every row, all columns (the admin table)
 //   POST  { record }                 -> upsert on (account_number, billing_month)
 //   PATCH { id, record }             -> update one row by id
 //   PUT   { extractionId, ingestionId, record }
@@ -60,7 +67,7 @@ async function approveSequentially({ extractionId, ingestionId, record }) {
 }
 
 export default async function handler(req, res) {
-  if (handlePreflightAndMethod(req, res, ['POST', 'PATCH', 'PUT'])) return;
+  if (handlePreflightAndMethod(req, res, ['GET', 'POST', 'PATCH', 'PUT'])) return;
 
   const adminUser = await verifyAdminToken(req, res);
   if (!adminUser) return; // verifyAdminToken has already sent 401/403
@@ -70,6 +77,17 @@ export default async function handler(req, res) {
   const actor = adminUser?.emailAddresses?.[0]?.emailAddress || adminUser?.id || 'unknown_admin';
 
   try {
+    // ---------------------------------------------------------------- GET: list every row
+    if (req.method === 'GET') {
+      const { data, error } = await supabase
+        .from('ceb_data')
+        .select('*')
+        .order('bill_date', { ascending: false });
+
+      if (error) throw new Error(`Read failed: ${error.message}`);
+      return res.status(200).json({ records: data || [] });
+    }
+
     // ---------------------------------------------------------------- PATCH: edit one row
     if (req.method === 'PATCH') {
       const { id, record: raw } = req.body || {};

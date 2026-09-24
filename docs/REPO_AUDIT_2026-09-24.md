@@ -60,8 +60,9 @@ Tests went from 91 to 191. Non-PDF JavaScript went from 1,557 KB to 1,194 KB.
 - **The review queue showed a parsed `0` as blank** (`item.units_exported || ''`), which made a
   measured zero look missing and blocked approving it. Fixed alongside S6.
 - **S13 — `ceb_data` is publicly readable and carries `account_number` and `file_path`.** The
-  dashboard needs neither. **Not fixed**: the remedy is a view of the display columns and
-  pointing the dashboard at it, which is a decision about the public data surface.
+  dashboard needs neither; it reads four columns. **Fixed in code afterwards**: column-level
+  grants (`2026-09-24_ceb_data_public_columns.sql`) plus `GET /api/ceb-bills/records` for the
+  admin table. The migration is **not applied**.
 - **`updateUserMetadata` in the Clerk adapter writes `unsafeMetadata`**, which the user controls.
   Nothing calls it and nothing authorizes on it, so it is harmless today, but it is a trap. Left
   in place because it belongs to the adapter's interface.
@@ -76,7 +77,7 @@ Deliberately left, each needing a decision rather than an edit:
   Clerk-migration scripts, and the live-only trigger.
 - The duplicate `ErrorBoundary` and `SkeletonLoader` components. Each pair is used from
   different places, so merging them is a behaviour change, not a deletion.
-- S13 above; the `ceb_data.ingestion_id` foreign key; a `ceb_data` unique index that treats NULL
+- The `ceb_data.ingestion_id` foreign key; a `ceb_data` unique index that treats NULL
   account numbers as distinct.
 - Unused CSS and image assets were never checked.
 
@@ -88,6 +89,7 @@ Deliberately left, each needing a decision rather than an edit:
 | `migrate-users-to-clerk.js`, `export-users.js` | **Deleted** — the migration is complete; they remain in git history |
 | Live-only trigger `trg_cascade_delete_ceb_data` | **Drop it**: `2026-09-24_drop_cascade_trigger.sql`, not applied |
 | Duplicate `ErrorBoundary` / `SkeletonLoader` | **Deferred to the redesign**, which should end with one of each |
+| S13 (`ceb_data` public columns) | **Column-level grants**, not a view: no renaming, no second object to keep in step. Migration written, not applied |
 - Lighthouse has not been re-run since the bundle shrank.
 - Seven links inside archived documents still point at files that no longer exist; they are
   historical.

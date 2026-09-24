@@ -450,7 +450,7 @@ Layers, each of which assumes the others may fail:
 | Identity | Clerk `verifyToken`, fails closed, `authorizedParties` replay guard | `api/_lib/verifyAdminToken.js` |
 | Authorization | `publicMetadata.role === 'admin'` | same |
 | Input | Allowlist validation, not blocklists; user roles, bill records and Solis parameters each have a tested rules module | `api/_lib/userMetadataRules.js`, `cebRecordRules.js`, `api/_config/solisEndpointsConfig.js` |
-| Data | RLS: `anon` gets `SELECT` on public tables and nothing on bills | `scripts/sql/2026-09-12_revoke_anon_writes.sql`, `2026-09-24_revoke_anon_bill_access.sql` |
+| Data | RLS: `anon` gets `SELECT` on public tables — on `ceb_data` only four columns — and nothing on bills | `scripts/sql/2026-09-12_revoke_anon_writes.sql`, `2026-09-24_revoke_anon_bill_access.sql`, `2026-09-24_ceb_data_public_columns.sql` |
 | Config | Startup assertion that the service key really is `service_role` — in the API **and** in the scheduled jobs | `api/_lib/supabaseServer.js`, `api/_lib/serviceKeyGuard.js` |
 
 ### The config assertion, and why it exists

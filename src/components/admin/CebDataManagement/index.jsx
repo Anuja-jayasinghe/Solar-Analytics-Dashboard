@@ -70,19 +70,25 @@ const CebDataManagement = () => {
   };
 
   // ✅ Fetch CEB data
+  //
+  // Through the admin API, not the browser's Supabase client: the public anon key may read only
+  // four columns of ceb_data, and this table needs all of them (account number, file path, …).
   const fetchData = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("ceb_data")
-      .select("*")
-      .order("bill_date", { ascending: false });
+    try {
+      const token = await fetchAuthToken();
+      if (!token) throw new Error("No auth token");
 
-    if (error) {
+      const response = await fetch("/api/ceb-bills/records", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = await readApiResponse(response);
+      if (!response.ok) throw new Error(payload.error || `Failed with status ${response.status}`);
+
+      setAllData(payload.records || []);
+    } catch (error) {
       setMessage(`❌ Error loading data: ${error.message}`);
-      console.error("CEB data fetch error:", error);
-    } else {
-      setAllData(data || []);
-      console.log("CEB data loaded:", data);
+      console.error("CEB data fetch error:", error.message);
     }
     setLoading(false);
   };

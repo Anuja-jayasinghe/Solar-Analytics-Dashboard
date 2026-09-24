@@ -22,7 +22,7 @@ is not listed.
 
 | Object | `anon` | Why |
 |---|---|---|
-| `ceb_data` | R | The public dashboard's billing figures |
+| `ceb_data` | R — **four columns only**: `id`, `bill_date`, `earnings`, `units_exported` | The public dashboard's billing figures. The account number, file path and ingestion id are not public |
 | `system_settings` | R | The dashboard needs the tariff and targets |
 | `inverter_data_live`, `_daily_summary`, `_monthly_summary` | R | Public generation data |
 | `system_metrics` | R | Public dashboard metrics |
@@ -38,6 +38,11 @@ How the admin screens work without `anon` access to the closed rows:
 - The review queue is `GET /api/ceb-bills/ingestions?view=queue`.
 - Bill previews are `POST /api/ceb-bills/signed-url`.
 
+Column-level privileges are what enforce "four columns only": RLS decides which *rows* `anon`
+sees, the `GRANT` decides which *columns*. A browser query for anything else — including
+`select *` — is refused by Postgres. The admin CEB table reads all columns through
+`GET /api/ceb-bills/records`.
+
 **Verify the live database matches** (expect only `SELECT` rows, and none at all for the closed
 objects):
 
@@ -48,17 +53,28 @@ where roles && array['anon', 'public']::name[]
 order by schemaname, tablename, policyname;
 ```
 
-`public` in `roles` means every role, `anon` included. Bringing the database into line with
-this matrix is `scripts/sql/2026-09-24_revoke_anon_bill_access.sql` (bills) on top of
+`public` in `roles` means every role, `anon` included. And the column check for `ceb_data`
+(expect `true` for exactly `id`, `bill_date`, `earnings`, `units_exported`):
+
+```sql
+select column_name,
+       has_column_privilege('anon', 'public.ceb_data', column_name, 'select') as anon_can_read
+from information_schema.columns
+where table_schema = 'public' and table_name = 'ceb_data'
+order by ordinal_position;
+```
+
+Bringing the database into line with this matrix is
+`scripts/sql/2026-09-24_revoke_anon_bill_access.sql` (bills) and
+`scripts/sql/2026-09-24_ceb_data_public_columns.sql` (`ceb_data` columns), on top of
 `scripts/sql/2026-09-12_revoke_anon_writes.sql` (writes). Migrations are applied by hand; see
 [`MIGRATIONS.md`](./MIGRATIONS.md).
 
-## Known limitation
+## Widening the public surface
 
-`ceb_data` is public by design, but its rows also carry `account_number`, `file_path` and
-`ingestion_id`, which the dashboard does not need. Closing that means exposing a view with only
-the display columns and pointing the dashboard at it; it has not been done. The storage path is
-harmless without bucket access, but the account number is real customer data.
+If the redesign needs another column on the public dashboard, add it to the `GRANT` in a **new**
+migration and list it in the matrix above. Do not grant the whole table again: the account number
+is real customer data.
 
 ## Checklist for a new endpoint
 
