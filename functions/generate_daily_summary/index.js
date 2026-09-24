@@ -7,6 +7,7 @@
 // - Prevents updating today's record before 23:00 local time
 
 import { createClient } from '@supabase/supabase-js';
+import { exitOnServiceKeyProblem } from '../../api/_lib/serviceKeyGuard.js';
 import 'dotenv/config';
 
 // =============================================================
@@ -21,6 +22,9 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error('   SUPABASE_SERVICE_KEY:', SUPABASE_SERVICE_KEY ? 'SET' : 'MISSING');
   process.exit(1);
 }
+
+// Reject an anon key up front — see api/_lib/serviceKeyGuard.js.
+exitOnServiceKeyProblem(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 

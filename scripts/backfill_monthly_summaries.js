@@ -5,6 +5,7 @@
 // Requires: SUPABASE_URL and SUPABASE_SERVICE_KEY in .env
 
 import { createClient } from '@supabase/supabase-js';
+import { exitOnServiceKeyProblem } from '../api/_lib/serviceKeyGuard.js';
 import 'dotenv/config';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -14,6 +15,9 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error('❌ Missing Supabase environment variables.');
   process.exit(1);
 }
+
+// Reject an anon key up front — see api/_lib/serviceKeyGuard.js.
+exitOnServiceKeyProblem(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 

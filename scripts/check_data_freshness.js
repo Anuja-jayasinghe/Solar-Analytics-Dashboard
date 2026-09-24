@@ -18,6 +18,7 @@
 //   1  at least one table is stale  (or the check could not run)
 
 import { createClient } from '@supabase/supabase-js';
+import { exitOnServiceKeyProblem } from '../api/_lib/serviceKeyGuard.js';
 import 'dotenv/config';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -27,6 +28,9 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error('❌ Missing Supabase env vars SUPABASE_URL / SUPABASE_SERVICE_KEY');
   process.exit(1);
 }
+
+// Reject an anon key up front — see api/_lib/serviceKeyGuard.js.
+exitOnServiceKeyProblem(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
