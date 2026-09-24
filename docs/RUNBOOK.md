@@ -126,7 +126,10 @@ A layered failure with a documented history. Check in order:
 3. **Is every `api/` import in `dependencies`?** Vercel ships only `dependencies` into the
    function bundle, never `devDependencies`. `tests/runtimeDependencies.test.js` enforces this;
    run `pnpm test` before assuming otherwise.
-4. **Read the real response body.** Bare 500s are undiagnosable from the outside. Getting the
+4. **Is it a validation error, not a crash?** The endpoints now return `400` with an `error` (and
+   a `details` list for records) for bad input, and a fixed `500` message otherwise — the real
+   cause is in the function log (`vercel logs`), not the response.
+5. **Read the real response body.** Bare 500s are undiagnosable from the outside. Getting the
    actual body — from the browser, with a live session token — is what finally resolved this
    last time, after several blind deploy cycles. Do it early, not late.
 
@@ -149,7 +152,13 @@ layout, not OCR and not AI.
    arriving **tab-delimited**, which is invisible on the page. If the tabs are gone, that
    anchor is what broke.
 4. Fix the regex in `api/_lib/cebBillParser.js`, **add the new format as a fixture**, and
-   assert on specific values — not just the match count.
+   assert on specific values — not just the match count. A figure the regexes cannot find is
+   `null` in the result, never `0`; if the queue shows a blank where a number should be, that
+   anchor is what missed.
+
+If `POST /extract` reports "No tariff available", the bill did not print a rate and
+`system_settings.rate_per_kwh` is unset or unreadable. Set the setting; there is deliberately no
+default.
 
 > **Redact before committing a fixture.** Real bills carry the account holder's name, address
 > and phone number.
@@ -182,9 +191,19 @@ down while looking plausible. This has corrupted the dataset twice.
 3. **Review it even when `auto_approved`.** Validation proves the bill is *internally
    consistent* — it cannot prove the right bill was parsed, or that the regexes latched onto
    the right table rows.
-4. Approve. The record is written to `ceb_data` and the ingestion is marked `approved`.
+4. Approve. The record is written to `ceb_data` and the extraction and ingestion are marked
+   `approved`, in one transaction. Approval logs a warning if `approve_ceb_extraction()` has not
+   been installed yet — see [`MIGRATIONS.md`](./MIGRATIONS.md).
 
 Duplicates are caught by SHA-256 before storage, so re-uploading is safe.
+
+### Applying a database migration
+
+Take a DB Snapshot, read the migration's header for **ordering** (some must follow a code deploy),
+run it in the Supabase SQL editor, run its verification query, then record it in the ledger in
+[`MIGRATIONS.md`](./MIGRATIONS.md). The full procedure is there. To check the policies the app
+relies on are what [`SECURITY.md`](./SECURITY.md) says they should be, run the query at the top of
+that page.
 
 ### Verifying the data trail
 
@@ -294,7 +313,8 @@ Pasting the anon key here is the single most repeated mistake in this project's 
 ### Deploying
 
 `main` auto-deploys to production. CI must pass all four gates — lint, test, build, prod audit.
-None is `--if-present`; two of them silently passed for months before that was fixed.
+None is `--if-present`; two of them silently passed for months before that was fixed. The full
+checklist is [`guides/DEPLOYMENT_CHECKLIST.md`](./guides/DEPLOYMENT_CHECKLIST.md).
 
 ```bash
 curl -s https://solaredge.anujajay.com/ready | jq   # smoke test after deploy

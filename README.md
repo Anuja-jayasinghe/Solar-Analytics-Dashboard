@@ -290,6 +290,9 @@ tests/                    Vitest suites — parser, alignment, API validation, s
 | [Architecture](docs/ARCHITECTURE.md) | System design, both pipelines, data model, security — with diagrams |
 | [API Reference](docs/API.md) | Every endpoint, auth model, request and error shapes |
 | [Runbook](docs/RUNBOOK.md) | Operating procedures and incident response |
+| [Security](docs/SECURITY.md) | Trust boundaries, the RLS / storage policy matrix, the new-endpoint checklist |
+| [Migrations](docs/MIGRATIONS.md) | How schema changes are made, and which have been applied |
+| [Local development](docs/guides/LOCAL_DEVELOPMENT.md) | Running the app, the API and Clerk sign-in locally |
 | [Logic Registry](docs/logic-registry) | Specifications for the non-obvious domain rules |
 
 The repository also keeps a deliberate historical record — the

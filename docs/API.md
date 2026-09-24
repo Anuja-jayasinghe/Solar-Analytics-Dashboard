@@ -15,7 +15,7 @@ See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for how these fit together and
 Authorization: Bearer <clerk-session-token>
 ```
 
-`api/middleware/verifyAdminToken.js` verifies it with `@clerk/backend`'s `verifyToken`, then
+`api/_lib/verifyAdminToken.js` verifies it with `@clerk/backend`'s `verifyToken`, then
 fetches the user and requires `publicMetadata.role === 'admin'`. It **fails closed** — any
 error verifying, any missing claim, any non-admin role is a rejection, never a pass-through.
 

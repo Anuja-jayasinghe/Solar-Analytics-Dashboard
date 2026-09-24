@@ -1,3 +1,5 @@
+> **Archived — historical record, not current.** Written before September 2026. Current documentation: [`docs/README.md`](../README.md).
+
 # Solar Analytics Dashboard - Complete Project Documentation
 
 > **📦 Archive Notice:** This document contains legacy project details. For current documentation, see the main [README.md](../../README.md) and [Documentation Hub](../README.md).
