@@ -29,7 +29,7 @@ The remediation is a stack of pull requests, each targeting the one before it.
 | 1 — security | [#145](https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard/pull/145) | S1, S4, S8, S9, S10, S11, S12 | code done; **S1 migration not applied** |
 | 2 — root cause | [#146](https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard/pull/146) | S2, S3, S5, S6, S7 | code done; **two migrations not applied** |
 | 3 — dead code | [#147](https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard/pull/147) | Section 3 | done, except the items listed under *Not remediated* |
-| 4 — documentation | see the PR that carries this update | Section 4 | done |
+| 4 — documentation | [#148](https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard/pull/148) | Section 4 | done |
 
 "Code done" means the change is written, tested and built. It does not mean it is deployed or
 that the database has been changed. Database migrations are added under `scripts/sql/` and are
