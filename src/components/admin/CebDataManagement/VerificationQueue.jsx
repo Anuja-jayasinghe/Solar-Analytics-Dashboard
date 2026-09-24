@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../../../lib/supabaseClient';
 import { useAuth } from '@clerk/clerk-react';
 
 // Helper: determine if a queue item represents a failed parse
@@ -49,25 +48,19 @@ const VerificationQueue = ({ onApproveSuccess }) => {
   const fetchQueue = async () => {
     setLoading(true);
     try {
-        const { data, error } = await supabase
-        .from('ceb_bill_extractions')
-        .select(`
-            *,
-            ceb_bill_ingestions(file_path, status, id)
-        `)
-        .in('review_status', ['pending_review', 'auto_approved', 'approved'])
-        .order('created_at', { ascending: false });
+        // Served by the admin API: these tables carry account numbers and the path of every
+        // private bill PDF, so the browser's public anon key is not allowed to read them.
+        const token = import.meta.env.VITE_CLERK_JWT_TEMPLATE_NAME
+            ? await getToken({ template: import.meta.env.VITE_CLERK_JWT_TEMPLATE_NAME })
+            : await getToken();
 
-        if (error) throw error;
-
-        // Fetch failed parsing attempts (from ingestion table directly)
-        const { data: failedIngestions, error: failedError } = await supabase
-            .from('ceb_bill_ingestions')
-            .select('id, file_path, status, received_at')
-            .in('status', ['failed_api_limit', 'failed_extraction'])
-            .order('received_at', { ascending: false });
-
-        if (failedError) throw failedError;
+        const queueResponse = await fetch('/api/ceb-bills/ingestions?view=queue', {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!queueResponse.ok) {
+            throw new Error(`Queue request failed with status ${queueResponse.status}`);
+        }
+        const { extractions: data, failedIngestions } = await queueResponse.json();
 
         const mergedQueue = [...(data || [])];
         if (failedIngestions) {

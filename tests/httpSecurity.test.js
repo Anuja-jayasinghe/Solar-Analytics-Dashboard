@@ -84,10 +84,29 @@ describe('applyCors', () => {
 
   it('allows this project’s Vercel preview deployments', () => {
     const res = mockRes();
-    applyCors(mockReq({ origin: 'https://solar-analytics-dashboard-abc123.vercel.app' }), res);
+    applyCors(mockReq({ origin: 'https://solar-analytics-dashboard-abc123-anuja-jayasinghes-projects.vercel.app' }), res);
     expect(res.headers['Access-Control-Allow-Origin']).toBe(
-      'https://solar-analytics-dashboard-abc123.vercel.app'
+      'https://solar-analytics-dashboard-abc123-anuja-jayasinghes-projects.vercel.app'
     );
+  });
+
+  it('allows a branch preview under the same scope', () => {
+    const res = mockRes();
+    const origin = 'https://solar-analytics-dashboard-git-fix-security-anuja-jayasinghes-projects.vercel.app';
+    applyCors(mockReq({ origin }), res);
+    expect(res.headers['Access-Control-Allow-Origin']).toBe(origin);
+  });
+
+  it('rejects a look-alike project name registered under another Vercel scope', () => {
+    for (const origin of [
+      'https://solar-analytics-dashboard-evil.vercel.app',
+      'https://solar-analytics-dashboard-abc123-someone-elses-projects.vercel.app',
+      'https://solar-analytics-dashboard-anuja-jayasinghes-projects.vercel.app.evil.test'
+    ]) {
+      const res = mockRes();
+      applyCors(mockReq({ origin }), res);
+      expect(res.headers['Access-Control-Allow-Origin'], origin).toBeUndefined();
+    }
   });
 
   it('does not allow an unrelated vercel.app project', () => {

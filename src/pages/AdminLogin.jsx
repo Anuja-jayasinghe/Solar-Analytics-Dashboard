@@ -11,13 +11,6 @@ export default function AdminLogin() {
   useEffect(() => {
     // Auto-redirect based on user role and access level
     if (!loading && clerkLoaded && session?.user) {
-      console.log('🔐 AdminLogin Debug:', {
-        isAdmin,
-        dashboardAccess,
-        email: session.user.email,
-        metadata: clerkUser?.publicMetadata
-      });
-      
       if (dashboardAccess === 'real') {
         // Real users and admins go to real dashboard
         console.log('✅ Redirecting to /dashboard (Real user or Admin)');

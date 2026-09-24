@@ -97,29 +97,35 @@ field exists to make that state observable without reading logs.
 
 ## CEB bill pipeline
 
-The four endpoints below are one workflow. Order matters.
+The endpoints below are one workflow. Order matters.
 
 ```mermaid
 flowchart LR
     A["POST /upload"] --> B["POST /extract"]
     B --> C["👤 review in UI"]
     C --> D["PUT /records"]
-    A -.->|"list"| E["GET /ingestions"]
+    A -.->|"list / queue"| E["GET /ingestions"]
+    A -.->|"preview PDF"| G["POST /signed-url"]
     A -.->|"discard"| F["DELETE /delete"]
 ```
 
 ### `POST /api/ceb-bills/upload`
 
-Accepts a bill PDF as `multipart/form-data`, field name `file`.
+Accepts a bill PDF as `multipart/form-data`, field name `file`. **PDF only** — the type is
+checked twice: the declared `Content-Type` must be `application/pdf` and the bytes must contain
+the `%PDF-` marker. The stored path always ends in `.pdf`.
 
 Computes SHA-256 over the bytes and checks it against `ceb_bill_ingestions` **before** storing,
 so re-uploading the same bill is a no-op rather than a duplicate.
 
 | Status | Body |
 |---|---|
-| `201` | `{ ingestion: {...} }` — stored, `status: "received"` |
-| `400` | Missing `file` field, empty file, or not a PDF |
-| `409` | `{ error, existingIngestion }` — this exact file is already ingested |
+| `201` | `{ ingestionId, filePath, fileSha256, status: "received", receivedAt }` |
+| `400` | Missing `file` field, empty file, not a PDF, or larger than 10 MB |
+| `409` | `{ error, ingestionId, filePath, receivedAt, status, fileSha256 }` — this exact file is already ingested |
+
+The 10 MB limit is enforced by the handler. The hosting platform may impose a lower request
+body limit on serverless functions; bills are far smaller than either in practice.
 
 > Real bills contain the account holder's name, address and phone number. They are gitignored
 > (`resources/*`), and any test fixture derived from one must be redacted.
@@ -171,7 +177,27 @@ left stuck at `received`.
 
 ### `GET /api/ceb-bills/ingestions`
 
-`200` → `{ files: [...] }`. Ingestions with their extractions joined, for the review queue.
+Admin-only. Two views:
+
+- `?limit=N` (default 12, max 100) → `{ files: [...] }` — recent uploads with their extraction
+  joined, for the admin file list.
+- `?view=queue` → `{ extractions: [...], failedIngestions: [...] }` — the verification queue:
+  extractions that are `pending_review`, `auto_approved` or `approved`, each with its ingestion
+  joined, plus ingestions that ended `failed_api_limit` / `failed_extraction`.
+
+The review screen reads these through the API rather than querying the tables from the
+browser. The tables hold account numbers and the path of every private bill PDF, and the
+browser's anon key is public — see [`SECURITY.md`](./SECURITY.md).
+
+### `POST /api/ceb-bills/signed-url`
+
+```json
+{ "filePath": "ceb/2026/09/user_xxx/2026-09-03T…_bill.pdf" }
+```
+
+`200` → `{ signedUrl, expiresIn: 300 }`. A five-minute link to one bill PDF, signed
+server-side. `filePath` must belong to a known ingestion (`404` otherwise) — the endpoint will
+not sign an arbitrary path in the bucket.
 
 ### `POST` | `PATCH` | `PUT /api/ceb-bills/records`
 
@@ -179,9 +205,9 @@ Promotes a reviewed extraction into `ceb_data` — the canonical billing table.
 
 | Method | Purpose | Body |
 |---|---|---|
-| `POST` | Insert a new record | `{ record }` |
+| `POST` | Upsert a manually entered record (on `account_number, billing_month`) | `{ record }` |
 | `PATCH` | Edit an existing one | `{ id, record }` |
-| `PUT` | Upsert + mark the ingestion `approved` | `{ record }` |
+| `PUT` | Approve a parsed bill: upsert `ceb_data`, then mark the extraction and ingestion `approved` | `{ extractionId, ingestionId, record }` |
 
 `400` returns `{ error: "Invalid record", details: [...] }` listing each field that failed
 validation.
@@ -191,12 +217,20 @@ anon key has `SELECT` and nothing else.
 
 ### `POST` | `DELETE /api/ceb-bills/delete`
 
-`{ ingestionId }` — removes the stored file, its ingestion row, its extractions, **and any
-`ceb_data` row derived from it**. Fully destructive. `404` if unknown.
+Fully destructive. Address the bill by **one** of:
 
-### `POST` | `DELETE /api/ceb-bills/delete-record`
+- `{ ingestionId }` — the upload, its extraction, any `ceb_data` row derived from it, and the
+  stored PDF.
+- `{ recordId }` — one `ceb_data` row, plus the ingestion, extraction and PDF behind it when
+  there is one.
 
-`{ recordId }` — removes a `ceb_data` row and its associated files.
+`400` if neither or both are given; `404` if unknown. `200` → `{ success: true }`, with
+`warnings: [...]` when the database was cleaned but the stored PDF could not be removed.
+
+Order is database rows first and the file last, and every step is checked and idempotent, so a
+failed request can be repeated. This endpoint replaces the former `delete-record`, which did
+the same job in the opposite order and relied on a database trigger that is not in any
+migration.
 
 ---
 
@@ -205,9 +239,9 @@ anon key has `SELECT` and nothing else.
 ### `PUT` | `POST /api/settings`
 
 - `PUT` — one setting: `{ id, setting_value }`
-- `POST` — several: `{ settings: [{ id, setting_value }, ...] }`
+- `POST` — seed several: `{ settings: [{ setting_name, setting_value, description? }, ...] }`
 
-`200` → `{ setting }` or `{ settings }`. `400` on a missing id or a value that fails the
+`200` → `{ setting }`; `201` → `{ settings }`. `400` on a missing id or a value that fails the
 per-setting type check; `403` if the setting is not editable; `404` if unknown.
 
 `rate_per_kwh` is the one that matters — it is the fallback tariff for validating bills that
@@ -217,10 +251,21 @@ don't print their own rate.
 
 ## Users
 
-### `GET` | `POST` | `PATCH` | `DELETE /api/admin/users/[userId]`
+### `GET` | `PATCH` | `DELETE /api/admin/users/[userId]`
 
-Clerk user administration. `GET` without a `userId` lists users; with one, returns that user.
-`PATCH` accepts `{ role, dashboardAccess }` and rejects an empty update with `400`.
+Clerk user administration. `GET` without a `userId` lists every user (paged through Clerk 100 at
+a time, up to 1,000); with one, returns that user.
+
+`PATCH` accepts `{ role?, dashboardAccess? }` and validates both:
+
+| Field | Allowed values |
+|---|---|
+| `role` | `user`, `admin` |
+| `dashboardAccess` | `demo`, `real` |
+
+`400` for anything else, for an empty update, and for an admin trying to remove **their own**
+admin role — which is what guarantees the last admin cannot be demoted. `DELETE` refuses to
+delete the caller.
 
 ---
 
@@ -232,8 +277,14 @@ Clerk user administration. `GET` without a `userId` lists users; with one, retur
 { "endpointKey": "inverterDetail", "params": { } }
 ```
 
-Signs and forwards a request to SolisCloud. **Rate limited** — `429` when exceeded.
-`endpointKey` must name a pre-registered endpoint; arbitrary URLs are not accepted.
+Signs and forwards a request to SolisCloud. `endpointKey` must name a pre-registered endpoint;
+arbitrary URLs are not accepted. Parameters are validated against that endpoint's schema
+(declared names only, string type, length cap, and format / range where declared — e.g. dates
+are `YYYY-MM-DD`, page size is 1–100) and anything else is dropped or rejected with `400`.
+
+Every call writes one `[AUDIT]` JSON line to the function log. The rate limit (`429`) is held in
+module memory, so it applies per warm serverless instance: it slows a runaway client but is not
+a global quota.
 
 This is a diagnostic tool, not part of the data path. The scheduled collectors in `functions/`
 call SolisCloud directly.

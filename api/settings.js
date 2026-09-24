@@ -18,8 +18,6 @@ import { verifyAdminToken } from './_lib/verifyAdminToken.js';
 import { handlePreflightAndMethod } from './_lib/httpSecurity.js';
 import { supabase, blockOnConfigProblem } from './_lib/supabaseServer.js';
 
-
-
 // Only these may be written through this endpoint. An allowlist keeps a compromised admin
 // session from introducing arbitrary rows into a table the dashboard trusts.
 const ALLOWED_SETTINGS = new Set([
@@ -50,7 +48,7 @@ export default async function handler(req, res) {
   const adminUser = await verifyAdminToken(req, res);
   if (!adminUser) return; // verifyAdminToken has already sent 401/403
 
-    if (blockOnConfigProblem(res)) return;
+  if (blockOnConfigProblem(res)) return;
 
   try {
     if (req.method === 'PUT') {
@@ -136,6 +134,6 @@ export default async function handler(req, res) {
     return res.status(201).json({ settings: data });
   } catch (error) {
     console.error('Settings write failed', { message: error?.message });
-    return res.status(500).json({ error: 'Failed to write settings', details: error?.message });
+    return res.status(500).json({ error: 'Failed to write settings' });
   }
 }

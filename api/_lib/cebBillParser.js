@@ -24,14 +24,14 @@
  * redesign. All but one survived the redesign unchanged; see BILL_REF_DATE below.
  */
 export const PATTERNS = {
-  // legacy: "Electricity A/C No.: 4924089702"
-  // 2026:   "Electricity A/C No.: 4924089702\tWPN"
+  // legacy: "Electricity A/C No.: 0000000000"
+  // 2026:   "Electricity A/C No.: 0000000000\tWPN"
   accountNumber: /Electricity A\/C No\.:\s*(\d+)/i,
   // legacy: "2024 SEP\tMonth:"   2026: "2026 SEP\tMonth:"
   billingMonth: /([0-9]{4} [A-Z]{3})\s+Month:/i,
   // legacy only: "Bill Date: 9/5/2024 9:59:05 AM". The 2026 bill dropped this label.
   billDateLabel: /Bill Date:\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i,
-  // 2026 replacement: "Bill Ref: 457-4924089702-20260903082730"
+  // 2026 replacement: "Bill Ref: 457-0000000000-20260903082730"
   //                                             ^^^^^^^^ YYYYMMDD (+ HHMMSS)
   billRefDate: /Bill Ref:\s*\d+-\d+-(\d{4})(\d{2})(\d{2})\d{6}/i,
   // both: "No. of Units Exported (kWh) 4007"
@@ -57,7 +57,7 @@ export const LEGACY_PATTERNS = PATTERNS;
  *
  * The 2026 redesign removed the "Bill Date:" label — this was the ONLY field the new format
  * broke. The date is still present, encoded in the bill reference
- * (`457-4924089702-20260903082730`), so we read it from there.
+ * (`457-0000000000-20260903082730`), so we read it from there.
  *
  * Legacy dates were previously returned raw as `9/5/2024`, which is ambiguous and was being
  * written straight into a DATE column. Both paths now normalise to ISO.

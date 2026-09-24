@@ -33,7 +33,7 @@ describe('parseCebBillText — legacy (pre-2026) bill layout', () => {
   const parsed = parseCebBillText(legacyBill);
 
   it('extracts the account number', () => {
-    expect(parsed.account_number).toBe('4924089702');
+    expect(parsed.account_number).toBe('0000000000');
   });
 
   it('extracts the billing month, uppercased', () => {
@@ -103,7 +103,7 @@ describe('parseCebBillText — failure behaviour', () => {
     // This is what a redesigned bill looks like to the current parser: the numbers are all
     // present, but under different wording, so every anchor misses.
     const newFormat = [
-      'Account Number 4924089702',
+      'Account Number 0000000000',
       'Statement Date 05-Sep-2026',
       'Billing Period SEP 2026',
       'Units Exported to Grid 3676 kWh',
@@ -120,7 +120,7 @@ describe('parseCebBillText — failure behaviour', () => {
 
 describe('validateExtraction', () => {
   const good = {
-    account_number: '4924089702',
+    account_number: '0000000000',
     billing_month: '2024 SEP',
     billing_period_start: '2024-08-06',
     billing_period_end: '2024-09-05',
@@ -186,8 +186,8 @@ describe('parseCebBillText — 2026 redesigned bill', () => {
   const parsed = parseCebBillText(bill2026);
 
   it('still finds the account number despite the trailing region code', () => {
-    // "Electricity A/C No.: 4924089702\tWPN"
-    expect(parsed.account_number).toBe('4924089702');
+    // "Electricity A/C No.: 0000000000\tWPN"
+    expect(parsed.account_number).toBe('0000000000');
   });
 
   it('still finds the billing month', () => {
@@ -195,7 +195,7 @@ describe('parseCebBillText — 2026 redesigned bill', () => {
   });
 
   it('recovers the issue date from the bill reference, which replaced "Bill Date:"', () => {
-    // "Bill Ref: 457-4924089702-20260903082730"
+    // "Bill Ref: 457-0000000000-20260903082730"
     expect(parsed.bill_issue_date).toBe('2026-09-03');
   });
 
@@ -271,11 +271,11 @@ describe('extractBillIssueDate', () => {
   });
 
   it('reads the 2026 bill reference', () => {
-    expect(extractBillIssueDate('Bill Ref: 457-4924089702-20260903082730')).toBe('2026-09-03');
+    expect(extractBillIssueDate('Bill Ref: 457-0000000000-20260903082730')).toBe('2026-09-03');
   });
 
   it('prefers the explicit label when a bill somehow carries both', () => {
-    const both = 'Bill Ref: 457-4924089702-20260903082730\nBill Date: 1/2/2020 0:00:00 AM';
+    const both = 'Bill Ref: 457-0000000000-20260903082730\nBill Date: 1/2/2020 0:00:00 AM';
     expect(extractBillIssueDate(both)).toBe('2020-01-02');
   });
 

@@ -1,11 +1,13 @@
 import { verifyAdminToken } from '../_lib/verifyAdminToken.js'
-import { buildStoragePath, createSha256, parseMultipartForm } from '../_lib/cebBillUploadUtils.js'
+import { buildStoragePath, createSha256, looksLikePdf, parseMultipartForm } from '../_lib/cebBillUploadUtils.js'
 import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
 import { supabase, blockOnConfigProblem } from '../_lib/supabaseServer.js';
 
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET_BILLS || 'ceb_bills'
 const MAX_BYTES = 10 * 1024 * 1024
-const ALLOWED_TYPES = new Set(['application/pdf', 'image/png', 'image/jpeg'])
+// PDF only: the extractor reads the PDF text layer and cannot parse images, so accepting them
+// would only create ingestions that are guaranteed to fail extraction.
+const ALLOWED_TYPES = new Set(['application/pdf'])
 
 
 
@@ -47,6 +49,12 @@ export default async function handler(req, res) {
 
     if (!file.buffer || file.buffer.length === 0) {
       res.status(400).json({ error: 'Uploaded file is empty' })
+      return
+    }
+
+    // The declared type is client-supplied; check the bytes too.
+    if (!looksLikePdf(file.buffer)) {
+      res.status(400).json({ error: 'Uploaded file is not a valid PDF' })
       return
     }
 
@@ -141,6 +149,6 @@ export default async function handler(req, res) {
       return
     }
 
-    res.status(500).json({ error: 'Failed to upload CEB bill', details: errorMessage })
+    res.status(500).json({ error: 'Failed to upload CEB bill' })
   }
 }
