@@ -21,15 +21,69 @@ the query that settles it.
 
 ## Status tracker
 
-Updated as each remediation lands. `open` = not yet started.
+The remediation is a stack of pull requests, each targeting the one before it.
 
 | Step | PR | Findings | Status |
 |---|---|---|---|
-| 0 — audit log | this file | — | done |
-| 1 — security | | S1, S4, S8, S9, S10, S11, S12 | open |
-| 2 — root cause | | S2, S3, S5, S6, S7 | open |
-| 3 — dead code | | Section 3 | open |
-| 4 — documentation | | Section 4 | open |
+| 0 — audit log | [#144](https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard/pull/144) | — | done |
+| 1 — security | [#145](https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard/pull/145) | S1, S4, S8, S9, S10, S11, S12 | code done; **S1 migration not applied** |
+| 2 — root cause | [#146](https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard/pull/146) | S2, S3, S5, S6, S7 | code done; **two migrations not applied** |
+| 3 — dead code | [#147](https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard/pull/147) | Section 3 | done, except the items listed under *Not remediated* |
+| 4 — documentation | see the PR that carries this update | Section 4 | done |
+
+"Code done" means the change is written, tested and built. It does not mean it is deployed or
+that the database has been changed. Database migrations are added under `scripts/sql/` and are
+**not** applied automatically; the ledger of what has been applied is
+[`MIGRATIONS.md`](./MIGRATIONS.md).
+
+## What the remediation changed, finding by finding
+
+| # | What was done |
+|---|---|
+| S1 | Bill previews and the review queue are served by admin endpoints (`POST /api/ceb-bills/signed-url`, `GET /api/ceb-bills/ingestions?view=queue`). `2026-09-24_revoke_anon_bill_access.sql` drops the anon policies by behaviour rather than by name. [`SECURITY.md`](./SECURITY.md) holds the policy matrix. **Still unverified against the live database** |
+| S2 | `approve_ceb_extraction()` does the three approval writes in one transaction and rejects an extraction that does not belong to the ingestion. The handler falls back, with a warning, until it is installed |
+| S3 | `api/_lib/serviceKeyGuard.js`, called by both collectors, the backfill scripts and the freshness check. Verified: each exits 1 on an anon-role key |
+| S4 | One `/api/ceb-bills/delete` endpoint; database rows first, file last, every result checked. `delete-record` removed. No longer relies on the live-only trigger |
+| S5 | `extract.js` validates and parses before changing anything, saves the new extraction before removing the old, keeps the status of a previously extracted ingestion on failure, and has no default tariff |
+| S6 | Fixed at the source: the parser returns `null` (not `0`) for what it cannot read; the validator accepts a measured zero and flags a missing value. The review queue also blanked a parsed `0` — fixed |
+| S7 | `2026-09-24_ceb_schema_drift.sql` adds the two undeclared columns. The trigger and the missing foreign key are documented in its header, not migrated |
+| S8 | Role and access allowlists, no self-demotion, the list pages past 100, no pre-auth logging, no upstream error text |
+| S9 | Header corrected, audit line always written, schema tightened (formats, ranges, length, falsy non-strings), own-property lookup |
+| S10 | `.npmrc` removed |
+| S11 | PDF-only, verified by magic bytes, stored path always `.pdf`, quoted boundaries handled, parser tested. The platform's request-body limit is **still unverified** |
+| S12 | CORS scoped to this team's Vercel scope; `/ready` no longer echoes error text; auth PII removed from the console; account number replaced by a placeholder in tracked files (it remains in git history); the `yaml` advisory cleared by removing Chakra/emotion |
+
+Tests went from 91 to 191. Non-PDF JavaScript went from 1,557 KB to 1,194 KB.
+
+## Found while remediating
+
+- **The review queue showed a parsed `0` as blank** (`item.units_exported || ''`), which made a
+  measured zero look missing and blocked approving it. Fixed alongside S6.
+- **S13 — `ceb_data` is publicly readable and carries `account_number` and `file_path`.** The
+  dashboard needs neither. **Not fixed**: the remedy is a view of the display columns and
+  pointing the dashboard at it, which is a decision about the public data surface.
+- **`updateUserMetadata` in the Clerk adapter writes `unsafeMetadata`**, which the user controls.
+  Nothing calls it and nothing authorizes on it, so it is harmless today, but it is a trap. Left
+  in place because it belongs to the adapter's interface.
+- **`@clerk/clerk-react` is deprecated** by the vendor in favour of `@clerk/react`.
+- `failed_api_limit` and the extraction table's `rejected` status are never set by any code.
+
+## Not remediated
+
+Deliberately left, each needing a decision rather than an edit:
+
+- `.agents/skills/` and `skills/`, which hold the same two vendor skill packs (73 files), and
+  `skills-lock.json`.
+- The finished Clerk-migration scripts, `scripts/migrate-users-to-clerk.js` and
+  `scripts/export-users.js`.
+- The duplicate `ErrorBoundary` and `SkeletonLoader` components. Each pair is used from
+  different places, so merging them is a behaviour change, not a deletion.
+- S13 above; the live-only trigger; the `ceb_data.ingestion_id` foreign key; a `ceb_data` unique
+  index that treats NULL account numbers as distinct.
+- Unused CSS and image assets were never checked.
+- Lighthouse has not been re-run since the bundle shrank.
+- Seven links inside archived documents still point at files that no longer exist; they are
+  historical.
 
 ---
 
@@ -128,13 +182,12 @@ tables and `storage.objects` show no `anon` rows.
   covers `verifyAdminToken`, `sanitizeRecord`, the settings validation, the multipart parser,
   the Solis validator or the delete flows.
 
-## 5. Remediation plan
+## 5. Remediation order used
 
-1. **Verify S1** against the live database (query above). Nothing else should be merged ahead
-   of the S1 migration being applied if the policies turn out to be live.
-2. **Security** — S1 (code + migration), S4, S8, S9, S10, S11, S12.
-3. **Root cause** — S2, S3, S5, S6, S7, with tests.
-4. **Dead code** — Section 3, then re-measure the bundle.
-5. **Documentation** — Section 4, and update the tracker above.
+1. Verify S1 against the live database (query above).
+2. Security — S1 (code + migration), S4, S8, S9, S10, S11, S12.
+3. Root cause — S2, S3, S5, S6, S7, with tests.
+4. Dead code — Section 3, then re-measure the bundle.
+5. Documentation — Section 4, and the tracker above.
 
-Database migrations are added under `scripts/sql/` and are **not applied automatically**.
+Step 1 has **not** happened: it needs access to the live project.

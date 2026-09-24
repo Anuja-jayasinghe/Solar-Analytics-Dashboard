@@ -1,3 +1,5 @@
+> **Archived — historical record, not current.** Written before September 2026. Current documentation: [`docs/README.md`](../README.md).
+
 # Dashboard Improvements Implementation Tracker
 
 **Date:** November 19, 2025  

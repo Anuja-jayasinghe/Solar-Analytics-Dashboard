@@ -1,147 +1,61 @@
-# Deployment Checklist
+# Deployment checklist
 
-## Pre-Deployment
+The project deploys to **Vercel**: `main` auto-deploys to production, and every pull request
+gets a preview. There is no manual deploy step. This is what to check around one.
 
-### Code Quality
-- [x] All tests passing
-- [x] No console errors in production build
-- [x] Bundle size optimized (< 350KB total)
-- [x] All components render correctly
-- [x] Error handling tested
+## Before merging
 
-### Database Setup
-- [x] Run billing period SQL inserts in production Supabase
-- [x] Verify RPC function `get_monthly_comparison` exists
-- [x] Check table indexes for performance
-- [x] Enable Row Level Security (RLS) policies
+- [ ] CI is green: lint, tests, build and `pnpm audit --prod --audit-level high`. All four are
+      mandatory; none is `--if-present`.
+- [ ] If the change adds a serverless function, the count is still within Vercel Hobby's limit
+      of **12** (currently 10). Anything under `api/_lib/` or `api/_config/` does not count.
+- [ ] If the change adds a database migration, read its header for **ordering**. Some must run
+      after the code is deployed, some before. See [`../MIGRATIONS.md`](../MIGRATIONS.md).
+- [ ] If the change adds an environment variable, it is in `.env.example` with a comment, and
+      set in **both** Vercel and GitHub Actions if scheduled jobs use it. The two hold separate
+      copies.
+- [ ] No secret sits behind a `VITE_` prefix. Vite compiles those into the public bundle.
+      Server-side secrets — `SUPABASE_SERVICE_KEY`, `CLERK_SECRET_KEY`, `SOLIS_API_ID`,
+      `SOLIS_API_SECRET` — must never have a `VITE_` twin.
 
-### Environment Variables
-- [x] Set production environment variables:
-  - `VITE_SUPABASE_URL`
-  - `VITE_SUPABASE_ANON_KEY`
-  - `VITE_SOLIS_API_KEY`
-  - `VITE_SOLIS_API_SECRET`
-  - `VITE_SOLIS_BASE_URL`
+## Required environment
 
-### Build Verification
-- [x] Production build successful (`npm run build`)
-- [x] No build warnings
-- [x] Assets properly generated in `dist/`
-- [x] Index.html contains correct meta tags
+Set in Vercel → Project → Settings → Environment Variables. Every variable is documented in
+`.env.example`.
 
-## Deployment Steps
+| Variable | Notes |
+|---|---|
+| `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` | The key must be the **service_role** key. An anon key is rejected with an explanation |
+| `CLERK_SECRET_KEY` | Authorises every admin endpoint |
+| `SOLIS_API_URL`, `SOLIS_API_ID`, `SOLIS_API_SECRET` | Server-side only |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_CLERK_PUBLISHABLE_KEY`, `VITE_USE_CLERK_AUTH` | Public by design |
+| `ALLOWED_ORIGINS`, `CLERK_AUTHORIZED_PARTIES` | Optional. Each **replaces** its default list |
 
-### Option 1: Netlify
+## After a deploy
+
 ```bash
-# Install CLI
-npm install -g netlify-cli
-
-# Build and deploy
-npm run build
-netlify deploy --prod --dir=dist
-
-# Or connect GitHub repo for auto-deploy
-netlify init
+curl -s https://solaredge.anujajay.com/healthz | jq   # is it up?
+curl -s https://solaredge.anujajay.com/ready   | jq   # config and database
 ```
 
-### Option 2: Vercel
-```bash
-# Install CLI
-npm install -g vercel
+`/ready` reports the service key's role. Anything other than `service_role` (or `null` for the
+newer opaque `sb_secret_…` keys) means writes will fail.
 
-# Deploy
-vercel --prod
+Then a quick pass through what the change touched. For anything near the bill pipeline:
 
-# Or import GitHub repo in Vercel dashboard
-```
+- [ ] Upload a PDF → parsing runs → it appears in the review queue
+- [ ] Preview opens the PDF
+- [ ] Approve a bill → the row appears in the table and the ingestion shows `approved`
+- [ ] Delete something you uploaded for the test
 
-### Option 3: Manual (Static Hosting)
-1. Run `npm run build`
-2. Upload `dist/` folder to hosting provider
-3. Configure redirects (see netlify.toml/vercel.json)
-4. Set environment variables in hosting dashboard
+## Rolling back
 
-## Post-Deployment
+Vercel → Deployments → the previous production deployment → **Promote to Production**. Code only:
+database migrations are not rolled back by this. Each migration's header says how to reverse it.
 
-### Verification
-- [ ] Dashboard loads without errors
-- [ ] All cards display data
-- [ ] Charts render correctly
-- [ ] Theme toggle works
-- [ ] Settings page accessible
-- [ ] Admin dashboard (if applicable)
+## Scheduled jobs
 
-### Performance Check
-- [ ] Run Lighthouse audit (target > 85)
-- [ ] Test on mobile devices
-- [ ] Verify HTTPS enabled
-- [ ] Check CDN caching headers
-- [ ] Test from different geographic locations
-
-### Monitoring Setup
-- [ ] Set up error tracking (Sentry/LogRocket)
-- [ ] Configure uptime monitoring (UptimeRobot)
-- [ ] Set up analytics (Google Analytics/Plausible)
-- [ ] Monitor Supabase usage/quotas
-- [ ] Check Solis API rate limits
-
-### User Communication
-- [ ] Notify users of new features
-- [ ] Document changes in changelog
-- [ ] Update help documentation
-- [ ] Prepare support for questions
-
-## Rollback Plan
-
-If issues occur:
-1. Revert to previous deployment (Netlify/Vercel dashboard)
-2. Check error logs in hosting platform
-3. Verify environment variables
-4. Test database connectivity
-5. Contact support if needed
-
-## Performance Benchmarks
-
-**Build Output (Validated May 21, 2026):**
-- Total bundle size: ~1.18 MB (uncompressed)
-- Gzipped: ~319 KB
-- Main chunks:
-  - react-vendor: 733.78 KB (gzipped: 201.89 KB)
-  - vendor: 310.00 KB (gzipped: 100.62 KB)
-  - supabase-vendor: 147.10 KB (gzipped: 39.39 KB)
-
-**Target Metrics:**
-- First Contentful Paint: < 1.5s ✅
-- Time to Interactive: < 3s ✅
-- Largest Contentful Paint: < 2.5s ✅
-- Cumulative Layout Shift: < 0.1 ✅
-
-## Success Criteria
-
-- ✅ Zero critical errors
-- ✅ Dashboard loads in < 3 seconds
-- ✅ All features functional
-- ✅ Mobile responsive
-- ✅ Theme persistence working
-- ✅ Error handling operational
-- ✅ Caching system active
-
----
-
-**Deployment Date:** May 21, 2026  
-**Deployed By:** Antigravity (AI Pair Partner) & Anuja Jayasinghe  
-**Version:** 2.0.0-rc1 (CEB Release)  
-**Status:** BUILD VALIDATED & READY FOR DEPLOYMENT 🚀  
-
----
-
-## 📋 Document History
-
-**Maintainer:** Anuja Jayasinghe  
-
-### Change Log
-- **Created:** November 16, 2025 - Initial deployment checklist for v2.0.0
-- **Updated:** November 19, 2025 - Verified all checklist items accurate, added maintainer log
-- **Updated:** May 21, 2026 - Validated local build success (Vite v7.1.10) and RLS compliance before deployment.
-
-**Last Updated:** May 21, 2026
+The GitHub Actions workflows run from the default branch and use their own copy of the
+secrets. After changing a secret, run the affected workflow once by hand and read the log. The
+jobs now exit non-zero if `SUPABASE_SERVICE_KEY` is an anon key. See the
+[runbook](../RUNBOOK.md#the-workflows).

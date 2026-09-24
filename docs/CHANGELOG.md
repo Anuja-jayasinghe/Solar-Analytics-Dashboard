@@ -2,18 +2,82 @@
 
 All notable changes to the Solar Analytics Dashboard project.
 
-## [Unreleased] - 2026-07-12
+## [Unreleased] - 2026-09-24
+
+Remediation of the repository audit in [`REPO_AUDIT_2026-09-24.md`](REPO_AUDIT_2026-09-24.md).
+The three SQL migrations it adds are **not applied automatically** — see
+[`MIGRATIONS.md`](MIGRATIONS.md).
+
+### Security
+- **Bill PDFs and the review queue no longer depend on public anon access.** New
+  `POST /api/ceb-bills/signed-url` and `GET /api/ceb-bills/ingestions?view=queue` replace the
+  browser's direct storage and table reads. `2026-09-24_revoke_anon_bill_access.sql` drops the
+  anon policies on the two `ceb_bill_*` tables and the `ceb_bills` bucket. Deploy the code first.
+- `/api/admin/users`: `role` and `dashboardAccess` are allowlisted; an admin cannot remove their own
+  admin role; the user list pages past 100; no pre-authentication logging; no upstream error text
+  in responses.
+- `/api/solis/explore`: stricter parameter schema (date formats, integer ranges, length cap),
+  own-property endpoint lookup, and an audit line that is always written.
+- Uploads are PDF-only, verified by their bytes; stored paths always end in `.pdf`.
+- CORS accepts only this project's Vercel preview hosts under this team's scope, not any project
+  whose name starts the same way.
+- `/ready` no longer echoes database error text; auth details are no longer logged to the browser
+  console; the real account number was replaced by a placeholder in tracked files.
+- Removed `.npmrc`'s `frozen-lockfile=false` so Vercel installs match the lockfile CI verifies.
+- `docs/SECURITY.md` added: trust boundaries, the policy matrix, a new-endpoint checklist.
 
 ### Fixed
-- **ErrorBanner.jsx**: fixed an invalid/conditional React hook call — `useToast()`/`useEffect()` were being called inside a plain helper function (`getErrorTitle`) invoked during render inside a `.map()`, which would throw when a rate-limit error was shown. Moved the toast side-effect into the component's top-level `useEffect`.
-- **eslint.config.js**: added Node globals for `api/`, `functions/`, `scripts/`, `vite.config.js`, and `src/lib/solisAuth.js`, eliminating ~130 false-positive `no-undef` errors for `process`/`Buffer`. Added `argsIgnorePattern`/`caughtErrorsIgnorePattern` (`^_`) so intentionally-unused params can be marked explicitly.
-- **AdminDashboard.jsx**: fixed a broken escape sequence (`\_` → `\\_`) in the CONTROL.CENTER ASCII-art banner that was silently dropping a backslash from the rendered art.
-- Removed dead code: unused storage-listing helpers in `api/ceb-bills/ingestions.js` (leftover from a pre-DB-query implementation), unused imports/vars/dead style objects across `RefreshIndicator.jsx`, `Sidebar.jsx`, `MonthlyGenerationCard.jsx`, and several admin components, an empty silent `catch {}` in `cacheService.js` (now documented as intentional).
+- **`null` is no longer confused with `0` in the bill parser.** It returned `0` for any figure it
+  could not find; a measured zero was rejected as a failure and a missing value accepted. The
+  review queue also showed a parsed `0` as blank.
+- **Bill approval is atomic** (`approve_ceb_extraction()`): `ceb_data`, the extraction and the
+  ingestion are approved in one transaction. Record input is validated more strictly.
+- `POST /api/ceb-bills/extract` no longer deletes the previous extraction before it has downloaded
+  and parsed the file, and no longer validates against an invented Rs 37 tariff.
+- Scheduled collectors, backfill scripts and the freshness check now refuse to start with an anon
+  key in `SUPABASE_SERVICE_KEY` (`api/_lib/serviceKeyGuard.js`).
+- One `delete` endpoint replaces `delete` and `delete-record`; rows are removed before the file and
+  every result is checked.
 
-Full write-up: [docs/development/LOCAL_LOGIN_DEBUG_LOG.md](development/LOCAL_LOGIN_DEBUG_LOG.md)
+### Removed
+- ~1,700 lines of unreachable source, eight unused fetchers in `dataService.js`, five broken Clerk
+  adapter methods, three dead scripts.
+- Dependencies: `@chakra-ui/react`, `@emotion/react`, `@emotion/styled`, `framer-motion`,
+  `crypto-js`, `@types/react`, `@types/react-dom`. Non-PDF JavaScript 1,557 KB → 1,194 KB;
+  `react-vendor` 776 KB → 263 KB. `pnpm audit --prod` is now clean.
+- The dashboard v2 preview and its design-direction document (PR #143). They remain in git history.
 
-### In progress
-- Diagnosing local dev login failure: `.env.local` has a Clerk **production** (`pk_live_`) publishable key, which Clerk refuses to initialize outside its configured production domain — breaks the login page under both `npm run dev` and `npx vercel dev` on localhost. Fix path chosen: ngrok tunnel (per `docs/LOCAL_CLERK_DEVELOPMENT.md` Option 1). ngrok installed via winget; **blocked on user providing an ngrok auth token** to continue setup.
+### Documentation
+- `SECURITY.md`, `MIGRATIONS.md`, `guides/LOCAL_DEVELOPMENT.md` added; `START_HERE`, `docs/README`,
+  the CEB bill guide, the deployment checklist, `API.md` and `ARCHITECTURE.md` brought up to date.
+- Fifty-odd superseded documents moved to `docs/archive/` with banners.
+
+## [2.1.0] - 2026-09-13
+
+Last known-good state before the UI redesign work began. The CEB bill parser handles both the
+pre-2026 and the 2026 (`ebill-edl-v.1.0.2`) formats; 25 bills reconciled end to end. Details:
+[`RECOVERY_STATUS_2026-09.md`](RECOVERY_STATUS_2026-09.md),
+[`PROJECT_AUDIT_2026-09.md`](PROJECT_AUDIT_2026-09.md).
+
+### Security
+- Every write moved behind an admin-authenticated API endpoint; anon write policies dropped.
+- Clerk verification moved to `@clerk/backend` with a replay guard; CORS is an allowlist.
+
+### Fixed
+- The five-month inverter data outage and its three stacked causes; a freshness check, a keepalive
+  and a DB snapshot workflow added so a silent recurrence is not possible.
+- The parser and its text extraction, and the Edge Function's retry handling.
+
+### Added
+- Liveness and readiness probes (`/healthz`, `/ready`); `ARCHITECTURE`, `API` and `RUNBOOK`.
+
+## [Earlier 2026-07-12] — lint sweep
+
+### Fixed
+- **ErrorBanner.jsx**: fixed an invalid/conditional React hook call.
+- **eslint.config.js**: added Node globals for `api/`, `functions/`, `scripts/`, eliminating ~130 false positives.
+- **AdminDashboard.jsx**: fixed a broken escape sequence in the ASCII-art banner.
+- Removed dead code left over from a pre-database implementation of `ingestions.js`.
 
 ## [2.0.0] - 2025-11-16
 

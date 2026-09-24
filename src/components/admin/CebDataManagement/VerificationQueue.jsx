@@ -80,14 +80,18 @@ const VerificationQueue = ({ onApproveSuccess }) => {
         setQueue(mergedQueue.filter(i => i.review_status !== 'approved'));
         setHistory(mergedQueue.filter(i => i.review_status === 'approved').sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at)));
 
+        // A figure the parser did not find is null and shows blank; a figure it read as 0 shows
+        // "0". `x || ''` would blank both, hiding a measured zero and making it look missing.
+        const field = (v) => (v === null || v === undefined ? '' : String(v));
+
         const initials = {};
         mergedQueue.forEach(item => {
             initials[item.id] = {
                 billing_period_start: item.billing_period_start || '',
                 billing_period_end: item.billing_period_end || '',
-                meter_reading: item.meter_reading || '',
-                units_exported: item.units_exported || '',
-                earnings: item.earnings || '',
+                meter_reading: field(item.meter_reading),
+                units_exported: field(item.units_exported),
+                earnings: field(item.earnings),
                 account_number: item.account_number || '',
                 billing_month: item.billing_month || '',
             };
