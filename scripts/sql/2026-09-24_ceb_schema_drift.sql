@@ -29,9 +29,8 @@ alter table public.ceb_bill_extractions
 --   from pg_trigger t
 --   where t.tgname = 'trg_cascade_delete_ceb_data' and not t.tgisinternal;
 --
--- Then either drop it (`drop trigger trg_cascade_delete_ceb_data on public.ceb_data;` — check
--- first that nothing else deletes from ceb_data and expects the cascade) or commit its
--- definition to this directory.
+-- The decision was to drop it: see 2026-09-24_drop_cascade_trigger.sql, whose header lists what
+-- to check first.
 --
 -- ALSO WORTH KNOWING
 -- * `ceb_data.ingestion_id` has no foreign key to `ceb_bill_ingestions(id)`; integrity between

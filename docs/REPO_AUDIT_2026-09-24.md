@@ -72,15 +72,22 @@ Tests went from 91 to 191. Non-PDF JavaScript went from 1,557 KB to 1,194 KB.
 
 Deliberately left, each needing a decision rather than an edit:
 
-- `.agents/skills/` and `skills/`, which hold the same two vendor skill packs (73 files), and
-  `skills-lock.json`.
-- The finished Clerk-migration scripts, `scripts/migrate-users-to-clerk.js` and
-  `scripts/export-users.js`.
+- *(Resolved afterwards, see below.)* `.agents/skills/` and `skills/`, the finished
+  Clerk-migration scripts, and the live-only trigger.
 - The duplicate `ErrorBoundary` and `SkeletonLoader` components. Each pair is used from
   different places, so merging them is a behaviour change, not a deletion.
-- S13 above; the live-only trigger; the `ceb_data.ingestion_id` foreign key; a `ceb_data` unique
-  index that treats NULL account numbers as distinct.
+- S13 above; the `ceb_data.ingestion_id` foreign key; a `ceb_data` unique index that treats NULL
+  account numbers as distinct.
 - Unused CSS and image assets were never checked.
+
+### Decisions taken after the remediation
+
+| Item | Decision |
+|---|---|
+| Duplicate `.agents/skills/` and `skills/` (76 tracked files) | **Untracked** and gitignored; `skills-lock.json` stays so they can be reinstalled. The files remain on disk |
+| `migrate-users-to-clerk.js`, `export-users.js` | **Deleted** — the migration is complete; they remain in git history |
+| Live-only trigger `trg_cascade_delete_ceb_data` | **Drop it**: `2026-09-24_drop_cascade_trigger.sql`, not applied |
+| Duplicate `ErrorBoundary` / `SkeletonLoader` | **Deferred to the redesign**, which should end with one of each |
 - Lighthouse has not been re-run since the bundle shrank.
 - Seven links inside archived documents still point at files that no longer exist; they are
   historical.
