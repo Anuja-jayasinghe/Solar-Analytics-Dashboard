@@ -200,11 +200,11 @@ failing closed.
 | Storage | Supabase Storage (bill PDFs) |
 | Auth | Clerk |
 | Charts | Recharts 3 |
-| UI | Chakra UI 3, custom CSS variables for theming |
+| UI | Custom CSS variables for theming |
 | PDF | pdfjs-dist (parsing) · react-pdf (preview) |
 | Icons | Lucide |
 | Scheduling | GitHub Actions cron |
-| Testing | Vitest — 91 tests |
+| Testing | Vitest |
 | Data fetching | Custom stale-while-revalidate cache with circuit breaker |
 
 ---
@@ -247,7 +247,7 @@ pnpm dev
 | Command | Purpose |
 | --- | --- |
 | `pnpm dev` | Development server |
-| `pnpm test` | Vitest — 91 tests |
+| `pnpm test` | Vitest |
 | `pnpm lint` | ESLint — 0 errors expected |
 | `pnpm build` | Production build |
 | `pnpm audit --prod --audit-level high` | The CI security gate |
@@ -278,7 +278,7 @@ functions/                GitHub Actions collectors
 supabase/functions/       Supabase Edge Functions (Deno)
 scripts/sql/              Schema baseline and RLS migrations
 docs/                     Architecture, API, runbook, logic registry
-tests/                    91 tests across 6 files
+tests/                    Vitest suites — parser, alignment, API validation, security helpers
 ```
 
 ---

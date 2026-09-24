@@ -30,17 +30,17 @@ export default defineConfig(({ mode }) => {
             if (id.includes('react-pdf') || id.includes('pdfjs-dist')) {
               return undefined;
             }
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+            // Match the package by its directory name, not by substring. `includes('react')`
+            // also matched `@chakra-ui/react`, `@emotion/react`, `react-smooth`, and any
+            // other package with "react" in its path, sweeping them all into react-vendor.
+            if (/[\\/]node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom)[\\/]/.test(id)) {
               return 'react-vendor';
             }
-            if (id.includes('chart.js') || id.includes('recharts') || id.includes('react-liquid-gauge')) {
+            if (/[\\/]node_modules[\\/](recharts|d3-[^\\/]+|victory-vendor)[\\/]/.test(id)) {
               return 'chart-vendor';
             }
-            if (id.includes('@supabase') || id.includes('supabase')) {
+            if (id.includes('@supabase')) {
               return 'supabase-vendor';
-            }
-            if (id.includes('lodash') || id.includes('crypto-js') || id.includes('lucide-react')) {
-              return 'utils-vendor';
             }
             return 'vendor';
           }
