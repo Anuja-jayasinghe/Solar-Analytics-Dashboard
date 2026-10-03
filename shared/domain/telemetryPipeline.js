@@ -79,6 +79,28 @@ export function toUptimeRow(sn, d) {
   };
 }
 
+/**
+ * The inverse of toUptimeRow, to the shape aggregateUptime expects. Numeric columns arrive from
+ * PostgREST as strings; null stays null (unknown), it is never turned into 0.
+ */
+export function uptimeRowToDay(row) {
+  const num = (v) => (v === null || v === undefined || v === '' ? null : Number(v));
+  return {
+    dateKey: row.day,
+    status: row.status,
+    uptimePct: num(row.uptime_pct),
+    windowMinutes: num(row.window_minutes) ?? 0,
+    minutes: {
+      trip: num(row.trip_min) ?? 0,
+      gap: num(row.gap_min) ?? 0,
+      comms_lost: num(row.comms_lost_min) ?? 0,
+      edge_gap: num(row.edge_gap_min) ?? 0
+    },
+    tripCount: num(row.trip_count) ?? 0,
+    gapCount: num(row.gap_count) ?? 0
+  };
+}
+
 export function toSegmentRows(sn, d) {
   return d.segments.map((s) => ({
     inverter_sn: sn,

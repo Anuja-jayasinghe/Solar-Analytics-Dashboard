@@ -33,6 +33,16 @@ export function powerToKw(value, scale, unit) {
   return v * s * factor;
 }
 
+const KWH_FACTOR = { wh: 0.001, kwh: 1, mwh: 1000, gwh: 1_000_000 };
+
+/** Convert a Solis (value, unit) energy pair to kWh; null if the unit is missing or unknown. */
+export function energyToKwh(value, unit) {
+  const v = toNum(value);
+  if (v === null) return null;
+  const factor = KWH_FACTOR[String(unit ?? '').trim().toLowerCase()];
+  return factor === undefined ? null : v * factor;
+}
+
 const series = (raw, prefix, count) =>
   Array.from({ length: count }, (_, i) => toNum(raw?.[`${prefix}${i + 1}`]));
 

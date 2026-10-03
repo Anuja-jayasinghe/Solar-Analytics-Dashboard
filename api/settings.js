@@ -26,7 +26,8 @@ const ALLOWED_SETTINGS = new Set([
   'theme',
   'rate_per_kwh',
   'solar_grid_capacity',
-  'daily_generation_target'
+  'daily_generation_target',
+  'capacity_kwp'
 ]);
 
 function isValidValue(name, value) {
@@ -34,7 +35,7 @@ function isValidValue(name, value) {
 
   // Numeric settings must actually be numeric and non-negative — a non-numeric rate would
   // silently turn every earnings figure into NaN.
-  if (['rate_per_kwh', 'solar_grid_capacity', 'daily_generation_target'].includes(name)) {
+  if (['rate_per_kwh', 'solar_grid_capacity', 'daily_generation_target', 'capacity_kwp'].includes(name)) {
     const n = Number(value);
     return Number.isFinite(n) && n >= 0;
   }
