@@ -49,10 +49,10 @@ Status: ☐ todo · ◐ in progress · ☑ done · ⚠ deferred (see §6)
 - ☑ Write `docs/WORKING_RULES.md`
 
 ### P2a — Solis deep dive · #153
-- ☐ Catalogue every endpoint in the API PDF
-- ☐ Read-only probes against our station; sample responses stored without secrets
-- ☐ Probe `inverterDay` retention (1w / 1m / 6m / 12m / 24m back)
-- ☐ `docs/SOLIS_API_FIELD_CATALOG.md` with adopt/skip verdicts
+- ☑ Catalogue every endpoint in the API PDF (45 endpoints)
+- ☑ Read-only probes against our station (36 calls). Raw responses NOT committed (owner/GPS/device IDs); catalog holds names+types only, probe is `scripts/solis_probe.mjs`
+- ☑ Probe `inverterDay` retention: reaches back at least 24 months
+- ☑ `docs/SOLIS_API_FIELD_CATALOG.md` with adopt/skip verdicts
 
 ### LR-002 / LR-003 specs + tests · #154
 - ☐ LR-002 uptime/downtime definition
@@ -136,3 +136,8 @@ Newest first. One entry per meaningful change: date, what, commit/PR, deviations
   migration/*, superseded guides), archived history docs to `docs/archive/2026-v2-era/` and repointed every
   inbound link; rewrote `docs/README.md`; added `docs/WORKING_RULES.md`. Deviation: UI-impacting cleanup
   deferred → V3-D3 / #162. Branch not yet pushed.
+- **2026-10-03 (P2a)** — Solis deep dive done (#153). Key findings: inverterDay = full-fidelity 5-min telemetry with
+  129 fields; history >= 2 yrs so the uptime log can be fully backfilled; cadence varied (1/5/18 min) so LR-002 must be
+  cadence-aware; night has no points (not state 2); timeZone param ignored and timeStr is UTC+8; 199 alarms in 3 months,
+  mostly grid under-voltage (code 1011); alarmList paginates (explorer misses half); array is 41.76 kWp (not 40) for
+  kWh/kWp. Skipped endpoints (epm/weather/ammeter/fleet/write) are intentional and listed in the catalog.
