@@ -60,10 +60,10 @@ Status: ☐ todo · ◐ in progress · ☑ done · ⚠ deferred (see §6)
 - ☑ Pure-function implementations in `shared/domain/` (time, solisNormalize, uptime, rangeStats) with tests written first: 74 new tests, 165 total
 
 ### P1 — Database · #155 (blocked by P2a)
-- ☐ DB snapshot taken first
-- ☐ Migrations on a Supabase branch, advisors clean, then applied
-- ☐ New tables: telemetry, alarms, status segments
-- ☐ Daily summary uptime columns
+- ☐ DB snapshot taken first (workflow run; awaiting owner go-ahead)
+- ◐ Migrations WRITTEN, not applied: scripts/sql/2026-10-03_v3_telemetry_schema.sql (+ rollback), 2026-10-03_v3_harden_public_role_privileges.sql. Apply after snapshot + owner confirmation; run advisors before/after
+- ◐ New tables written: inverter_telemetry, collector_heartbeats, inverter_alarms, inverter_day_uptime, inverter_status_segments, collector_runs (all private, RLS on, no policies)
+- ☑ Decided: uptime lives in the derived inverter_day_uptime table; the existing daily summary is NOT altered (additive-only migration)
 - ☐ Retire unused tables; remove `anon` SELECT on real tables (**coordinate with P3/P4 — the current app reads with anon**)
 
 ### P2 — Collection pipeline · #156
@@ -150,3 +150,6 @@ Newest first. One entry per meaningful change: date, what, commit/PR, deviations
   tile would be flat — keep the mechanism, do not feature it); 15 zero-generation days in the daily summary, 4 provably false
   and 8 unknowable (#163); peak_power_kw null on 149/791 days.
   Gates: 165 tests, lint 0 errors, build OK, prod audit (high) clean. Not yet pushed.
+- **2026-10-03 (P1 prep)** — Wrote the additive v3 schema migration + rollback and a privilege-hardening migration (found
+  that anon holds INSERT/UPDATE/DELETE/TRUNCATE table grants, blocked only by RLS). Nothing applied. Decision: no raw JSON in
+  telemetry (size; source retains >= 2 years). DB is 16 MB so storage is not a constraint.
