@@ -55,9 +55,9 @@ Status: ☐ todo · ◐ in progress · ☑ done · ⚠ deferred (see §6)
 - ☑ `docs/SOLIS_API_FIELD_CATALOG.md` with adopt/skip verdicts
 
 ### LR-002 / LR-003 specs + tests · #154
-- ☐ LR-002 uptime/downtime definition
-- ☐ LR-003 range aggregation + tariff selection
-- ☐ Pure-function implementations in `lib/` with tests written first
+- ☑ LR-002 uptime/downtime definition (docs/logic-registry/LR-002)
+- ☑ LR-003 range aggregation + tariff selection (docs/logic-registry/LR-003)
+- ☑ Pure-function implementations in `shared/domain/` (time, solisNormalize, uptime, rangeStats) with tests written first: 74 new tests, 165 total
 
 ### P1 — Database · #155 (blocked by P2a)
 - ☐ DB snapshot taken first
@@ -67,6 +67,7 @@ Status: ☐ todo · ◐ in progress · ☑ done · ⚠ deferred (see §6)
 - ☐ Retire unused tables; remove `anon` SELECT on real tables (**coordinate with P3/P4 — the current app reads with anon**)
 
 ### P2 — Collection pipeline · #156
+- ☐ Data repair from #163 (4 false zeros, 8 unknowable zeros, 149 null peaks, 1 missing day) — needs snapshot + owner confirmation
 - ☐ Nightly collector (idempotent, fails loudly on empty, timeZone 5.5)
 - ☐ Gated backfill workflow (dry run default)
 - ☐ Freshness check extended
@@ -141,3 +142,11 @@ Newest first. One entry per meaningful change: date, what, commit/PR, deviations
   cadence-aware; night has no points (not state 2); timeZone param ignored and timeStr is UTC+8; 199 alarms in 3 months,
   mostly grid under-voltage (code 1011); alarmList paginates (explorer misses half); array is 41.76 kWp (not 40) for
   kWh/kWp. Skipped endpoints (epm/weather/ammeter/fleet/write) are intentional and listed in the catalog.
+- **2026-10-03 (LR-002/003)** — Specs, acceptance tests and implementations landed (#154). `shared/domain/` holds pure,
+  dependency-free modules usable by browser, API and collector. Replayed real probe days: 2026-10-02 → 97.4% uptime, three
+  grid under-voltage trips, no gaps; 2026-04-06 → five 12–19 min silent gaps with no alarm (89.3%, flagged as lacking logger
+  evidence); 2025-10-03 → coarse 17-min cadence reported as resolution ~52 min, not as perfect uptime.
+  Data findings (read-only): all 25 bills have effective rate exactly 37.00 (tariff has never changed, so a "tariff drift"
+  tile would be flat — keep the mechanism, do not feature it); 15 zero-generation days in the daily summary, 4 provably false
+  and 8 unknowable (#163); peak_power_kw null on 149/791 days.
+  Gates: 165 tests, lint 0 errors, build OK, prod audit (high) clean. Not yet pushed.
