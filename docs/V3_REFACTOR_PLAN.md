@@ -68,10 +68,10 @@ Status: ☐ todo · ◐ in progress · ☑ done · ⚠ deferred (see §6)
 
 ### P2 — Collection pipeline · #156
 - ◐ Data repair #163: 4 false zeros corrected and 8 unknowable rows removed (applied, owner-approved). Remaining: backfill 153 null peaks, fill 2026-06-03, Solis reconciliation check, collector refuses to write unmeasured 0
-- ☐ Nightly collector (idempotent, fails loudly on empty, timeZone 5.5)
-- ☐ Gated backfill workflow (dry run default)
-- ☐ Freshness check extended
-- ☐ Replace the wrong health score
+- ☑ Nightly collector built + tested (functions/collect_telemetry, workflow collect-telemetry.yml, 00:15 local; idempotent upserts; empty/failed day/failed alarm fetch = failure + data-outage issue). timeZone note: the API ignores it, we pass 8 as documented
+- ◐ Gated backfill workflow written (backfill-telemetry.yml, dry run default). Full-history dry run in progress; WRITE run needs owner go-ahead. Workflows are not dispatchable from GitHub until merged to main (workflow must exist on the default branch); the same CLI runs locally
+- ☐ Freshness check extended (collector_runs recency, latest inverter_day_uptime day, reconcile findings)
+- ☐ Replace the wrong health score (in the Pro metrics page build, #160)
 
 ### P3 — API · #157
 - ☐ Access levels, read router (≤12 functions), CSV export, rate limits, CSP, logging, tests
@@ -157,3 +157,8 @@ Newest first. One entry per meaningful change: date, what, commit/PR, deviations
   Data repair: the 12 suspect rows (ids 893-904, one bulk insert on 2025-11-23) -> 4 corrected from Solis, 8 deleted; zero days now 3
   (genuine). Draft PR #164 opened so CI runs on refactor/v3. Observation logged on #163: period ending 2025-09-04 has inverter 4675
   vs CEB 2748 kWh (billing timing?), to investigate before designing the CEB summary.
+- **2026-10-03 (P2)** — Collector built test-first: shared/domain/telemetryPipeline.js (12 tests) and
+  functions/collect_telemetry/{run.js,index.js} (22 tests, fake adapters: dry run writes nothing, failed day never produces a
+  row, empty = failure, alarm-fetch failure = unknown not none, peak fill only on NULL peaks of existing rows, idempotent).
+  Live dry run on the last 3 days worked end to end (e.g. 2026-10-02: 146 pts, 97.4%, 3 trips). 199 tests total.
+  Note: backfill-daily-summaries.yml claims inverter_data_live "cannot be backfilled"; wrong since inverterDay (fix in P7).
