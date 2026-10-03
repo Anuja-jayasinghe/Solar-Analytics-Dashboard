@@ -70,7 +70,7 @@ Status: ☐ todo · ◐ in progress · ☑ done · ⚠ deferred (see §6)
 - ◐ Data repair #163: 4 false zeros corrected and 8 unknowable rows removed (applied, owner-approved). Remaining: backfill 153 null peaks, fill 2026-06-03, Solis reconciliation check, collector refuses to write unmeasured 0
 - ☑ Nightly collector built + tested (functions/collect_telemetry, workflow collect-telemetry.yml, 00:15 local; idempotent upserts; empty/failed day/failed alarm fetch = failure + data-outage issue). timeZone note: the API ignores it, we pass 8 as documented
 - ◐ Gated backfill workflow written (backfill-telemetry.yml, dry run default). Full-history dry run in progress; WRITE run needs owner go-ahead. Workflows are not dispatchable from GitHub until merged to main (workflow must exist on the default branch); the same CLI runs locally
-- ☐ Freshness check extended (collector_runs recency, latest inverter_day_uptime day, reconcile findings)
+- ◐ Freshness check extended (shared/domain/freshness.js, 9 tests; wired into scripts/check_data_freshness.js). NOT ARMED: empty tables are skipped until TELEMETRY_REQUIRED=true is set in data-freshness-check.yml after the first successful nightly run (V3-D4, tracked #165)
 - ☐ Replace the wrong health score (in the Pro metrics page build, #160)
 
 ### P3 — API · #157
@@ -123,6 +123,7 @@ Every row has a GitHub issue. Add a row the moment something is skipped.
 |---|---|---|---|
 | V3-D1 | Revoke `anon` SELECT on existing real tables is staged to cutover, not P1 | v1 reads with anon until cutover | #155 |
 | V3-D2 | Downtime/fault alerting | Out of scope for v3 | #151 |
+| V3-D4 | Freshness check for the telemetry pipeline ships unarmed (empty = skipped) so deploying it cannot raise a false outage | Arm with TELEMETRY_REQUIRED=true after the first successful nightly run | #165 |
 | V3-D3 | UI-impacting cleanup held for the design phase: Chakra/emotion removal, vite manualChunks, duplicate ErrorBoundary/SkeletonLoader, SolisExplorer rewrite, Open-Meteo CSP entry, eslint stale refs, `/demodashbaard` typo | Changing them alters what users see; UI waits for design sign-off | #162 |
 
 ## 7. Progress log
