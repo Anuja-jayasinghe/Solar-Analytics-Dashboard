@@ -79,7 +79,19 @@ export default defineConfig(({ mode }) => {
   test: {
     environment: 'node',
     include: ['tests/**/*.test.js'],
-    reporters: 'default'
+    reporters: 'default',
+
+    // Coverage is measured on the code that carries the business rules: the pure shared/
+    // modules, the read API's logic and the collector core. UI and glue (CLI wiring, the Supabase
+    // repository, scripts) are covered by integration runs, not unit coverage, and are excluded
+    // so the threshold means something. Raise the thresholds as coverage rises; never lower them
+    // to make a build pass.
+    coverage: {
+      provider: 'v8',
+      include: ['shared/**/*.js', 'api/_lib/data/{handler,live,rateLimit}.js', 'functions/collect_telemetry/run.js'],
+      reporter: ['text-summary', 'text'],
+      thresholds: { lines: 90, functions: 90, statements: 90, branches: 80 }
+    }
   }
 
 }})
