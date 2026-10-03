@@ -155,6 +155,19 @@ collector keeps request *starts* 700 ms apart (the API limit is 2 per second).
 The dry run's "reconcile" list names days where the daily summary disagrees with the inverter's
 own counter by more than 1.5 kWh. That is how the false zeros in #163 were found; investigate each.
 
+### Re-deriving uptime without calling SolisCloud
+
+`inverter_day_uptime` and `inverter_status_segments` are **derived** from the stored facts
+(telemetry, heartbeats, alarms). If the derivation rules change (as they did on 2026-10-03 when
+`1D4C2` "Loss of internet connection" stopped counting as downtime), or a derived row is damaged:
+
+```bash
+node scripts/rederive_uptime.mjs            # dry run: lists the days that would change, writes nothing
+node scripts/rederive_uptime.mjs --write    # applies; a second run is a no-op
+```
+
+No Solis calls, about a minute. Take a snapshot first if you want a before-image of the derived tables.
+
 ### Freshness check for the telemetry tables
 
 `scripts/check_data_freshness.js` also checks `collector_runs` and `inverter_day_uptime`

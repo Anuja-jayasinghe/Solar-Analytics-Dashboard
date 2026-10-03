@@ -117,7 +117,10 @@ export async function runCollector({ solis, db, dates, write, fillPeaks = false,
       day.gaps = rec.derived.gapCount;
 
       if (write) {
-        report.pointsWritten += await writeChunked(db, 'inverter_telemetry', rec.telemetryRows, 'inverter_sn,ts');
+        // Await FIRST, then add: `report.n += await f()` reads report.n before the await, so
+        // concurrent days silently overwrite each other's additions (the counter, not the data).
+        const written = await writeChunked(db, 'inverter_telemetry', rec.telemetryRows, 'inverter_sn,ts');
+        report.pointsWritten += written;
         await writeChunked(db, 'collector_heartbeats', rec.heartbeatRows, 'collector_sn,ts');
         await db.upsert('inverter_day_uptime', [rec.uptimeRow], 'inverter_sn,day');
         await db.replaceSegments(inv.sn, dateKey, rec.segmentRows);

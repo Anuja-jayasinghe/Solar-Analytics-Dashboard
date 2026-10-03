@@ -32,6 +32,11 @@ gated backfill loads the full history. `inverter_data_live` stays as the "right 
 - Grid under-voltage trips leave **no gap** in the points (one sample with zero power); alarms
   are the authoritative record of them, so the alarm fetch is mandatory and paginated
   (`total` 199 vs 100 per page at the time of the probe).
+- **Not every alarm is downtime.** The first full backfill scored days with 140+ kWh as 0% uptime because
+  alarm `1D4C2` "Loss of internet connection" (the logger's cloud link, not the inverter) had been
+  treated as a trip. Comms alarms now only classify gaps as `comms_lost`; grid alarms (`1011`,
+  `1015`, `101A`) are the trips. This is why the derived tables are regenerable from stored facts
+  (`scripts/rederive_uptime.mjs`) rather than computed once and trusted.
 - We depend on SolisCloud's history retention, which is undocumented. If it shrinks, older days
   can no longer be reconstructed; the stored copy then becomes the only record. This is the
   reason to run the backfill once, early.

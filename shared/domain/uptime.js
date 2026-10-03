@@ -28,6 +28,17 @@ const THRESHOLD_CADENCES = 3;
 const MIN_USABLE_GAPS = 2;
 const EPS_MS = 1_000; // pieces shorter than a second are rounding noise
 
+/**
+ * Alarms that describe the LOGGER's cloud link, not the inverter (LR-002 observed fact 4).
+ * 1D4C2 "Loss of internet connection": the inverter keeps generating and the logger uploads the
+ * buffered points later. These are evidence for classifying a gap, never downtime themselves.
+ */
+const COMMS_ALARM_CODES = new Set(['1D4C2']);
+
+export function isCommsAlarmCode(code) {
+  return COMMS_ALARM_CODES.has(String(code ?? '').trim().toUpperCase());
+}
+
 export function causeForAlarmCode(code) {
   const c = code === null || code === undefined ? '' : String(code);
   if (c === '1011') return 'grid_undervoltage';
@@ -166,12 +177,16 @@ export function deriveDayUptime({ dateKey, points, alarms, collector = null, now
   // --- Trips from alarms (authoritative for grid trips and faults) ---------------------------
   const nowMs = now === null || now === undefined ? win.endMs : now;
   const tripIntervals = [];
+  const commsIntervals = [];
   if (alarmsKnown) {
     for (const a of alarms) {
       const rawEnd = a.endMs ?? Math.min(nowMs, win.endMs);
       const startMs = Math.max(a.beginMs, win.startMs);
       const endMs = Math.min(rawEnd, win.endMs);
-      if (endMs - startMs > EPS_MS) tripIntervals.push({ startMs, endMs, codes: [String(a.code)], open: !!a.open });
+      if (endMs - startMs <= EPS_MS) continue;
+      // Comms alarms are evidence about the logger, not downtime: keep them out of the trips.
+      if (isCommsAlarmCode(a.code)) commsIntervals.push({ startMs, endMs });
+      else tripIntervals.push({ startMs, endMs, codes: [String(a.code)], open: !!a.open });
     }
   }
   const trips = mergeIntervals(tripIntervals);
@@ -194,6 +209,8 @@ export function deriveDayUptime({ dateKey, points, alarms, collector = null, now
       let loggerEvidence = null;
       if (c.edge) {
         kind = 'edge_gap';
+      } else if (commsIntervals.some((ci) => ci.startMs < piece.endMs && ci.endMs > piece.startMs)) {
+        kind = 'comms_lost'; // the device itself reported the link down; no heartbeat check needed
       } else if (!loggerKnown) {
         kind = 'gap';
         loggerEvidence = false;

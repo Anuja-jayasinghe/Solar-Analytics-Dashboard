@@ -249,3 +249,25 @@ describe('concurrency', async () => {
     expect(calls.upserts.filter((u) => u.table === 'inverter_day_uptime')).toHaveLength(2);
   });
 });
+
+describe('counters under real interleaving (regression)', () => {
+  it('pointsWritten equals the sum of the days even when writes complete out of order', async () => {
+    // `report.n += await write()` reads n BEFORE the await, so concurrent days used to overwrite
+    // each other's additions: the 2026-10-03 backfill wrote 111,453 rows and reported 109,456.
+    const days = ['2026-09-26', '2026-09-27', '2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02'];
+    const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+    const { solis, db } = makeFakes();
+    // Every day returns its own 60 in-day points, and every upsert takes a different time to finish.
+    solis.inverterDay = async (_sn, d) => {
+      const base = Date.parse(`${d}T02:00:00Z`);
+      return Array.from({ length: 60 }, (_, i) => pt(base + i * 5 * 60_000));
+    };
+    let k = 0;
+    const realUpsert = db.upsert;
+    db.upsert = async (...a) => { await delay((k++ * 7) % 11); return realUpsert(...a); };
+    const r = await runCollector({ solis, db, dates: days, write: true, concurrency: 4 });
+    const perDay = r.days.reduce((s, d) => s + d.points, 0);
+    expect(perDay).toBe(60 * days.length);
+    expect(r.pointsWritten).toBe(perDay);
+  });
+});

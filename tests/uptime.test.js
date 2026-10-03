@@ -11,7 +11,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { deriveDayUptime, aggregateUptime, causeForAlarmCode } from '../shared/domain/uptime.js';
+import { deriveDayUptime, aggregateUptime, causeForAlarmCode, isCommsAlarmCode } from '../shared/domain/uptime.js';
 import { operatingWindow } from '../shared/domain/time.js';
 import { normalizeDayPoints, normalizeAlarms, normalizeCollectorPoints } from '../shared/domain/solisNormalize.js';
 
@@ -230,5 +230,61 @@ describe('replay of real probe days', () => {
     expect(r.resolutionMin).toBeLessThan(62);
     expect(r.lowConfidence).toBe(false);
     expect(r.minutes.gap).toBe(0); // nothing exceeds 3× its own cadence
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Comms alarms (1D4C2 "Loss of internet connection"): logger evidence, never inverter downtime.
+// Found by the 2-year backfill: days with 140+ kWh were scored 0% because this alarm was a "trip".
+// ---------------------------------------------------------------------------------------------
+describe('comms alarms are not trips', () => {
+  const comms = (fromMin, toMin) => ({ ...alarm(fromMin, toMin, '1D4C2') });
+
+  it('12a. a comms alarm over continuous points creates no segment and does not reduce uptime', () => {
+    const r = deriveDayUptime({ dateKey: D, points: pointsEvery(5), alarms: [comms(-600, W + 600)] });
+    expect(r.segments).toEqual([]);
+    expect(r.minutes.trip).toBe(0);
+    expect(r.uptimePct).toBe(100);
+    expect(r.tripCount).toBe(0);
+  });
+
+  it('12b. a gap overlapping a comms alarm, with logger evidence unknown, is comms_lost, not gap', () => {
+    const pts = without(pointsEvery(5), 100, 190);
+    const r = deriveDayUptime({ dateKey: D, points: pts, alarms: [comms(90, 200)] }); // no collector data at all
+    expect(r.segments.map((s) => s.kind)).toEqual(['comms_lost']);
+    expect(r.minutes.gap).toBe(0);
+    expect(r.uptimePct).toBe(100);
+  });
+
+  it('the same gap WITHOUT a comms alarm is still a gap (the alarm is what changes it)', () => {
+    const pts = without(pointsEvery(5), 100, 190);
+    const r = deriveDayUptime({ dateKey: D, points: pts, alarms: [] });
+    expect(r.segments.map((s) => s.kind)).toEqual(['gap']);
+  });
+
+  it('12c. a grid alarm overlapping the comms alarm wins: a power cut takes the router down too', () => {
+    const pts = without(pointsEvery(5), 100, 190);
+    const r = deriveDayUptime({ dateKey: D, points: pts, alarms: [comms(100, 190), alarm(100, 190, '1011')] });
+    expect(r.segments.map((s) => s.kind)).toEqual(['trip']);
+    expect(r.minutes.trip).toBeCloseTo(90, 6);
+  });
+
+  it('a comms alarm leaves a real outage elsewhere in the day intact', () => {
+    const pts = without(without(pointsEvery(5), 300, 360), 30, 90);
+    const r = deriveDayUptime({ dateKey: D, points: pts, alarms: [comms(20, 100), alarm(400, 410, '1011')] });
+    expect(r.segments.map((s) => s.kind).sort()).toEqual(['comms_lost', 'gap', 'trip']);
+  });
+
+  it('replays the shape of 2026-06-03: coarse 18-minute points all day under a comms alarm → up, low resolution', () => {
+    const r = deriveDayUptime({ dateKey: D, points: pointsEvery(18), alarms: [comms(-600, W + 600)] });
+    expect(r.uptimePct).toBe(100);
+    expect(r.resolutionMin).toBeCloseTo(54, 1);
+    expect(r.tripCount).toBe(0);
+  });
+
+  it('classifies codes: only 1D4C2 is a comms alarm', () => {
+    expect(isCommsAlarmCode('1D4C2')).toBe(true);
+    expect(isCommsAlarmCode(' 1d4c2 ')).toBe(true);
+    for (const c of ['1011', '1015', '101A', '1010', '', null, undefined]) expect(isCommsAlarmCode(c)).toBe(false);
   });
 });

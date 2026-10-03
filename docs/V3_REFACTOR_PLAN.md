@@ -67,9 +67,9 @@ Status: ☐ todo · ◐ in progress · ☑ done · ⚠ deferred (see §6)
 - ☐ Retire unused tables (admin_users, system_metrics, report_logs, inverter_data_live_archive); remove `anon` SELECT on real tables at cutover (V3-D1)
 
 ### P2 — Collection pipeline · #156
-- ◐ Data repair #163: 4 false zeros corrected and 8 unknowable rows removed (applied, owner-approved). Remaining: backfill 153 null peaks, fill 2026-06-03, Solis reconciliation check, collector refuses to write unmeasured 0
+- ◐ Data repair #163: false zeros fixed, 153 null peaks filled (0 remain), collector refuses to write unmeasured 0. Remaining: 8 daily-summary values lower than the inverter counter and the missing 2026-06-03 row (owner decision, #167)
 - ☑ Nightly collector built + tested (functions/collect_telemetry, workflow collect-telemetry.yml, 00:15 local; idempotent upserts; empty/failed day/failed alarm fetch = failure + data-outage issue). timeZone note: the API ignores it, we pass 8 as documented
-- ◐ Gated backfill workflow written (backfill-telemetry.yml, dry run default). Full-history dry run in progress; WRITE run needs owner go-ahead. Workflows are not dispatchable from GitHub until merged to main (workflow must exist on the default branch); the same CLI runs locally
+- ☑ Backfill RUN (owner-approved, 2026-10-03): 792 days, 111,453 telemetry rows, 435 alarms, 784 ok + 8 no_data days, 153 null peaks filled. Gated workflow exists (backfill-telemetry.yml, dry run default) but is only dispatchable once merged to main; the same CLI ran locally
 - ◐ Freshness check extended (shared/domain/freshness.js, 9 tests; wired into scripts/check_data_freshness.js). NOT ARMED: empty tables are skipped until TELEMETRY_REQUIRED=true is set in data-freshness-check.yml after the first successful nightly run (V3-D4, tracked #165)
 - ☐ Replace the wrong health score (in the Pro metrics page build, #160)
 
@@ -184,3 +184,11 @@ Newest first. One entry per meaningful change: date, what, commit/PR, deviations
   recorded my two migrations and the data repairs in MIGRATIONS.md, and added a v3 target-state section to SECURITY.md.
   Lesson recorded in WORKING_RULES: fetch and compare with origin/main before starting a long-running branch.
   Result: 417 tests, lint 0 errors, build OK, prod audit clean.
+- **2026-10-03 (backfill + LR-002 correction)** — Two backups first (GitHub snapshot + full local export of 18 tables, 2,100 rows), then the
+  owner-approved write: 111,453 telemetry rows over 784 days, 165,844 heartbeats, 435 alarms, 792 uptime rows; 153 null peaks filled; 8
+  days (2025-04-14..21) have no Solis telemetry at all (a 10-day internet outage), recorded as no_data. Verifying the result found two bugs of
+  mine: (1) the report counter lost updates under concurrency (data right, count wrong; regression test added); (2) days scored 0%
+  while producing 140+ kWh because alarm 1D4C2 "Loss of internet connection" is logger evidence, not downtime. LR-002 corrected spec-first,
+  28 days re-derived from stored facts with no Solis calls (scripts/rederive_uptime.mjs), mean uptime 96.68% -> 98.00%, genuine outages
+  unchanged. Reconciliation found 8 daily-summary values below the inverter's own counter (largest 2026-02-01: 89.3 vs 128.4 kWh) and the
+  missing 2026-06-03 row (142.0 kWh): needs owner approval, #167.

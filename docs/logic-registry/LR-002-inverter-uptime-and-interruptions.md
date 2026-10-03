@@ -32,9 +32,16 @@ as a measurement.
 3. **A grid under-voltage trip (code 1011, "UN-G-V01") is one sample with `pac = 0` and
    `uAc1 ≈ 190–215 V`.** `state` stays `1` and **there is no gap**. Alarms are the only record
    of exactly when it began and ended, so alarms are authoritative for trips.
-4. **A gap in points** means the inverter stopped *or* the logger/WiFi/cloud did. Only logger
+4. **Alarm `1D4C2` "Loss of internet connection" is a LOGGER alarm, not inverter downtime.** It marks the
+   logger's cloud link being down, not the inverter stopping. Found by backfilling two years: every
+   "zero-uptime" day that still produced energy (e.g. 2026-06-03, 142 kWh) was covered by one. The
+   inverter kept generating; the logger uploaded the buffered points later, at a coarse cadence. Real
+   outages are grid alarms (`1011` under-voltage, `1015` NO-Grid, `101A` phase fault). A power cut
+   can raise both at once (router and grid down together), which is why a comms alarm alone never
+   decides; grid alarms and missing production do.
+5. **A gap in points** means the inverter stopped *or* the logger/WiFi/cloud did. Only logger
    evidence separates the two.
-5. `dataTimestamp` is epoch ms and is the only trustworthy clock. `timeStr` is UTC+8.
+6. `dataTimestamp` is epoch ms and is the only trustworthy clock. `timeStr` is UTC+8.
 
 ## Canonical rules
 
@@ -66,7 +73,12 @@ The day is analysed over the window. `segments` lists every **non-producing** st
 - A `gap` or `edge_gap` is reduced by one cadence at its start: the next sample was *due* one
   cadence after the previous one, so only the remainder is evidence of a stop.
 - If a trip overlaps a gap, the overlap is a `trip` (the cause is known).
-- Overlapping alarms are merged (union), never double-counted.
+- **Alarms have two classes.** *Comms alarms* (`1D4C2`) are **not trips**: they create no segment of their own
+  and cannot make a day look down. They are *evidence for classifying a gap*: a silent stretch that overlaps
+  one is `comms_lost`, exactly like a silent logger. Every other alarm is a *trip* candidate.
+  If points cover a comms alarm's interval (buffered data), the inverter is shown up, because points are
+  positive evidence of operation however late they arrived.
+- Overlapping trip alarms are merged (union), never double-counted.
 - A `trip` has `cause` = `grid_undervoltage` (1011), `grid_overvoltage` (1010), or
   `fault` (anything else), plus the raw `alarmCode`.
 - An alarm with `state = 0` (pending / ongoing) has no end: its end is `min(now, windowEnd)`.
@@ -134,6 +146,9 @@ may be inverter stops or logger/cloud drop-outs, and the result says so rather t
 9. `alarms = null` → `alarmsKnown = false`, no trips.
 10. Night points (outside the window) never create segments.
 11. Range aggregation weights by known minutes and skips `no_data` days.
+12a. A comms alarm (`1D4C2`) over a day with continuous points → no segment, `uptimePct = 100` (the 2026-06-03 shape).
+12b. A gap overlapping a comms alarm, with logger evidence unknown → `comms_lost`, not `gap`.
+12c. A gap overlapping both a comms alarm and a grid alarm → the grid alarm wins (`trip`): a power cut is real downtime.
 12. The 2025-10-03 coarse-cadence day reports `resolutionMin ≈ 52` (≈ 3 × 17 min) and `lowConfidence = false`.
 
 ## Current implementation files
