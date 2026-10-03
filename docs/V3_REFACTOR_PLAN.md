@@ -67,7 +67,7 @@ Status: ☐ todo · ◐ in progress · ☑ done · ⚠ deferred (see §6)
 - ☐ Retire unused tables (admin_users, system_metrics, report_logs, inverter_data_live_archive); remove `anon` SELECT on real tables at cutover (V3-D1)
 
 ### P2 — Collection pipeline · #156
-- ◐ Data repair #163: false zeros fixed, 153 null peaks filled (0 remain), collector refuses to write unmeasured 0. Remaining: 8 daily-summary values lower than the inverter counter and the missing 2026-06-03 row (owner decision, #167)
+- ☑ Data repair #163 / #167 complete: false zeros fixed, 153 null peaks filled, 8 summary values corrected to the inverter counter, 2026-06-03 inserted; 0 days disagree with the counter
 - ☑ Nightly collector built + tested (functions/collect_telemetry, workflow collect-telemetry.yml, 00:15 local; idempotent upserts; empty/failed day/failed alarm fetch = failure + data-outage issue). timeZone note: the API ignores it, we pass 8 as documented
 - ☑ Backfill RUN (owner-approved, 2026-10-03): 792 days, 111,453 telemetry rows, 435 alarms, 784 ok + 8 no_data days, 153 null peaks filled. Gated workflow exists (backfill-telemetry.yml, dry run default) but is only dispatchable once merged to main; the same CLI ran locally
 - ◐ Freshness check extended (shared/domain/freshness.js, 9 tests; wired into scripts/check_data_freshness.js). NOT ARMED: empty tables are skipped until TELEMETRY_REQUIRED=true is set in data-freshness-check.yml after the first successful nightly run (V3-D4, tracked #165)
@@ -192,3 +192,7 @@ Newest first. One entry per meaningful change: date, what, commit/PR, deviations
   28 days re-derived from stored facts with no Solis calls (scripts/rederive_uptime.mjs), mean uptime 96.68% -> 98.00%, genuine outages
   unchanged. Reconciliation found 8 daily-summary values below the inverter's own counter (largest 2026-02-01: 89.3 vs 128.4 kWh) and the
   missing 2026-06-03 row (142.0 kWh): needs owner approval, #167.
+- **2026-10-03 (record corrections #167)** — Fresh snapshot (run 37141010417), then owner-approved: 8 daily-summary values raised to the inverter's own
+  counter (+103 kWh net) and the missing 2026-06-03 row inserted. Reconciliation afterwards: 0 disagreeing days. The 2025-08-04 bill period
+  (CEB 5,859 vs inverter 3,827) is a CEB meter-read timing shift, not a data error: with the next bill (2,748 vs 4,675) the pair totals
+  8,607 vs 8,501 kWh, 1.2% apart.
