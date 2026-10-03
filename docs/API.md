@@ -15,9 +15,16 @@ See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for how these fit together and
 Authorization: Bearer <clerk-session-token>
 ```
 
-`api/_lib/verifyAdminToken.js` verifies it with `@clerk/backend`'s `verifyToken`, then
-fetches the user and requires `publicMetadata.role === 'admin'`. It **fails closed** — any
-error verifying, any missing claim, any non-admin role is a rejection, never a pass-through.
+`api/_lib/verifyAdminToken.js` verifies it with `@clerk/backend`'s `verifyToken` (one code path,
+`authenticate()`), then fetches the user and maps `publicMetadata` to an **access level**
+(`shared/domain/access.js`): `admin` (`role: 'admin'`), `viewer` (`role: 'viewer'`, or the legacy
+`dashboardAccess: 'real'` until the role migration is complete) or `none`.
+
+- Write and admin endpoints require **`admin`** (`verifyAdminToken` / `verifyAccess(…, 'admin')`).
+- The dashboard data endpoints (`/api/data/*`) require **`viewer` or above**; admin satisfies viewer.
+
+It **fails closed** — any error verifying, any missing claim, any unknown level is a rejection,
+never a pass-through.
 
 **CORS.** An allowlist, not `*`. Defaults to the production domain, localhost dev ports, and
 this project's Vercel preview deployments. `ALLOWED_ORIGINS` **replaces** those defaults rather
@@ -32,11 +39,12 @@ anything outside the declared list with `405`.
 |---|---|
 | `400` | Malformed request — missing field, bad type, unparseable body |
 | `401` | No token, expired token, or verification failed |
-| `403` | Valid token, but not an admin |
+| `403` | Valid token, but the access level is too low (not an admin / not a viewer) |
 | `404` | Referenced row does not exist |
 | `405` | Method not in the endpoint's allowlist |
 | `409` | Conflict — currently only duplicate-bill detection |
-| `429` | Rate limited (`/api/solis/explore` only) |
+| `429` | Rate limited (`/api/solis/explore`; `/api/data/*`, 120 requests/min/user, `Retry-After` set) |
+| `502` | `/api/data/live` only: SolisCloud unavailable and nothing cached (never a fabricated reading) |
 | `500` | Unhandled — or a configuration problem, which says so explicitly |
 | `503` | `/ready` only: a dependency is down |
 
@@ -254,6 +262,41 @@ migration.
 
 ---
 
+## Dashboard data (v3 read API)
+
+`GET /api/data/{resource}`, **one function** (`api/data/[resource].js`) serving every dashboard
+read, authorised at **viewer** level. The browser never queries the real tables directly (D-2);
+reads use the service-role key server-side. Responses are `Cache-Control: private, max-age=30`
+with `Vary: Authorization`, so a shared cache can never serve one user's data to another.
+
+Errors are `{ error, code }` where `code` is a stable machine-readable string
+(`invalid_range`, `range_too_large`, `missing_param`, `invalid_param`, `not_found`, `rate_limited`,
+`upstream_unavailable`, `internal`). A 500 never contains upstream or database error text.
+
+**Null is not zero.** An unknown value is `null` in JSON and an **empty cell** in CSV. A day with
+no data is *missing*, and every aggregate reports `presentDays`/`completeness` so a partial range
+is never read as a full one.
+
+| Resource | Query | Returns |
+|---|---|---|
+| `range` | `from`, `to` (≤ 3660 days), `rate=effective\|fixed` (default `effective`), `compare=prev,yoy` | Explore figures (LR-003): total, average/day, best/worst day, peak, specific yield (kWh/kWp, **DC** size), capacity factor (**AC** rating), LKR with its `basis`, daily series with cumulative; optional baselines with average-per-day deltas; uptime aggregate for the same range |
+| `comparison` | `year` | 12 bill-aligned CEB-vs-inverter rows (LR-001) with `daysPresent / daysInPeriod / completeness` |
+| `bills` | – | Every bill: period, CEB kWh, earnings, **effective LKR/kWh**, inverter kWh, completeness, variance (flagged `complete: false` when days are missing) |
+| `uptime` | `from`, `to` | Per-day uptime rows, weighted aggregate, and timeline `segments` (ranges ≤ 62 days; otherwise `null`) (LR-002) |
+| `alarms` | `from`, `to` (≤ 400 days), `limit` (1–500, default 200) | Alarm log, counts by code, `truncated` flag |
+| `telemetry` | `date` | One day of 5-minute points (power, string V/I, AC V/I, frequency, PF, temperature) |
+| `live` | – | Right-now status from SolisCloud: `status` (`online`/`offline`/`alarm`), `abnormalOffline`, `currentPowerKw`, `todayKwh`, `totalKwh`; cached 60 s; `stale: true` when serving the last good value during an upstream outage |
+| `settings` | – | `ratePerKwh`, `capacityKwp`, `acRatedKw`, `dailyTargetKwh` (null when unset; never a guessed default) |
+| `export` | `kind=daily\|uptime\|alarms`, `from`, `to` | `text/csv` attachment; RFC 4180 quoting; spreadsheet-formula injection neutralised |
+
+`state = offline` is **normal every night**; only `abnormalOffline` indicates a real problem.
+
+Tariff basis: `effective` uses each bill period's own rate (earnings ÷ units exported); days not
+covered by any bill are **unrated** and excluded from LKR (counted in `unratedDays`). `fixed` uses
+the Settings tariff for every day. The response always states which was used.
+
+---
+
 ## Settings
 
 ### `PUT` | `POST /api/settings`
@@ -273,19 +316,26 @@ don't print their own rate.
 
 ### `GET` | `PATCH` | `DELETE /api/admin/users/[userId]`
 
-Clerk user administration. `GET` without a `userId` lists every user (paged through Clerk 100 at
-a time, up to 1,000); with one, returns that user.
+Clerk user administration (admin only). `GET` without a `userId` lists every user (paged through
+Clerk 100 at a time, up to 1,000); with one, returns that user. Responses include `accessLevel`
+(`admin` | `viewer` | `none`), the level the server will actually enforce.
 
-`PATCH` accepts `{ role?, dashboardAccess? }` and validates both:
+`PATCH` accepts `{ role?, dashboardAccess? }` and validates both (`api/_lib/userMetadataRules.js`; the
+role list is shared with the enforcer in `shared/domain/access.js`):
 
 | Field | Allowed values |
 |---|---|
-| `role` | `user`, `admin` |
-| `dashboardAccess` | `demo`, `real` |
+| `role` | `user`, `viewer`, `admin` |
+| `dashboardAccess` | `demo`, `real` (legacy flag, retired after the role migration) |
 
-`400` for anything else, for an empty update, and for an admin trying to remove **their own**
-admin role — which is what guarantees the last admin cannot be demoted. `DELETE` refuses to
-delete the caller.
+`400` for anything else (including case variants such as `"Admin"`), for an empty update, and for an
+admin trying to remove **their own** admin role — which is what guarantees the last admin cannot be
+demoted. Unknown keys in the body are ignored, never merged into the user's metadata. `DELETE`
+refuses to delete the caller.
+
+One-off migration of legacy users to `role: viewer`: `node scripts/migrate-roles.mjs` (dry run by
+default; `--write` applies; the legacy flag is left in place so it is reversible). Applied
+2026-10-03 (1 user).
 
 ---
 

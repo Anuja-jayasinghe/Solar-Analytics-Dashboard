@@ -7,8 +7,12 @@
 // (or a hostile value such as an object) was stored verbatim — and `role` is the value
 // verifyAdminToken authorizes on.
 
-export const ALLOWED_ROLES = ['user', 'admin'];
-export const ALLOWED_ACCESS_LEVELS = ['demo', 'real'];
+import { ASSIGNABLE_ROLES, DASHBOARD_ACCESS_VALUES } from '../../shared/domain/access.js';
+
+// One source of truth for what can be assigned: the same module that turns metadata into an access
+// level, so the validator and the enforcer cannot disagree about which roles exist.
+export const ALLOWED_ROLES = ASSIGNABLE_ROLES; // user | viewer | admin
+export const ALLOWED_ACCESS_LEVELS = DASHBOARD_ACCESS_VALUES; // legacy flag: demo | real
 
 /**
  * Validate a PATCH body.

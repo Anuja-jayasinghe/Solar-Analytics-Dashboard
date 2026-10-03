@@ -128,6 +128,8 @@ any more, because two of them silently passed for months.
 Reference — how it works now:
 
 - `docs/ARCHITECTURE.md` — system design, both pipelines, data model, security. **Start here.**
+- `docs/WORKING_RULES.md` — the rulebook (data honesty, dates, security, DB changes, gates, tracking)
+- `docs/V3_REFACTOR_PLAN.md` — the v3 refactor: decisions, checklists, progress log, deferred register
 - `docs/API.md` — every endpoint, auth model, error shapes
 - `docs/SECURITY.md` — who can do what, the RLS / storage policy matrix, new-endpoint checklist
 - `docs/MIGRATIONS.md` — how schema changes are made, and the ledger of what has been applied

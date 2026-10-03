@@ -1,0 +1,97 @@
+name: Backfill Inverter Telemetry
+
+# =============================================================
+# WHY THIS EXISTS (v3, issue #156)
+# =============================================================
+# One-off / recovery run of the telemetry collector over an arbitrary date range. SolisCloud's
+# `inverterDay` history reaches back at least two years (verified 2024-10-03), so the inverter's
+# whole life since commissioning (2024-08-02) can be loaded.
+#
+# This corrects an older claim in backfill-daily-summaries.yml that the 5-minute series "has no
+# history endpoint upstream and cannot be backfilled". It can, via inverterDay.
+#
+# DRY RUN IS THE DEFAULT. It fetches from Solis, builds every row, reports per-day results and
+# any disagreement with inverter_data_daily_summary, and writes NOTHING. Untick dry_run to write.
+#
+# fill_peaks additionally sets peak_power_kw on daily-summary rows where it is NULL. It never
+# overwrites a value and never creates a row (see issue #163).
+#
+# Pace: Solis allows 2 calls/second; the collector starts ~1.4 calls/second and makes 2 calls per day,
+# so ~790 days takes ~25-30 minutes with concurrency 4 (it was over 2 hours before concurrency: each Solis call has ~5 s latency). Take a DB Snapshot first if writing.
+# =============================================================
+
+on:
+  workflow_dispatch:
+    inputs:
+      from:
+        description: 'First day (YYYY-MM-DD)'
+        required: true
+        default: '2024-08-02'
+      to:
+        description: 'Last day (YYYY-MM-DD). Blank = yesterday'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Preview only: report the result and write nothing'
+        type: boolean
+        required: true
+        default: true
+      fill_peaks:
+        description: 'Also fill NULL peak_power_kw in the daily summary (never overwrites)'
+        type: boolean
+        required: true
+        default: false
+
+concurrency:
+  group: collect-telemetry
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  backfill:
+    name: Backfill telemetry
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: 📚 Install Dependencies
+        run: pnpm install --no-frozen-lockfile --prefer-offline
+
+      - name: 📡 Backfill telemetry
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SOLIS_API_URL: ${{ secrets.SOLIS_API_URL }}
+          SOLIS_API_ID: ${{ secrets.SOLIS_API_ID }}
+          SOLIS_API_SECRET: ${{ secrets.SOLIS_API_SECRET }}
+          NODE_ENV: production
+          FROM: ${{ github.event.inputs.from }}
+          TO: ${{ github.event.inputs.to }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+          FILL_PEAKS: ${{ github.event.inputs.fill_peaks }}
+        run: |
+          set -euo pipefail
+          ARGS=(--from "$FROM" --job backfill_telemetry)
+          if [ -n "$TO" ]; then ARGS+=(--to "$TO"); fi
+          if [ "$DRY_RUN" != "true" ]; then ARGS+=(--write); fi
+          if [ "$FILL_PEAKS" = "true" ]; then ARGS+=(--fill-peaks); fi
+          echo "node functions/collect_telemetry/index.js ${ARGS[*]}"
+          node functions/collect_telemetry/index.js "${ARGS[@]}" --concurrency 4

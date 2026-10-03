@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@clerk/backend": "^3.17.2",
@@ -29,6 +30,7 @@
   "devDependencies": {
     "@eslint/js": "^9.36.0",
     "@vitejs/plugin-react": "^5.0.3",
+    "@vitest/coverage-v8": "5.0.0",
     "dotenv": "^17.2.3",
     "eslint": "^9.36.0",
     "eslint-plugin-react-hooks": "^5.2.0",

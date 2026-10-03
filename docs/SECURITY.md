@@ -70,6 +70,29 @@ Bringing the database into line with this matrix is
 `scripts/sql/2026-09-12_revoke_anon_writes.sql` (writes). Migrations are applied by hand; see
 [`MIGRATIONS.md`](./MIGRATIONS.md).
 
+## v3 target state (staged; in force only at cutover)
+
+The matrix above describes what the **running v1 dashboard** needs. The v3 refactor
+([ADR-003](./adr/003-private-reads-through-the-api.md), decision D-2) changes the model from "the
+dashboard is public" to "real data is private": viewers and admins read through `GET /api/data/*`,
+and everyone else sees a demo built from generated data.
+
+| Object | Today | At v3 cutover |
+|---|---|---|
+| `inverter_telemetry`, `collector_heartbeats`, `inverter_alarms`, `inverter_day_uptime`, `inverter_status_segments`, `collector_runs` | **Already private**: RLS on, no policies, no `anon`/`authenticated` privileges (applied 2026-10-03) | unchanged |
+| write-class privileges on every public table | **Already revoked** from `anon`/`authenticated` (applied 2026-10-03), RLS is now the second wall | unchanged |
+| `ceb_data`, `system_settings`, `inverter_data_*` | `anon` SELECT (as in the matrix) | `anon` SELECT revoked; read only through the API |
+| Access levels | `admin` only on the server | `admin`, `viewer` (read-only dashboards), none = demo; enforced in `api/_lib/verifyAdminToken.js` (`verifyAccess`) |
+
+Until cutover real generation and billing data stays publicly readable, exactly as the matrix says.
+That is a known, tracked exposure (deferred item V3-D1, issue #155). The `anon` SELECT revoke and the
+matching removal of v1's direct reads ship together, because revoking first would blank the live site.
+
+The new-endpoint checklist below was applied to `/api/data/[resource]`: authenticate (viewer), method
+gate, `blockOnConfigProblem`, allowlist validation, no dependency error text returned, tests, API.md.
+
+---
+
 ## Widening the public surface
 
 If the redesign needs another column on the public dashboard, add it to the `GRANT` in a **new**

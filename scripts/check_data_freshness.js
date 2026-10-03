@@ -20,6 +20,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { exitOnServiceKeyProblem } from '../api/_lib/serviceKeyGuard.js';
 import 'dotenv/config';
+import { evaluateCollectorRuns, evaluateUptimeFreshness } from '../shared/domain/freshness.js';
+import { localDateKey } from '../shared/domain/time.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -124,11 +126,31 @@ async function checkLiveData() {
   };
 }
 
+// v3 telemetry pipeline (issue #156). Not armed until TELEMETRY_REQUIRED=true, so an empty table
+// is "not started yet" rather than an outage; arm it after the first successful nightly run.
+const TELEMETRY_REQUIRED = process.env.TELEMETRY_REQUIRED === 'true';
+
+async function checkCollectorRuns() {
+  const base = () => supabase.from('collector_runs').select('status,started_at').order('started_at', { ascending: false }).limit(1);
+  const [any, ok] = await Promise.all([base(), base().eq('status', 'ok')]);
+  const err = any.error || ok.error;
+  if (err) return { name: 'collector_runs', ok: false, reason: `query failed: ${err.message}` };
+  return evaluateCollectorRuns({
+    latestRun: any.data?.[0] ?? null, latestOkRun: ok.data?.[0] ?? null, nowMs: Date.now(), required: TELEMETRY_REQUIRED
+  });
+}
+
+async function checkDayUptime() {
+  const { data, error } = await supabase.from('inverter_day_uptime').select('day').order('day', { ascending: false }).limit(1);
+  if (error) return { name: 'inverter_day_uptime', ok: false, reason: `query failed: ${error.message}` };
+  return evaluateUptimeFreshness({ latestDay: data?.[0]?.day ?? null, todayKey: localDateKey(Date.now()), required: TELEMETRY_REQUIRED });
+}
+
 // -------------------------------------------------------------
 // Main
 // -------------------------------------------------------------
 async function main() {
-  const results = [await checkDailySummary(), await checkLiveData()];
+  const results = [await checkDailySummary(), await checkLiveData(), await checkCollectorRuns(), await checkDayUptime()];
   const stale = results.filter(r => !r.ok);
 
   if (jsonOutput) {
@@ -142,13 +164,14 @@ async function main() {
   console.log('');
 
   for (const r of results) {
-    const icon = r.ok ? '✅' : '❌';
-    console.log(`${icon} ${r.name}`);
+    const icon = r.skipped ? '⏸️ ' : r.ok ? '✅' : '❌';
+    console.log(`${icon} ${r.name}${r.skipped ? '  (skipped)' : ''}`);
+    if (r.skipped) console.log(`   Note       : ${r.reason}`);
     if (r.latest) console.log(`   Newest row : ${r.latest}`);
     if (r.ageDays !== undefined) console.log(`   Age        : ${describeAge(r.ageDays)}`);
     if (r.ageHours !== undefined) console.log(`   Age        : ${r.ageHours} hours`);
     if (r.threshold) console.log(`   Threshold  : ${r.threshold}`);
-    if (r.reason) console.log(`   Problem    : ${r.reason}`);
+    if (r.reason && !r.skipped) console.log(`   Problem    : ${r.reason}`);
     console.log('');
   }
 

@@ -48,3 +48,17 @@ and the two `*_meta.json` files beside them are the inverter vendor's documentat
 refactors, the finished Clerk migration, old plans and specs — kept for history and grouped by
 topic. Every file there carries a banner saying so. Nothing in the archive describes the current
 system reliably.
+
+## v3 refactor (in progress)
+
+The ground-up refactor tracked in [`V3_REFACTOR_PLAN.md`](./V3_REFACTOR_PLAN.md) (decisions, phase
+checklists, progress log, and the deferred / bypassed register).
+
+| Document | Contents |
+|---|---|
+| [`V3_REFACTOR_PLAN.md`](./V3_REFACTOR_PLAN.md) | Decisions, checklists, progress log, deferred register |
+| [`WORKING_RULES.md`](./WORKING_RULES.md) | The rulebook: data honesty, dates, security, DB changes, quality gates, tracking |
+| [`adr/`](./adr/README.md) | Architecture decision records (uptime source, shared modules, private reads, demo, null ≠ 0) |
+| [`SOLIS_API_FIELD_CATALOG.md`](./SOLIS_API_FIELD_CATALOG.md) | Every SolisCloud endpoint and field, from live probes: what we use, what we skip |
+| [`UI_CURRENT_STATE_AUDIT.md`](./UI_CURRENT_STATE_AUDIT.md) | What the v2.1.0 UI shows, what is wrong with it, and the questions that shaped v3 |
+| [`logic-registry/`](./logic-registry/README.md) | LR-002 (uptime and interruptions) and LR-003 (custom range aggregation) join LR-001 |

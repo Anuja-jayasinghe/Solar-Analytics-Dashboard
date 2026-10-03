@@ -410,6 +410,69 @@ Notes on the awkward bits:
 
 ---
 
+### v3 telemetry tables (added 2026-10-03, branch `refactor/v3`)
+
+Private tables (RLS on, **no policies**, no privileges for `anon`/`authenticated`; service-role
+only) that hold the uptime log. Decisions: [ADR-001](./adr/001-uptime-from-solis-history.md),
+[ADR-003](./adr/003-private-reads-through-the-api.md). Spec: LR-002.
+
+```mermaid
+erDiagram
+    inverter_telemetry {
+        text inverter_sn PK
+        timestamptz ts PK "Solis dataTimestamp, epoch ms"
+        numeric pac_kw "normalised to kW"
+        numeric_array pv_v "8 string voltages"
+        numeric_array pv_a "8 string currents"
+        numeric_array ac_v "3 phases"
+        numeric fac_hz
+        numeric temp_c
+    }
+    collector_heartbeats {
+        text collector_sn PK
+        timestamptz ts PK
+        smallint rssi
+    }
+    inverter_alarms {
+        text inverter_sn PK
+        text alarm_code PK
+        timestamptz begin_ts PK
+        timestamptz end_ts "NULL while open"
+        bigint duration_ms
+    }
+    inverter_day_uptime {
+        text inverter_sn PK
+        date day PK
+        text status "ok | down | no_data | no_window"
+        numeric uptime_pct "NULL = not knowable, never 0 by default"
+        numeric trip_min
+        numeric gap_min
+        numeric comms_lost_min
+    }
+    inverter_status_segments {
+        text inverter_sn PK
+        timestamptz start_ts PK
+        text kind PK "trip | gap | comms_lost | edge_gap"
+        date day
+    }
+    collector_runs {
+        bigint id PK
+        text job
+        text status "running | ok | empty | failed"
+    }
+    inverter_telemetry }o--|| inverter_day_uptime : "derived into"
+    inverter_alarms }o--|| inverter_day_uptime : "trips overlay"
+    collector_heartbeats }o--|| inverter_day_uptime : "separates gap from comms_lost"
+    inverter_day_uptime ||--o{ inverter_status_segments : "non-producing stretches"
+```
+
+Flow: `collect-telemetry.yml` (00:15 Colombo) → `functions/collect_telemetry` →
+`shared/domain/telemetryPipeline` (pure row builder) → upserts. Reads go through
+`GET /api/data/*` ([API.md](./API.md#dashboard-data-v3-read-api)). The one-per-day `inverter_day_uptime`
+row is **derived**; deleting it is harmless because the collector re-derives it.
+
+---
+
 ## 7. Security model
 
 ```mermaid

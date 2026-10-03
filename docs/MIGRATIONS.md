@@ -45,9 +45,24 @@ except the two `2026-04-23_…anon…` files, which are superseded (see the ledg
 | `2026-09-24_approve_ceb_extraction.sql` | `approve_ceb_extraction()` — bill approval in one transaction. Safe before or after the code; the API falls back and warns until it is installed | **Not applied** |
 | `2026-09-24_ceb_data_public_columns.sql` | Limits `anon` to four `ceb_data` columns (`id`, `bill_date`, `earnings`, `units_exported`). **Deploy the code that adds `GET /api/ceb-bills/records` first** — the old admin table did `select *` from the browser | **Not applied** |
 | `2026-09-24_drop_cascade_trigger.sql` | Drops the live-only `trg_cascade_delete_ceb_data` trigger, now redundant. Read its header first: snapshot, deploy the merged `/delete` endpoint, read the definition | **Not applied** |
+| `2026-10-03_v3_telemetry_schema.sql` | v3: six new **private** tables (`inverter_telemetry`, `collector_heartbeats`, `inverter_alarms`, `inverter_day_uptime`, `inverter_status_segments`, `collector_runs`) and the `capacity_kwp` setting. Purely additive; RLS on, no policies, no privileges for `anon`/`authenticated`. Rollback: `…_rollback.sql` | **Yes — 2026-10-03** (via Supabase `apply_migration` after DB Snapshot run 37134535084; verified: RLS on, 0 policies, `anon` denied) |
+| `2026-10-03_v3_harden_public_role_privileges.sql` | Revokes INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER from `anon` and `authenticated` on all public tables (they held them; only RLS blocked writes) and sets default privileges so new tables do not get them back. **SELECT is untouched** | **Yes — 2026-10-03** (verified: v1 reads still 200; an `anon` PATCH now fails at privilege level, 42501) |
 | `2026-09-24_ceb_schema_drift.sql` | Adds `confidence_score` and `meter_reading_previous`, which the code writes but no migration declared. No-op on the live project | **Not applied** (no-op if the columns exist) |
 
 When you apply one, change its last cell to `Yes — YYYY-MM-DD`.
+
+## Data repairs (not migrations)
+
+Recorded here because they changed production rows and the ledger is where a future reader looks.
+
+| Date | What | Evidence |
+|---|---|---|
+| 2026-10-03 | `inverter_data_daily_summary`: 4 false-zero rows (ids 893, 894, 895, 904) set to the SolisCloud values 52.1 / 48.7 / 154 / 172.4 kWh (peak set to NULL); 8 unknowable rows (ids 896–903, 2025-04-14…21) deleted. All 12 came from one bulk insert at 2025-11-23 04:42:01 | Issue #163; DB Snapshot run 37134535084 holds the before-state |
+| 2026-10-03 | **Telemetry backfill** (`functions/collect_telemetry --from 2024-08-02 --write --fill-peaks`, ran 32 min): 111,453 rows in `inverter_telemetry` over 784 days, 165,844 `collector_heartbeats`, 435 `inverter_alarms`, 792 `inverter_day_uptime` rows (784 `ok`, 8 `no_data` = 2025-04-14…21, where Solis holds nothing: a 10-day internet outage). **`peak_power_kw` filled on the 153 daily-summary rows that had NULL**; the 0 remaining are NULL-free. Never overwrote a value | DB Snapshot run 37137895932 + full local export (2,100 rows, 18 tables) taken immediately before |
+| 2026-10-03 | `inverter_day_uptime` / `inverter_status_segments`: 28 days re-derived after LR-002 was corrected so that alarm `1D4C2` ("Loss of internet connection") is logger evidence, not an inverter trip (`scripts/rederive_uptime.mjs`; mean uptime 96.68% → 98.00%). Genuine outages (28–30 Nov 2025, 23–24 Jul 2025) unchanged | Derived tables only; regenerable from the stored facts |
+| 2026-10-03 | `inverter_data_daily_summary`: 8 values raised to the inverter's own end-of-day counter (2024-11-02 148.7→152.2, 11-17 141.4→143.4, 11-18 123.7→125.5, 11-23 88.7→100.5, 11-27 46.0→60.4, 2025-06-26 138.0→146.1, 07-10 127.2→149.4, 2026-02-01 89.3→128.4; net +103 kWh) and the missing 2026-06-03 row inserted (142.0 kWh, peak 37.07 kW). The old values came from sparse live polling that missed evenings. Afterwards 0 days disagree with the counter and every telemetry day has a summary row (785 rows) | Issue #167; DB Snapshot run 37141010417 holds the before-image |
+| 2026-10-03 | `collector_runs` id 1: `points_written` corrected 109,456 → 111,453 (a lost-update bug in the report counter under concurrency; the data was right) | Fixed + regression test |
+| 2026-10-03 | Clerk: 1 user with the legacy `dashboardAccess: real` flag and no role given `role: viewer` (`scripts/migrate-roles.mjs`); legacy flag left in place | Issue #158 |
 
 ## Suggested order for the three pending migrations
 

@@ -10,6 +10,7 @@
 import { verifyAdminToken, clerkClient } from '../../_lib/verifyAdminToken.js';
 import { handlePreflightAndMethod } from '../../_lib/httpSecurity.js';
 import { validateUserPatch } from '../../_lib/userMetadataRules.js';
+import { accessLevelFromMetadata } from '../../../shared/domain/access.js';
 
 // Clerk returns at most 100 users per call. Page through them rather than silently dropping the rest.
 const PAGE_SIZE = 100;
@@ -23,6 +24,9 @@ function toUserSummary(user) {
     lastName: user.lastName,
     role: user.publicMetadata?.role || 'user',
     dashboardAccess: user.publicMetadata?.dashboardAccess || 'demo',
+    // The level the server will actually enforce (shared/domain/access.js), so the admin screen
+    // shows effective access rather than two raw flags.
+    accessLevel: accessLevelFromMetadata(user.publicMetadata),
     createdAt: user.createdAt
   };
 }

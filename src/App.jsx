@@ -20,8 +20,6 @@ const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const USE_CLERK_AUTH = import.meta.env.VITE_USE_CLERK_AUTH === 'true';
 
 // Lazy load pages for better code splitting
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const Settings = lazy(() => import("./pages/Settings"));
 const Landing = lazy(() => import("./pages/Landing"));
 // Demo/Real separated pages
 const DashboardDemo = lazy(() => import("./pages/demo/DashboardDemo"));

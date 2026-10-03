@@ -57,6 +57,21 @@ describe('validateUserPatch', () => {
     expect(validateUserPatch({ dashboardAccess: 'real' }, self).ok).toBe(true);
   });
 
+  it('accepts the viewer role (read-only dashboard access, D-3) and rejects case variants', () => {
+    expect(validateUserPatch({ role: 'viewer' }, ctx)).toEqual({ ok: true, updates: { role: 'viewer' } });
+    for (const role of ['Viewer', 'VIEWER', 'Admin', ' viewer']) expect(validateUserPatch({ role }, ctx).ok).toBe(false);
+  });
+
+  it('an admin cannot turn themselves into a viewer either', () => {
+    const self = { targetUserId: 'user_admin', actingUserId: 'user_admin' };
+    expect(validateUserPatch({ role: 'viewer' }, self).ok).toBe(false);
+  });
+
+  it('does not pass unknown keys through into the updates', () => {
+    const r = validateUserPatch({ role: 'viewer', publicMetadata: { role: 'admin' }, isSuperAdmin: true }, ctx);
+    expect(r.updates).toEqual({ role: 'viewer' });
+  });
+
   it('lets an admin demote somebody else', () => {
     expect(validateUserPatch({ role: 'user' }, ctx).ok).toBe(true);
   });
