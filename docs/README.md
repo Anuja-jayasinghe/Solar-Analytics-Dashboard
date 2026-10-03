@@ -8,6 +8,7 @@ The v3 refactor is tracked in [`V3_REFACTOR_PLAN.md`](./V3_REFACTOR_PLAN.md).
 | Document | What it covers |
 |---|---|
 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) | System design, both pipelines, data model, security |
+| [`adr/`](./adr) | Architecture decision records for v3 (uptime source, shared modules, private reads, demo, null≠0) |
 | [`WORKING_RULES.md`](./WORKING_RULES.md) | The rulebook: data honesty, dates, security, DB changes, gates, tracking |
 | [`API.md`](./API.md) | Every endpoint, auth model, error shapes |
 | [`RUNBOOK.md`](./RUNBOOK.md) | Operating procedures and incident response |

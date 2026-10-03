@@ -40,6 +40,8 @@ exports every table plus the schema as a downloadable artifact. It costs two min
 | Generate Daily Inverter Summary | `30 1 * * *` | aggregates → `inverter_data_daily_summary` | [Summary failing](#daily-summary-failing) |
 | Data Freshness Check | daily | opens a `data-outage` issue if rows stop arriving | It *is* the alarm — read the issue |
 | Keepalive | `17 3 */10 * *` + push to `main` | heartbeat commit, re-enables schedules | [Workflows disabled](#workflows-silently-disabled) |
+| Collect Inverter Telemetry | `45 18 * * *` (00:15 Colombo) | last 7 completed days of Solis `inverterDay` + `collector/day` + `alarmList` → telemetry, alarms, uptime tables | [Telemetry collector](#telemetry-collector-failing) |
+| Backfill Inverter Telemetry | manual (**dry run default**) | same collector over any range, `--concurrency 4` | [Backfilling telemetry](#backfilling-telemetry) |
 | Backfill Daily Summaries | manual | rebuilds gaps from the Solis month API | [Backfill](#backfilling-a-gap) |
 | DB Snapshot | manual | read-only export of tables + schema | — |
 | ci | push / PR | lint · test · build · prod audit | All four are mandatory |
@@ -105,6 +107,61 @@ So first: **is this a real failure or a legitimate empty window?** The job check
 immediately after a recovery), the failure is correct but uninteresting — fix the *live*
 collector and this resolves itself. If the live table is healthy and the summary still fails,
 the aggregation is at fault.
+
+### Telemetry collector failing
+
+`Collect Inverter Telemetry` (ADR-001) ends **non-zero** unless the run fully succeeded: any failed
+day, a failed alarm fetch, or a run that found no points at all. A failure opens or updates the
+shared `data-outage` issue, and records a row in `collector_runs` with `status = failed | empty`
+and the error. First look there:
+
+```sql
+select started_at, status, date_from, date_to, points_written, alarms_written, days_derived, error
+from collector_runs order by started_at desc limit 10;
+```
+
+| Symptom | Likely cause | Action |
+|---|---|---|
+| `alarm fetch failed` | SolisCloud `alarmList` error or rate limit | Re-run the workflow; days derived without alarms carry `alarms_known = false` and are corrected by the next successful run (re-processing is idempotent) |
+| `N day(s) failed` | One `inverterDay` call errored (Solis 5xx/504) | Re-run; only the failed days need data |
+| `empty` | No points for any requested day. Inverter off for the whole range, or the credentials work but return nothing | Check the Solis web portal; a real total outage is recorded per day as `down`/`no_data` |
+| Everything fails with `Missing Solis API credentials` / RLS error | Rotated `SOLIS_*` secrets, or `SUPABASE_SERVICE_KEY` is not the `service_role` key | [Rotating credentials](#rotating-credentials). Remember GitHub and Vercel hold **separate** copies |
+
+Re-running is always safe: every write is an upsert on a natural key and segments are replaced per day.
+
+### Backfilling telemetry
+
+Dry run first, always. It prints per-day results and any disagreement with the daily summary, and
+writes nothing:
+
+```bash
+node functions/collect_telemetry/index.js --from 2024-08-02 --concurrency 4          # dry run
+```
+
+Then take a **DB Snapshot**, then write:
+
+```bash
+gh workflow run "DB Snapshot"
+node functions/collect_telemetry/index.js --from 2024-08-02 --concurrency 4 --write
+node functions/collect_telemetry/index.js --from 2024-08-02 --concurrency 4 --write --fill-peaks
+```
+
+(or run the **Backfill Inverter Telemetry** workflow with `dry_run` unticked; note a workflow is
+only dispatchable once it exists on the default branch). `--fill-peaks` sets `peak_power_kw` on
+daily-summary rows where it is NULL; it never overwrites a value and never creates a row.
+Expect about 25–30 minutes for the full history: each Solis call has ~5 s latency and the
+collector keeps request *starts* 700 ms apart (the API limit is 2 per second).
+
+The dry run's "reconcile" list names days where the daily summary disagrees with the inverter's
+own counter by more than 1.5 kWh. That is how the false zeros in #163 were found; investigate each.
+
+### Freshness check for the telemetry tables
+
+`scripts/check_data_freshness.js` also checks `collector_runs` and `inverter_day_uptime`
+(`shared/domain/freshness.js`). It ships **unarmed**: while those tables are empty the checks are
+skipped. After the first successful run set `TELEMETRY_REQUIRED=true` in
+`.github/workflows/data-freshness-check.yml` (issue #165), otherwise a collector that silently
+stops stays invisible.
 
 ### Workflows silently disabled
 
