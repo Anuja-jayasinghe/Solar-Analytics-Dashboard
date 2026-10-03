@@ -74,7 +74,8 @@ Status: ☐ todo · ◐ in progress · ☑ done · ⚠ deferred (see §6)
 - ☐ Replace the wrong health score (in the Pro metrics page build, #160)
 
 ### P3 — API · #157
-- ☐ Access levels, read router (≤12 functions), CSV export, rate limits, CSP, logging, tests
+- ☑ Access levels (shared/domain/access.js; single authenticate() path), read router api/data/[resource].js (function 11/12), CSV export w/ formula-injection protection, per-user rate limit, private caching, generic 500s, 71 tests, docs/API.md updated, unused open-meteo CSP entry removed
+- ⚠ Not done, tracked #166 (V3-D5): real-deployment verification of /api/data (Vercel preview is protected), CSP unsafe-eval/inline tightening, api_logs request logging, ceb delete-endpoint merge, distributed rate limiting, ETag
 
 ### P4 — Auth and demo · #158
 - ☐ Clerk-only; single route guard; roles admin|viewer|demo
@@ -124,6 +125,7 @@ Every row has a GitHub issue. Add a row the moment something is skipped.
 | V3-D1 | Revoke `anon` SELECT on existing real tables is staged to cutover, not P1 | v1 reads with anon until cutover | #155 |
 | V3-D2 | Downtime/fault alerting | Out of scope for v3 | #151 |
 | V3-D4 | Freshness check for the telemetry pipeline ships unarmed (empty = skipped) so deploying it cannot raise a false outage | Arm with TELEMETRY_REQUIRED=true after the first successful nightly run | #165 |
+| V3-D5 | P3 leftovers: real-deployment verification of /api/data, CSP tightening, request logging, delete-endpoint merge, distributed rate limit, ETag | Cannot observe the protected Vercel preview; the rest need browser testing or are low value now | #166 |
 | V3-D3 | UI-impacting cleanup held for the design phase: Chakra/emotion removal, vite manualChunks, duplicate ErrorBoundary/SkeletonLoader, SolisExplorer rewrite, Open-Meteo CSP entry, eslint stale refs, `/demodashbaard` typo | Changing them alters what users see; UI waits for design sign-off | #162 |
 
 ## 7. Progress log
@@ -163,3 +165,8 @@ Newest first. One entry per meaningful change: date, what, commit/PR, deviations
   row, empty = failure, alarm-fetch failure = unknown not none, peak fill only on NULL peaks of existing rows, idempotent).
   Live dry run on the last 3 days worked end to end (e.g. 2026-10-02: 146 pts, 97.4%, 3 trips). 199 tests total.
   Note: backfill-daily-summaries.yml claims inverter_data_live "cannot be backfilled"; wrong since inverterDay (fix in P7).
+- **2026-10-03 (P3)** — Read API built test-first (shared/domain/{access,alignment}.js; api/_lib/data/{query,rateLimit,csv,resources,handler,live,repo}.js;
+  api/data/[resource].js). alignment.js re-implements LR-001 on date keys: identical to v1 for complete data (differential test),
+  identical across 4 timezones (v1 is not), and returns null instead of a fabricated 0 for windows with no data. 278 tests.
+  Deviation: could not verify the deployed function (Vercel Authentication on previews; Vercel connector not authorised for the
+  project) -> V3-D5/#166.
