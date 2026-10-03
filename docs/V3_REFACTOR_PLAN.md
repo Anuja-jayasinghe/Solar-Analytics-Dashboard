@@ -122,6 +122,7 @@ Every row has a GitHub issue. Add a row the moment something is skipped.
 |---|---|---|---|
 | V3-D1 | Revoke `anon` SELECT on existing real tables is staged to cutover, not P1 | v1 reads with anon until cutover | #155 |
 | V3-D2 | Downtime/fault alerting | Out of scope for v3 | #151 |
+| V3-D3 | UI-impacting cleanup held for the design phase: Chakra/emotion removal, vite manualChunks, duplicate ErrorBoundary/SkeletonLoader, SolisExplorer rewrite, Open-Meteo CSP entry, eslint stale refs, `/demodashbaard` typo | Changing them alters what users see; UI waits for design sign-off | #162 |
 
 ## 7. Progress log
 
