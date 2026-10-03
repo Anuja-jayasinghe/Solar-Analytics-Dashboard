@@ -60,14 +60,14 @@ Status: ☐ todo · ◐ in progress · ☑ done · ⚠ deferred (see §6)
 - ☑ Pure-function implementations in `shared/domain/` (time, solisNormalize, uptime, rangeStats) with tests written first: 74 new tests, 165 total
 
 ### P1 — Database · #155 (blocked by P2a)
-- ☐ DB snapshot taken first (workflow run; awaiting owner go-ahead)
-- ◐ Migrations WRITTEN, not applied: scripts/sql/2026-10-03_v3_telemetry_schema.sql (+ rollback), 2026-10-03_v3_harden_public_role_privileges.sql. Apply after snapshot + owner confirmation; run advisors before/after
-- ◐ New tables written: inverter_telemetry, collector_heartbeats, inverter_alarms, inverter_day_uptime, inverter_status_segments, collector_runs (all private, RLS on, no policies)
+- ☑ DB snapshot taken first (run 37134535084: 932 rows, 30-day artifact)
+- ☑ Migrations APPLIED 2026-10-03 (owner-approved): v3_telemetry_schema, v3_harden_public_role_privileges. Verified: new tables private (RLS on, 0 policies, no anon/authenticated access); v1 reads still 200; anon writes now fail at privilege level (42501). Advisors: only INFO notices for the intentionally policy-less tables
+- ☑ New tables created: inverter_telemetry, collector_heartbeats, inverter_alarms, inverter_day_uptime, inverter_status_segments, collector_runs; capacity_kwp=41.76 seeded
 - ☑ Decided: uptime lives in the derived inverter_day_uptime table; the existing daily summary is NOT altered (additive-only migration)
-- ☐ Retire unused tables; remove `anon` SELECT on real tables (**coordinate with P3/P4 — the current app reads with anon**)
+- ☐ Retire unused tables (admin_users, system_metrics, report_logs, inverter_data_live_archive); remove `anon` SELECT on real tables at cutover (V3-D1)
 
 ### P2 — Collection pipeline · #156
-- ☐ Data repair from #163 (4 false zeros, 8 unknowable zeros, 149 null peaks, 1 missing day) — needs snapshot + owner confirmation
+- ◐ Data repair #163: 4 false zeros corrected and 8 unknowable rows removed (applied, owner-approved). Remaining: backfill 153 null peaks, fill 2026-06-03, Solis reconciliation check, collector refuses to write unmeasured 0
 - ☐ Nightly collector (idempotent, fails loudly on empty, timeZone 5.5)
 - ☐ Gated backfill workflow (dry run default)
 - ☐ Freshness check extended
@@ -153,3 +153,7 @@ Newest first. One entry per meaningful change: date, what, commit/PR, deviations
 - **2026-10-03 (P1 prep)** — Wrote the additive v3 schema migration + rollback and a privilege-hardening migration (found
   that anon holds INSERT/UPDATE/DELETE/TRUNCATE table grants, blocked only by RLS). Nothing applied. Decision: no raw JSON in
   telemetry (size; source retains >= 2 years). DB is 16 MB so storage is not a constraint.
+- **2026-10-03 (P1 applied + #163 part 1)** — Snapshot taken (932 rows) then both migrations applied via Supabase and verified.
+  Data repair: the 12 suspect rows (ids 893-904, one bulk insert on 2025-11-23) -> 4 corrected from Solis, 8 deleted; zero days now 3
+  (genuine). Draft PR #164 opened so CI runs on refactor/v3. Observation logged on #163: period ending 2025-09-04 has inverter 4675
+  vs CEB 2748 kWh (billing timing?), to investigate before designing the CEB summary.
