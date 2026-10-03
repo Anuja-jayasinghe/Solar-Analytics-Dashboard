@@ -7,7 +7,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createDataHandler } from '../api/_lib/data/handler.js';
 import { createRateLimiter } from '../api/_lib/data/rateLimit.js';
 import { createLiveProvider, mapLive } from '../api/_lib/data/live.js';
-import { HttpError } from '../api/_lib/data/query.js';
+import { HttpError } from '../shared/data/query.js';
 
 // ---- fakes ------------------------------------------------------------------------------------
 function makeRes() {

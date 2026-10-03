@@ -260,10 +260,24 @@ don't print their own rate.
 
 ## Users
 
-### `GET` | `POST` | `PATCH` | `DELETE /api/admin/users/[userId]`
+### `GET` | `PATCH` | `DELETE /api/admin/users/[userId]`
 
-Clerk user administration. `GET` without a `userId` lists users; with one, returns that user.
-`PATCH` accepts `{ role, dashboardAccess }` and rejects an empty update with `400`.
+Clerk user administration (admin only). `GET` without a `userId` lists users; with one, returns that
+user. Responses include `accessLevel` (`admin` | `viewer` | `none`) as the server will compute it.
+
+`PATCH` accepts `{ role, dashboardAccess }` and is validated (`shared/domain/access.js`):
+- `role` must be `admin`, `viewer` or `user` (`user` removes the role). Anything else, including a
+  case typo such as `"Admin"`, is `400` rather than silently stripping access.
+- `dashboardAccess` (legacy flag, retired after the role migration) must be `real` or `demo`.
+- An admin **cannot remove their own admin role** (`400`), so the system cannot be left with no one
+  able to administer it.
+- Keys other than `role` and `dashboardAccess` are ignored, never merged into the user's metadata.
+
+An unexpected failure returns a generic `500` (`{ error }`); Clerk's error text is logged, not returned.
+`POST` is not supported (it was listed but never implemented).
+
+One-off migration of legacy users to `role: viewer`: `node scripts/migrate-roles.mjs` (dry run by
+default; `--write` applies; legacy flag is left in place so it is reversible).
 
 ---
 

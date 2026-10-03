@@ -10,7 +10,7 @@
 // State mapping (Solis docs): 1 online, 2 offline, 3 alarm. NOTE state 2 is NORMAL every night,
 // so `abnormalOffline` (stateExceptionFlag === 1) is what signals a real problem.
 
-import { HttpError } from './query.js';
+import { HttpError } from '../../../shared/data/query.js';
 import { energyToKwh, powerToKw, toNum } from '../../../shared/domain/solisNormalize.js';
 
 const STATUS = { 1: 'online', 2: 'offline', 3: 'alarm' };

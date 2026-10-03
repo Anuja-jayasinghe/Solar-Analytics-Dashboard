@@ -78,8 +78,8 @@ Status: ☐ todo · ◐ in progress · ☑ done · ⚠ deferred (see §6)
 - ⚠ Not done, tracked #166 (V3-D5): real-deployment verification of /api/data (Vercel preview is protected), CSP unsafe-eval/inline tightening, api_logs request logging, ceb delete-endpoint merge, distributed rate limiting, ETag
 
 ### P4 — Auth and demo · #158
-- ☐ Clerk-only; single route guard; roles admin|viewer|demo
-- ☐ Demo fixtures dated 2035+
+- ◐ Roles admin|viewer|none implemented server-side (shared/domain/access.js, validated PATCH with typo + self-demotion guards, migration script scripts/migrate-roles.mjs dry-run: 8 Clerk users, 1 legacy-real user would become viewer; NOT applied, needs owner go-ahead). Clerk-only frontend + single route guard: frontend rewrite, folded into P5b (#160)
+- ☑ Demo dataset dated 2035+ (shared/demo/{demoData,demoApi}.js, 17 tests): runs the REAL resource code against generated data, so it cannot drift from the API; covers outage, collection gap, comms-lost, late start, tariff change, open bill period
 
 ### P5a — UI design · #159  **← DISCUSS WITH OWNER BEFORE STARTING**
 - ☐ Detailed design discussion (glassy/modern; a11y contrast; Figma vs artifact)
@@ -170,3 +170,7 @@ Newest first. One entry per meaningful change: date, what, commit/PR, deviations
   identical across 4 timezones (v1 is not), and returns null instead of a fabricated 0 for windows with no data. 278 tests.
   Deviation: could not verify the deployed function (Vercel Authentication on previews; Vercel connector not authorised for the
   project) -> V3-D5/#166.
+- **2026-10-03 (P4 server side)** — Moved pure resource logic to shared/data/ so the demo can run the real code. Demo dataset (all dates
+  2035+, fake identifiers, deterministic). Building it exposed a real flaw in LR-002: a lone heartbeat at the recovery edge of a gap was
+  taken as proof the logger stayed up; logger evidence now comes from the interior of the gap (spec + tests updated). Admin user endpoint
+  hardened: validated roles, no self-demotion, generic 500s, POST removed, accessLevel in responses. 295+ tests.

@@ -62,6 +62,7 @@ The day is analysed over the window. `segments` lists every **non-producing** st
 | `comms_lost` | no points for > threshold and the logger was **not** reporting either | **unknown**: excluded |
 | `edge_gap` | window start→first point, or last point→window end, longer than the threshold, with no alarm | **unknown**: excluded |
 
+- Logger evidence for a gap is taken from its **interior**: a heartbeat within one cadence of either end is the stop or the recovery, not proof the logger stayed up (found while building the demo dataset). A piece too short to have an interior (≤ 2 cadences) uses its whole length.
 - A `gap` or `edge_gap` is reduced by one cadence at its start: the next sample was *due* one
   cadence after the previous one, so only the remainder is evidence of a stop.
 - If a trip overlaps a gap, the overlap is a `trip` (the cause is known).
@@ -124,7 +125,7 @@ may be inverter stops or logger/cloud drop-outs, and the result says so rather t
 
 1. A day with continuous points and no alarms → `uptimePct = 100`, no segments but `producing`.
 2. A 40-minute interior gap with a reporting logger → one `gap` of (40 − cadence) min.
-3. The same gap with no logger points inside it → `comms_lost`, excluded from the percentage.
+3. The same gap with no logger points inside it → `comms_lost`, excluded from the percentage. A lone heartbeat within one cadence of the recovery does not change that.
 4. A 5-minute 1011 alarm with no gap → one `trip` of 5 min, `cause = grid_undervoltage`.
 5. A late start (first point 90 min after window start), no alarm → `edge_gap`, not down.
 6. Two overlapping alarms → counted once.

@@ -69,6 +69,13 @@ describe('LR-002 acceptance criteria', () => {
     expect(r.uptimePct).toBe(100); // nothing known to be down in the remaining time
   });
 
+  it('3a. a heartbeat at the recovery edge does not prove the logger was alive during the gap', () => {
+    const pts = without(pointsEvery(5), 100, 190); // 90-minute silence: last point 100, next 190
+    const logger = [...without(loggerEvery(5), 102, 188), { ts: win.startMs + 188 * MIN }]; // lone beat 2 min before recovery
+    const r = deriveDayUptime({ dateKey: D, points: pts, alarms: [], collector: logger });
+    expect(r.segments.map((s) => s.kind)).toEqual(['comms_lost']);
+  });
+
   it('3b. with no logger data at all the gap is still reported, flagged as lacking logger evidence', () => {
     const pts = without(pointsEvery(5), 100, 140);
     const r = deriveDayUptime({ dateKey: D, points: pts, alarms: [] });

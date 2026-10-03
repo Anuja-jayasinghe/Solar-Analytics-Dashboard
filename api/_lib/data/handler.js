@@ -16,8 +16,8 @@
 
 import { handlePreflightAndMethod } from '../httpSecurity.js';
 import { localDateKey } from '../../../shared/domain/time.js';
-import { HttpError } from './query.js';
-import { resolveResource } from './resources.js';
+import { HttpError } from '../../../shared/data/query.js';
+import { resolveResource } from '../../../shared/data/resources.js';
 
 const CACHE_SECONDS = 30;
 

@@ -3,9 +3,9 @@
 // api/_lib/data/{query,rateLimit,csv}.js: every caller-supplied value is untrusted.
 
 import { describe, it, expect } from 'vitest';
-import { HttpError, parseRange, parseDate, parseEnum, parseIntBounded, parseCompare, parseYear } from '../api/_lib/data/query.js';
+import { HttpError, parseRange, parseDate, parseEnum, parseIntBounded, parseCompare, parseYear } from '../shared/data/query.js';
 import { createRateLimiter } from '../api/_lib/data/rateLimit.js';
-import { csvCell, toCsv } from '../api/_lib/data/csv.js';
+import { csvCell, toCsv } from '../shared/data/csv.js';
 
 const bad = (fn) => { try { fn(); } catch (e) { return e; } return null; };
 

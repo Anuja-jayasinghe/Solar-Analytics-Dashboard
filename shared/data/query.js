@@ -4,7 +4,7 @@
 // returns a clean value or throws an HttpError that the handler turns into a 4xx. Nothing here
 // touches the database, so none of it can be reached with an unvalidated value.
 
-import { diffDays, isDateKey } from '../../../shared/domain/time.js';
+import { diffDays, isDateKey } from '../domain/time.js';
 
 export class HttpError extends Error {
   constructor(status, message, code = 'bad_request') {

@@ -9,16 +9,11 @@
 // authorization-bypass advisory.
 import { verifyAdminToken, clerkClient } from '../../_lib/verifyAdminToken.js';
 import { handlePreflightAndMethod } from '../../_lib/httpSecurity.js';
+import { accessLevelFromMetadata, validateAccessPatch } from '../../../shared/domain/access.js';
 
 export default async function handler(req, res) {
-  if (handlePreflightAndMethod(req, res, ['GET', 'POST', 'PATCH', 'DELETE'])) return;
-
-  console.log('🔍 User API Request:', {
-    method: req.method,
-    userId: req.query?.userId,
-    hasBody: !!req.body,
-    bodyKeys: req.body ? Object.keys(req.body) : []
-  });
+  // POST was listed here but never implemented (it fell through to 405); removed.
+  if (handlePreflightAndMethod(req, res, ['GET', 'PATCH', 'DELETE'])) return;
 
   try {
     // Verify admin session and role
@@ -42,6 +37,7 @@ export default async function handler(req, res) {
           lastName: user.lastName,
           role: user.publicMetadata?.role || 'user',
           dashboardAccess: user.publicMetadata?.dashboardAccess || 'demo',
+          accessLevel: accessLevelFromMetadata(user.publicMetadata),
           createdAt: user.createdAt
         }));
 
@@ -58,6 +54,7 @@ export default async function handler(req, res) {
         lastName: user.lastName,
         role: user.publicMetadata?.role || 'user',
         dashboardAccess: user.publicMetadata?.dashboardAccess || 'demo',
+        accessLevel: accessLevelFromMetadata(user.publicMetadata),
         createdAt: user.createdAt
       });
     }
@@ -68,31 +65,17 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'User ID required' });
       }
 
-      const { role, dashboardAccess } = req.body;
-
-      // Validate input
-      if (!role && !dashboardAccess) {
-        return res.status(400).json({ error: 'No updates provided' });
+      // Only known role / dashboardAccess values pass, and an admin cannot strip their own admin
+      // role (shared/domain/access.js). Unknown keys in the body are ignored, never merged.
+      const check = validateAccessPatch(req.body, { actorId: adminUser.id, targetId: userId });
+      if (!check.ok) {
+        return res.status(check.status).json({ error: check.error });
       }
 
-      // Get current user metadata
+      // Merge into the current metadata; Clerk deletes a key whose value is null.
       const user = await clerkClient.users.getUser(userId);
-      const currentMetadata = user.publicMetadata || {};
+      const updatedMetadata = { ...(user.publicMetadata || {}), ...check.patch };
 
-      // Update metadata
-      const updatedMetadata = {
-        ...currentMetadata
-      };
-
-      if (role !== undefined) {
-        updatedMetadata.role = role;
-      }
-
-      if (dashboardAccess !== undefined) {
-        updatedMetadata.dashboardAccess = dashboardAccess;
-      }
-
-      // Update user in Clerk
       await clerkClient.users.updateUser(userId, {
         publicMetadata: updatedMetadata
       });
@@ -100,7 +83,8 @@ export default async function handler(req, res) {
       return res.status(200).json({
         success: true,
         message: 'User updated successfully',
-        metadata: updatedMetadata
+        metadata: updatedMetadata,
+        accessLevel: accessLevelFromMetadata(updatedMetadata)
       });
     }
 
@@ -126,10 +110,8 @@ export default async function handler(req, res) {
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
-    console.error('Admin API Error:', error);
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      message: error.message 
-    });
+    // Log the detail, return none of it: Clerk error text is not for the caller.
+    console.error('Admin API Error:', error?.message);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

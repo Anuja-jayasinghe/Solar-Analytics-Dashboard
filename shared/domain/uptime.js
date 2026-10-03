@@ -76,6 +76,16 @@ function subtract(startMs, endMs, cuts) {
   return pieces.filter((p) => p.endMs - p.startMs > EPS_MS);
 }
 
+/**
+ * Was the logger reporting DURING the silent stretch? Heartbeats at the very ends do not count:
+ * the instants just before and after a gap are the stop and the recovery, not the middle. So one
+ * cadence is ignored at each end, unless the piece is too short to have an interior.
+ */
+function loggerAliveInside(loggerTs, piece, cadenceMs) {
+  const margin = piece.endMs - piece.startMs > 2 * cadenceMs ? cadenceMs : 0;
+  return loggerTs.some((t) => t > piece.startMs + margin && t < piece.endMs - margin);
+}
+
 function emptyResult(dateKey, status, extra = {}) {
   return {
     dateKey, status, uptimePct: null, windowStartMs: null, windowEndMs: null, windowMinutes: 0,
@@ -187,7 +197,7 @@ export function deriveDayUptime({ dateKey, points, alarms, collector = null, now
       } else if (!loggerKnown) {
         kind = 'gap';
         loggerEvidence = false;
-      } else if (loggerTs.some((t) => t > piece.startMs && t < piece.endMs)) {
+      } else if (loggerAliveInside(loggerTs, piece, cadenceMs)) {
         kind = 'gap';
         loggerEvidence = true;
       } else {

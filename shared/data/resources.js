@@ -7,12 +7,12 @@
 // Conventions: unknown is null (never 0); every figure that depends on a choice (which tariff,
 // how complete the data is) carries that choice in the response.
 
-import { aggregateUptime } from '../../../shared/domain/uptime.js';
-import { uptimeRowToDay } from '../../../shared/domain/telemetryPipeline.js';
-import { buildAlignedRows } from '../../../shared/domain/alignment.js';
+import { aggregateUptime } from '../domain/uptime.js';
+import { uptimeRowToDay } from '../domain/telemetryPipeline.js';
+import { buildAlignedRows } from '../domain/alignment.js';
 import {
   buildBillRatePeriods, compareRanges, computeRangeStats, previousPeriod, sameRangeLastYear
-} from '../../../shared/domain/rangeStats.js';
+} from '../domain/rangeStats.js';
 import { HttpError, parseCompare, parseDate, parseEnum, parseIntBounded, parseRange, parseYear } from './query.js';
 import { toCsv } from './csv.js';
 
