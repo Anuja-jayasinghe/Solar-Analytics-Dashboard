@@ -1,6 +1,6 @@
 # Data Pipeline Safeguards
 
-**Added:** 2026-09-07 · **Context:** [`RECOVERY_STATUS_2026-09.md`](./archive/2026-v2-era/RECOVERY_STATUS_2026-09.md)
+**Added:** 2026-09-07 · **Context:** [`RECOVERY_STATUS_2026-09.md`](./RECOVERY_STATUS_2026-09.md)
 
 Why inverter data collection died for five months without anyone noticing, and the five
 mechanisms now in place so it cannot happen the same way twice.

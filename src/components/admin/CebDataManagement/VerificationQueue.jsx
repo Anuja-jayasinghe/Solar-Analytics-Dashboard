@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../../../lib/supabaseClient';
 import { useAuth } from '@clerk/clerk-react';
 
 // Helper: determine if a queue item represents a failed parse
@@ -49,25 +48,19 @@ const VerificationQueue = ({ onApproveSuccess }) => {
   const fetchQueue = async () => {
     setLoading(true);
     try {
-        const { data, error } = await supabase
-        .from('ceb_bill_extractions')
-        .select(`
-            *,
-            ceb_bill_ingestions(file_path, status, id)
-        `)
-        .in('review_status', ['pending_review', 'auto_approved', 'approved'])
-        .order('created_at', { ascending: false });
+        // Served by the admin API: these tables carry account numbers and the path of every
+        // private bill PDF, so the browser's public anon key is not allowed to read them.
+        const token = import.meta.env.VITE_CLERK_JWT_TEMPLATE_NAME
+            ? await getToken({ template: import.meta.env.VITE_CLERK_JWT_TEMPLATE_NAME })
+            : await getToken();
 
-        if (error) throw error;
-
-        // Fetch failed parsing attempts (from ingestion table directly)
-        const { data: failedIngestions, error: failedError } = await supabase
-            .from('ceb_bill_ingestions')
-            .select('id, file_path, status, received_at')
-            .in('status', ['failed_api_limit', 'failed_extraction'])
-            .order('received_at', { ascending: false });
-
-        if (failedError) throw failedError;
+        const queueResponse = await fetch('/api/ceb-bills/ingestions?view=queue', {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!queueResponse.ok) {
+            throw new Error(`Queue request failed with status ${queueResponse.status}`);
+        }
+        const { extractions: data, failedIngestions } = await queueResponse.json();
 
         const mergedQueue = [...(data || [])];
         if (failedIngestions) {
@@ -87,14 +80,18 @@ const VerificationQueue = ({ onApproveSuccess }) => {
         setQueue(mergedQueue.filter(i => i.review_status !== 'approved'));
         setHistory(mergedQueue.filter(i => i.review_status === 'approved').sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at)));
 
+        // A figure the parser did not find is null and shows blank; a figure it read as 0 shows
+        // "0". `x || ''` would blank both, hiding a measured zero and making it look missing.
+        const field = (v) => (v === null || v === undefined ? '' : String(v));
+
         const initials = {};
         mergedQueue.forEach(item => {
             initials[item.id] = {
                 billing_period_start: item.billing_period_start || '',
                 billing_period_end: item.billing_period_end || '',
-                meter_reading: item.meter_reading || '',
-                units_exported: item.units_exported || '',
-                earnings: item.earnings || '',
+                meter_reading: field(item.meter_reading),
+                units_exported: field(item.units_exported),
+                earnings: field(item.earnings),
                 account_number: item.account_number || '',
                 billing_month: item.billing_month || '',
             };

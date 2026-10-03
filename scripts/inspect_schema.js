@@ -89,7 +89,7 @@ async function fetchOpenApi() {
     attempts.map(a => `      ${a}`).join('\n') +
     '\n\n      A 401 here usually means the key is an anon key and the project does not\n' +
     '      expose the schema description to it. Fix SUPABASE_SERVICE_KEY (see\n' +
-    '      docs/archive/2026-v2-era/RECOVERY_STATUS_2026-09.md) or read the schema from the Supabase\n' +
+    '      docs/RECOVERY_STATUS_2026-09.md) or read the schema from the Supabase\n' +
     '      dashboard: Database → Tables → inverter_data_daily_summary.'
   );
   err.soft = true;

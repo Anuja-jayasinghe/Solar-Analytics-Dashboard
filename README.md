@@ -200,11 +200,11 @@ failing closed.
 | Storage | Supabase Storage (bill PDFs) |
 | Auth | Clerk |
 | Charts | Recharts 3 |
-| UI | Chakra UI 3, custom CSS variables for theming |
+| UI | Custom CSS variables for theming |
 | PDF | pdfjs-dist (parsing) · react-pdf (preview) |
 | Icons | Lucide |
 | Scheduling | GitHub Actions cron |
-| Testing | Vitest — 91 tests |
+| Testing | Vitest |
 | Data fetching | Custom stale-while-revalidate cache with circuit breaker |
 
 ---
@@ -247,7 +247,7 @@ pnpm dev
 | Command | Purpose |
 | --- | --- |
 | `pnpm dev` | Development server |
-| `pnpm test` | Vitest — 91 tests |
+| `pnpm test` | Vitest |
 | `pnpm lint` | ESLint — 0 errors expected |
 | `pnpm build` | Production build |
 | `pnpm audit --prod --audit-level high` | The CI security gate |
@@ -278,7 +278,7 @@ functions/                GitHub Actions collectors
 supabase/functions/       Supabase Edge Functions (Deno)
 scripts/sql/              Schema baseline and RLS migrations
 docs/                     Architecture, API, runbook, logic registry
-tests/                    91 tests across 6 files
+tests/                    Vitest suites — parser, alignment, API validation, security helpers
 ```
 
 ---
@@ -290,12 +290,14 @@ tests/                    91 tests across 6 files
 | [Architecture](docs/ARCHITECTURE.md) | System design, both pipelines, data model, security — with diagrams |
 | [API Reference](docs/API.md) | Every endpoint, auth model, request and error shapes |
 | [Runbook](docs/RUNBOOK.md) | Operating procedures and incident response |
+| [Security](docs/SECURITY.md) | Trust boundaries, the RLS / storage policy matrix, the new-endpoint checklist |
+| [Migrations](docs/MIGRATIONS.md) | How schema changes are made, and which have been applied |
+| [Local development](docs/guides/LOCAL_DEVELOPMENT.md) | Running the app, the API and Clerk sign-in locally |
 | [Logic Registry](docs/logic-registry) | Specifications for the non-obvious domain rules |
-| [UI Redesign Direction](docs/UI_REDESIGN_DIRECTION.md) | Competitive teardown and the design decisions for the next version |
 
 The repository also keeps a deliberate historical record — the
-[project audit](docs/archive/2026-v2-era/PROJECT_AUDIT_2026-09.md), the
-[recovery write-up](docs/archive/2026-v2-era/RECOVERY_STATUS_2026-09.md) and the
+[project audit](docs/PROJECT_AUDIT_2026-09.md), the
+[recovery write-up](docs/RECOVERY_STATUS_2026-09.md) and the
 [pipeline safeguards](docs/DATA_PIPELINE_SAFEGUARDS.md) — documenting a five-month silent data
 outage and the countermeasures built afterwards. Where the record and the reference documents
 disagree, the reference documents are current.

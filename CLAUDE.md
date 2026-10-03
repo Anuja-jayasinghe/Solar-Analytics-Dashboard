@@ -60,7 +60,10 @@ JSON — which is what made a 500 here take several deploy cycles to diagnose.
 ## Security model — read before touching data access
 
 - `VITE_SUPABASE_ANON_KEY` is **public**. It ships in the browser bundle.
-- Therefore the browser client **reads only**. RLS grants `anon` `SELECT` and nothing else.
+- Therefore the browser client **reads only**, and only what is public by design. RLS grants `anon`
+  `SELECT` on the dashboard's tables and nothing else. **Bills, the ingestion tables and the
+  `ceb_bills` bucket are closed to `anon`** — the admin screens reach them through
+  `/api/ceb-bills/*`. Policy matrix: `docs/SECURITY.md`.
 - **Every write goes through an admin-authenticated API endpoint** using the service-role key,
   which bypasses RLS. Never reintroduce a client-side `.insert()` / `.update()` / `.upsert()`.
 - Authorization is Clerk `publicMetadata.role === 'admin'`, verified server-side in
@@ -68,7 +71,8 @@ JSON — which is what made a 500 here take several deploy cycles to diagnose.
 - `SUPABASE_SERVICE_KEY` must be the **service_role** key (`SUPABASE_SERVICE_ROLE_KEY` is
   accepted as an alias). An anon key there fails every insert with "violates row-level
   security policy" — this caused a five-month outage, then a second one on Vercel.
-  `api/_lib/supabaseServer.js` asserts the key's role claim and names the problem.
+  `api/_lib/supabaseServer.js` asserts the key's role claim and names the problem; the scheduled
+  jobs and write scripts run the same check at start-up (`api/_lib/serviceKeyGuard.js`).
 - **Never prefix a secret with `VITE_`.** Vite compiles those into the browser bundle.
   `api/_lib/solisAuth.js` is server-only and lives outside `src/` for exactly this reason: it
   reads env with a *computed* key, so Vite inlines the **entire** env object wherever it is
@@ -82,7 +86,7 @@ JSON — which is what made a 500 here take several deploy cycles to diagnose.
 
 ```bash
 pnpm dev        # dev server
-pnpm test       # vitest, 91 tests
+pnpm test       # vitest
 pnpm lint       # eslint — 0 errors expected
 pnpm build      # production build
 pnpm audit --prod --audit-level high   # the CI security gate
@@ -127,20 +131,18 @@ Reference — how it works now:
 - `docs/WORKING_RULES.md` — the rulebook (data honesty, dates, security, DB changes, gates, tracking)
 - `docs/V3_REFACTOR_PLAN.md` — the v3 refactor: decisions, checklists, progress log, deferred register
 - `docs/API.md` — every endpoint, auth model, error shapes
+- `docs/SECURITY.md` — who can do what, the RLS / storage policy matrix, new-endpoint checklist
+- `docs/MIGRATIONS.md` — how schema changes are made, and the ledger of what has been applied
 - `docs/RUNBOOK.md` — operating procedures and incident response
 - `docs/logic-registry/` — specs for the non-obvious domain rules
 
-Decided, not yet built:
-
-- `docs/UI_REDESIGN_DIRECTION.md` — the SolisCloud v4 teardown and what the redesign takes,
-  adapts and refuses. **Read before touching the UI.** Note D7: it deliberately reverses the
-  orange/teal role mapping used in ARCHITECTURE.md, and says why.
-
 History — why it is the way it is:
 
-- `docs/archive/2026-v2-era/PROJECT_AUDIT_2026-09.md` — full audit: security, API, data, UI, CI, docs
-- `docs/archive/2026-v2-era/RECOVERY_STATUS_2026-09.md` — the five-month data outage and its three stacked causes
+- `docs/PROJECT_AUDIT_2026-09.md` — full audit: security, API, data, UI, CI, docs
+- `docs/RECOVERY_STATUS_2026-09.md` — the five-month data outage and its three stacked causes
 - `docs/DATA_PIPELINE_SAFEGUARDS.md` — what now prevents a silent recurrence
+- `docs/REPO_AUDIT_2026-09-24.md` — dead code, stale docs, security and validation: findings and remediation
+- `docs/archive/` — superseded material, kept for history. **Nothing in it is current**
 
 The history documents are a **record**, not a description of the present. Where they disagree
 with the reference documents, the reference documents are right.
@@ -155,11 +157,26 @@ Next up is a **UI redesign**. `v2.1.0` is tagged as the last known-good state be
 Deliberately deferred, because that surface is about to be rewritten:
 
 - LCP 5.7s, almost entirely render delay — TTFB is a healthy ~900ms (Lighthouse Performance 70)
-- 393 KiB of unused JavaScript; react-vendor is 785 KiB
+  as measured at v2.1.0. **Not re-measured since the 2026-09-24 cleanup**, which cut react-vendor
+  from 776 KB to 263 KB (Chakra and emotion were the bulk of it) — worth a fresh Lighthouse run.
 
-Lighthouse otherwise: Accessibility 100, Best Practices 100, SEO 100.
+Lighthouse otherwise (at v2.1.0): Accessibility 100, Best Practices 100, SEO 100.
 
-Genuinely open: nothing.
+## Open as of 2026-09-24
+
+The repository audit (`docs/REPO_AUDIT_2026-09-24.md`) is remediated in code. What still needs
+a person with database access:
+
+- **Three SQL migrations are written but not applied** — see `docs/MIGRATIONS.md` for the order.
+  Apply `2026-09-24_revoke_anon_bill_access.sql` only *after* the code with `/signed-url` and
+  `?view=queue` is deployed. **Until then, whether anon can read bill PDFs is unverified** — run
+  the policy query in `docs/SECURITY.md`.
+- `ceb_data` is publicly readable including `account_number` and `file_path`.
+  `2026-09-24_ceb_data_public_columns.sql` limits `anon` to four columns (not applied — deploy the
+  code with `GET /api/ceb-bills/records` first).
+- The live-only trigger `trg_cascade_delete_ceb_data` is redundant; `2026-09-24_drop_cascade_trigger.sql` drops it (not applied — read its header first).
+- The redesign should end with one `ErrorBoundary` and one `SkeletonLoader` (there are two of each).
+- `@clerk/clerk-react` is deprecated by the vendor in favour of `@clerk/react`.
 
 The `ceb_bills` bucket reconciles exactly — 25 ingestions, 25 extractions, 25 `ceb_data`
 rows, 25 storage objects, no unreferenced files and no ingestion pointing at a missing one.

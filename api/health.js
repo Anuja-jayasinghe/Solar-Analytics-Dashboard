@@ -77,10 +77,20 @@ async function checkDatabase() {
       DEPENDENCY_TIMEOUT_MS,
       'supabase'
     );
-    if (error) return { ok: false, latency_ms: Date.now() - startedAt, error: error.message };
+    if (error) {
+      // The probe is unauthenticated. The driver's message can name tables, policies or hosts,
+      // so it goes to the log for operators and only a fixed string goes to the caller.
+      console.error('readiness: supabase check failed:', error.message);
+      return { ok: false, latency_ms: Date.now() - startedAt, error: 'database check failed' };
+    }
     return { ok: true, latency_ms: Date.now() - startedAt };
   } catch (err) {
-    return { ok: false, latency_ms: Date.now() - startedAt, error: err.message };
+    console.error('readiness: supabase check threw:', err.message);
+    return {
+      ok: false,
+      latency_ms: Date.now() - startedAt,
+      error: /timed out/.test(err.message) ? 'database check timed out' : 'database check failed'
+    };
   }
 }
 

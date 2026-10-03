@@ -1,4 +1,4 @@
-import CryptoJS from 'crypto-js';
+import { createHash, createHmac } from 'node:crypto';
 
 // ============================================================================
 // SERVER-ONLY. Do not import this from anything under src/.
@@ -12,12 +12,47 @@ import CryptoJS from 'crypto-js';
 // published every VITE_ value, including VITE_SOLIS_API_SECRET, into the browser bundle.
 //
 // Nothing in the client graph reached it (verified against the built bundle), but the only
-// thing preventing it was that src/lib/testSolisAPI.js — its sole src/ importer — happened
+// thing preventing it was that an old src/lib test helper — its sole src/ importer — happened
 // to be dead code. Moving the file here removes the possibility rather than relying on that.
 // ============================================================================
 
 function getEnv(key) {
   return typeof process !== 'undefined' ? process.env[key] : undefined;
+}
+
+/**
+ * Sign a SolisCloud request.
+ *
+ * Pure — the clock and the credentials are arguments — so it can be checked against known
+ * vectors. Signature scheme (SolisCloud API v2.0.3): Content-MD5 is the base64 MD5 of the body,
+ * and the signature is base64(HMAC-SHA1(secret, canonical string)) with
+ * canonical = METHOD \n Content-MD5 \n Content-Type \n Date \n path.
+ *
+ * MD5 and SHA-1 are weak primitives, but they are what the vendor's gateway requires; nothing
+ * here is a choice.
+ */
+export function signSolisRequest({ apiId, apiSecret, method = 'POST', path, bodyString = '', date }) {
+  const contentType = 'application/json'; // match Postman exactly
+
+  // Compute Content-MD5 only if body is not empty
+  let contentMd5 = '';
+  if (bodyString && bodyString !== '{}' && bodyString.trim() !== '') {
+    contentMd5 = createHash('md5').update(bodyString, 'utf8').digest('base64');
+  }
+
+  const canonical = [method.toUpperCase(), contentMd5, contentType, date, path].join('\n');
+  const base64Sign = createHmac('sha1', apiSecret).update(canonical, 'utf8').digest('base64');
+
+  return {
+    canonical,
+    signature: base64Sign,
+    headers: {
+      'Content-MD5': contentMd5,
+      'Content-Type': contentType,
+      Date: date,
+      Authorization: `API ${apiId}:${base64Sign}`,
+    },
+  };
 }
 
 /**
@@ -33,36 +68,23 @@ export async function buildSolisHeaders(apiPath, body = '', method = 'POST') {
 
   const path = `/${apiPath.replace(/^\/+/, '')}`;
   const bodyString = typeof body === 'string' ? body : JSON.stringify(body ?? '');
-  const contentType = 'application/json'; // match Postman exactly
 
-  // Compute Content-MD5 only if body is not empty
-  let contentMd5 = '';
-  if (bodyString && bodyString !== '{}' && bodyString.trim() !== '') {
-    const md5Hash = CryptoJS.MD5(bodyString);
-    contentMd5 = CryptoJS.enc.Base64.stringify(md5Hash);
-  }
-
-  const date = new Date().toUTCString();
-
-  // Build canonical string
-  const canonical = [method.toUpperCase(), contentMd5, contentType, date, path].join('\n');
-
-  // Sign with HMAC-SHA1 (string directly, not UTF8 parsed)
-  const signature = CryptoJS.HmacSHA1(canonical, apiSecret);
-  const base64Sign = CryptoJS.enc.Base64.stringify(signature);
+  const { canonical, signature, headers } = signSolisRequest({
+    apiId,
+    apiSecret,
+    method,
+    path,
+    bodyString,
+    date: new Date().toUTCString(),
+  });
 
   const DEBUG = (process?.env?.NODE_ENV !== 'production') && ((typeof import.meta !== 'undefined' && import.meta?.env?.DEV) || (process?.env?.DEBUG === 'true'));
   if (DEBUG) {
     console.log('🧾 Canonical String:\n' + canonical);
-    console.log('🔏 Signature:', base64Sign);
+    console.log('🔏 Signature:', signature);
   }
 
-  return {
-    'Content-MD5': contentMd5,
-    'Content-Type': contentType,
-    Date: date,
-    Authorization: `API ${apiId}:${base64Sign}`,
-  };
+  return headers;
 }
 
 /**

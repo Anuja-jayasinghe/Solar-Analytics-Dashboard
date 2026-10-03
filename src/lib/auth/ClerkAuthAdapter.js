@@ -117,13 +117,6 @@ export class ClerkAuthAdapter extends AuthAdapter {
     
     // Check Clerk publicMetadata.role (set in Clerk Dashboard)
     const role = user.raw?.publicMetadata?.role || user.metadata?.role;
-    console.log('🔍 checkIsAdmin:', { 
-      userId: user.id, 
-      email: user.email,
-      role, 
-      publicMetadata: user.raw?.publicMetadata,
-      isAdmin: role === 'admin' 
-    });
     return role === 'admin';
   }
 
@@ -164,14 +157,6 @@ export class ClerkAuthAdapter extends AuthAdapter {
     
     // Read directly from Clerk publicMetadata
     const access = user.raw?.publicMetadata?.dashboardAccess || user.metadata?.dashboardAccess;
-    console.log('🔍 getDashboardAccess:', { 
-      userId: user.id,
-      email: user.email, 
-      access,
-      publicMetadata: user.raw?.publicMetadata,
-      result: access === 'real' ? 'real' : 'demo'
-    });
-    
     // Default to demo if not set
     return access === 'real' ? 'real' : 'demo';
   }
@@ -194,77 +179,5 @@ export class ClerkAuthAdapter extends AuthAdapter {
   async getToken() {
     const session = await this.getSession();
     return session?.token || null;
-  }
-
-  // Clerk-specific helpers
-
-  /**
-   * Update public metadata (requires backend call)
-   * @param {string} userId
-   * @param {object} metadata
-   * @returns {Promise<void>}
-   */
-  async updatePublicMetadata(userId, metadata) {
-    // This must be done via backend API
-    const response = await fetch('/api/update-user-metadata', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${await this.getToken()}`
-      },
-      body: JSON.stringify({ userId, metadata })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to update public metadata');
-    }
-  }
-
-  /**
-   * Grant real dashboard access to a user
-   * @param {string} userId
-   * @returns {Promise<void>}
-   */
-  async grantRealAccess(userId) {
-    await this.updatePublicMetadata(userId, {
-      dashboardAccess: 'real',
-      accessGrantedDate: new Date().toISOString()
-    });
-  }
-
-  /**
-   * Revoke real dashboard access (downgrade to demo)
-   * @param {string} userId
-   * @returns {Promise<void>}
-   */
-  async revokeRealAccess(userId) {
-    await this.updatePublicMetadata(userId, {
-      dashboardAccess: 'demo',
-      accessRevokedDate: new Date().toISOString()
-    });
-  }
-
-  /**
-   * Promote user to admin
-   * @param {string} userId
-   * @returns {Promise<void>}
-   */
-  async promoteToAdmin(userId) {
-    await this.updatePublicMetadata(userId, {
-      role: 'admin',
-      promotedToAdminDate: new Date().toISOString()
-    });
-  }
-
-  /**
-   * Demote admin to regular user
-   * @param {string} userId
-   * @returns {Promise<void>}
-   */
-  async demoteFromAdmin(userId) {
-    await this.updatePublicMetadata(userId, {
-      role: 'user',
-      demotedFromAdminDate: new Date().toISOString()
-    });
   }
 }

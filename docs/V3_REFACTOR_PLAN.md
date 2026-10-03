@@ -126,7 +126,7 @@ Every row has a GitHub issue. Add a row the moment something is skipped.
 | V3-D2 | Downtime/fault alerting | Out of scope for v3 | #151 |
 | V3-D4 | Freshness check for the telemetry pipeline ships unarmed (empty = skipped) so deploying it cannot raise a false outage | Arm with TELEMETRY_REQUIRED=true after the first successful nightly run | #165 |
 | V3-D5 | P3 leftovers: real-deployment verification of /api/data, CSP tightening, request logging, delete-endpoint merge, distributed rate limit, ETag | Cannot observe the protected Vercel preview; the rest need browser testing or are low value now | #166 |
-| V3-D3 | UI-impacting cleanup held for the design phase: Chakra/emotion removal, vite manualChunks, duplicate ErrorBoundary/SkeletonLoader, SolisExplorer rewrite, Open-Meteo CSP entry, eslint stale refs, `/demodashbaard` typo | Changing them alters what users see; UI waits for design sign-off | #162 |
+| V3-D3 | UI-impacting cleanup held for the design phase. **Mostly resolved by `main` (PRs #143-#150, 2026-09-24)**: Chakra/emotion/crypto-js removed, vite `manualChunks` rewritten, Open-Meteo CSP entry gone. **Still open**: duplicate `ErrorBoundary`/`SkeletonLoader`, the 1,989-line `SolisExplorer` (rebuilt as the Pro page), stale ESLint refs, `/demodashbaard` typo, `VITE_USE_CLERK_AUTH` flag | Changing them alters what users see; UI waits for design sign-off | #162 |
 
 ## 7. Progress log
 
@@ -174,3 +174,13 @@ Newest first. One entry per meaningful change: date, what, commit/PR, deviations
   2035+, fake identifiers, deterministic). Building it exposed a real flaw in LR-002: a lone heartbeat at the recovery edge of a gap was
   taken as proof the logger stayed up; logger evidence now comes from the interior of the gap (spec + tests updated). Admin user endpoint
   hardened: validated roles, no self-demotion, generic 500s, POST removed, accessLevel in responses. 295+ tests.
+- **2026-10-03 (merge with main)** — Discovered my local `main` was stale: it stopped at PR #142 while `origin/main` had the
+  owner's PRs #143-#150 (2026-09-24): v2 removal, a repository audit, security hardening of the bill pipeline, dead-code and doc
+  reorganisation, new docs (SECURITY.md, MIGRATIONS.md, START_HERE.md, REPO_AUDIT) and 5 unapplied SQL migrations. I had duplicated parts
+  of that (v2 removal, dead-code deletion, doc triage) and unknowingly duplicated its admin-user validation. Merged main into
+  refactor/v3: took main's side for every docs move/delete, unified user-role validation on main's `userMetadataRules.js` (extended with
+  `viewer`, role list shared with the enforcer; my duplicate validator removed), kept main's dependency set (+ my coverage dev-dep),
+  restored PROJECT_AUDIT/RECOVERY_STATUS to docs/ root where main links them, added the collector to the `serviceKeyGuard` convention,
+  recorded my two migrations and the data repairs in MIGRATIONS.md, and added a v3 target-state section to SECURITY.md.
+  Lesson recorded in WORKING_RULES: fetch and compare with origin/main before starting a long-running branch.
+  Result: 417 tests, lint 0 errors, build OK, prod audit clean.

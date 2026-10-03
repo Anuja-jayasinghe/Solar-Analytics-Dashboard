@@ -17,7 +17,7 @@ resources/
 ├── README.md                        this file
 └── ceb-bills/
     ├── 2026/                        source PDFs, one per bill
-    │   └── 2026-09-03_ref457_acct4924089702.pdf
+    │   └── 2026-09-03_ref457_acct0000000000.pdf
     └── _extracted-text/             pdf-parse output, for diffing formats
         └── 2026-09-03_ref457.txt
 ```
@@ -29,9 +29,9 @@ resources/
 ```
 
 Every CEB bill carries a reference of the form
-`Bill Ref: 457-4924089702-20260903082730` — sequence, account, then a `YYYYMMDDHHMMSS`
+`Bill Ref: 457-0000000000-20260903082730` — sequence, account, then a `YYYYMMDDHHMMSS`
 timestamp. So `ref457` issued `2026-09-03` becomes
-`2026-09-03_ref457_acct4924089702.pdf`. Sorting by filename sorts by date, and the sequence
+`2026-09-03_ref457_acct0000000000.pdf`. Sorting by filename sorts by date, and the sequence
 number makes gaps in a series obvious.
 
 ## Extracting the text of a bill

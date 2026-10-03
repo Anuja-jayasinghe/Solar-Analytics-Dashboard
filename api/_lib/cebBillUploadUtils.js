@@ -57,13 +57,14 @@ function parseContentDisposition(value = '') {
 
 export async function parseMultipartForm(req, maxBytes = 10 * 1024 * 1024) {
   const contentType = req.headers['content-type'] || ''
-  const boundaryMatch = contentType.match(/boundary=(.+)$/i)
+  // The boundary may be quoted and may be followed by further parameters.
+  const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;\s]+))/i)
 
   if (!contentType.toLowerCase().includes('multipart/form-data') || !boundaryMatch) {
     throw new Error('Unsupported content type. Expected multipart/form-data')
   }
 
-  const boundary = boundaryMatch[1]
+  const boundary = boundaryMatch[1] || boundaryMatch[2]
   const body = await readRawBody(req, maxBytes)
   const boundaryBuffer = Buffer.from(`--${boundary}`)
 
@@ -124,6 +125,18 @@ export function sanitizeFilename(filename = 'bill') {
   return cleaned || 'bill'
 }
 
+/**
+ * Does this buffer start like a PDF?
+ *
+ * The declared MIME type and file name come from the client and prove nothing. The PDF
+ * specification allows the `%PDF-` marker anywhere in the first 1024 bytes, so that is the
+ * window checked. This is a sanity gate, not a validator — pdfjs does the real parsing.
+ */
+export function looksLikePdf(buffer) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 5) return false
+  return buffer.subarray(0, 1024).includes('%PDF-')
+}
+
 export function createSha256(buffer) {
   return crypto.createHash('sha256').update(buffer).digest('hex')
 }
@@ -133,5 +146,8 @@ export function buildStoragePath({ adminId, filename }) {
   const yyyy = String(now.getUTCFullYear())
   const mm = String(now.getUTCMonth() + 1).padStart(2, '0')
   const ts = now.toISOString().replace(/[:.]/g, '-')
-  return `ceb/${yyyy}/${mm}/${adminId}/${ts}_${sanitizeFilename(filename)}`
+  // Always stored as .pdf: extraction decides what it can parse from the stored path.
+  const name = sanitizeFilename(filename)
+  const safeName = name.toLowerCase().endsWith('.pdf') ? name : `${name}.pdf`
+  return `ceb/${yyyy}/${mm}/${adminId}/${ts}_${safeName}`
 }

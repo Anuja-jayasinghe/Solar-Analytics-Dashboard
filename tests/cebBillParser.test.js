@@ -33,7 +33,7 @@ describe('parseCebBillText — legacy (pre-2026) bill layout', () => {
   const parsed = parseCebBillText(legacyBill);
 
   it('extracts the account number', () => {
-    expect(parsed.account_number).toBe('4924089702');
+    expect(parsed.account_number).toBe('0000000000');
   });
 
   it('extracts the billing month, uppercased', () => {
@@ -90,8 +90,10 @@ describe('parseCebBillText — failure behaviour', () => {
   it('returns a fully-null shape for empty input rather than throwing', () => {
     const parsed = parseCebBillText('');
     expect(parsed.account_number).toBeNull();
-    expect(parsed.units_exported).toBe(0);
-    expect(parsed.meter_reading_current).toBe(0);
+    expect(parsed.units_exported).toBeNull();
+    expect(parsed.earnings).toBeNull();
+    expect(parsed.meter_reading_current).toBeNull();
+    expect(parsed.meter_reading_previous).toBeNull();
   });
 
   it('returns a fully-null shape for non-string input', () => {
@@ -99,11 +101,11 @@ describe('parseCebBillText — failure behaviour', () => {
     expect(parseCebBillText(null).billing_month).toBeNull();
   });
 
-  it('degrades to zeros — never partial garbage — if every label were to change', () => {
+  it('degrades to nulls — never fabricated zeros — if every label were to change', () => {
     // This is what a redesigned bill looks like to the current parser: the numbers are all
     // present, but under different wording, so every anchor misses.
     const newFormat = [
-      'Account Number 4924089702',
+      'Account Number 0000000000',
       'Statement Date 05-Sep-2026',
       'Billing Period SEP 2026',
       'Units Exported to Grid 3676 kWh',
@@ -112,15 +114,17 @@ describe('parseCebBillText — failure behaviour', () => {
 
     const parsed = parseCebBillText(newFormat);
     expect(parsed.account_number).toBeNull();
-    expect(parsed.units_exported).toBe(0);
-    expect(parsed.earnings).toBe(0);
-    expect(parsed.meter_reading_current).toBe(0);
+    // null, not 0: "the regexes found nothing" must not look like "the bill printed zero".
+    expect(parsed.units_exported).toBeNull();
+    expect(parsed.earnings).toBeNull();
+    expect(parsed.meter_reading_current).toBeNull();
+    expect(parsed.meter_reading_previous).toBeNull();
   });
 });
 
 describe('validateExtraction', () => {
   const good = {
-    account_number: '4924089702',
+    account_number: '0000000000',
     billing_month: '2024 SEP',
     billing_period_start: '2024-08-06',
     billing_period_end: '2024-09-05',
@@ -163,6 +167,54 @@ describe('validateExtraction', () => {
     expect(result.validation_errors.join(' ')).toMatch(/Timeline error/);
   });
 
+  describe('null versus zero', () => {
+    it('treats a measured zero-export month as valid, not as an extraction failure', () => {
+      const zeroMonth = {
+        ...good,
+        units_exported: 0,
+        earnings: 0,
+        meter_reading_current: 1000,
+        meter_reading_previous: 1000
+      };
+      const result = validateExtraction(zeroMonth, 37);
+      expect(result.validation_errors).toEqual([]);
+      expect(result.status).toBe('auto_approved');
+    });
+
+    it('flags a MISSING export figure even though 0 would be a valid one', () => {
+      const missing = validateExtraction({ ...good, units_exported: null, earnings: null }, 37);
+      expect(missing.status).toBe('pending_review');
+      expect(missing.validation_errors).toContain('Invalid exported units');
+      expect(missing.validation_errors).toContain('Invalid earnings');
+    });
+
+    it('does not count a null reading as extracted (null >= 0 is true in JavaScript)', () => {
+      const result = validateExtraction({ ...good, meter_reading_previous: null }, 37);
+      expect(result.confidence_score).toBeLessThan(100);
+    });
+
+    it('does not run the meter-delta check against a reading that was not found', () => {
+      const result = validateExtraction({ ...good, meter_reading_previous: null }, 37);
+      expect(result.validation_errors.join(' ')).not.toMatch(/Meter mismatch/);
+    });
+  });
+
+  describe('tariff availability', () => {
+    it('reports a missing tariff instead of validating against an invented one', () => {
+      const noRate = { ...good, export_rate: null };
+      for (const tariff of [null, undefined, NaN]) {
+        const result = validateExtraction(noRate, tariff);
+        expect(result.status).toBe('pending_review');
+        expect(result.validation_errors.join(' ')).toMatch(/No tariff available/);
+      }
+    });
+
+    it('needs no configured tariff when the bill states its own rate', () => {
+      const result = validateExtraction({ ...good, export_rate: 37 }, null);
+      expect(result.status).toBe('auto_approved');
+    });
+  });
+
   it('honours a changed tariff — a flat-rate assumption the new bill may break', () => {
     // Same bill, different rate: what used to validate now does not. Documents the coupling
     // so that a tiered/TOU export tariff is recognised as a validation problem rather than
@@ -186,8 +238,8 @@ describe('parseCebBillText — 2026 redesigned bill', () => {
   const parsed = parseCebBillText(bill2026);
 
   it('still finds the account number despite the trailing region code', () => {
-    // "Electricity A/C No.: 4924089702\tWPN"
-    expect(parsed.account_number).toBe('4924089702');
+    // "Electricity A/C No.: 0000000000\tWPN"
+    expect(parsed.account_number).toBe('0000000000');
   });
 
   it('still finds the billing month', () => {
@@ -195,7 +247,7 @@ describe('parseCebBillText — 2026 redesigned bill', () => {
   });
 
   it('recovers the issue date from the bill reference, which replaced "Bill Date:"', () => {
-    // "Bill Ref: 457-4924089702-20260903082730"
+    // "Bill Ref: 457-0000000000-20260903082730"
     expect(parsed.bill_issue_date).toBe('2026-09-03');
   });
 
@@ -271,11 +323,11 @@ describe('extractBillIssueDate', () => {
   });
 
   it('reads the 2026 bill reference', () => {
-    expect(extractBillIssueDate('Bill Ref: 457-4924089702-20260903082730')).toBe('2026-09-03');
+    expect(extractBillIssueDate('Bill Ref: 457-0000000000-20260903082730')).toBe('2026-09-03');
   });
 
   it('prefers the explicit label when a bill somehow carries both', () => {
-    const both = 'Bill Ref: 457-4924089702-20260903082730\nBill Date: 1/2/2020 0:00:00 AM';
+    const both = 'Bill Ref: 457-0000000000-20260903082730\nBill Date: 1/2/2020 0:00:00 AM';
     expect(extractBillIssueDate(both)).toBe('2020-01-02');
   });
 

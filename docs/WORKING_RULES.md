@@ -76,6 +76,9 @@ body text ≥ 14px / labels ≥ 12px, contrast checked against the surface the t
 
 ## 7. Tracking work
 
+- **Before starting a long-running branch, `git fetch` and compare with `origin/main`.** The v3 branch was cut from a stale local
+  `main` and duplicated a week of merged work (audit, security hardening, doc reorganisation) before the merge exposed it.
+
 - `docs/V3_REFACTOR_PLAN.md` is the source of truth for the v3 refactor: checklists, a progress
   log, and the **deferred / bypassed register**.
 - Anything skipped, bypassed, partially done or knowingly worked around gets (a) a row in the

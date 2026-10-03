@@ -4,7 +4,7 @@
 **Scope:** the user-facing frontend only (not the admin CEB pipeline UI, not the API).
 **Purpose:** record what the dashboard shows today, from where, and what is wrong with it —
 *before* deciding what it should show. Nothing here is a decision. Decisions go in a follow-up
-to `UI_REDESIGN_DIRECTION.md`.
+to `UI_REDESIGN_DIRECTION.md` (removed from the repository in #143; see git history).
 
 Method: read every component, context and data function the dashboard routes render. Claims
 about what a figure *is* come from the code, not from the label on the card.
@@ -154,7 +154,7 @@ The two things an owner most plausibly wants and cannot get: **any arbitrary dat
 
 - v1 is ~100% inline `style={{}}` objects with hard-coded hex (`#00c2a8`, `#ff7a00`, `#22c55e`…).
   v2 introduced `dv2-tokens.css`; v1 and v2 now carry **two token systems**.
-- v1 colour mapping is teal = inverter, orange = CEB. `UI_REDESIGN_DIRECTION.md` D7 reverses it.
+- v1 colour mapping is teal = inverter, orange = CEB. `UI_REDESIGN_DIRECTION.md` (removed from the repository in #143; see git history) D7 reverses it.
 - Perpetual animation: wave `setInterval` at 30 ms (re-renders the component ~33×/s), bubbles,
   sparkles, pulsing heart, glow filters. Likely a contributor to the LCP/INP problems and
   battery drain on phones.

@@ -9,10 +9,29 @@
 // authorization-bypass advisory.
 import { verifyAdminToken, clerkClient } from '../../_lib/verifyAdminToken.js';
 import { handlePreflightAndMethod } from '../../_lib/httpSecurity.js';
-import { accessLevelFromMetadata, validateAccessPatch } from '../../../shared/domain/access.js';
+import { validateUserPatch } from '../../_lib/userMetadataRules.js';
+import { accessLevelFromMetadata } from '../../../shared/domain/access.js';
+
+// Clerk returns at most 100 users per call. Page through them rather than silently dropping the rest.
+const PAGE_SIZE = 100;
+const MAX_PAGES = 10;
+
+function toUserSummary(user) {
+  return {
+    id: user.id,
+    email: user.emailAddresses[0]?.emailAddress,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.publicMetadata?.role || 'user',
+    dashboardAccess: user.publicMetadata?.dashboardAccess || 'demo',
+    // The level the server will actually enforce (shared/domain/access.js), so the admin screen
+    // shows effective access rather than two raw flags.
+    accessLevel: accessLevelFromMetadata(user.publicMetadata),
+    createdAt: user.createdAt
+  };
+}
 
 export default async function handler(req, res) {
-  // POST was listed here but never implemented (it fell through to 405); removed.
   if (handlePreflightAndMethod(req, res, ['GET', 'PATCH', 'DELETE'])) return;
 
   try {
@@ -25,38 +44,24 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       // GET /api/admin/users - List all users
       if (!userId) {
-        const userList = await clerkClient.users.getUserList({
-          limit: 100,
-          orderBy: '-created_at'
-        });
-
-        const users = userList.data.map(user => ({
-          id: user.id,
-          email: user.emailAddresses[0]?.emailAddress,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.publicMetadata?.role || 'user',
-          dashboardAccess: user.publicMetadata?.dashboardAccess || 'demo',
-          accessLevel: accessLevelFromMetadata(user.publicMetadata),
-          createdAt: user.createdAt
-        }));
+        const users = [];
+        for (let page = 0; page < MAX_PAGES; page += 1) {
+          const { data, totalCount } = await clerkClient.users.getUserList({
+            limit: PAGE_SIZE,
+            offset: page * PAGE_SIZE,
+            orderBy: '-created_at'
+          });
+          users.push(...data.map(toUserSummary));
+          if (data.length < PAGE_SIZE || users.length >= totalCount) break;
+        }
 
         return res.status(200).json({ users });
       }
 
       // GET /api/admin/users/[userId] - Get specific user
       const user = await clerkClient.users.getUser(userId);
-      
-      return res.status(200).json({
-        id: user.id,
-        email: user.emailAddresses[0]?.emailAddress,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.publicMetadata?.role || 'user',
-        dashboardAccess: user.publicMetadata?.dashboardAccess || 'demo',
-        accessLevel: accessLevelFromMetadata(user.publicMetadata),
-        createdAt: user.createdAt
-      });
+
+      return res.status(200).json(toUserSummary(user));
     }
 
     if (req.method === 'PATCH') {
@@ -65,17 +70,19 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'User ID required' });
       }
 
-      // Only known role / dashboardAccess values pass, and an admin cannot strip their own admin
-      // role (shared/domain/access.js). Unknown keys in the body are ignored, never merged.
-      const check = validateAccessPatch(req.body, { actorId: adminUser.id, targetId: userId });
-      if (!check.ok) {
-        return res.status(check.status).json({ error: check.error });
+      const validation = validateUserPatch(req.body, {
+        targetUserId: userId,
+        actingUserId: adminUser.id
+      });
+      if (!validation.ok) {
+        return res.status(400).json({ error: validation.error });
       }
 
-      // Merge into the current metadata; Clerk deletes a key whose value is null.
+      // Merge into the existing metadata so unrelated keys (e.g. accessGrantedDate) survive.
       const user = await clerkClient.users.getUser(userId);
-      const updatedMetadata = { ...(user.publicMetadata || {}), ...check.patch };
+      const updatedMetadata = { ...(user.publicMetadata || {}), ...validation.updates };
 
+      // Update user in Clerk
       await clerkClient.users.updateUser(userId, {
         publicMetadata: updatedMetadata
       });
@@ -83,8 +90,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         success: true,
         message: 'User updated successfully',
-        metadata: updatedMetadata,
-        accessLevel: accessLevelFromMetadata(updatedMetadata)
+        metadata: updatedMetadata
       });
     }
 
@@ -110,8 +116,7 @@ export default async function handler(req, res) {
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
-    // Log the detail, return none of it: Clerk error text is not for the caller.
-    console.error('Admin API Error:', error?.message);
+    console.error('Admin API Error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

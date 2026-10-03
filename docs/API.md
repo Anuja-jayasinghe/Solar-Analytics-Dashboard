@@ -18,7 +18,7 @@ Authorization: Bearer <clerk-session-token>
 `api/_lib/verifyAdminToken.js` verifies it with `@clerk/backend`'s `verifyToken` (one code path,
 `authenticate()`), then fetches the user and maps `publicMetadata` to an **access level**
 (`shared/domain/access.js`): `admin` (`role: 'admin'`), `viewer` (`role: 'viewer'`, or the legacy
-`dashboardAccess: 'real'` until the P4 migration) or `none`.
+`dashboardAccess: 'real'` until the role migration is complete) or `none`.
 
 - Write and admin endpoints require **`admin`** (`verifyAdminToken` / `verifyAccess(…, 'admin')`).
 - The dashboard data endpoints (`/api/data/*`) require **`viewer` or above**; admin satisfies viewer.
@@ -105,29 +105,35 @@ field exists to make that state observable without reading logs.
 
 ## CEB bill pipeline
 
-The four endpoints below are one workflow. Order matters.
+The endpoints below are one workflow. Order matters.
 
 ```mermaid
 flowchart LR
     A["POST /upload"] --> B["POST /extract"]
     B --> C["👤 review in UI"]
     C --> D["PUT /records"]
-    A -.->|"list"| E["GET /ingestions"]
+    A -.->|"list / queue"| E["GET /ingestions"]
+    A -.->|"preview PDF"| G["POST /signed-url"]
     A -.->|"discard"| F["DELETE /delete"]
 ```
 
 ### `POST /api/ceb-bills/upload`
 
-Accepts a bill PDF as `multipart/form-data`, field name `file`.
+Accepts a bill PDF as `multipart/form-data`, field name `file`. **PDF only** — the type is
+checked twice: the declared `Content-Type` must be `application/pdf` and the bytes must contain
+the `%PDF-` marker. The stored path always ends in `.pdf`.
 
 Computes SHA-256 over the bytes and checks it against `ceb_bill_ingestions` **before** storing,
 so re-uploading the same bill is a no-op rather than a duplicate.
 
 | Status | Body |
 |---|---|
-| `201` | `{ ingestion: {...} }` — stored, `status: "received"` |
-| `400` | Missing `file` field, empty file, or not a PDF |
-| `409` | `{ error, existingIngestion }` — this exact file is already ingested |
+| `201` | `{ ingestionId, filePath, fileSha256, status: "received", receivedAt }` |
+| `400` | Missing `file` field, empty file, not a PDF, or larger than 10 MB |
+| `409` | `{ error, ingestionId, filePath, receivedAt, status, fileSha256 }` — this exact file is already ingested |
+
+The 10 MB limit is enforced by the handler. The hosting platform may impose a lower request
+body limit on serverless functions; bills are far smaller than either in practice.
 
 > Real bills contain the account holder's name, address and phone number. They are gitignored
 > (`resources/*`), and any test fixture derived from one must be redacted.
@@ -139,8 +145,10 @@ so re-uploading the same bill is a no-op rather than a duplicate.
 ```
 
 Downloads the PDF from Storage, extracts text with `pdfjs-dist`, runs the nine regex anchors,
-validates, and writes a `ceb_bill_extractions` row. Re-running deletes prior extractions for
-that ingestion first, so it is idempotent.
+validates, and writes a `ceb_bill_extractions` row. Re-running is idempotent: the new
+extraction is saved first and only then are the ones it replaces removed, so a failed re-parse
+leaves the previous result in place. Nothing is changed until the file has been downloaded,
+parsed and validated.
 
 Returns `200` with `{ success, extraction, validation }`:
 
@@ -169,42 +177,88 @@ Validation cross-checks three things:
 | Timeline | `billing_period_start < billing_period_end` |
 
 The rate comes from the bill itself when present (the 2026 format prints
-`Export Rate (Rs.) 37.00`), falling back to `system_settings.rate_per_kwh`. Preferring the
+`Export Rate (Rs.) 37.00`), falling back to `system_settings.rate_per_kwh`. If neither is
+available the extraction is sent to review with a "No tariff available" error — there is no
+built-in default rate to validate against. Preferring the
 on-bill rate makes the check self-contained: a tariff change no longer makes every
 correctly-parsed bill fail validation in a way that looks exactly like a parser fault.
 
+**Null is not zero.** A figure the extractor could not find is `null` in the result and is
+reported as missing; a `0` means the bill printed zero and is valid. Earlier versions returned
+`0` for both, so a bill whose text the regexes failed to read looked like a bill that exported
+nothing.
+
 `400` if `ingestionId` is missing, the file isn't a PDF, or the ingestion is already
-`approved`. On any internal failure the ingestion is marked `failed_extraction` rather than
-left stuck at `received`.
+`approved`; `404` if it does not exist. On an internal failure an ingestion that was never
+extracted is marked `failed_extraction` rather than left stuck at `received`; one that already
+has an extraction keeps its status.
 
 ### `GET /api/ceb-bills/ingestions`
 
-`200` → `{ files: [...] }`. Ingestions with their extractions joined, for the review queue.
+Admin-only. Two views:
 
-### `POST` | `PATCH` | `PUT /api/ceb-bills/records`
+- `?limit=N` (default 12, max 100) → `{ files: [...] }` — recent uploads with their extraction
+  joined, for the admin file list.
+- `?view=queue` → `{ extractions: [...], failedIngestions: [...] }` — the verification queue:
+  extractions that are `pending_review`, `auto_approved` or `approved`, each with its ingestion
+  joined, plus ingestions that ended `failed_api_limit` / `failed_extraction`.
 
-Promotes a reviewed extraction into `ceb_data` — the canonical billing table.
+The review screen reads these through the API rather than querying the tables from the
+browser. The tables hold account numbers and the path of every private bill PDF, and the
+browser's anon key is public — see [`SECURITY.md`](./SECURITY.md).
+
+### `POST /api/ceb-bills/signed-url`
+
+```json
+{ "filePath": "ceb/2026/09/user_xxx/2026-09-03T…_bill.pdf" }
+```
+
+`200` → `{ signedUrl, expiresIn: 300 }`. A five-minute link to one bill PDF, signed
+server-side. `filePath` must belong to a known ingestion (`404` otherwise) — the endpoint will
+not sign an arbitrary path in the bucket.
+
+### `GET` | `POST` | `PATCH` | `PUT /api/ceb-bills/records`
+
+Reads and writes `ceb_data` — the canonical billing table.
 
 | Method | Purpose | Body |
 |---|---|---|
-| `POST` | Insert a new record | `{ record }` |
+| `GET` | Every row, all columns, newest bill first → `{ records: [...] }`. This is the admin table's data source: the public anon key may read only `id`, `bill_date`, `earnings` and `units_exported` | — |
+| `POST` | Upsert a manually entered record (on `account_number, billing_month`) | `{ record }` |
 | `PATCH` | Edit an existing one | `{ id, record }` |
-| `PUT` | Upsert + mark the ingestion `approved` | `{ record }` |
+| `PUT` | Approve a parsed bill: upsert `ceb_data` and mark the extraction and ingestion `approved`, **in one transaction** | `{ extractionId, ingestionId, record }` |
 
 `400` returns `{ error: "Invalid record", details: [...] }` listing each field that failed
-validation.
+validation. Required: `bill_date` (a real `YYYY-MM-DD` date), `meter_reading`, `units_exported`,
+`earnings` (non-negative numbers; **`0` is accepted, a missing value is not**). Optional columns
+are whitelisted, type-checked and length-capped; `ingestion_id` must be a UUID; a period that
+runs backwards is rejected.
+
+`PUT` calls the `approve_ceb_extraction()` database function
+(`scripts/sql/2026-09-24_approve_ceb_extraction.sql`), so the three writes cannot be left
+half-done. It also rejects an `extractionId` that does not belong to `ingestionId`. If the
+function has not been installed yet, the handler logs a warning and falls back to the old
+sequential writes.
 
 This endpoint exists because these writes used to happen from the browser. They cannot: the
 anon key has `SELECT` and nothing else.
 
 ### `POST` | `DELETE /api/ceb-bills/delete`
 
-`{ ingestionId }` — removes the stored file, its ingestion row, its extractions, **and any
-`ceb_data` row derived from it**. Fully destructive. `404` if unknown.
+Fully destructive. Address the bill by **one** of:
 
-### `POST` | `DELETE /api/ceb-bills/delete-record`
+- `{ ingestionId }` — the upload, its extraction, any `ceb_data` row derived from it, and the
+  stored PDF.
+- `{ recordId }` — one `ceb_data` row, plus the ingestion, extraction and PDF behind it when
+  there is one.
 
-`{ recordId }` — removes a `ceb_data` row and its associated files.
+`400` if neither or both are given; `404` if unknown. `200` → `{ success: true }`, with
+`warnings: [...]` when the database was cleaned but the stored PDF could not be removed.
+
+Order is database rows first and the file last, and every step is checked and idempotent, so a
+failed request can be repeated. This endpoint replaces the former `delete-record`, which did
+the same job in the opposite order and relied on a database trigger that is not in any
+migration.
 
 ---
 
@@ -248,9 +302,9 @@ the Settings tariff for every day. The response always states which was used.
 ### `PUT` | `POST /api/settings`
 
 - `PUT` — one setting: `{ id, setting_value }`
-- `POST` — several: `{ settings: [{ id, setting_value }, ...] }`
+- `POST` — seed several: `{ settings: [{ setting_name, setting_value, description? }, ...] }`
 
-`200` → `{ setting }` or `{ settings }`. `400` on a missing id or a value that fails the
+`200` → `{ setting }`; `201` → `{ settings }`. `400` on a missing id or a value that fails the
 per-setting type check; `403` if the setting is not editable; `404` if unknown.
 
 `rate_per_kwh` is the one that matters — it is the fallback tariff for validating bills that
@@ -262,22 +316,26 @@ don't print their own rate.
 
 ### `GET` | `PATCH` | `DELETE /api/admin/users/[userId]`
 
-Clerk user administration (admin only). `GET` without a `userId` lists users; with one, returns that
-user. Responses include `accessLevel` (`admin` | `viewer` | `none`) as the server will compute it.
+Clerk user administration (admin only). `GET` without a `userId` lists every user (paged through
+Clerk 100 at a time, up to 1,000); with one, returns that user. Responses include `accessLevel`
+(`admin` | `viewer` | `none`), the level the server will actually enforce.
 
-`PATCH` accepts `{ role, dashboardAccess }` and is validated (`shared/domain/access.js`):
-- `role` must be `admin`, `viewer` or `user` (`user` removes the role). Anything else, including a
-  case typo such as `"Admin"`, is `400` rather than silently stripping access.
-- `dashboardAccess` (legacy flag, retired after the role migration) must be `real` or `demo`.
-- An admin **cannot remove their own admin role** (`400`), so the system cannot be left with no one
-  able to administer it.
-- Keys other than `role` and `dashboardAccess` are ignored, never merged into the user's metadata.
+`PATCH` accepts `{ role?, dashboardAccess? }` and validates both (`api/_lib/userMetadataRules.js`; the
+role list is shared with the enforcer in `shared/domain/access.js`):
 
-An unexpected failure returns a generic `500` (`{ error }`); Clerk's error text is logged, not returned.
-`POST` is not supported (it was listed but never implemented).
+| Field | Allowed values |
+|---|---|
+| `role` | `user`, `viewer`, `admin` |
+| `dashboardAccess` | `demo`, `real` (legacy flag, retired after the role migration) |
+
+`400` for anything else (including case variants such as `"Admin"`), for an empty update, and for an
+admin trying to remove **their own** admin role — which is what guarantees the last admin cannot be
+demoted. Unknown keys in the body are ignored, never merged into the user's metadata. `DELETE`
+refuses to delete the caller.
 
 One-off migration of legacy users to `role: viewer`: `node scripts/migrate-roles.mjs` (dry run by
-default; `--write` applies; legacy flag is left in place so it is reversible).
+default; `--write` applies; the legacy flag is left in place so it is reversible). Applied
+2026-10-03 (1 user).
 
 ---
 
@@ -289,8 +347,14 @@ default; `--write` applies; legacy flag is left in place so it is reversible).
 { "endpointKey": "inverterDetail", "params": { } }
 ```
 
-Signs and forwards a request to SolisCloud. **Rate limited** — `429` when exceeded.
-`endpointKey` must name a pre-registered endpoint; arbitrary URLs are not accepted.
+Signs and forwards a request to SolisCloud. `endpointKey` must name a pre-registered endpoint;
+arbitrary URLs are not accepted. Parameters are validated against that endpoint's schema
+(declared names only, string type, length cap, and format / range where declared — e.g. dates
+are `YYYY-MM-DD`, page size is 1–100) and anything else is dropped or rejected with `400`.
+
+Every call writes one `[AUDIT]` JSON line to the function log. The rate limit (`429`) is held in
+module memory, so it applies per warm serverless instance: it slows a runaway client but is not
+a global quota.
 
 This is a diagnostic tool, not part of the data path. The scheduled collectors in `functions/`
 call SolisCloud directly.

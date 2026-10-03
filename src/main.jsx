@@ -1,6 +1,5 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import App from "./App";
 
 // Global error handler for third-party scripts
@@ -14,7 +13,5 @@ window.addEventListener('error', (event) => {
 });
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <ChakraProvider value={defaultSystem}>
-    <App />
-  </ChakraProvider>
+  <App />
 );

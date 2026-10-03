@@ -19,6 +19,7 @@ import 'dotenv/config';
 import fs from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import { solisFetch } from '../../api/_lib/solisAuth.js';
+import { exitOnServiceKeyProblem } from '../../api/_lib/serviceKeyGuard.js';
 import { addDays, eachDateKey, isDateKey, localDateKey } from '../../shared/domain/time.js';
 import { runCollector } from './run.js';
 
@@ -159,6 +160,9 @@ async function main() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY (service_role) are required');
+  // Reject an anon key up front — see api/_lib/serviceKeyGuard.js. A collector holding an anon key
+  // reads fine and has every write rejected by RLS, which is exactly how the 2026 outage hid.
+  exitOnServiceKeyProblem(url, key);
 
   const supabase = createClient(url, key, { auth: { persistSession: false } });
   const solis = makeSolis();

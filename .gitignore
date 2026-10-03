@@ -35,6 +35,10 @@ dist-ssr
 .augment/
 .bob/
 .claude/
+# Vendor agent-skill packs, installed by the `skills` CLI from skills-lock.json (which stays
+# tracked so they can be reinstalled). Tooling, not application code.
+.agents/
+skills/
 .codebuddy/
 .commandcode/
 .continue/

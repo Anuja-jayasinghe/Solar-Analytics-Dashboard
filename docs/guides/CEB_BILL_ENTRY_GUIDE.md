@@ -1,93 +1,84 @@
-# 🧾 CEB Bill Entry Process - Ingestion & OCR Guide
+# CEB bill entry
 
-This guide outlines the processes for entering CEB (Ceylon Electricity Board) billing data into the Solar Analytics Dashboard, leveraging both the direct **Manual Entry** form and the **Automated OCR Ingestion Pipeline**.
+How a CEB bill becomes a row in `ceb_data`, from the operator's side. For how the pieces work
+underneath, see [`ARCHITECTURE.md` §4](../ARCHITECTURE.md#4-pipeline-b--ceb-bills); for the exact
+requests, [`API.md`](../API.md).
 
----
+> **The extractor is not OCR and not AI.** It reads the PDF's text layer with `pdfjs-dist` and
+> applies nine regular expressions pinned to the bill's layout. Both the pre-2026 format and the
+> 2026 `ebill-edl-v.1.0.2` format are supported. It cannot read a scanned image.
 
-## 1. Automated OCR Pipeline (Primary Process)
+## 1. Adding a bill from a PDF (the normal path)
 
-The automated OCR ingestion pipeline is a three-step workflow designed to minimize manual typing by extracting data directly from digital bills.
+Admin dashboard → **CEB Billing**.
 
-```mermaid
-graph TD
-    A[Upload Bill PDF/Image] --> B[Auto-parse via Document AI]
-    B --> C[Parsing Review Queue]
-    C -->|Verify & Edit| D[Approve & Save]
-    D --> E[Final ceb_data Table]
-```
+1. **Upload the PDF.** PDF only, up to 10 MB. The file is checked by its bytes, not just its
+   name. Uploading the same file twice is safe: it is recognised by SHA-256 and rejected as a
+   duplicate before anything is stored.
+2. **Parsing runs automatically.** The result lands in the **Parsing Review Queue**. If parsing
+   fails, the bill appears there as a failed parse with a **Retry** option.
+3. **Review it — even when it says Looks good.** The queue shows:
 
-### Step 1: File Upload
-- **Trigger**: The admin selects a CEB bill file (supports `.pdf`, `.png`, `.jpg` up to 10MB) and clicks "Upload Bill" inside the Admin Dashboard.
-- **Action**: The file is securely uploaded to the private Supabase Storage bucket (`ceb_bills`) via the `/api/ceb-bills/upload` endpoint.
-- **Processing**: The file receives an `ingestionId`, and the system automatically triggers the background parser (`/api/ceb-bills/extract`).
-- **Validation**: If a duplicate bill is uploaded, the system detects the hash overlap and alerts the user rather than creating duplicate records.
+   | Status | Meaning |
+   |---|---|
+   | `auto_approved` | Parsed, and the three internal checks passed |
+   | `pending_review` | Parsed, but a check failed; the reason is listed |
+   | `failed_extraction` | The PDF could not be read or saved |
 
-### Step 2: Parsing Review Queue
-- **Location**: `VerificationQueue.jsx`
-- **Function**: Once parsed, the bill lands in the **Parsing Review Queue** waiting for user verification.
-- **Fields Extracted**: The system extracts critical fields: `Account Number`, `Billing Month`, `Period Start`, `Period End`, `Meter Reading`, `Units Exported`, and `Earnings`.
-- **Status Indicators**:
-  - ✅ **LOOKS GOOD** (`auto_approved`): High-confidence extraction.
-  - ⚠️ **NEEDS REVIEW** (`pending_review`): Parsed, but requires human verification (e.g. potential validation errors or low extraction scores highlighted in yellow).
-  - ❌ **PARSE FAILED**: Unable to read the document. Provides an option to "Retry Parsing".
-- **Interactivity**: The user can manually edit any of the extracted fields directly within the queue grid to correct any parser mistakes.
+   The three checks are: units × rate = earnings, meter reading difference = units exported,
+   and period start before period end. Passing them proves the bill is **internally consistent**.
+   It cannot prove the right bill was parsed or that the expressions matched the right table
+   rows. That judgement is why a person still approves every bill.
 
-### Step 3: Approve & Save
-- **Action**: Once satisfied with the extracted values, the user clicks **"Approve & Save"**.
-- **Database Update**: This pushes the finalized data into the main `ceb_data` database table, securely logging it for dashboard charts. It uses an upsert mechanism based on `account_number` and `billing_month`.
-- **Completion**: The record's status in `ceb_bill_extractions` and `ceb_bill_ingestions` is updated to `'approved'`. The bill is moved out of the queue and into the **"Verified History"** log at the bottom of the page.
+   Every extracted field is editable in the queue. To compare against the original, open the
+   PDF from the bill's row in the main records table (see *Files and previews* below).
+4. **Approve & Save.** This writes the `ceb_data` row and marks the extraction and the upload
+   approved, in one step. An existing row for the same account and month is **updated**, not
+   duplicated. The bill moves to *Verified History*.
 
----
+### Missing versus zero
 
-## 2. Manual Data Entry
+A field the parser could not read is left **blank** in the queue, with the reason listed. A `0` in a field
+means the bill printed zero. Do not type `0` to get past a blank field — a fabricated zero is
+indistinguishable from a real one once saved. If a figure is genuinely missing from the bill,
+leave it flagged and investigate.
 
-For scenarios where a digital file is unavailable or a quick reading needs to be logged, a dedicated manual entry form is provided.
+### If the figures are wrong or empty
 
-- **Location**: `CebForm.jsx`
-- **Fields**: User manually inputs `BILL_DATE`, `ACCOUNT_NUMBER`, `BILLING_MONTH` (e.g., `2024 JAN`), `METER_READING`, `UNITS_EXPORTED`, and `EARNINGS`.
-- **Conflict Handling**: Upon clicking **"[ COMMIT_NEW_RECORD ]"**, the system uses an "upsert" mechanism. If a record for that specific `account_number` and `billing_month` already exists, it updates the existing record rather than creating a duplicate.
+Almost always the bill layout changed. See the runbook:
+[Bill extraction produces wrong or empty figures](../RUNBOOK.md#bill-extraction-produces-wrong-or-empty-figures).
 
----
+## 2. Manual entry
 
-## 3. File Storage Management
+For a bill you have no PDF for. The form (`CebForm.jsx`) takes bill date, account number, billing
+month (e.g. `2026 SEP`), meter reading, units exported and earnings.
 
-The implementation includes a collapsible **"Files In Storage"** section for administrative oversight.
+Saving **upserts** on account number + billing month, so entering a month that already exists
+updates it. Always fill in the account number: the uniqueness rule cannot see a row whose
+account number is blank, so a blank one can create a duplicate of an existing month.
 
-- **Capabilities**:
-  - View all files currently in backend storage.
-  - Check processing statuses (`approved`, `pending_review`, `failed`).
-  - Manually trigger a "Parse" action if a file becomes stuck.
-  - Completely delete a file and its associated extractions from the system to start fresh.
+Manual entries have no PDF and no upload record. A later PDF for the same month, once approved,
+replaces the manual row.
 
----
+## 3. Files in storage
 
-## 4. Planned Robustness & Data Integrity Enhancements
+The collapsible **Files in storage** panel lists every upload with its status. From it you can:
 
-To ensure the system remains highly robust, user-friendly, and free of "orphaned" records (e.g., a file sitting in storage when the database record is deleted), the following architectural improvements are planned:
+- **Parse** an upload that is stuck at `received`.
+- **Delete** an upload. This is destructive: it removes the file, its extraction **and the
+  `ceb_data` row it produced**. The dashboard's figures for that month change immediately.
 
-### A. Storage Optimization & Professional Cleanup
-- **Goal**: Maintain a clean, professional storage environment by ensuring that only fully vetted and approved files consume storage space.
-- **Implementation**: When a file is uploaded, it is held temporarily. If a file is **rejected** in the verification queue, or left unapproved for an extended period, it is automatically and permanently purged from the storage bucket. The storage bucket must only serve as an archive for `approved` CEB bills.
+Deleting a finalised row from the main table does the same thing from the other end: the row,
+its extraction, its upload record and the stored PDF all go.
 
-### B. Intelligent Duplicate Prevention & Data Hierarchy
-- **Goal**: Prevent duplicate records for the same billing month, especially during the transition from historical manual data entry to the automated pipeline.
-- **Implementation**: The main `ceb_data` table enforces a strict unique constraint on `(account_number, billing_month)`. 
-- **Conflict Resolution (The Hierarchy)**: If an automated bill is parsed and approved for a month that already has a `manual_entry` record, the system will **automatically override** the manual entry with the verified parsed data. Automated, proven data always takes precedence over historical manual entries.
+### Files and previews
 
-### C. Centralized Deletion & Cascading Cleanups
-- **Current Issue**: Deleting an upload from "Files in Storage" cleans up the storage bucket and extraction tables correctly. However, deleting a finalized record directly from the main CEB Table leaves the original PDF in storage.
-- **Solution - Centralized API**: Create a single `/api/ceb-bills/delete-record` endpoint. When a user deletes a record from the frontend table, this endpoint will securely execute a transaction that:
-  1. Deletes the row in `ceb_data`.
-  2. Deletes the row in `ceb_bill_extractions`.
-  3. Deletes the row in `ceb_bill_ingestions`.
-  4. Deletes the physical file from the `ceb_bills` storage bucket.
-- **Solution - Database Triggers**: Implement Postgres functions/triggers in Supabase that listen for `DELETE` operations on `ceb_data` and automatically remove associated ingestions and storage files.
+A row in the main records table that came from a PDF has a **preview** action. It opens the
+original bill through a link that lasts five minutes and is generated for you each time; only
+admins can request one.
 
-### D. User-Friendly Data Traceability (UI/UX)
-- **"View Original Bill"**: In the main CEB Data Table, add a link to view the original PDF for records created via the OCR pipeline, proving the data's source.
-- **Source Indicators**: Display a small icon next to records in the main table indicating if they were "Manually Entered" ✍️ or "Auto-Parsed" 🤖.
-- **Explicit Deletion Warnings**: When deleting an auto-parsed record, the confirmation dialog will explicitly warn: *"This will permanently delete the record AND the associated PDF bill from storage."*
+## 4. Things that are not automatic
 
-### E. Extraction Reliability & Validation
-- **Confidence Scores**: Update the parsing prompt to return a "confidence score". Low confidence parses (e.g., due to blurry images) will automatically flag as `needs_review`.
-- **Strict Math Validation**: Implement a backend check before queuing: `(Meter Reading Current - Meter Reading Previous) = Units Exported`. If the math does not align with the extracted text, the system will auto-flag the bill for human review.
+- An upload that is never approved stays in storage until someone deletes it. Nothing purges it.
+- There is no email ingestion. Bills are downloaded from CEB and uploaded by hand.
+- Approval is the only step that touches the figures on the dashboard.

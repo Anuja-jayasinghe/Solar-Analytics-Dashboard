@@ -62,14 +62,10 @@ function AuthProviderInner({ children, clerkUser, clerkAuth, clerk }) {
         const currentSession = await authAdapter.getSession();
         const currentUser = await authAdapter.getCurrentUser();
         
-        console.log("🔐 AuthContext: Session loaded:", currentUser?.email || "No session");
-        
         setSession(currentSession);
         setUser(currentUser);
 
         if (currentUser?.email) {
-          console.log("🔍 AuthContext: Checking admin status for:", currentUser.email);
-          
           const admin = await authAdapter.checkIsAdmin(currentUser);
           const access = await authAdapter.getDashboardAccess(currentUser);
           

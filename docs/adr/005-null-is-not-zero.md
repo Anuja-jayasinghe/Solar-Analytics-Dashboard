@@ -26,7 +26,7 @@ looked like a 1,300 kWh shortfall because of them. The v1 UI repeats the pattern
   applicable rate; settings that are missing stay `null` rather than defaulting (no guessed
   capacity, no guessed tariff).
 - **Estimates are labelled and never enter a comparison.** Weather-derived or modelled values may
-  explain, never compare (UI_REDESIGN_DIRECTION §7.2).
+  explain, never compare (the weather validation in the removed UI_REDESIGN_DIRECTION §7.2: r² 0.53, ~13% typical error, fine for context, unfit for comparison).
 - A collector must not write `0` unless the source reports a measured `0`.
 
 ## Consequences

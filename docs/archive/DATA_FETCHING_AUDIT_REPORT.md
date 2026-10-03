@@ -1,3 +1,5 @@
+> **Archived — historical record, not current.** Written before September 2026. Current documentation: [`docs/README.md`](../README.md).
+
 # Solar Analytics Dashboard - Data Fetching Architecture Audit Report
 
 **Date:** November 15, 2025  

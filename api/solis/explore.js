@@ -1,12 +1,17 @@
 /**
  * Vercel Serverless Function: SolisCloud API Explorer Proxy
- * 
- * Safe, server-side gateway for calling read-only Solis endpoints
- * - Validates all requests against allowlist
- * - Enforces read-only flag
- * - Audits all calls
- * - Rate limits per user/IP
- * - Requires authentication via Clerk
+ *
+ * Server-side gateway for calling read-only Solis endpoints
+ * - Requires an admin Clerk session (verifyAdminToken)
+ * - Validates every request against the endpoint allowlist and parameter schema
+ * - Enforces the read-only flag
+ * - Writes one structured audit line per call to the function log
+ * - Applies a best-effort rate limit per admin
+ *
+ * Limits worth knowing about:
+ * - The rate limiter lives in module memory, so it is per warm serverless instance. It slows a
+ *   runaway client; it is not a global quota.
+ * - The audit trail is the platform log (JSON lines tagged [AUDIT]). There is no audit table.
  */
 
 import { solisFetch } from '../_lib/solisAuth.js';
@@ -81,13 +86,8 @@ function auditLog(userId, endpointKey, success, statusCode, durationMs, errorMsg
     error: errorMsg || null,
   };
 
-  // For development/debugging
-  if (process.env.DEBUG === 'true' || process.env.NODE_ENV !== 'production') {
-    console.log('[AUDIT]', JSON.stringify(logEntry));
-  }
-
-  // TODO: Write to Supabase audit table
-  // await supabase.from('api_audit_logs').insert([logEntry]);
+  // Always emitted: in production the function log is the audit trail.
+  console.log('[AUDIT]', JSON.stringify(logEntry));
 
   return logEntry;
 }
@@ -172,9 +172,6 @@ export default async function handler(req, res) {
 
     console.error('[ERROR] SolisCloud Explorer:', error);
 
-    return res.status(500).json({
-      error: 'Internal server error',
-      message: process.env.NODE_ENV === 'production' ? 'An error occurred' : error.message,
-    });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

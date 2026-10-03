@@ -1,7 +1,7 @@
-Monthly Statement of Electricity Account Bill Ref: 457-4924089702-20260903082730
+Monthly Statement of Electricity Account Bill Ref: 457-0000000000-20260903082730
 ebill-edl-v.1.0.2
 Scan & Pay:
-Electricity A/C No.: 4924089702	WPN
+Electricity A/C No.: 0000000000	WPN
 0.00
 0.00
 0.00

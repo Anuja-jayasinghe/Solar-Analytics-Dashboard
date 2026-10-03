@@ -70,19 +70,25 @@ const CebDataManagement = () => {
   };
 
   // ✅ Fetch CEB data
+  //
+  // Through the admin API, not the browser's Supabase client: the public anon key may read only
+  // four columns of ceb_data, and this table needs all of them (account number, file path, …).
   const fetchData = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("ceb_data")
-      .select("*")
-      .order("bill_date", { ascending: false });
+    try {
+      const token = await fetchAuthToken();
+      if (!token) throw new Error("No auth token");
 
-    if (error) {
+      const response = await fetch("/api/ceb-bills/records", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = await readApiResponse(response);
+      if (!response.ok) throw new Error(payload.error || `Failed with status ${response.status}`);
+
+      setAllData(payload.records || []);
+    } catch (error) {
       setMessage(`❌ Error loading data: ${error.message}`);
-      console.error("CEB data fetch error:", error);
-    } else {
-      setAllData(data || []);
-      console.log("CEB data loaded:", data);
+      console.error("CEB data fetch error:", error.message);
     }
     setLoading(false);
   };
@@ -400,12 +406,18 @@ const CebDataManagement = () => {
     setPreviewUrl(null);
     setPreviewFileName(filePath.split('/').pop() || 'document.pdf');
     try {
-      const { data, error } = await supabase
-        .storage
-        .from('ceb_bills')
-        .createSignedUrl(filePath, 300); // 5 minutes expiry
+      const token = await fetchAuthToken();
+      if (!token) throw new Error('No auth token');
 
-      if (error) throw error;
+      // Signed server-side: the bill bucket is closed to the public anon key.
+      const response = await fetch('/api/ceb-bills/signed-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ filePath })
+      });
+      const data = await readApiResponse(response);
+      if (!response.ok) throw new Error(data.error || 'Could not create a preview link');
+
       setPreviewUrl(data.signedUrl);
       setPreviewLoading(false);
     } catch (err) {
@@ -428,7 +440,7 @@ const CebDataManagement = () => {
 
     try {
       const token = await fetchAuthToken();
-      const response = await fetch('/api/ceb-bills/delete-record', {
+      const response = await fetch('/api/ceb-bills/delete', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -520,7 +532,7 @@ const CebDataManagement = () => {
           <input
             type="file"
             multiple
-            accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+            accept=".pdf,application/pdf"
             onChange={(e) => setSelectedBillFiles(Array.from(e.target.files || []))}
             disabled={uploading}
           />

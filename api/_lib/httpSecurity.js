@@ -18,11 +18,21 @@ const DEFAULT_ALLOWED_ORIGINS = [
   'http://localhost:4173'
 ];
 
+// Vercel preview and production-alias hosts for THIS project under THIS team's scope:
+//   <project>.vercel.app
+//   <project>-<hash>-<scope>.vercel.app
+//   <project>-git-<branch>-<scope>.vercel.app
+// The scope suffix matters. Matching only the project-name prefix would accept
+// `solar-analytics-dashboard-anything.vercel.app`, which anyone can register under their own
+// Vercel account — and this origin is answered with Access-Control-Allow-Credentials.
+const VERCEL_PREVIEW_ORIGIN =
+  /^https:\/\/solar-analytics-dashboard(\.vercel\.app|(-[a-z0-9]+)+-anuja-jayasinghes-projects\.vercel\.app)$/;
+
 /**
  * Origins permitted to call the API.
  *
  * Configure with ALLOWED_ORIGINS (comma-separated) to add preview deployments or a new
- * domain without a code change. Vercel preview URLs are matched by suffix.
+ * domain without a code change. This project's Vercel preview URLs are matched separately.
  */
 function getAllowedOrigins() {
   const fromEnv = (process.env.ALLOWED_ORIGINS || '')
@@ -38,8 +48,7 @@ function isOriginAllowed(origin) {
   const allowed = getAllowedOrigins();
   if (allowed.includes(origin)) return true;
 
-  // Vercel preview deployments for this project.
-  return /^https:\/\/solar-analytics-dashboard[a-z0-9-]*\.vercel\.app$/.test(origin);
+  return VERCEL_PREVIEW_ORIGIN.test(origin);
 }
 
 /**

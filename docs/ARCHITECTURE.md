@@ -105,7 +105,7 @@ Three separate credential scopes, and **keeping them separate is the security mo
 
 | Actor | Credential | Can do |
 |---|---|---|
-| Browser | `VITE_SUPABASE_ANON_KEY` (public, shipped in the bundle) | `SELECT` only. RLS enforces it. |
+| Browser | `VITE_SUPABASE_ANON_KEY` (public, shipped in the bundle) | `SELECT` only, and only on data that is public by design. RLS enforces it. Bills, the ingestion tables and the `ceb_bills` bucket are closed to it — see [`SECURITY.md`](./SECURITY.md) |
 | Serverless function | `SUPABASE_SERVICE_KEY` (service_role, server-only) | Everything. Bypasses RLS. |
 | GitHub Actions | `SUPABASE_SERVICE_KEY` repo secret | Everything. Bypasses RLS. |
 
@@ -201,11 +201,11 @@ flowchart TD
     VAL -->|"no blocking errors"| AA[("ceb_bill_extractions<br/>review_status = auto_approved")]
     VAL -->|"errors"| PR[("ceb_bill_extractions<br/>review_status = pending_review")]
 
-    AA --> Q["VerificationQueue.jsx<br/>👤 human review"]
+    AA --> Q["VerificationQueue.jsx<br/>👤 human review<br/>(GET /ingestions?view=queue,<br/>POST /signed-url for the PDF)"]
     PR --> Q
-    Q -->|"admin edits + approves"| REC["PUT /api/ceb-bills/records"]
+    Q -->|"admin edits + approves"| REC["PUT /api/ceb-bills/records<br/>one transaction"]
     REC --> CEBD[("ceb_data<br/>— canonical")]
-    REC --> MARK[("ingestion status = approved")]
+    REC --> MARK[("extraction + ingestion<br/>status = approved")]
 
     CEBD --> CHART["Dashboard charts"]
 
@@ -225,7 +225,7 @@ Two properties of this design are worth internalising:
 
 - **A bill redesign breaks it.** That already happened once. CEB shipped
   `ebill-edl-v.1.0.2` in 2026 and the `Bill Date:` label vanished; the date is now recovered
-  from the bill reference (`457-4924089702-20260903082730`). Eight of nine anchors survived —
+  from the bill reference (`457-0000000000-20260903082730`). Eight of nine anchors survived —
   which was luck.
 - **The most fragile anchor is invisible on the page.** `meterRow` matches
   `\t(\d+)\t(\d{4}-\d{2}-\d{2})` — it depends on table cells arriving *tab-delimited*, which is
@@ -247,6 +247,40 @@ there is a fixture corpus large enough to justify otherwise.
 A detail that took a real debugging session to get right: `notes` are kept separate from
 `errors`. A tariff-change advisory is worth surfacing to the reviewer, but lumping it into
 `errors` silently downgraded a perfectly good extraction to `pending_review`.
+
+### Status lifecycle
+
+Two status columns, set by three endpoints and nothing else:
+
+```mermaid
+stateDiagram-v2
+    [*] --> received: POST /upload
+    received --> auto_approved: POST /extract, no blocking errors
+    received --> pending_review: POST /extract, blocking errors
+    received --> failed_extraction: POST /extract, download or parse failed
+    failed_extraction --> auto_approved: retry
+    failed_extraction --> pending_review: retry
+    auto_approved --> approved: PUT /records
+    pending_review --> approved: PUT /records
+    approved --> [*]
+```
+
+| Value | On | Meaning |
+|---|---|---|
+| `received` | ingestion | Stored, not yet parsed |
+| `auto_approved` | both | Parsed and internally consistent. **Still awaits a human** — this label is not "approved" |
+| `pending_review` | both | Parsed, but a blocking check failed |
+| `failed_extraction` | ingestion | Download, PDF read or database write failed. Only set on an ingestion that was never extracted; a failed *re*-parse keeps the previous status |
+| `approved` | both | A human approved it and the `ceb_data` row exists. **Terminal** — `/extract` refuses to re-parse it |
+
+Approval writes `ceb_data`, the extraction and the ingestion together, in one transaction
+(`approve_ceb_extraction()`), so the labels cannot disagree with the data. Twenty ingestions once
+did: they were fully promoted into `ceb_data` but still said `auto_approved`.
+
+Not real states, despite appearing in the code: `failed_api_limit` (left from the abandoned AI
+extractor; nothing sets it, the queue still lists it), `rejected` (allowed by the extraction
+table's `CHECK`, never written — rejecting a bill deletes it), and `needs_review` (a label the
+upload screen shows for `pending_review`; never stored).
 
 ---
 
@@ -293,6 +327,11 @@ output varies seasonally — wrong in a way that looks plausible.
 corrupted this dataset twice — a fabricated `0` is indistinguishable from a real one once it is
 in the table, and it drags every average down while looking like data.
 
+The bill parser follows the same rule. A figure its regexes cannot find comes back `null`, never
+`0`; `validateExtraction()` reports a `null` as missing and accepts a `0` as a measured zero.
+Until 2026-09-24 the parser returned `0` for both, so a bill whose text it failed to read looked
+identical to a bill that exported nothing.
+
 ---
 
 ## 6. Data model
@@ -321,8 +360,8 @@ erDiagram
     ceb_bill_ingestions {
         uuid id PK
         text file_path "Storage key"
-        text file_hash "SHA-256 — dedupe"
-        text status "received|pending_review|auto_approved|approved|failed_extraction"
+        text file_sha256 "SHA-256 — dedupe, unique"
+        text status "see Status lifecycle (section 4)"
     }
 
     ceb_bill_extractions {
@@ -471,10 +510,11 @@ Layers, each of which assumes the others may fail:
 |---|---|---|
 | Transport | HSTS `max-age=63072000; preload`, CSP, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` | `vercel.json` |
 | Origin | CORS **allowlist** — not `*` | `api/_lib/httpSecurity.js` |
-| Identity | Clerk `verifyToken`, fails closed, `authorizedParties` replay guard | `api/middleware/verifyAdminToken.js` |
+| Identity | Clerk `verifyToken`, fails closed, `authorizedParties` replay guard | `api/_lib/verifyAdminToken.js` |
 | Authorization | `publicMetadata.role === 'admin'` | same |
-| Data | RLS: `anon` gets `SELECT` and nothing else | `scripts/sql/2026-09-12_revoke_anon_writes.sql` |
-| Config | Startup assertion that the service key really is `service_role` | `api/_lib/supabaseServer.js` |
+| Input | Allowlist validation, not blocklists; user roles, bill records and Solis parameters each have a tested rules module | `api/_lib/userMetadataRules.js`, `cebRecordRules.js`, `api/_config/solisEndpointsConfig.js` |
+| Data | RLS: `anon` gets `SELECT` on public tables — on `ceb_data` only four columns — and nothing on bills | `scripts/sql/2026-09-12_revoke_anon_writes.sql`, `2026-09-24_revoke_anon_bill_access.sql`, `2026-09-24_ceb_data_public_columns.sql` |
+| Config | Startup assertion that the service key really is `service_role` — in the API **and** in the scheduled jobs | `api/_lib/supabaseServer.js`, `api/_lib/serviceKeyGuard.js` |
 
 ### The config assertion, and why it exists
 
@@ -498,6 +538,10 @@ the file had already been written to storage).
 There is now **no fallback**. One key, its `role` claim asserted at request time, and an error
 message that names the fix. `/ready` reports the key's role so the failure is visible from
 outside without reading logs.
+
+The assertion originally protected only the API — but the component that actually failed was the
+GitHub Actions collector. `api/_lib/serviceKeyGuard.js` now makes the collectors, the backfill
+scripts and the freshness check run the same check at start-up and exit non-zero on an anon key.
 
 ### Secrets and the client bundle
 
@@ -523,6 +567,10 @@ The system's history, compressed into a table. Each row is something that actual
 | `toISOString()` on a local-midnight Date | Asia/Colombo is UTC+5:30 — dates shifted back one day | `toLocalIsoDate()`; caught by tests on their first run |
 | `pdf-parse` was a devDependency | Vercel ships only `dependencies`; worked locally | `tests/runtimeDependencies.test.js` |
 | Bill format redesign broke the parser | Only testable by uploading to production | Parser extracted as a pure module + two fixtures |
+| Parser returned `0` for anything it could not read | A failed parse looked like a bill that exported nothing | Parser returns `null`; validator distinguishes missing from zero |
+| Bill approved in `ceb_data`, ingestion still `auto_approved` | Three separate writes, no transaction | `approve_ceb_extraction()` — one transaction |
+| Bill PDFs and review queue readable with the public anon key | The browser signed URLs and read the tables itself, so the policies had to allow it | Admin endpoints (`/signed-url`, `/ingestions?view=queue`) + `2026-09-24_revoke_anon_bill_access.sql` |
+| Delete removed the file before the rows | An ingestion could point at a file that no longer existed | One `/delete` endpoint: rows first, file last, every result checked |
 | CI gates used `--if-present` | Two of them silently passed for months | All four gates mandatory |
 
 The general shape: **every one of these was a silent failure, not a loud one.** The
@@ -537,13 +585,15 @@ failures rarer.
 api/                        Vercel serverless functions (10 of 12 used)
 ├── _lib/                   Shared — excluded from the function count
 │   ├── supabaseServer.js   The one server client + config assertion
-│   ├── solisAuth.js        HMAC-SHA1 signing. Server-only, deliberately
+│   ├── solisAuth.js        HMAC-SHA1 signing (node:crypto). Server-only, deliberately
+│   ├── serviceKeyGuard.js  Start-up check for jobs and scripts: reject an anon key
 │   ├── pdfText.js          pdfjs-dist text extraction
-│   ├── cebBillParser.js    Pure regex parser + validator
+│   ├── cebBillParser.js    Pure regex parser + validator (null ≠ 0)
+│   ├── cebRecordRules.js   ceb_data record validation
+│   ├── userMetadataRules.js  role / access allowlist for user admin
+│   ├── verifyAdminToken.js Clerk verification, fails closed
 │   └── httpSecurity.js     CORS allowlist, preflight, method gate
-├── middleware/
-│   └── verifyAdminToken.js Clerk verification, fails closed
-├── ceb-bills/              upload · extract · records · ingestions · delete · delete-record
+├── ceb-bills/              upload · extract · records · ingestions · signed-url · delete
 ├── admin/users/[userId].js User management
 ├── solis/explore.js        Debug proxy for SolisCloud
 ├── settings.js             system_settings writes
@@ -560,7 +610,7 @@ supabase/functions/         Supabase Edge Functions (Deno)
 .github/workflows/          7 workflows — see RUNBOOK.md
 scripts/sql/                Schema baseline + RLS migrations
 docs/logic-registry/        Specs for non-obvious domain rules
-tests/                      91 tests, 6 files
+tests/                      Vitest — parser, alignment, API validation, security helpers
 ```
 
 ---

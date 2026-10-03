@@ -1,6 +1,6 @@
 -- Baseline schema — captured 2026-09-12
 --
--- Audit finding D1 (docs/archive/2026-v2-era/PROJECT_AUDIT_2026-09.md).
+-- Audit finding D1 (docs/PROJECT_AUDIT_2026-09.md).
 --
 -- ============================================================================
 -- WHY THIS EXISTS
