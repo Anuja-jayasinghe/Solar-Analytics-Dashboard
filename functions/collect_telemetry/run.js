@@ -25,6 +25,20 @@ import { buildDayRecords, prepareAlarms, toAlarmRow } from '../../shared/domain/
 const CHUNK = 500;
 const RECONCILE_TOLERANCE_KWH = 1.5;
 
+/** Map with at most `limit` in flight; the result array is in input order. */
+export async function mapLimit(items, limit, fn) {
+  const results = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i], i);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
 async function writeChunked(db, table, rows, onConflict) {
   for (let i = 0; i < rows.length; i += CHUNK) {
     await db.upsert(table, rows.slice(i, i + CHUNK), onConflict);
@@ -38,7 +52,7 @@ async function writeChunked(db, table, rows, onConflict) {
  * @param {boolean} a.write        false = dry run: nothing is written anywhere
  * @param {boolean} [a.fillPeaks]  also set peak_power_kw on summary rows where it is NULL
  */
-export async function runCollector({ solis, db, dates, write, fillPeaks = false, now = Date.now(), log = () => {}, job = 'collect_telemetry' }) {
+export async function runCollector({ solis, db, dates, write, fillPeaks = false, concurrency = 1, now = Date.now(), log = () => {}, job = 'collect_telemetry' }) {
   const report = {
     status: 'ok', write, job, dates: dates.length, days: [], alarmsFetched: null, alarmsWritten: 0,
     pointsWritten: 0, daysDerived: 0, failedDays: 0, collectorFailures: 0,
@@ -81,7 +95,7 @@ export async function runCollector({ solis, db, dates, write, fillPeaks = false,
     log(`WARN could not read daily summary for reconciliation: ${e.message}`);
   }
 
-  for (const dateKey of dates) {
+  const processDay = async (dateKey) => {
     const day = { dateKey, status: null, points: 0, uptimePct: null, trips: 0, gaps: 0, error: null };
     try {
       const rawPoints = await solis.inverterDay(inv.sn, dateKey);
@@ -133,8 +147,12 @@ export async function runCollector({ solis, db, dates, write, fillPeaks = false,
       report.failedDays++;
       log(`ERROR ${dateKey}: ${e.message}`);
     }
-    report.days.push(day);
-  }
+    return day;
+  };
+
+  // Days are independent, so up to `concurrency` run at once (the Solis client paces the actual
+  // request starts). Results keep the order of `dates`, whatever order they finish in.
+  report.days = await mapLimit(dates, Math.max(1, Math.floor(concurrency)), processDay);
 
   if (write && alarms) {
     try {

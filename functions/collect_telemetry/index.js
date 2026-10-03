@@ -7,6 +7,7 @@
 //   node functions/collect_telemetry/index.js --write               nightly: write last 7 days
 //   node functions/collect_telemetry/index.js --from 2024-08-02 --to 2026-10-02 --write
 //   node functions/collect_telemetry/index.js --fill-peaks --write  also set NULL summary peaks
+//   node functions/collect_telemetry/index.js --from 2024-08-02 --concurrency 4   long ranges: several days in flight
 //
 // SAFE BY DEFAULT: without --write nothing is written anywhere. Today is never processed
 // (the day is incomplete) unless --include-today is given. Exit code is non-zero unless the run
@@ -25,7 +26,7 @@ const MAX_DAYS = 900;
 const SOLIS_GAP_MS = 700; // documented limit is 2 calls/second; stay well under it
 
 function parseArgs(argv) {
-  const a = { write: false, fillPeaks: false, includeToday: false, days: 7, from: null, to: null, job: 'collect_telemetry' };
+  const a = { write: false, fillPeaks: false, includeToday: false, days: 7, concurrency: 1, from: null, to: null, job: 'collect_telemetry' };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i];
     if (k === '--write') a.write = true;
@@ -34,6 +35,7 @@ function parseArgs(argv) {
     else if (k === '--from') a.from = argv[++i];
     else if (k === '--to') a.to = argv[++i];
     else if (k === '--days') a.days = Number(argv[++i]);
+    else if (k === '--concurrency') a.concurrency = Number(argv[++i]);
     else if (k === '--job') a.job = argv[++i];
     else throw new Error(`unknown argument: ${k}`);
   }
@@ -61,11 +63,14 @@ export function resolveDates({ from, to, days, includeToday }, nowMs = Date.now(
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function makeSolis() {
-  let last = 0;
+  // Each call reserves the next free start slot synchronously, so concurrent callers are spaced
+  // SOLIS_GAP_MS apart however many are in flight (the API limit is on request STARTS per second).
+  let nextSlot = 0;
   async function call(path, body) {
-    const wait = last + SOLIS_GAP_MS - Date.now();
+    const startAt = Math.max(Date.now(), nextSlot);
+    nextSlot = startAt + SOLIS_GAP_MS;
+    const wait = startAt - Date.now();
     if (wait > 0) await sleep(wait);
-    last = Date.now();
     const res = await solisFetch(path, body);
     if (String(res?.code) !== '0') throw new Error(`${path}: ${res?.msg ?? 'unknown error'} (code ${res?.code})`);
     return res.data;
@@ -150,6 +155,7 @@ function summaryMarkdown(r) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const dates = resolveDates(args);
+  if (!Number.isInteger(args.concurrency) || args.concurrency < 1 || args.concurrency > 6) throw new Error('--concurrency must be an integer from 1 to 6');
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY (service_role) are required');
@@ -160,9 +166,9 @@ async function main() {
   if (!inv) throw new Error('SolisCloud returned no inverter');
   const db = makeDb(supabase, inv.sn);
 
-  console.log(`mode=${args.write ? 'WRITE' : 'DRY RUN'} job=${args.job} days=${dates.length} (${dates[0]} → ${dates[dates.length - 1]}) fillPeaks=${args.fillPeaks}`);
+  console.log(`mode=${args.write ? 'WRITE' : 'DRY RUN'} job=${args.job} days=${dates.length} (${dates[0]} → ${dates[dates.length - 1]}) fillPeaks=${args.fillPeaks} concurrency=${args.concurrency}`);
   const report = await runCollector({
-    solis, db, dates, write: args.write, fillPeaks: args.fillPeaks, job: args.job,
+    solis, db, dates, write: args.write, fillPeaks: args.fillPeaks, concurrency: args.concurrency, job: args.job,
     log: (m) => console.log(m)
   });
 

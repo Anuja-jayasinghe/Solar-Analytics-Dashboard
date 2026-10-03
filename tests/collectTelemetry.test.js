@@ -205,3 +205,47 @@ describe('resolveDates (CLI)', async () => {
     expect(() => resolveDates({ days: 0 }, now)).toThrow();
   });
 });
+
+describe('concurrency', async () => {
+  const { mapLimit } = await import('../functions/collect_telemetry/run.js');
+  const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  it('mapLimit keeps results in input order and never exceeds the limit in flight', async () => {
+    let inFlight = 0; let max = 0;
+    const out = await mapLimit([5, 1, 4, 2, 3, 0], 3, async (n) => {
+      inFlight++; max = Math.max(max, inFlight);
+      await sleepMs(n * 3);
+      inFlight--;
+      return n * 10;
+    });
+    expect(out).toEqual([50, 10, 40, 20, 30, 0]);
+    expect(max).toBeLessThanOrEqual(3);
+    expect(max).toBeGreaterThan(1);
+  });
+
+  it('mapLimit handles empty input and a limit larger than the list', async () => {
+    expect(await mapLimit([], 4, async (x) => x)).toEqual([]);
+    expect(await mapLimit([1, 2], 10, async (x) => x + 1)).toEqual([2, 3]);
+  });
+
+  it('a concurrent run produces the same report and the same writes as a sequential one', async () => {
+    const dates = ['2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02'];
+    const seq = makeFakes(); const par = makeFakes();
+    const a = await runCollector({ solis: seq.solis, db: seq.db, dates, write: true, concurrency: 1 });
+    const b = await runCollector({ solis: par.solis, db: par.db, dates, write: true, concurrency: 4 });
+    expect(b.days.map((d) => d.dateKey)).toEqual(dates); // order preserved
+    expect(b.days).toEqual(a.days);
+    expect(b.pointsWritten).toBe(a.pointsWritten);
+    const norm = (calls) => calls.upserts.map((u) => `${u.table}:${u.n}`).sort();
+    expect(norm(par.calls)).toEqual(norm(seq.calls));
+  });
+
+  it('one failing day does not stop or corrupt the others when run concurrently', async () => {
+    const dates = ['2026-09-30', '2026-10-01', '2026-10-02'];
+    const { solis, db, calls } = makeFakes({ failDay: '2026-10-01' });
+    const r = await runCollector({ solis, db, dates, write: true, concurrency: 3 });
+    expect(r.status).toBe('failed');
+    expect(r.days.map((d) => d.status)).toEqual(['no_data', 'failed', 'ok']); // the fake only has points for 2 Oct: other days are honestly no_data
+    expect(calls.upserts.filter((u) => u.table === 'inverter_day_uptime')).toHaveLength(2);
+  });
+});

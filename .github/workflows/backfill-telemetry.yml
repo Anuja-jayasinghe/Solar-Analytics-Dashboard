@@ -16,8 +16,8 @@ name: Backfill Inverter Telemetry
 # fill_peaks additionally sets peak_power_kw on daily-summary rows where it is NULL. It never
 # overwrites a value and never creates a row (see issue #163).
 #
-# Pace: Solis allows 2 calls/second; the collector uses ~1.4/second and makes 2 calls per day,
-# so ~790 days takes ~20-25 minutes. Take a DB Snapshot first if writing.
+# Pace: Solis allows 2 calls/second; the collector starts ~1.4 calls/second and makes 2 calls per day,
+# so ~790 days takes ~25-30 minutes with concurrency 4 (it was over 2 hours before concurrency: each Solis call has ~5 s latency). Take a DB Snapshot first if writing.
 # =============================================================
 
 on:
@@ -53,7 +53,7 @@ jobs:
   backfill:
     name: Backfill telemetry
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 300
 
     steps:
       - name: 📥 Checkout Repository
@@ -94,4 +94,4 @@ jobs:
           if [ "$DRY_RUN" != "true" ]; then ARGS+=(--write); fi
           if [ "$FILL_PEAKS" = "true" ]; then ARGS+=(--fill-peaks); fi
           echo "node functions/collect_telemetry/index.js ${ARGS[*]}"
-          node functions/collect_telemetry/index.js "${ARGS[@]}"
+          node functions/collect_telemetry/index.js "${ARGS[@]}" --concurrency 4
