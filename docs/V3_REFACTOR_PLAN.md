@@ -42,11 +42,11 @@ Out of scope for v3 (tracked): alerting on downtime/faults → #151.
 Status: ☐ todo · ◐ in progress · ☑ done · ⚠ deferred (see §6)
 
 ### P0 — Dead code and docs triage · #152
-- ☐ Reference-check, then delete dead frontend files
-- ☐ Remove unused dependencies
-- ☐ Fix `vite.config.js` chunk rules and `eslint.config.js` stale references
-- ☐ Archive history docs, delete stale docs (list in §5)
-- ☐ Write `docs/WORKING_RULES.md`
+- ☑ Reference-check, then delete dead frontend files (commit 01f803c)
+- ◐ Remove unused dependencies — framer-motion ☑; Chakra/emotion ⚠ V3-D3
+- ⚠ Fix `vite.config.js` chunk rules and `eslint.config.js` stale references — V3-D3
+- ☑ Archive history docs, delete stale docs (list in §5); docs/README.md rewritten as an index
+- ☑ Write `docs/WORKING_RULES.md`
 
 ### P2a — Solis deep dive · #153
 - ☐ Catalogue every endpoint in the API PDF
@@ -129,3 +129,9 @@ Newest first. One entry per meaningful change: date, what, commit/PR, deviations
 
 - **2026-10-03** — Plan agreed; branch `refactor/v3` created; issues #152–#161 opened;
   this file created. `docs/UI_CURRENT_STATE_AUDIT.md` committed as the UI baseline.
+- **2026-10-03 (P0)** — Baseline: 115 tests, 0 lint errors, build OK. Deleted 11 unreferenced frontend files
+  (01f803c); disposed v2 preview + its 24 tests + route, removed unused lazy imports and `framer-motion`
+  (tests now 91/91, matching CLAUDE.md); deleted ~40 stale docs (admin-dashboard notes, LOCAL_CLERK_*,
+  migration/*, superseded guides), archived history docs to `docs/archive/2026-v2-era/` and repointed every
+  inbound link; rewrote `docs/README.md`; added `docs/WORKING_RULES.md`. Deviation: UI-impacting cleanup
+  deferred → V3-D3 / #162. Branch not yet pushed.

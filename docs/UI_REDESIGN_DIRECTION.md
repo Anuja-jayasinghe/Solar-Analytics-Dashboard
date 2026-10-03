@@ -440,5 +440,5 @@ variance attached.
 
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) — system design and the current data model
 - [`logic-registry/LR-001`](./logic-registry) — the bill-period alignment rule D5 depends on
-- [`PROJECT_AUDIT_2026-09.md`](./PROJECT_AUDIT_2026-09.md) — the UI/UX findings that predate
+- [`PROJECT_AUDIT_2026-09.md`](./archive/2026-v2-era/PROJECT_AUDIT_2026-09.md) — the UI/UX findings that predate
   this teardown

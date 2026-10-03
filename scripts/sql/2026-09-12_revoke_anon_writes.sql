@@ -1,6 +1,6 @@
 -- 2026-09-12: Revoke anonymous write access
 --
--- Audit findings S1 / S1a / S2 — see docs/PROJECT_AUDIT_2026-09.md
+-- Audit findings S1 / S1a / S2 — see docs/archive/2026-v2-era/PROJECT_AUDIT_2026-09.md
 --
 -- ============================================================================
 -- WHY

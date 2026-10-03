@@ -7,7 +7,7 @@
 // ⚠️  IMPORTANT — this is a safety net, not an authoritative backup.
 //
 // It can only capture what the configured key is allowed to SELECT. If SUPABASE_SERVICE_KEY
-// holds an anon key (see docs/RECOVERY_STATUS_2026-09.md), row-level security silently
+// holds an anon key (see docs/archive/2026-v2-era/RECOVERY_STATUS_2026-09.md), row-level security silently
 // filters rows out and an RLS-blocked table comes back as an empty array rather than an
 // error — a snapshot that looks fine and contains nothing.
 //
@@ -160,7 +160,7 @@ async function main() {
       console.log(`   Unexpectedly empty: ${suspiciouslyEmpty.map(r => r.table).join(', ')}`);
       console.log('   A table that exists but returns nothing usually means row-level');
       console.log('   security filtered it out — i.e. SUPABASE_SERVICE_KEY is not a');
-      console.log('   service_role key. See docs/RECOVERY_STATUS_2026-09.md.');
+      console.log('   service_role key. See docs/archive/2026-v2-era/RECOVERY_STATUS_2026-09.md.');
     }
     process.exit(1);
   }

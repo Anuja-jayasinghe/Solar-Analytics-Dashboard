@@ -124,6 +124,8 @@ any more, because two of them silently passed for months.
 Reference — how it works now:
 
 - `docs/ARCHITECTURE.md` — system design, both pipelines, data model, security. **Start here.**
+- `docs/WORKING_RULES.md` — the rulebook (data honesty, dates, security, DB changes, gates, tracking)
+- `docs/V3_REFACTOR_PLAN.md` — the v3 refactor: decisions, checklists, progress log, deferred register
 - `docs/API.md` — every endpoint, auth model, error shapes
 - `docs/RUNBOOK.md` — operating procedures and incident response
 - `docs/logic-registry/` — specs for the non-obvious domain rules
@@ -136,8 +138,8 @@ Decided, not yet built:
 
 History — why it is the way it is:
 
-- `docs/PROJECT_AUDIT_2026-09.md` — full audit: security, API, data, UI, CI, docs
-- `docs/RECOVERY_STATUS_2026-09.md` — the five-month data outage and its three stacked causes
+- `docs/archive/2026-v2-era/PROJECT_AUDIT_2026-09.md` — full audit: security, API, data, UI, CI, docs
+- `docs/archive/2026-v2-era/RECOVERY_STATUS_2026-09.md` — the five-month data outage and its three stacked causes
 - `docs/DATA_PIPELINE_SAFEGUARDS.md` — what now prevents a silent recurrence
 
 The history documents are a **record**, not a description of the present. Where they disagree

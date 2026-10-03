@@ -294,8 +294,8 @@ tests/                    91 tests across 6 files
 | [UI Redesign Direction](docs/UI_REDESIGN_DIRECTION.md) | Competitive teardown and the design decisions for the next version |
 
 The repository also keeps a deliberate historical record — the
-[project audit](docs/PROJECT_AUDIT_2026-09.md), the
-[recovery write-up](docs/RECOVERY_STATUS_2026-09.md) and the
+[project audit](docs/archive/2026-v2-era/PROJECT_AUDIT_2026-09.md), the
+[recovery write-up](docs/archive/2026-v2-era/RECOVERY_STATUS_2026-09.md) and the
 [pipeline safeguards](docs/DATA_PIPELINE_SAFEGUARDS.md) — documenting a five-month silent data
 outage and the countermeasures built afterwards. Where the record and the reference documents
 disagree, the reference documents are current.
