@@ -41,19 +41,19 @@ export function mapLive(rec, fetchedAtMs, peak = null) {
  * @param {(dateKey:string) => Promise<unknown[]>} [a.fetchDay]  today's raw inverterDay points, for the peak. Optional:
  *   without it, or if it fails, the peak is simply unknown and everything else still works.
  * @param {number} [a.ttlMs]
+ * @param {number} [a.peakWaitMs]  the live reading never waits longer than this for the peak: the right-now numbers matter
+ *   more than the day's maximum, so a slow day-read is reported as unknown this time and used on the next call
  * @param {number} [a.peakTtlMs]  how long a computed peak is reused (default 5 min: it is a whole day of points)
  * @param {() => number} [a.now]
  */
-export function createLiveProvider({ fetchInverter, fetchDay = null, ttlMs = 60_000, peakTtlMs = 300_000, now = () => Date.now() }) {
+export function createLiveProvider({ fetchInverter, fetchDay = null, ttlMs = 60_000, peakTtlMs = 300_000, peakWaitMs = 2_500, now = () => Date.now() }) {
   let cached = null;
   let peakCache = null; // { dateKey, at, peak }
+  let peakInFlight = null;
   let inFlight = null;
 
   /** Today's peak, cached, never throwing: a failure keeps the last peak for the same day or reports unknown. */
-  async function todayPeak() {
-    if (!fetchDay) return null;
-    const dateKey = localDateKey(now());
-    if (peakCache && peakCache.dateKey === dateKey && now() - peakCache.at < peakTtlMs) return peakCache.peak;
+  async function refreshPeak(dateKey) {
     try {
       const peak = peakOfDay(await fetchDay(dateKey));
       peakCache = { dateKey, at: now(), peak };
@@ -62,6 +62,20 @@ export function createLiveProvider({ fetchInverter, fetchDay = null, ttlMs = 60_
       console.error('live: peak unavailable', err?.message);
       return peakCache && peakCache.dateKey === dateKey ? peakCache.peak : null;
     }
+  }
+
+  async function todayPeak() {
+    if (!fetchDay) return null;
+    const dateKey = localDateKey(now());
+    if (peakCache && peakCache.dateKey === dateKey && now() - peakCache.at < peakTtlMs) return peakCache.peak;
+    // The day-read keeps running if it is slow; its result is cached for the next call.
+    peakInFlight = peakInFlight ?? refreshPeak(dateKey).finally(() => { peakInFlight = null; });
+    let timer;
+    const timeout = new Promise((resolve) => { timer = setTimeout(() => resolve(undefined), peakWaitMs); });
+    const peak = await Promise.race([peakInFlight, timeout]);
+    clearTimeout(timer);
+    if (peak !== undefined) return peak;
+    return peakCache && peakCache.dateKey === dateKey ? peakCache.peak : null;
   }
 
   return async function live() {

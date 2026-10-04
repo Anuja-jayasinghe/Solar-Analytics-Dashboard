@@ -422,6 +422,17 @@ describe('live peak today', () => {
     expect(await live()).toMatchObject({ peakTodayKw: null, peakTodayAt: null });
   });
 
+  it('does not make the live reading wait for a slow day-read, and uses the result on the next call', async () => {
+    let release;
+    const slow = new Promise((r) => { release = r; });
+    const live = createLiveProvider({ fetchInverter: async () => rec, fetchDay: () => slow.then(() => dayPoints), ttlMs: 0, peakWaitMs: 20, now: () => noon });
+    const first = await live(); // returns after ~20 ms with the peak unknown, not after the slow read
+    expect(first).toMatchObject({ status: 'online', peakTodayKw: null });
+    release();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(await live()).toMatchObject({ peakTodayKw: 26.3, peakTodayAt: '11:55' });
+  });
+
   it('reuses the peak for 5 minutes and keeps the last one if a refresh fails', async () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     let t = noon; let fail = false;
