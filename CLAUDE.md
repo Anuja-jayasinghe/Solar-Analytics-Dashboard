@@ -102,6 +102,8 @@ any more, because two of them silently passed for months.
 | Fetch Live Inverter Data | every 5 min, Solis → `inverter_data_live` |
 | Generate Daily Inverter Summary | 2×/day, aggregates into `inverter_data_daily_summary` |
 | Data Freshness Check | daily; opens a `data-outage` issue if rows stop arriving |
+| Collect Inverter Telemetry | nightly 00:15 Colombo; last 7 days of Solis `inverterDay` + `collector/day` + `alarmList` → telemetry, alarms, uptime tables (v3, ADR-001) |
+| Backfill Inverter Telemetry | manual; same collector over any range. **Dry run by default** |
 | Backfill Daily Summaries | manual; rebuilds gaps from the Solis month API. **Dry run by default** |
 | DB Snapshot | manual; read-only export of tables + schema as an artifact |
 | Keepalive | stops GitHub disabling the scheduled workflows for inactivity |
@@ -115,7 +117,7 @@ any more, because two of them silently passed for months.
 - Plain JavaScript, ESM. No TypeScript, no tsconfig — don't add a `typecheck` script unless
   you actually introduce TS.
 - Serverless functions live in `api/`. Vercel Hobby caps this at **12 functions**; anything
-  under `api/_lib/` or `api/_config/` doesn't count. Currently 10/12.
+  under `api/_lib/` or `api/_config/` doesn't count. Currently 11/12 (`api/data/[resource].js` serves every v3 dashboard read).
 - Health probes `/healthz` and `/ready` share ONE function via rewrites in `vercel.json` —
   two handlers would have put the count at the cap exactly.
 - Dates: serialise with local components, never `.toISOString()` on a local-midnight `Date` —
@@ -146,6 +148,25 @@ History — why it is the way it is:
 
 The history documents are a **record**, not a description of the present. Where they disagree
 with the reference documents, the reference documents are right.
+
+## v3 foundations are live (2026-10-04)
+
+The non-UI half of the v3 refactor is merged and running; **v1 (`/dashboard`) is unchanged and still the
+UI**. The new UI waits for a design phase (issue #159). Plan, decisions and the deferred register:
+`docs/V3_REFACTOR_PLAN.md`; rulebook: `docs/WORKING_RULES.md`; decisions: `docs/adr/`.
+
+- **Uptime log**: private tables `inverter_telemetry`, `collector_heartbeats`, `inverter_alarms`,
+  `inverter_day_uptime`, `inverter_status_segments`, `collector_runs`, filled by the nightly collector
+  from SolisCloud (backfilled 2024-08-02 → now). Spec: LR-002. **Alarm `1D4C2` "Loss of internet
+  connection" is logger evidence, not downtime.**
+- **Shared pure logic** in `shared/` (time, uptime, range stats, LR-001 on date keys, resources, demo) —
+  no I/O, runs in browser, API and collectors. LR-003 specifies custom ranges (inverter only).
+- **Read API** `GET /api/data/*`: viewer-level (Clerk `role: viewer`, or admin). The demo runs the same
+  resource code on generated data dated 2035+.
+- **Still public until cutover**: `anon` can SELECT the real tables because v1 reads them directly
+  (deferred V3-D1, #155). Write-class privileges were already revoked from `anon`.
+- Array size is **41.76 kWp** (`capacity_kwp`, DC; use for kWh/kWp); the 40 kW is the AC rating.
+- Daily summaries are reconciled against the inverter's own counter (0 disagreeing days at 2026-10-03).
 
 ## State as of v2.1.0 (2026-09-13)
 
