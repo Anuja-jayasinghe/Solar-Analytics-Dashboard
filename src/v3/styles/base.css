@@ -336,3 +336,51 @@
   .v3-spread { height: 110px; }
   .v3-daterow .v3-field { height: 30px; font-size: 12px; }
 }
+
+/* ---- Pro metrics ---- */
+.v3-rings { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr)); gap: 20px; }
+.v3-rings > .v3-tip { display: flex; }
+.v3-ringtile { padding: 18px 22px; display: flex; align-items: center; gap: 16px; flex: 1 1 auto; min-width: 0; }
+.v3-ring { flex: 0 0 auto; }
+.v3-ring-value { font-size: 26px; line-height: 1.15; }
+.v3-ring-value span { font-size: 13px; font-weight: 500; color: var(--ink2); margin-left: 5px; }
+.v3-strip { display: flex; gap: 3px; align-items: flex-end; height: 92px; }
+.v3-strip > .v3-tip { flex: 1 1 0; min-width: 0; height: 100%; align-items: flex-end; }
+.v3-stripcell { width: 100%; border-radius: 4px; }
+.v3-strip-ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink2); }
+.v3-twocol { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 20px; align-items: start; }
+.v3-bartrack { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.v3-barhead { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--ink2); }
+.v3-barhead b { color: var(--ink); font-weight: 600; }
+.v3-barbg { height: 8px; border-radius: 99px; background: var(--track); overflow: hidden; flex: 1 1 0; }
+.v3-barbg > div { height: 100%; border-radius: 99px; }
+.v3-elec { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 22px; }
+.v3-elec-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.v3-elec-title { font-size: 12.5px; font-weight: 600; }
+.v3-elec-title span { color: var(--ink2); font-weight: 500; }
+.v3-strrow { display: flex; align-items: center; gap: 10px; font-size: 12px; width: 100%; }
+.v3-strrow > span { width: 30px; color: var(--ink2); }
+.v3-strrow b { width: 56px; text-align: right; font-size: 12px; }
+.v3-miniplot { position: relative; height: 150px; }
+.v3-miniplot > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.v3-mini-hi, .v3-mini-lo, .v3-mini-tick, .v3-freq-label { font-size: 10.5px; color: var(--ink2); }
+.v3-mini-hi { position: absolute; left: 0; top: 0; } .v3-mini-lo { position: absolute; left: 0; bottom: 0; }
+.v3-mini-tick { position: relative; top: -14px; }
+.v3-freqband { position: absolute; left: 0; right: 0; top: 16%; bottom: 16%; background: var(--good-a20); border-radius: 8px; }
+.v3-freqmid { position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed var(--ink2); opacity: .6; }
+.v3-freq-label { position: absolute; right: 4px; margin-top: -15px; }
+.v3-freqbar { position: absolute; left: 50%; width: 8px; margin-left: -4px; border-radius: 99px; background: var(--ceb); }
+.v3-yoy { display: flex; gap: 6px; align-items: stretch; }
+.v3-yoy > .v3-tip { flex: 1 1 0; min-width: 0; }
+.v3-yoycol { width: 100%; text-align: center; }
+.v3-yoybars { height: 150px; display: flex; gap: 3px; align-items: flex-end; justify-content: center; }
+.v3-yoybars i { width: 14px; border-radius: 4px 4px 1px 1px; display: block; }
+
+@media (max-width: 700px) {
+  .v3-rings { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .v3-ringtile { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .v3-ring-value { font-size: 20px; }
+  .v3-strip { gap: 2px; height: 70px; }
+  .v3-yoybars { height: 110px; }
+  .v3-yoybars i { width: 9px; }
+}
