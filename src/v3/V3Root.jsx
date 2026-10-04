@@ -7,9 +7,9 @@ import { AccessProvider } from './access/AccessProvider.jsx';
 import { RequireAccess } from './access/RequireAccess.jsx';
 import { DataProvider } from './data/DataProvider.jsx';
 import { AppShell } from './shell/AppShell.jsx';
-import ComingSoon from './pages/ComingSoon.jsx';
 
 const OverviewPage = lazy(() => import('./pages/OverviewPage.jsx'));
+const AdminPage = lazy(() => import('./pages/AdminPage.jsx'));
 const ProPage = lazy(() => import('./pages/ProPage.jsx'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'));
 const SignInPage = lazy(() => import('./pages/SignInPage.jsx'));
@@ -31,7 +31,7 @@ export default function V3Root() {
                 <Route element={<AppShell />}>
                   <Route index element={<OverviewPage />} />
                   <Route path="pro" element={<ProPage />} />
-                  <Route path="admin/*" element={<RequireAccess level="admin"><ComingSoon slice="admin">Bills, access and data health.</ComingSoon></RequireAccess>} />
+                  <Route path="admin/*" element={<RequireAccess level="admin"><AdminPage /></RequireAccess>} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="signin" element={<SignInPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
