@@ -9,6 +9,7 @@ export function SvgDefs() {
       <defs>
         <linearGradient id="gaugeGrad" x1="0" y1="1" x2="1" y2="0">{stop(0, 'var(--gen-hi)')}{stop(1, 'var(--gen)')}</linearGradient>
         <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">{stop(0, 'var(--gen)', 0.4)}{stop(1, 'var(--gen)', 0.02)}</linearGradient>
+        <linearGradient id="areaFillCeb" x1="0" y1="0" x2="0" y2="1">{stop(0, 'var(--ceb)', 0.35)}{stop(1, 'var(--ceb)', 0.02)}</linearGradient>
       </defs>
     </svg>
   );

@@ -5,17 +5,15 @@ import { usePrefs } from '../prefs/context.js';
 import { navGroup } from './nav.js';
 import { readPref, writePref } from '../theme/storage.js';
 import { Icon } from './icons.jsx';
-import { Tip } from '../ui/Tip.jsx';
 
-function Item({ item, collapsed }) {
+function Item({ item }) {
   const link = (
     <NavLink to={item.path} end={item.end} className="v3-navitem" aria-label={item.label}>
       <Icon id={item.icon} />
       <span className="v3-label">{item.label}</span>
     </NavLink>
   );
-  // Collapsed to icons: the label stays reachable as a hint (always shown, even when figure hints are off).
-  return collapsed ? <Tip always text={item.label} side="right">{link}</Tip> : link;
+  return link;
 }
 
 /**
@@ -48,11 +46,11 @@ export function Sidebar() {
             <img className="v3-brand-mark" src="/favicon.svg" alt="" width="28" height="28" />
             {!collapsed && <span className="v3-brand-name">SolarEdge</span>}
           </Link>
-          {navGroup(level, 'main').map((n) => <Item key={n.id} item={n} collapsed={collapsed} />)}
+          {navGroup(level, 'main').map((n) => <Item key={n.id} item={n} />)}
         </div>
         <div className="v3-rail-group">
-          {navGroup(level, 'foot').map((n) => <Item key={n.id} item={n} collapsed={collapsed} />)}
-          {collapsed ? <Tip always text={hints ? 'Hints on: click to turn off' : 'Hints off: click to turn on'} side="right">{hintsButton}</Tip> : hintsButton}
+          {navGroup(level, 'foot').map((n) => <Item key={n.id} item={n} />)}
+          {hintsButton}
           <button type="button" className="v3-navitem v3-collapse v3-hide-phone" onClick={toggle} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-expanded={!collapsed}>
             <Icon id="collapse" />
             <span className="v3-label">Collapse</span>

@@ -1,51 +1,72 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { usePrefs } from '../prefs/context.js';
+import { Portal } from './Portal.jsx';
+import { useFloating } from './useFloating.js';
 
 /**
- * A hint on hover, keyboard focus and tap. Wrap any readout: <Tip text="..."><span>...</span></Tip>.
- * Hints are OFF by default (they distract); the sidebar switches them on. `always` is for labels that
- * must stay reachable regardless, such as the names of icon-only navigation items.
- * When hints are off the wrapper still renders (with its class and style, which some charts use for
- * positioning) but shows nothing extra and takes no focus.
+ * Two kinds of hover label on one wrapper:
+ *  - `value`: the figure under the pointer on a chart ("Aug 2036 · 4,100 kWh"). Always on, appears at once on
+ *    hover and goes as soon as the pointer leaves (on touch: while pressed, then fades). Not affected by the
+ *    hints switch.
+ *  - `text`: an explanation. Only when hints are switched on (sidebar); also opens by keyboard focus or a tap.
+ * The bubble is drawn above the cards (Portal) and kept fully on screen, so it is never cut off.
+ * The wrapper renders the same either way, so layouts that size `.v3-tip` do not change.
  */
-export function Tip({ text, children, side, className = '', style, always = false }) {
+export function Tip({ text, value, children, side, className = '', style }) {
   const { hints } = usePrefs();
   const [open, setOpen] = useState(false);
   const id = useId();
-  const ref = useRef(null);
-  const active = !!text && (hints || always);
+  const anchorRef = useRef(null);
+  const floatRef = useRef(null);
+  const touchTimer = useRef(null);
+  const explain = hints && !!text;
+  const content = explain ? (value ? `${value} · ${text}` : text) : value;
+  const pos = useFloating(anchorRef, floatRef, open && !!content, side === 'right' ? 'right' : 'top');
 
   useEffect(() => {
-    if (!open) return undefined;
-    const away = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    if (!open || !explain) return undefined;
+    const away = (e) => { if (anchorRef.current && !anchorRef.current.contains(e.target)) setOpen(false); };
     const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
     document.addEventListener('pointerdown', away);
     document.addEventListener('keydown', esc);
-    return () => {
-      document.removeEventListener('pointerdown', away);
-      document.removeEventListener('keydown', esc);
-    };
-  }, [open]);
+    return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', esc); };
+  }, [open, explain]);
+  useEffect(() => () => clearTimeout(touchTimer.current), []);
 
   const cls = `v3-tip${className ? ` ${className}` : ''}`;
-  if (!text) return children;
-  // Same wrapper either way, so layouts that size `.v3-tip` (chart columns, tile grids) do not change.
-  if (!active) return <span className={cls} style={style}>{children}</span>;
+  if (!text && !value) return children;
+  if (!content) return <span className={cls} style={style}>{children}</span>;
+
+  const handlers = {
+    onPointerEnter: (e) => { if (e.pointerType !== 'touch') setOpen(true); },
+    onPointerLeave: (e) => { if (e.pointerType !== 'touch') setOpen(false); },
+    onPointerDown: (e) => {
+      if (e.pointerType !== 'touch') return;
+      clearTimeout(touchTimer.current);
+      setOpen(true);
+      if (!explain) touchTimer.current = setTimeout(() => setOpen(false), 1400);
+    }
+  };
+  const explainHandlers = explain
+    ? { tabIndex: 0, onFocus: () => setOpen(true), onBlur: () => setOpen(false), onClick: () => setOpen((v) => !v) }
+    : {};
+
   return (
-    <span
-      ref={ref}
-      className={cls}
-      data-open={open}
-      data-side={side}
-      aria-describedby={id}
-      tabIndex={always ? undefined : 0}
-      onClick={() => setOpen((v) => !v)}
-      onFocus={() => setOpen(true)}
-      onBlur={() => setOpen(false)}
-      style={{ cursor: 'default', ...style }}
-    >
+    <span ref={anchorRef} className={cls} style={style} aria-describedby={id} {...handlers} {...explainHandlers}>
       {children}
-      <span id={id} role="tooltip" className="v3-tip-bubble">{text}</span>
+      <span id={id} role="tooltip" className="v3-sr">{content}</span>
+      {open && (
+        <Portal>
+          <span
+            ref={floatRef}
+            aria-hidden="true"
+            className={`v3-float-tip${explain ? '' : ' value'}`}
+            style={pos ? { top: pos.top, left: pos.left } : { top: -9999, left: -9999 }}
+          >
+            {content}
+          </span>
+        </Portal>
+      )}
     </span>
   );
 }

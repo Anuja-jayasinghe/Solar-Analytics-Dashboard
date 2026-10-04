@@ -4,6 +4,8 @@ import { Segmented } from '../ui/Segmented.jsx';
 import { Note } from '../ui/Note.jsx';
 import { ThresholdPlot } from '../charts/ThresholdPlot.jsx';
 import { MarkToggle } from '../charts/MarkToggle.jsx';
+import { DateRangePicker } from '../ui/Calendar.jsx';
+import { addDays } from '../../../shared/domain/time.js';
 import { usePrefs } from '../prefs/context.js';
 import { areaPath, axisTicks, linePath, maxOf, niceMax, xPct, yPct } from '../charts/scale.js';
 import { fmtNum } from '../overview/format.js';
@@ -52,8 +54,20 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
       <div className="v3-markrow v3-markrow-wide">
         {kind === 'custom' && range && (
           <div className="v3-daterow">
-            <label className="v3-field-label">From <input className="v3-field" type="date" value={range.from} min={bounds.min ?? undefined} max={bounds.max ?? undefined} onChange={(e) => e.target.value && onCustom(e.target.value, range.to)} /></label>
-            <label className="v3-field-label">To <input className="v3-field" type="date" value={range.to} min={bounds.min ?? undefined} max={bounds.max ?? undefined} onChange={(e) => e.target.value && onCustom(range.from, e.target.value)} /></label>
+            <DateRangePicker
+              from={range.from}
+              to={range.to}
+              min={bounds.min}
+              max={bounds.max}
+              onChange={onCustom}
+              presets={bounds.max ? [
+                { label: 'Last 7 days', range: () => ({ from: addDays(bounds.max, -6), to: bounds.max }) },
+                { label: 'Last 30 days', range: () => ({ from: addDays(bounds.max, -29), to: bounds.max }) },
+                { label: 'Last 90 days', range: () => ({ from: addDays(bounds.max, -89), to: bounds.max }) },
+                { label: 'This year', range: () => ({ from: `${bounds.max.slice(0, 4)}-01-01`, to: bounds.max }) },
+                { label: 'Last 12 months', range: () => ({ from: addDays(bounds.max, -364), to: bounds.max }) }
+              ] : []}
+            />
           </div>
         )}
         <span style={{ marginLeft: 'auto' }}><MarkToggle /></span>
@@ -86,7 +100,7 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
                   const partial = p.present > 0 && p.present < p.total; // a month with some days missing: drawn hatched/hollow, never as a full month
                   const pct = p.kwh === null ? 0 : (p.kwh / yMax) * 100;
                   return (
-                    <Tip key={p.key} text={pointTip(p, markAt, grouped)}>
+                    <Tip key={p.key} value={p.kwh === null ? `${p.full} · no data` : `${p.full} · ${fmtNum(p.kwh, grouped ? 0 : 1)} kWh`} text={pointTip(p, markAt, grouped)}>
                       <div className="v3-col" style={dense ? { padding: '0 1%' } : undefined}>
                         {style === 'bars' ? (
                           p.kwh === null ? <div className="v3-bar single" style={{ height: 3, background: 'var(--nodata)' }} /> : <div className="v3-bar single" style={{ height: `${pct}%`, background: partial ? 'repeating-linear-gradient(135deg, var(--gen) 0 5px, var(--gen-a30) 5px 9px)' : hi ? 'var(--gen)' : 'var(--gen-a34)', border: partial ? '1px solid var(--gen)' : undefined }} />

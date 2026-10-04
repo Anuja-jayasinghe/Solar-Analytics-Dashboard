@@ -45,7 +45,7 @@ export function GapStrip({ rows, summary }) {
               {rows.map((r) => {
                 const h = r.gapLkr === null ? 0 : Math.max(3, (Math.abs(r.gapLkr) / maxAbs) * 46);
                 return (
-                  <Tip key={r.id} text={gapTip(r)}>
+                  <Tip key={r.id} value={r.gapLkr === null ? `${r.label} ${r.year} · not compared` : `${r.label} ${r.year} · ${gapLabel(r.gapLkr)} LKR`} text={gapTip(r)}>
                     <div className="v3-col v3-gapcol">
                       {r.gapLkr !== null && <div className="v3-gapbar" style={r.gapLkr >= 0 ? { bottom: '50%', height: `${h}%`, background: 'var(--good)' } : { top: '50%', height: `${h}%`, background: 'var(--warn)' }} />}
                       {r.gapLkr === null && r.status !== 'provisional' && <span className="v3-gapdash">–</span>}

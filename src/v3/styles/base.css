@@ -456,3 +456,39 @@ select.v3-field { padding-right: 8px; }
 .v3-modal { width: min(1000px, 100%); height: min(90vh, 1200px); display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: 20px; background: var(--tip-bg); }
 .v3-modal-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; }
 .v3-pdfframe { flex: 1 1 auto; width: 100%; border: 0; border-radius: 12px; background: #fff; }
+
+/* ---- floating layer: hint bubbles and pickers are drawn above the cards and kept on screen ---- */
+.v3-float-tip { position: fixed; z-index: 400; pointer-events: none; max-width: min(280px, calc(100vw - 16px)); padding: 8px 11px; border-radius: 10px; background: var(--tip-bg); border: 1px solid var(--tip-line); color: var(--tip-ink); font-size: 11.5px; font-weight: 500; line-height: 1.4; box-shadow: 0 12px 34px rgba(0, 0, 0, .45); animation: v3-pop .09s ease-out; text-align: left; }
+.v3-float-tip.value { padding: 5px 9px; font-size: 11.5px; font-weight: 700; white-space: nowrap; max-width: calc(100vw - 16px); }
+@keyframes v3-pop { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+.v3-tip-bubble { display: none; }
+
+/* ---- date pickers ---- */
+.v3-datebtn { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--field-line); background: var(--field-bg); color: var(--ink); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.v3-datebtn:hover { border-color: var(--gen); }
+.v3-datebtn:focus-visible, .v3-cal-day:focus-visible, .v3-cal-preset:focus-visible { outline: 2px solid var(--gen); outline-offset: 2px; }
+.v3-cal { position: fixed; z-index: 400; display: flex; gap: 14px; padding: 14px; border-radius: 16px; background: var(--tip-bg); border: 1px solid var(--tip-line); box-shadow: 0 18px 44px rgba(0, 0, 0, .5); color: var(--ink); animation: v3-pop .12s ease-out; }
+.v3-cal-presets { display: flex; flex-direction: column; gap: 4px; padding-right: 12px; border-right: 1px solid var(--grid); min-width: 120px; }
+.v3-cal-preset { text-align: left; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 12.5px; font-weight: 600; padding: 7px 10px; border-radius: 8px; cursor: pointer; }
+.v3-cal-preset:hover { background: var(--hover); color: var(--gen); }
+.v3-cal-hint { font-size: 11.5px; color: var(--ink2); margin-bottom: 8px; }
+.v3-cal-month { width: 252px; }
+.v3-cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13.5px; }
+.v3-cal-row { display: grid; grid-template-columns: repeat(7, 1fr); }
+.v3-cal-wd { text-align: center; font-size: 10.5px; font-weight: 700; color: var(--ink2); padding: 4px 0; }
+.v3-cal-day { height: 34px; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 9px; cursor: pointer; }
+.v3-cal-day:hover:not(:disabled) { background: var(--hover); }
+.v3-cal-day[data-out='true'] { color: var(--ink2); opacity: .55; }
+.v3-cal-day[data-range='true'] { background: var(--gen-a16); border-radius: 0; }
+.v3-cal-day[data-selected='true'] { background: var(--gen); color: var(--gen-ink); }
+.v3-cal-day:disabled { opacity: .25; cursor: default; }
+@media (max-width: 700px) {
+  .v3-cal { flex-direction: column; }
+  .v3-cal-presets { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--grid); padding: 0 0 8px; }
+}
+
+/* ---- footer ---- */
+.v3-footer { display: flex; justify-content: center; align-items: center; gap: 10px; padding: 18px 0 6px; font-size: 11.5px; color: var(--ink2); opacity: .7; }
+.v3-footer a { color: inherit; text-decoration: none; font-weight: 600; }
+.v3-footer a:hover { color: var(--gen); }
+.v3-footer-icon { display: inline-flex; }

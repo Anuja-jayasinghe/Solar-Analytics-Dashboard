@@ -208,8 +208,10 @@ describe('round 2 fixes', () => {
     // with the default (hints off) a Tip renders its wrapper but no bubble
     const html = renderToString(h(Tip, { text: 'x' }, h('b', null, 'v')));
     expect(html).toBe('<span class="v3-tip"><b>v</b></span>');
-    // navigation labels stay reachable even with hints off
-    expect(renderToString(h(Tip, { text: 'Overview', always: true }, h('b', null, 'v')))).toContain('role="tooltip"');
+    // a chart value shows on hover even with hints off; the explanation does not
+    const v = renderToString(h(Tip, { value: 'Aug 2036 · 4,100 kWh', text: 'long explanation' }, h('b', null, 'v')));
+    expect(v).toContain('Aug 2036 · 4,100 kWh');
+    expect(v).not.toContain('long explanation');
   });
 
   it('the sidebar starts collapsed and no longer carries the account', () => {
@@ -218,6 +220,7 @@ describe('round 2 fixes', () => {
     expect(html).toContain('src="/favicon.svg"');
     expect(html).not.toMatch(/v3-rail[\s\S]*Full access/);
     expect(html).toContain('aria-label="Turn hints on"');
+    expect(html).not.toContain('role="tooltip"'); // no labels on the sidebar at all
   });
 
   it('profile: preset avatars, a clean nickname, and a sensible name', () => {
