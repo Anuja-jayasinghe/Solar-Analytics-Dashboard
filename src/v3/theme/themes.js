@@ -14,14 +14,17 @@ export const THEMES = Object.freeze([
     name: 'Sunrise Night',
     note: 'Dark first. Orange on navy.',
     scheme: 'dark',
-    preview: Object.freeze({ bg: '#0A0F1F', glass: 'rgba(255,255,255,.14)', gen: '#FF8A1F', ceb: '#5AA9FF' })
+    preview: Object.freeze({ bg: '#0A0F1F', glass: 'rgba(255,255,255,.14)', gen: '#FF8A1F', ceb: '#5AA9FF' }),
+    // Clerk's embedded sign-in form cannot read CSS variables, so each theme gives it real colours.
+    clerk: Object.freeze({ colorPrimary: '#FF8A1F', colorBackground: '#121a30', colorText: '#EEF1F8', colorTextSecondary: '#A9B3C7', colorInputBackground: '#0A0F1F', colorInputText: '#EEF1F8', colorNeutral: '#EEF1F8', colorTextOnPrimaryBackground: '#241000' })
   }),
   Object.freeze({
     id: 'light',
     name: 'Sunrise Day',
     note: 'Warm paper, same orange.',
     scheme: 'light',
-    preview: Object.freeze({ bg: '#F5F2EC', glass: 'rgba(255,255,255,.95)', gen: '#F26A00', ceb: '#2D7DE0' })
+    preview: Object.freeze({ bg: '#F5F2EC', glass: 'rgba(255,255,255,.95)', gen: '#F26A00', ceb: '#2D7DE0' }),
+    clerk: Object.freeze({ colorPrimary: '#F26A00', colorBackground: '#FFFFFF', colorText: '#172033', colorTextSecondary: '#5A6479', colorInputBackground: '#FFFFFF', colorInputText: '#172033', colorNeutral: '#172033', colorTextOnPrimaryBackground: '#FFFFFF' })
   })
 ]);
 
@@ -40,6 +43,11 @@ export function resolveTheme(stored) {
 export function nextTheme(id) {
   const i = THEMES.findIndex((t) => t.id === id);
   return THEMES[(i + 1) % THEMES.length].id;
+}
+
+/** Colours for Clerk's embedded forms. */
+export function clerkColorsOf(id) {
+  return (THEMES.find((t) => t.id === id) ?? THEMES[0]).clerk;
 }
 
 /** `color-scheme` for native controls (date pickers, scrollbars). */

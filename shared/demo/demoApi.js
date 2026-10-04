@@ -10,9 +10,15 @@ import { resolveResource } from '../data/resources.js';
 import { DEMO, createDemoDataset, createDemoRepo, demoLive } from './demoData.js';
 
 let repo = null;
+let lifetimeKwh = null;
 
 function getRepo() {
-  if (!repo) repo = createDemoRepo(createDemoDataset());
+  if (!repo) {
+    const ds = createDemoDataset();
+    repo = createDemoRepo(ds);
+    // The demo inverter's lifetime counter: every demo day plus today so far, so it agrees with the daily records.
+    lifetimeKwh = Math.round(ds.dailyRows.reduce((s, r) => s + (r.kwh ?? 0), 0) + demoLive().todayKwh);
+  }
   return repo;
 }
 
@@ -24,7 +30,7 @@ function getRepo() {
  */
 export function demoRequest(name, query = {}) {
   const run = resolveResource(name);
-  return run(getRepo(), query, { todayKey: DEMO.today, live: async () => demoLive() });
+  return run(getRepo(), query, { todayKey: DEMO.today, live: async () => ({ ...demoLive(), totalKwh: lifetimeKwh }) });
 }
 
 export { DEMO };

@@ -42,6 +42,7 @@ export default function OverviewPage() {
       <TotalsRow
         totals={totals.data}
         comparison={comparison.data}
+        live={live.data}
         todayKey={todayKey}
         loading={totals.loading || (comparison.loading && !comparison.data)}
       />

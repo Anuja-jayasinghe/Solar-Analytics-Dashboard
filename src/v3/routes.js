@@ -9,7 +9,6 @@ const EXACT = {
   '/demodashbaard': '/', // the old demo route, with its typo: the new Overview is the demo for visitors
   '/demosettings': '/settings',
   '/login': '/signin',
-  '/signup': '/signin',
   '/access': '/signin'
 };
 

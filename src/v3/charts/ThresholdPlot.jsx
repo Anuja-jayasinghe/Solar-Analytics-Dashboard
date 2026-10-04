@@ -19,7 +19,7 @@ function useFinePointer() {
  * type a number elsewhere, drag the handle (any device), or click/drag anywhere in the plot (mouse only).
  * The handle is a keyboard slider too. Children are drawn inside the plot, under the line.
  */
-export function ThresholdPlot({ max, value, step = 1, unit = '', label = 'Mark above', height, onChange, children }) {
+export function ThresholdPlot({ max, value, step = 1, unit = '', label = 'Mark above', height, onChange, children, show = true }) {
   const fine = useFinePointer();
   const plotRef = useRef(null);
   const dragging = useRef(false);
@@ -30,7 +30,7 @@ export function ThresholdPlot({ max, value, step = 1, unit = '', label = 'Mark a
   };
   const set = (v) => { if (v !== null && v !== undefined) onChange(v); };
 
-  const plotHandlers = fine
+  const plotHandlers = fine && show
     ? {
         onPointerDown: (e) => { dragging.current = true; e.currentTarget.setPointerCapture?.(e.pointerId); set(fromEvent(e, e.currentTarget)); },
         onPointerMove: (e) => { if (dragging.current) set(fromEvent(e, e.currentTarget)); },
@@ -52,6 +52,7 @@ export function ThresholdPlot({ max, value, step = 1, unit = '', label = 'Mark a
   };
 
   const pct = clamp((value / max) * 100, 0, 100);
+  if (!show) return <div className="v3-plot" style={{ height }}>{children}</div>;
   return (
     <div ref={plotRef} className="v3-plot" style={{ height, cursor: fine ? 'ns-resize' : undefined, touchAction: fine ? 'none' : undefined }} {...plotHandlers}>
       {children}

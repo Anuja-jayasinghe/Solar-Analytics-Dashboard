@@ -166,3 +166,20 @@ describe('smooth curve', () => {
     expect(smoothPath([])).toBe('');
   });
 });
+
+import { statsRange, STATS_PERIODS } from '../src/v3/explore/series.js';
+
+describe('statistics periods', () => {
+  const b = { min: '2024-08-02', max: '2026-10-03' };
+  it('last 30 and 365 days end on the newest day with data; lifetime starts at the first record', () => {
+    expect(STATS_PERIODS.map((p) => p.value)).toEqual(['30', '365', 'life']);
+    expect(statsRange('30', b)).toEqual({ from: '2026-09-04', to: '2026-10-03' });
+    expect(statsRange('365', b)).toEqual({ from: '2025-10-04', to: '2026-10-03' });
+    expect(statsRange('life', b)).toEqual({ from: '2024-08-02', to: '2026-10-03' });
+  });
+  it('never starts before the data, and is null until the data bounds are known', () => {
+    expect(statsRange('365', { min: '2026-06-01', max: '2026-10-03' })).toEqual({ from: '2026-06-01', to: '2026-10-03' });
+    expect(statsRange('30', { min: null, max: null })).toBeNull();
+    expect(statsRange('life', { min: null, max: '2026-10-03' })).toEqual({ from: '2026-10-03', to: '2026-10-03' });
+  });
+});

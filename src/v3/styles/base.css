@@ -3,6 +3,8 @@
  * (the only exceptions are shadows that must be black). Class names are prefixed v3- so nothing
  * collides with the v1 stylesheet during the transition. */
 
+html, body { margin: 0; padding: 0; }
+#root { min-height: 100vh; }
 .v3-root {
   position: relative;
   min-height: 100vh;
@@ -10,7 +12,11 @@
   color: var(--ink);
   font-family: Manrope, system-ui, -apple-system, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
+.v3-root input, .v3-root textarea, .v3-root select, .v3-root [contenteditable='true'] { -webkit-user-select: text; user-select: text; }
 .v3-root *, .v3-root *::before, .v3-root *::after { box-sizing: border-box; }
 .v3-root[data-scheme='dark'] { color-scheme: dark; }
 .v3-root[data-scheme='light'] { color-scheme: light; }
@@ -40,8 +46,8 @@
 
 /* ---- layout ---- */
 .v3-layout { position: relative; z-index: 1; display: flex; align-items: stretch; min-height: 100vh; }
-.v3-main { flex: 1 1 0; min-width: 0; max-width: 1240px; display: flex; flex-direction: column; gap: 20px; padding: 24px 28px 40px; }
-.v3-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 4px 4px 0; }
+.v3-main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 20px; padding: 24px 28px 40px; }
+.v3-header { position: relative; z-index: 50; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 4px 4px 0; }
 .v3-title { margin: 0; font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 26px; letter-spacing: -.02em; }
 .v3-header-right { display: flex; align-items: center; gap: 14px; font-size: 12.5px; color: var(--ink2); }
 .v3-badge { font-weight: 700; letter-spacing: .08em; font-size: 11px; color: var(--gen); }
@@ -52,7 +58,7 @@
 .v3-rail-in { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding: 18px 12px; }
 .v3-rail-group { display: flex; flex-direction: column; gap: 6px; }
 .v3-brand { display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 12px; margin-bottom: 10px; color: var(--ink); text-decoration: none; }
-.v3-brand-mark { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(135deg, var(--gen-hi), var(--gen-lo)); display: inline-flex; align-items: center; justify-content: center; font-family: Sora, sans-serif; font-weight: 700; font-size: 14px; color: var(--gen-ink); }
+.v3-brand-mark { flex: 0 0 auto; width: 28px; height: 28px; display: block; }
 .v3-brand-name { font-family: Sora, sans-serif; font-weight: 600; font-size: 16px; white-space: nowrap; }
 .v3-navitem {
   display: flex; align-items: center; gap: 14px; height: 48px; padding: 0 15px; width: 100%;
@@ -64,11 +70,31 @@
 .v3-navitem svg { flex: 0 0 auto; }
 .v3-rail[data-collapsed='true'] .v3-navitem { justify-content: center; padding: 0; }
 .v3-rail[data-collapsed='true'] .v3-label { display: none; }
-.v3-account { height: 56px; background: var(--chip-bg); border: 1px solid var(--chip-line); }
-.v3-avatar { flex: 0 0 auto; width: 28px; height: 28px; border-radius: 50%; background: var(--gen-a30); color: var(--gen); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; }
-.v3-account-text { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
-.v3-account-text b { color: var(--ink); font-size: 13px; font-weight: 600; }
-.v3-account-text span { font-size: 11px; font-weight: 500; color: var(--ink2); }
+.v3-avatar { flex: 0 0 auto; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; background: var(--gen-a30); color: var(--gen); }
+.v3-avatar[data-tone='ceb'] { background: var(--ceb-a20); color: var(--ceb); }
+.v3-avatar[data-tone='good'] { background: var(--good-a20); color: var(--good); }
+.v3-avatar[data-tone='warn'] { background: var(--warn-a20); color: var(--warn); }
+.v3-account { position: relative; }
+.v3-account-btn { border: 0; padding: 2px; border-radius: 50%; background: transparent; cursor: pointer; display: inline-flex; }
+.v3-account-btn:focus-visible, .v3-avatar-choice:focus-visible, .v3-menu-item:focus-visible { outline: 2px solid var(--gen); outline-offset: 2px; }
+.v3-menu { position: absolute; right: 0; top: calc(100% + 10px); z-index: 60; width: 300px; max-width: calc(100vw - 24px); padding: 16px; display: flex; flex-direction: column; gap: 14px; border-radius: 18px; color: var(--ink); text-align: left; background: var(--tip-bg); }
+.v3-menu-head { display: flex; gap: 12px; align-items: center; }
+.v3-menu-name { font-size: 15px; font-weight: 700; display: block; }
+.v3-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v3-menu-section { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid var(--grid); }
+.v3-menu-label { font-size: 12.5px; color: var(--ink2); }
+.v3-avatar-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.v3-avatar-choice { border: 2px solid transparent; border-radius: 50%; padding: 2px; background: transparent; cursor: pointer; display: inline-flex; justify-content: center; }
+.v3-avatar-choice[aria-checked='true'] { border-color: var(--gen); }
+.v3-menu-actions { display: flex; flex-direction: column; gap: 2px; padding-top: 10px; border-top: 1px solid var(--grid); }
+.v3-menu-item { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 10px; border-radius: 10px; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 13.5px; font-weight: 600; text-decoration: none; cursor: pointer; text-align: left; }
+.v3-menu-item:hover { background: var(--hover); }
+.v3-link { color: var(--gen); font-weight: 700; }
+/* sign-in doorway with Clerk's form embedded */
+.v3-door { display: flex; flex-direction: column; align-items: center; gap: 28px; padding-top: 10px; }
+.v3-door-card { width: 100%; max-width: 460px; padding: 28px; display: flex; flex-direction: column; gap: 16px; align-items: stretch; }
+.v3-door-roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 16px; width: 100%; max-width: 1100px; }
+.v3-door-card .cl-rootBox, .v3-door-card .cl-cardBox { width: 100%; }
 .v3-collapse svg { transition: transform .22s ease; }
 .v3-rail[data-collapsed='true'] .v3-collapse svg { transform: rotate(180deg); }
 .v3-navitem:focus-visible, .v3-btn:focus-visible, .v3-segbtn:focus-visible, .v3-iconbtn:focus-visible, .v3-field:focus-visible { outline: 2px solid var(--gen); outline-offset: 2px; }
@@ -227,6 +253,8 @@
 .v3-legend i.v3-hatch { width: 16px; height: 10px; border-radius: 2px; border: 1px solid var(--gen); background: repeating-linear-gradient(135deg, var(--gen) 0 4px, var(--gen-a30) 4px 7px); }
 .v3-legend i.v3-ghost { width: 16px; height: 10px; border-radius: 2px; border: 1.5px dashed var(--ceb); opacity: .75; }
 .v3-markrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.v3-marktoggle { height: 32px; padding: 0 12px; gap: 6px; font-size: 12px; }
+.v3-marktoggle[aria-pressed='false'] { opacity: .75; }
 .v3-field-label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink2); }
 
 .v3-chartgrid { display: flex; gap: 10px; }
@@ -238,8 +266,8 @@
 .v3-gridline { position: absolute; left: 0; right: 0; border-top: 1px solid var(--grid); }
 .v3-cols { position: absolute; inset: 0; display: flex; gap: 4px; align-items: stretch; }
 .v3-cols > .v3-tip { flex: 1 1 0; min-width: 0; display: flex; }
-.v3-col { position: relative; width: 100%; height: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 3px; padding: 0 8%; }
-.v3-bar { flex: 1 1 0; max-width: 20px; border-radius: 5px 5px 2px 2px; }
+.v3-col { position: relative; width: 100%; height: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 4px; padding: 0 6%; }
+.v3-bar { flex: 1 1 0; max-width: 34px; border-radius: 6px 6px 2px 2px; }
 .v3-dot { position: absolute; left: 50%; border-radius: 50%; border: 2px solid var(--bg); transform: translate(-50%, 50%); box-sizing: border-box; }
 .v3-xlabels { display: flex; gap: 4px; margin-top: 9px; }
 .v3-xlabel { flex: 1 1 0; min-width: 0; text-align: center; }
@@ -290,7 +318,7 @@
   .v3-chartgrid { gap: 6px; }
   .v3-cols, .v3-xlabels { gap: 2px; }
   .v3-col { padding: 0 4%; gap: 2px; }
-  .v3-bar { max-width: 13px; border-radius: 3px 3px 1px 1px; }
+  .v3-bar { max-width: 18px; border-radius: 3px 3px 1px 1px; }
   .v3-xmain { font-size: 10px; }
   .v3-xtag { font-size: 9px; }
   .v3-thr-handle { font-size: 10.5px; padding: 5px 9px; }
@@ -311,7 +339,7 @@
 .v3-explore { --plot-h: 270px; --axis-w: 56px; min-height: 420px; }
 .v3-explore .v3-daterow { display: flex; gap: 14px; flex-wrap: wrap; }
 .v3-markrow-wide { width: 100%; justify-content: flex-start; }
-.v3-bar.single { max-width: 26px; }
+.v3-bar.single { max-width: 40px; }
 .v3-xplain { font-size: 10.5px; color: var(--ink2); white-space: nowrap; overflow: visible; height: 14px; }
 .v3-statgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 12px; }
 .v3-statgrid > .v3-tip { display: flex; }
@@ -330,7 +358,7 @@
 
 @media (max-width: 700px) {
   .v3-explore { --plot-h: 150px; --axis-w: 34px; min-height: 360px; }
-  .v3-bar.single { max-width: 16px; }
+  .v3-bar.single { max-width: 20px; }
   .v3-xplain { font-size: 9.5px; height: 12px; }
   .v3-statgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .v3-stat { padding: 8px 9px; gap: 2px; }
@@ -424,3 +452,7 @@
 .v3-maintrow { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--grid); font-size: 13px; flex-wrap: wrap; }
 .v3-maintrow .v3-btn { height: 32px; font-size: 12px; }
 select.v3-field { padding-right: 8px; }
+.v3-modal-backdrop { position: fixed; inset: 0; z-index: 200; background: rgba(4, 7, 16, .72); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.v3-modal { width: min(1000px, 100%); height: min(90vh, 1200px); display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: 20px; background: var(--tip-bg); }
+.v3-modal-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; }
+.v3-pdfframe { flex: 1 1 auto; width: 100%; border: 0; border-radius: 12px; background: #fff; }

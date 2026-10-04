@@ -6,6 +6,7 @@ import { useResource } from '../data/context.js';
 import { fmtNum, longDate } from '../overview/format.js';
 import { BILL_FIELDS, buildRecord, impliedRate, queueItems, toBillDraft, uploadProblem, validateBillDraft } from './billForm.js';
 import { ApprovedBills } from './ApprovedBills.jsx';
+import { PdfModal } from './PdfModal.jsx';
 import { useAdminApi, useAdminLoad } from './useAdmin.js';
 
 function UploadCard({ onUploaded }) {
@@ -75,7 +76,8 @@ function QueueItem({ item, onDone }) {
   });
   const discard = () => run(async () => { await api.discard(item.ingestionId); onDone(false); });
   const retry = () => run(async () => { await api.extract(item.ingestionId); onDone(false); });
-  const openPdf = () => run(async () => { const { signedUrl } = await api.signedUrl(filePath); window.open(signedUrl, '_blank', 'noopener'); });
+  const [viewing, setViewing] = useState(false);
+  const openPdf = () => setViewing(true);
 
   return (
     <div className="v3-chip v3-queueitem">
@@ -98,6 +100,7 @@ function QueueItem({ item, onDone }) {
         </div>
       )}
       {msg && <Note tone="bad">{msg}</Note>}
+      {viewing && filePath && <PdfModal filePath={filePath} title="Uploaded bill" onClose={() => setViewing(false)} />}
       <div className="v3-formrow">
         {item.kind === 'extraction' && <button type="button" className="v3-btn primary" disabled={busy || Object.keys(errors).length > 0} onClick={approve}>{busy ? 'Working…' : 'Approve'}</button>}
         {item.kind === 'failed' && <button type="button" className="v3-btn primary" disabled={busy} onClick={retry}>Try reading again</button>}
