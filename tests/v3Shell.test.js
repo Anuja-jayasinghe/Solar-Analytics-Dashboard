@@ -127,3 +127,41 @@ describe('sign-in doorway', () => {
     expect(html).toContain('Keep exploring the demo');
   });
 });
+
+import { PlantCard } from '../src/v3/settings/PlantCard.jsx';
+import { AccountCard } from '../src/v3/settings/AccountCard.jsx';
+
+describe('settings cards', () => {
+  const settings = { dailyTargetKwh: 150, capacityKwp: 41.76, acRatedKw: 40, ratePerKwh: null };
+  it('admin: fields are editable with a Save button (disabled until something changes)', () => {
+    const html = renderToString(h(PlantCard, { settings, loading: false, canEdit: true, onSave: async () => {} }));
+    expect(html).toContain('You can edit');
+    expect(html).toContain('value="150"');
+    expect(html).not.toMatch(/<input[^>]*disabled/);
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>Save</);
+  });
+  it('viewer or visitor: the same values, read only, and no Save', () => {
+    const html = renderToString(h(PlantCard, { settings, loading: false, canEdit: false, onSave: async () => {} }));
+    expect(html).toContain('Read only');
+    expect(html).toContain('value="150"');
+    expect(html).toMatch(/<input[^>]*disabled/);
+    expect(html).not.toContain('>Save<');
+  });
+  it('an unset value shows an empty box, never 0', () => {
+    const html = renderToString(h(PlantCard, { settings, loading: false, canEdit: true, onSave: async () => {} }));
+    expect(html).toContain('placeholder="not set"');
+    expect(html).not.toMatch(/value="0"/);
+  });
+  it('shows a skeleton while loading', () => {
+    expect(renderToString(h(PlantCard, { settings: null, loading: true, canEdit: true, onSave: async () => {} }))).toContain('aria-busy="true"');
+  });
+  it('account: sign-in for visitors, sign-out for signed-in users', () => {
+    const visitor = renderToString(h(AccountCard, { level: 'none', email: null, onSignIn() {}, onSignOut() {} }));
+    expect(visitor).toContain('Visitor');
+    expect(visitor).toContain('>Sign in<');
+    expect(visitor).not.toContain('>Sign out<');
+    const admin = renderToString(h(AccountCard, { level: 'admin', email: 'owner@example.test', onSignIn() {}, onSignOut() {} }));
+    expect(admin).toContain('owner@example.test');
+    expect(admin).toContain('>Sign out<');
+  });
+});

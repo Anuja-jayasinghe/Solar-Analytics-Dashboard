@@ -11,37 +11,14 @@
 // Writes now go through here with the service-role key, so the anon write policies can be
 // dropped. Reads stay client-side and public; it is a public dashboard.
 //
-// PUT   { id, setting_value }  -> update one setting
+// PUT   { id, setting_value }            -> update one setting by row id (v1)
+// PUT   { setting_name, setting_value }  -> update one setting by name (v3: the read API has no row ids)
 // POST  { settings: [...] }    -> insert defaults (used by the "add default settings" action)
 
 import { verifyAdminToken } from './_lib/verifyAdminToken.js';
 import { handlePreflightAndMethod } from './_lib/httpSecurity.js';
 import { supabase, blockOnConfigProblem } from './_lib/supabaseServer.js';
-
-// Only these may be written through this endpoint. An allowlist keeps a compromised admin
-// session from introducing arbitrary rows into a table the dashboard trusts.
-const ALLOWED_SETTINGS = new Set([
-  'theme',
-  'rate_per_kwh',
-  'solar_grid_capacity',
-  'daily_generation_target',
-  'capacity_kwp'
-]);
-
-function isValidValue(name, value) {
-  if (value === null || value === undefined || String(value).trim() === '') return false;
-
-  // Numeric settings must actually be numeric and non-negative — a non-numeric rate would
-  // silently turn every earnings figure into NaN.
-  if (['rate_per_kwh', 'solar_grid_capacity', 'daily_generation_target', 'capacity_kwp'].includes(name)) {
-    const n = Number(value);
-    return Number.isFinite(n) && n >= 0;
-  }
-
-  if (name === 'theme') return ['dark', 'light', 'orange'].includes(String(value));
-
-  return String(value).length <= 200;
-}
+import { isAllowedSetting, isValidSettingValue, resolveTarget, settingProblem } from './_lib/settingsRules.js';
 
 export default async function handler(req, res) {
   if (handlePreflightAndMethod(req, res, ['PUT', 'POST'])) return;
@@ -53,36 +30,32 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'PUT') {
-      const { id, setting_value } = req.body || {};
+      const { setting_value } = req.body || {};
+      const target = resolveTarget(req.body);
+      if (target.error) return res.status(target.status).json({ error: target.error });
 
-      if (!id) {
-        return res.status(400).json({ error: 'Missing setting id' });
-      }
-
-      // Resolve the row first so we can validate against its name rather than trusting the
-      // client to tell us which setting this is.
-      const { data: existing, error: lookupError } = await supabase
-        .from('system_settings')
-        .select('id, setting_name')
-        .eq('id', id)
-        .maybeSingle();
+      // Resolve the row first so we validate against its name rather than trusting the client
+      // to tell us which setting this is.
+      const lookup = supabase.from('system_settings').select('id, setting_name');
+      const { data: existing, error: lookupError } = await (target.by === 'name'
+        ? lookup.eq('setting_name', target.name)
+        : lookup.eq('id', target.id)
+      ).maybeSingle();
 
       if (lookupError) throw new Error(`Setting lookup failed: ${lookupError.message}`);
       if (!existing) return res.status(404).json({ error: 'Setting not found' });
+      const id = existing.id;
 
-      if (!ALLOWED_SETTINGS.has(existing.setting_name)) {
+      if (!isAllowedSetting(existing.setting_name)) {
         return res.status(403).json({
           error: `Setting '${existing.setting_name}' is not writable through this endpoint`
         });
       }
 
-      if (!isValidValue(existing.setting_name, setting_value)) {
+      if (!isValidSettingValue(existing.setting_name, setting_value)) {
         return res.status(400).json({
           error: `Invalid value for ${existing.setting_name}`,
-          details:
-            existing.setting_name === 'theme'
-              ? 'Expected one of: dark, light, orange'
-              : 'Expected a non-negative number'
+          details: settingProblem(existing.setting_name)
         });
       }
 
@@ -110,7 +83,7 @@ export default async function handler(req, res) {
     }
 
     const invalid = settings.find(
-      (s) => !ALLOWED_SETTINGS.has(s?.setting_name) || !isValidValue(s?.setting_name, s?.setting_value)
+      (s) => !isAllowedSetting(s?.setting_name) || !isValidSettingValue(s?.setting_name, s?.setting_value)
     );
     if (invalid) {
       return res.status(400).json({
