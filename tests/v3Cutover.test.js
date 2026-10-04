@@ -21,7 +21,7 @@ describe('old addresses', () => {
     expect(legacyRedirect('/demodashbaard')).toBe('/');
     expect(legacyRedirect('/demosettings')).toBe('/settings');
     expect(legacyRedirect('/login')).toBe('/signin');
-    expect(legacyRedirect('/signup')).toBe('/signin');
+    expect(legacyRedirect('/signup')).toBeNull(); // a real page now: Clerk's sign-up form, embedded
     expect(legacyRedirect('/access')).toBe('/signin');
     expect(legacyRedirect('/admin/dashboard')).toBe('/admin');
     expect(legacyRedirect('/admin/dashboard/ceb-billing')).toBe('/admin');

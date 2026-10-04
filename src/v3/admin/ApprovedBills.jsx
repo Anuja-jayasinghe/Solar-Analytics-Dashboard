@@ -5,6 +5,7 @@ import { Note } from '../ui/Note.jsx';
 import { fmtNum, longDate } from '../overview/format.js';
 import { BILL_FIELDS, buildRecordFromRow, describeChanges, impliedRate, recordProblem, rowToDraft, validateBillDraft } from './billForm.js';
 import { useAdminApi, useAdminLoad } from './useAdmin.js';
+import { PdfModal } from './PdfModal.jsx';
 
 const SHOWN = 8;
 
@@ -91,6 +92,7 @@ export function ApprovedBills({ onChanged }) {
   const list = useAdminLoad(() => api.listRecords());
   const [mode, setMode] = useState(null); // { id, kind: 'edit' | 'delete' }
   const [all, setAll] = useState(false);
+  const [preview, setPreview] = useState(null); // { filePath, title }
   const records = list.data?.records ?? [];
   const rows = all ? records : records.slice(0, SHOWN);
   const done = () => { setMode(null); list.reload(); onChanged(); };
@@ -122,6 +124,7 @@ export function ApprovedBills({ onChanged }) {
                     <td>{rate === null ? '—' : fmtNum(rate, 2)}</td>
                     <td><Pill tone="good">Approved</Pill></td>
                     <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
+                      <button type="button" className="v3-btn" style={{ height: 28, fontSize: 12 }} disabled={!r.file_path} title={r.file_path ? undefined : 'No PDF stored for this bill'} onClick={() => setPreview({ filePath: r.file_path, title: `Bill ending ${longDate(r.bill_date)}` })}>View</button>{' '}
                       <button type="button" className="v3-btn" style={{ height: 28, fontSize: 12 }} onClick={() => setMode({ id: r.id, kind: 'edit' })}>Edit</button>{' '}
                       <button type="button" className="v3-btn" style={{ height: 28, fontSize: 12 }} onClick={() => setMode({ id: r.id, kind: 'delete' })}>Delete</button>
                     </td>
@@ -136,6 +139,7 @@ export function ApprovedBills({ onChanged }) {
           </table>
         </div>
       )}
+      {preview && <PdfModal filePath={preview.filePath} title={preview.title} onClose={() => setPreview(null)} />}
     </Glass>
   );
 }

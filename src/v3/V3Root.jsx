@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import './styles/tokens.css';
 import './styles/base.css';
 import { ThemeProvider } from './theme/ThemeProvider.jsx';
+import { PrefsProvider } from './prefs/PrefsProvider.jsx';
 import { AccessProvider } from './access/AccessProvider.jsx';
 import { RequireAccess } from './access/RequireAccess.jsx';
 import { DataProvider } from './data/DataProvider.jsx';
@@ -37,6 +38,7 @@ export default function V3Root() {
   return (
     <AppErrorBoundary>
       <ThemeProvider>
+        <PrefsProvider>
         <AccessProvider>
           <DataProvider>
             <BrowserRouter>
@@ -48,6 +50,7 @@ export default function V3Root() {
                     <Route path="admin/*" element={<RequireAccess level="admin"><AdminPage /></RequireAccess>} />
                     <Route path="settings" element={<SettingsPage />} />
                     <Route path="signin" element={<SignInPage />} />
+                    <Route path="signup" element={<SignInPage mode="signup" />} />
                     <Route path="*" element={<Fallback />} />
                   </Route>
                 </Routes>
@@ -55,6 +58,7 @@ export default function V3Root() {
             </BrowserRouter>
           </DataProvider>
         </AccessProvider>
+        </PrefsProvider>
       </ThemeProvider>
     </AppErrorBoundary>
   );

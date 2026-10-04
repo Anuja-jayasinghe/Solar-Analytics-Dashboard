@@ -1,7 +1,12 @@
 import { Link, Navigate, useLocation } from 'react-router-dom';
+import { SignIn, SignUp } from '@clerk/clerk-react';
 import { useAccess } from '../access/context.js';
+import { useTheme } from '../theme/context.js';
+import { clerkColorsOf } from '../theme/themes.js';
 import { Glass } from '../ui/Glass.jsx';
 import { Pill } from '../ui/Pill.jsx';
+
+export const CONTACT_URL = 'https://anujajay.com/#contact';
 
 const ROLES = [
   { tone: undefined, name: 'Visitor', text: 'Sees every page on demo data dated 2035 onwards. Nothing real is exposed or even sent to the browser.' },
@@ -9,24 +14,49 @@ const ROLES = [
   { tone: 'gen', name: 'Admin', text: 'Everything a viewer sees, plus bill upload and approval, access, plant settings and data health.' }
 ];
 
-/** The doorway. Clerk handles the actual sign-in; without a Clerk key the button is absent and the demo remains. */
-export default function SignInPage() {
-  const { level, signIn } = useAccess();
+/** Clerk's own form, drawn inside our card in the current theme (no pop-up, no second sign-in step). */
+function ClerkForm({ mode }) {
+  const { theme } = useTheme();
+  const appearance = {
+    variables: { ...clerkColorsOf(theme), borderRadius: '12px', fontFamily: 'Manrope, system-ui, sans-serif' },
+    elements: {
+      rootBox: { width: '100%' },
+      cardBox: { width: '100%', maxWidth: '100%', boxShadow: 'none', border: '0' },
+      card: { boxShadow: 'none', background: 'transparent', padding: '4px 0' },
+      footer: { background: 'transparent' }
+    }
+  };
+  return mode === 'signup'
+    ? <SignUp routing="virtual" signInUrl="/signin" forceRedirectUrl="/" appearance={appearance} />
+    : <SignIn routing="virtual" signUpUrl="/signup" forceRedirectUrl="/" appearance={appearance} />;
+}
+
+/** The doorway: Clerk's sign-in (or sign-up) embedded, a way back to the demo, and how to ask for access. */
+export default function SignInPage({ mode = 'signin' }) {
+  const { level, clerk } = useAccess();
   const location = useLocation();
   if (level === 'viewer' || level === 'admin') return <Navigate to={location.state?.from || '/'} replace />;
+  const signup = mode === 'signup';
   return (
-    <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28, paddingTop: 30 }}>
-      <Glass style={{ width: '100%', maxWidth: 440, padding: '34px 32px', display: 'flex', flexDirection: 'column', gap: 18, textAlign: 'center' }}>
-        <span className="v3-brand-mark" style={{ alignSelf: 'center', width: 44, height: 44, borderRadius: 13, fontSize: 22 }} aria-hidden="true">S</span>
-        <div>
-          <h2 className="v3-h2" style={{ fontSize: 22 }}>Sign in for the live plant</h2>
-          <div className="v3-sub">Invite only. Without signing in you can still explore everything on demo data.</div>
+    <section className="v3-door">
+      <Glass className="v3-door-card">
+        <div style={{ textAlign: 'center' }}>
+          <h2 className="v3-h2" style={{ fontSize: 22 }}>{signup ? 'Create an account' : 'Sign in for the live plant'}</h2>
+          <div className="v3-sub">
+            {signup
+              ? 'After signing up you will see the demo until the owner gives your account access.'
+              : 'Invite only. Without signing in you can still explore everything on demo data.'}
+          </div>
         </div>
-        {signIn && <button type="button" className="v3-btn primary" style={{ height: 44, fontSize: 14 }} onClick={signIn}>Sign in</button>}
+        {clerk && level !== 'loading' && <ClerkForm mode={mode} />}
+        {clerk && level === 'loading' && <div className="v3-skeleton" style={{ height: 260 }} aria-busy="true" aria-label="Loading sign-in" />}
+        {!clerk && <div className="v3-note">Sign-in is not available on this copy of the site.</div>}
         <Link to="/" className="v3-btn" style={{ height: 44, fontSize: 14 }}>Keep exploring the demo</Link>
-        <div className="v3-sub" style={{ margin: 0 }}>Need access? Ask the owner to invite your email.</div>
+        <div className="v3-sub" style={{ margin: 0, textAlign: 'center' }}>
+          Need access? <a className="v3-link" href={CONTACT_URL} target="_blank" rel="noopener noreferrer">Contact the owner</a> and mention the email you signed up with.
+        </div>
       </Glass>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 16, width: '100%' }}>
+      <div className="v3-door-roles">
         {ROLES.map((r) => (
           <Glass key={r.name} style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
             <span style={{ alignSelf: 'flex-start' }}><Pill tone={r.tone}>{r.name}</Pill></span>

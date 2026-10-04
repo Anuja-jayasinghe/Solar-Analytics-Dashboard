@@ -1,15 +1,16 @@
 import { Tip } from '../ui/Tip.jsx';
 import { Note } from '../ui/Note.jsx';
+import { Segmented } from '../ui/Segmented.jsx';
 import { areaPath, linePath } from '../charts/scale.js';
 import { DASH, fmtNum } from '../overview/format.js';
 import { dayLabelYear, spreadGeometry } from './series.js';
 
 /**
- * Statistics for the range chosen on the Generation tile: average per day, best day, lowest day, drawn
+ * Statistics for a chosen period (last 30 days, last 365 days, lifetime): average per day, best day, lowest day, drawn
  * on one chart (dashed line = average). Nothing else: total, yield, capacity factor, earnings and
  * days-above were removed on purpose (docs/design/v3/README.md).
  */
-export function StatsBody({ showHead, stats, loading, error, rangeText }) {
+export function StatsBody({ showHead, stats, loading, error, rangeText, period, onPeriod, periods = [] }) {
   const avg = stats?.avgPerDayKwh ?? null;
   const best = stats?.best ?? null;
   const worst = stats?.worst ?? null;
@@ -22,12 +23,13 @@ export function StatsBody({ showHead, stats, loading, error, rangeText }) {
 
   return (
     <>
-      {showHead ? (
-        <div className="v3-tilehead">
-          <h2 className="v3-h2">Statistics</h2>
-          <div className="v3-sub" style={{ marginTop: 0 }}>{rangeText}</div>
+      <div className="v3-tilehead">
+        <div>
+          {showHead && <h2 className="v3-h2">Statistics</h2>}
+          <div className="v3-sub" style={showHead ? undefined : { marginTop: 0 }}>{rangeText}</div>
         </div>
-      ) : <div className="v3-sub" style={{ marginTop: 0 }}>{rangeText}</div>}
+        {onPeriod && <Segmented small options={periods} value={period} onChange={onPeriod} label="Statistics period" />}
+      </div>
 
       {error && <Note tone="bad">Could not load the statistics ({error.code ?? 'error'}).</Note>}
       <div className="v3-statgrid">

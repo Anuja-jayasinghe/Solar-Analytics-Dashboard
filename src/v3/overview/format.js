@@ -99,8 +99,41 @@ export function openBillPeriod(rows) {
   if (!row) return null;
   return {
     startKey: row.periodStart ?? null,
+    endKey: row.periodEnd ?? null,
     kwh: isNum(row.inverter) ? row.inverter : null,
     daysPresent: row.daysPresent ?? null,
     daysInPeriod: row.daysInPeriod ?? null
   };
+}
+
+/**
+ * The open billing period's generation so far. Daily totals are stored after each day ends, so the stored sum
+ * never contains today; today's live reading is added when the period runs to today and today is not stored
+ * yet (`lastStoredDay` before today). Unknown stays null: nothing stored and no live reading -> null.
+ * @returns {null | {kwh:number|null, includesToday:boolean, daysPresent:number|null, daysInPeriod:number|null}}
+ */
+export function openPeriodSoFar(open, live, lastStoredDay, todayKey) {
+  if (!open) return null;
+  const today = live?.todayKwh;
+  const addToday = isNum(today) && !!todayKey && open.endKey === todayKey && (lastStoredDay == null || lastStoredDay < todayKey);
+  const stored = isNum(open.kwh) ? open.kwh : null;
+  const kwh = stored === null && !addToday ? null : (stored ?? 0) + (addToday ? today : 0);
+  return {
+    kwh,
+    includesToday: addToday,
+    daysPresent: open.daysPresent === null ? null : open.daysPresent + (addToday ? 1 : 0),
+    daysInPeriod: open.daysInPeriod
+  };
+}
+
+/**
+ * All-time generation. The inverter's own lifetime counter is the truth: it includes days the database
+ * has no record of (before collection started, outages). The sum of stored daily totals is the fallback.
+ * @returns {{kwh:number|null, source:'counter'|'records'|null}}
+ */
+export function lifetimeGeneration(live, totals) {
+  const counter = live?.totalKwh;
+  if (isNum(counter) && counter > 0) return { kwh: counter, source: 'counter' };
+  const sum = totals?.generation?.totalKwh;
+  return isNum(sum) ? { kwh: sum, source: 'records' } : { kwh: null, source: null };
 }

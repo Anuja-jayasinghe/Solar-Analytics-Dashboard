@@ -5,6 +5,8 @@ import { Tip } from '../ui/Tip.jsx';
 import { Segmented } from '../ui/Segmented.jsx';
 import { Note } from '../ui/Note.jsx';
 import { ThresholdPlot } from '../charts/ThresholdPlot.jsx';
+import { MarkToggle } from '../charts/MarkToggle.jsx';
+import { usePrefs } from '../prefs/context.js';
 import { areaPath, axisTicks, linePath, maxOf, niceMax, xPct, yPct } from '../charts/scale.js';
 import { fmtNum } from '../overview/format.js';
 import { aboveSummary, buildCebRows, columnTip, defaultThreshold, gapSummary, isPartial, stepEnd, varianceTag, windowOf } from './rows.js';
@@ -78,10 +80,12 @@ export function CebCompare({ bills, comparison, todayKey, loading, error }) {
   const [count, setCount] = useState(8);
   const [endIdx, setEndIdx] = useState(null); // null = follow the newest period
   const [thr, setThr] = useState(null); // null = the median of what we have
+  const { showMark } = usePrefs();
   const threshold = thr ?? defaultThreshold(rows);
+  const markAt = showMark ? threshold : -Infinity; // hidden: every inverter bar at full strength
 
   const win = windowOf(rows, count, endIdx ?? rows.length - 1);
-  const yMax = niceMax(Math.max(maxOf(win.rows.flatMap((r) => [r.inverterKwh, r.cebKwh]), 1) * 1.06, threshold * 1.04));
+  const yMax = niceMax(Math.max(maxOf(win.rows.flatMap((r) => [r.inverterKwh, r.cebKwh]), 1) * 1.06, showMark ? threshold * 1.04 : 0));
   const above = aboveSummary(win.rows, threshold);
   const gap = gapSummary(win.rows, bills?.bills ?? []);
   const first = win.rows[0];
@@ -121,20 +125,21 @@ export function CebCompare({ bills, comparison, todayKey, loading, error }) {
               <span><i className="v3-ghost" />bill not issued yet</span>
             </div>
             <div className="v3-markrow">
-              <label className="v3-field-label">Mark above
+              <MarkToggle />
+              {showMark && <><label className="v3-field-label"><span className="v3-sr">Mark above</span>
                 <input className="v3-field" type="number" min="0" step="50" value={threshold} aria-label="Threshold in kWh" onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v)) setThr(Math.max(0, Math.round(v))); }} style={{ width: 90 }} />
                 <span>kWh</span>
               </label>
-              <span className="v3-pill" data-tone="gen">{above.known ? `Inverter above: ${above.above} of ${above.known} periods` : 'no data in view'}</span>
+              <span className="v3-pill" data-tone="gen">{above.known ? `Inverter above: ${above.above} of ${above.known} periods` : 'no data in view'}</span></>}
             </div>
           </div>
 
           <div className="v3-chartgrid">
             <div className="v3-yaxis" aria-hidden="true">{axisTicks(yMax, (v) => fmtNum(v)).map((t) => <span key={t.pct}>{t.label}</span>)}</div>
             <div className="v3-plotwrap">
-              <ThresholdPlot max={yMax} value={threshold} step={10} unit="kWh" height="var(--plot-h, 250px)" onChange={(v) => setThr(v)}>
+              <ThresholdPlot show={showMark} max={yMax} value={threshold} step={10} unit="kWh" height="var(--plot-h, 250px)" onChange={(v) => setThr(v)}>
                 {axisTicks(yMax).map((t) => <div key={t.pct} className="v3-gridline" style={{ bottom: `${t.pct}%` }} />)}
-                <Columns rows={win.rows} yMax={yMax} threshold={threshold} style={style} />
+                <Columns rows={win.rows} yMax={yMax} threshold={markAt} style={style} />
               </ThresholdPlot>
               <div className="v3-xlabels">
                 {win.rows.map((r, i) => {

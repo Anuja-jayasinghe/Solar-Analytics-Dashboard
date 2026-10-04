@@ -14,11 +14,12 @@ import { DataContext } from '../src/v3/data/context.js';
 import { AppShell } from '../src/v3/shell/AppShell.jsx';
 import { Segmented } from '../src/v3/ui/Segmented.jsx';
 import { Tip } from '../src/v3/ui/Tip.jsx';
+import { PrefsContext } from '../src/v3/prefs/context.js';
 import { Pill } from '../src/v3/ui/Pill.jsx';
 import { Glass } from '../src/v3/ui/Glass.jsx';
 import SignInPage from '../src/v3/pages/SignInPage.jsx';
 
-const access = (level, extra = {}) => ({ level, userId: level === 'none' ? null : 'u1', email: null, getToken: async () => 't', signIn: () => {}, signOut: () => {}, ...extra });
+const access = (level, extra = {}) => ({ level, userId: level === 'none' ? null : 'u1', email: null, firstName: null, clerk: false, profile: { nickname: '', avatar: 'initial' }, saveProfile: async () => {}, getToken: async () => 't', signOut: () => {}, ...extra });
 const data = (mode) => ({ mode, ready: true, epoch: `${mode}:x`, request: () => ({ promise: new Promise(() => {}) }), peek: () => undefined });
 
 function renderShell(level, path = '/', mode = level === 'none' ? 'demo' : 'live') {
@@ -47,7 +48,7 @@ describe('app shell', () => {
     const html = renderShell('admin');
     expect(html).toContain('aria-label="Admin"');
     expect(html).not.toContain('DEMO DATA');
-    expect(html).toContain('Full access');
+    expect(html).toContain('aria-label="Account: Admin, Admin"'); // the account bubble, top right
   });
 
   it('titles the page from the path and marks the current page', () => {
@@ -98,7 +99,8 @@ describe('primitives', () => {
   });
 
   it('Tip describes its content for assistive tech and renders nothing extra without text', () => {
-    const html = renderToString(h(Tip, { text: 'earned in 20 months' }, h('span', null, '3.07 M')));
+    const withHints = (el) => h(PrefsContext.Provider, { value: { hints: true, showMark: true, setHints() {}, setShowMark() {} } }, el);
+    const html = renderToString(withHints(h(Tip, { text: 'earned in 20 months' }, h('span', null, '3.07 M'))));
     expect(html).toContain('role="tooltip"');
     expect(html).toContain('earned in 20 months');
     expect(html).toMatch(/aria-describedby="[^"]+"/);
@@ -115,15 +117,16 @@ describe('primitives', () => {
 describe('sign-in doorway', () => {
   const door = (ctx) =>
     renderToString(h(AccessContext.Provider, { value: ctx }, h(MemoryRouter, null, h(SignInPage))));
-  it('offers sign-in when auth is configured and always keeps the demo', () => {
-    const html = door(access('none'));
-    expect(html).toContain('>Sign in</button>');
+  it('when auth is configured, waits for it and always keeps the demo and a way to contact the owner', () => {
+    const html = door(access('loading', { clerk: true }));
+    expect(html).toContain('aria-label="Loading sign-in"');
+    expect(html).toContain('https://anujajay.com/#contact');
     expect(html).toContain('Keep exploring the demo');
     for (const r of ['Visitor', 'Viewer', 'Admin']) expect(html).toContain(r);
   });
-  it('without auth configured there is no sign-in button, only the demo', () => {
-    const html = door(access('none', { signIn: null }));
-    expect(html).not.toContain('>Sign in</button>');
+  it('without auth configured there is no sign-in form, only the demo', () => {
+    const html = door(access('none', { clerk: false }));
+    expect(html).toContain('Sign-in is not available');
     expect(html).toContain('Keep exploring the demo');
   });
 });
@@ -191,5 +194,78 @@ describe('admin page', () => {
     const html = renderAdmin('viewer');
     expect(html).not.toContain('Upload a CEB bill');
     expect(html).toContain('does not have access');
+  });
+});
+
+import { AVATARS, avatarById, cleanNickname, displayNameFor, initialOf, normalizeProfile, NICKNAME_MAX } from '../src/v3/access/avatars.js';
+import { openPeriodSoFar, lifetimeGeneration } from '../src/v3/overview/format.js';
+import { blockCopy } from '../src/v3/shell/copy.js';
+import { PREF_DEFAULTS } from '../src/v3/prefs/context.js';
+
+describe('round 2 fixes', () => {
+  it('hints are off and the Mark above line on, by default', () => {
+    expect(PREF_DEFAULTS).toEqual({ hints: false, showMark: true });
+    // with the default (hints off) a Tip renders its wrapper but no bubble
+    const html = renderToString(h(Tip, { text: 'x' }, h('b', null, 'v')));
+    expect(html).toBe('<span class="v3-tip"><b>v</b></span>');
+    // navigation labels stay reachable even with hints off
+    expect(renderToString(h(Tip, { text: 'Overview', always: true }, h('b', null, 'v')))).toContain('role="tooltip"');
+  });
+
+  it('the sidebar starts collapsed and no longer carries the account', () => {
+    const html = renderShell('admin');
+    expect(html).toContain('data-collapsed="true"');
+    expect(html).toContain('src="/favicon.svg"');
+    expect(html).not.toMatch(/v3-rail[\s\S]*Full access/);
+    expect(html).toContain('aria-label="Turn hints on"');
+  });
+
+  it('profile: preset avatars, a clean nickname, and a sensible name', () => {
+    expect(AVATARS[0].id).toBe('initial');
+    expect(avatarById('nope').id).toBe('initial');
+    expect(cleanNickname('  Solar   Fan  ')).toBe('Solar Fan');
+    expect(cleanNickname('x'.repeat(40))).toHaveLength(NICKNAME_MAX);
+    expect(displayNameFor({ nickname: '', firstName: 'Anuja', email: 'a@b.c', fallback: 'Admin' })).toBe('Anuja');
+    expect(displayNameFor({ nickname: 'Boss', firstName: 'Anuja', fallback: 'Admin' })).toBe('Boss');
+    expect(displayNameFor({ email: 'owner@example.test', fallback: 'Admin' })).toBe('owner');
+    expect(displayNameFor({ fallback: 'Visitor' })).toBe('Visitor');
+    expect(initialOf('anuja')).toBe('A');
+    expect(initialOf('')).toBe('?');
+    expect(normalizeProfile({ nickname: ' n ', avatar: 'sun', extra: 1 })).toEqual({ nickname: 'n', avatar: 'sun' });
+    expect(normalizeProfile(undefined)).toEqual({ nickname: '', avatar: 'initial' });
+  });
+
+  it('the open billing period includes today from the live reading until today is stored', () => {
+    const open = { startKey: '2026-10-04', endKey: '2026-10-04', kwh: null, daysPresent: 0, daysInPeriod: 1 };
+    expect(openPeriodSoFar(open, { todayKwh: 146.4 }, '2026-10-03', '2026-10-04')).toEqual({ kwh: 146.4, includesToday: true, daysPresent: 1, daysInPeriod: 1 });
+    const longer = { ...open, startKey: '2026-09-04', kwh: 1200, daysPresent: 10, daysInPeriod: 11 };
+    expect(openPeriodSoFar(longer, { todayKwh: 100 }, '2026-10-03', '2026-10-04').kwh).toBe(1300);
+    // already stored: not counted twice
+    expect(openPeriodSoFar(longer, { todayKwh: 100 }, '2026-10-04', '2026-10-04')).toMatchObject({ kwh: 1200, includesToday: false });
+    // no live reading and nothing stored: unknown, not zero
+    expect(openPeriodSoFar(open, null, '2026-10-03', '2026-10-04').kwh).toBeNull();
+    expect(openPeriodSoFar(null, { todayKwh: 1 }, null, '2026-10-04')).toBeNull();
+  });
+
+  it('all-time generation is the inverter lifetime counter, falling back to the daily records', () => {
+    const totals = { generation: { totalKwh: 99599.3 } };
+    expect(lifetimeGeneration({ totalKwh: 101116 }, totals)).toEqual({ kwh: 101116, source: 'counter' });
+    expect(lifetimeGeneration({ totalKwh: null }, totals)).toEqual({ kwh: 99599.3, source: 'records' });
+    expect(lifetimeGeneration(null, null)).toEqual({ kwh: null, source: null });
+  });
+
+  it('copying is blocked except out of form fields', () => {
+    const ev = (target) => ({ target, prevented: false, preventDefault() { this.prevented = true; } });
+    const page = ev({ tagName: 'DIV' }); blockCopy(page); expect(page.prevented).toBe(true);
+    const field = ev({ tagName: 'INPUT' }); blockCopy(field); expect(field.prevented).toBe(false);
+    const area = ev({ tagName: 'TEXTAREA' }); blockCopy(area); expect(area.prevented).toBe(false);
+  });
+
+  it('the demo lifetime counter agrees with the demo daily records', async () => {
+    const { demoRequest } = await import('../shared/demo/demoApi.js');
+    const live = (await demoRequest('live')).body;
+    const totals = (await demoRequest('totals')).body;
+    expect(live.totalKwh).toBeGreaterThan(totals.generation.totalKwh);
+    expect(live.totalKwh - totals.generation.totalKwh).toBeLessThan(500); // today so far, nothing else
   });
 });

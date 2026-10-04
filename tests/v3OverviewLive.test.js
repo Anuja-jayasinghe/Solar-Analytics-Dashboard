@@ -99,7 +99,7 @@ describe('live status', () => {
 describe('open bill period', () => {
   it('picks the provisional row and keeps null as null', () => {
     const rows = [{ status: 'finalized', inverter: 4100 }, { status: 'provisional', inverter: null, periodStart: '2036-09-04', daysPresent: 0, daysInPeriod: 11 }];
-    expect(openBillPeriod(rows)).toEqual({ startKey: '2036-09-04', kwh: null, daysPresent: 0, daysInPeriod: 11 });
+    expect(openBillPeriod(rows)).toEqual({ startKey: '2036-09-04', endKey: null, kwh: null, daysPresent: 0, daysInPeriod: 11 });
     expect(openBillPeriod([{ status: 'finalized' }])).toBeNull();
     expect(openBillPeriod(undefined)).toBeNull();
   });

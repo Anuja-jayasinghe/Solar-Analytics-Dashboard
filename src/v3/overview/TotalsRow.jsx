@@ -1,6 +1,6 @@
 import { Glass } from '../ui/Glass.jsx';
 import { Tip } from '../ui/Tip.jsx';
-import { DASH, energyCompact, fmtNum, longDate, lkrCompact, monthsBetween, openBillPeriod, shortDate } from './format.js';
+import { DASH, energyCompact, fmtNum, lifetimeGeneration, longDate, lkrCompact, monthsBetween, openBillPeriod, openPeriodSoFar, shortDate } from './format.js';
 
 function Tile({ label, short, value, unit, sub, tip, loading }) {
   return (
@@ -22,24 +22,28 @@ function Tile({ label, short, value, unit, sub, tip, loading }) {
  * The three headline tiles: the open billing period, all-time generation, all-time earnings.
  * Every figure is null-safe: while loading a skeleton, when unknown a dash, never a made-up 0.
  */
-export function TotalsRow({ totals, comparison, todayKey, loading }) {
-  const open = openBillPeriod(comparison?.rows);
+export function TotalsRow({ totals, comparison, live, todayKey, loading }) {
   const gen = totals?.generation;
+  const open = openPeriodSoFar(openBillPeriod(comparison?.rows), live, gen?.lastDay ?? null, todayKey);
+  const start = openBillPeriod(comparison?.rows)?.startKey ?? null;
   const earn = totals?.earnings;
 
   const periodTip = open
-    ? `Billing period ${shortDate(open.startKey)} to today. Inverter generation is recorded on ${open.daysPresent ?? DASH} of ${open.daysInPeriod ?? DASH} days; the CEB bill for this period has not been issued yet.`
+    ? `Billing period ${shortDate(start)} to today${open.includesToday ? ', including today so far from the live reading' : ''}. Generation is known for ${open.daysPresent ?? DASH} of ${open.daysInPeriod ?? DASH} days; the CEB bill for this period has not been issued yet.`
     : 'There is no open billing period right now: the latest bill covers everything up to today.';
   const period = {
     value: open ? fmtNum(open.kwh) : DASH,
-    sub: open ? `since ${shortDate(open.startKey)} · awaiting bill` : 'no open period'
+    sub: open ? `since ${shortDate(start)}${open.includesToday ? ' · incl. today' : ''} · awaiting bill` : 'no open period'
   };
 
-  const energy = energyCompact(gen?.totalKwh ?? null);
+  const life = lifetimeGeneration(live, totals);
+  const energy = energyCompact(life.kwh);
   const months = gen?.firstDay ? monthsBetween(gen.firstDay, todayKey ?? gen.lastDay) : null;
-  const genTip = gen?.totalKwh == null
+  const genTip = life.kwh == null
     ? 'No generation has been recorded yet.'
-    : `${fmtNum(gen.totalKwh)} kWh generated over ${fmtNum(gen.dayCount)} recorded days since ${longDate(gen.firstDay)}.${gen.missingDays ? ` ${gen.missingDays} day${gen.missingDays === 1 ? '' : 's'} in that span have no reading and are not counted as zero.` : ''}`;
+    : life.source === 'counter'
+      ? `${fmtNum(life.kwh)} kWh on the inverter's own lifetime counter. The daily records hold ${fmtNum(gen?.totalKwh)} kWh over ${fmtNum(gen?.dayCount)} days since ${longDate(gen?.firstDay)}; the difference is generation before records began, days with no record${gen?.missingDays ? ` (${gen.missingDays})` : ''}, and today.`
+      : `${fmtNum(life.kwh)} kWh over ${fmtNum(gen.dayCount)} recorded days since ${longDate(gen.firstDay)}.${gen.missingDays ? ` ${gen.missingDays} day${gen.missingDays === 1 ? '' : 's'} in that span have no reading and are not counted as zero.` : ''}`;
 
   const money = lkrCompact(earn?.totalLkr ?? null);
   const avgBill = lkrCompact(earn?.billCount ? earn.totalLkr / earn.billCount : null);
@@ -55,7 +59,7 @@ export function TotalsRow({ totals, comparison, todayKey, loading }) {
         short="All-time gen"
         value={energy.value}
         unit={energy.unit}
-        sub={gen?.firstDay ? `since ${longDate(gen.firstDay)}${months ? ` · ${months} months` : ''}` : 'no data yet'}
+        sub={life.source === 'counter' ? `inverter lifetime counter${months ? ` · ${months} months of records` : ''}` : gen?.firstDay ? `since ${longDate(gen.firstDay)}${months ? ` · ${months} months` : ''}` : 'no data yet'}
         tip={genTip}
         loading={loading}
       />

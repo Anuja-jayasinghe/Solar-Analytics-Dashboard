@@ -143,3 +143,19 @@ export function spreadGeometry(series, best, worst, avg) {
     worst: { x: x(index.get(worst.date) ?? 0), y: y(worst.kwh) }
   };
 }
+
+export const STATS_PERIODS = Object.freeze([
+  { value: '30', label: 'Last 30 days' },
+  { value: '365', label: 'Last 365 days' },
+  { value: 'life', label: 'Lifetime' }
+]);
+
+/** The day range a statistics period covers, ending on the newest day with data. Lifetime starts at the first record. */
+export function statsRange(period, { min = null, max = null } = {}) {
+  if (!max) return null;
+  if (period === 'life') return { from: min ?? max, to: max };
+  const days = period === '365' ? 365 : 30;
+  let from = addDays(max, -(days - 1));
+  if (min && from < min) from = min;
+  return { from, to: max };
+}

@@ -26,6 +26,7 @@ export function navGroup(level, group) {
 /** Page title for a pathname (header and browser tab). An address that matches no page is a 404. */
 export function titleFor(pathname) {
   if (pathname === '/signin') return 'Sign in';
+  if (pathname === '/signup') return 'Sign up';
   const hit = NAV.filter((n) => (n.end ? pathname === n.path : pathname === n.path || pathname.startsWith(`${n.path}/`)))
     .sort((a, b) => b.path.length - a.path.length)[0];
   return hit ? hit.title : 'Page not found';
