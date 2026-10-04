@@ -150,9 +150,13 @@ History — why it is the way it is:
 The history documents are a **record**, not a description of the present. Where they disagree
 with the reference documents, the reference documents are right.
 
-## v3 UI is built at /v3 (2026-10-04)
+## v3 is the default dashboard (2026-10-04, release v3.0.0)
 
-The new frontend (`src/v3/`, design in `docs/design/v3/`) lives at **`/v3`** beside the unchanged v1. Visitors see demo data; viewers and admins see real data through `/api/data/*`. Cutover (v1 replaced, anon SELECT revoked) is a separate owner-approved step, blocked on #181. Workflow: `docs/WORKING_RULES.md` 7a.
+The new frontend (`src/v3/`, design in `docs/design/v3/`) is served at **`/`**; the previous dashboard is **deprecated and lives
+under `/v1`** with a banner (`src/App.jsx`, `src/main.jsx` picks the app by path). Visitors see demo data; viewers and admins see
+real data through `/api/data/*`. Release notes and the production-readiness analysis: `docs/RELEASE_v3.0.0.md`. Rollback: `docs/RUNBOOK.md`.
+**Still open:** real data stays publicly readable by the anon key until `/v1` is removed and
+`scripts/sql/2026-10-04_v3_revoke_anon_read_at_v1_removal.sql` is applied (#155). Workflow: `docs/WORKING_RULES.md` 7a.
 
 ## v3 foundations are live (2026-10-04)
 

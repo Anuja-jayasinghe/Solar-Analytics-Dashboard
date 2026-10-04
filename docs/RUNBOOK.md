@@ -237,6 +237,17 @@ default.
 
 ## Routine procedures
 
+### Rolling back v3.0.0
+
+The release only changed which app is served; the database, collector and API are unchanged and compatible with both.
+
+1. Fastest (about a minute, no code): Vercel dashboard → the project → Deployments → pick the last deployment from before the
+   release merge → "Promote to Production".
+2. Or revert: `git revert -m 1 <merge commit of the release PR>` on a branch, open a PR, merge it (the main rules apply).
+3. Last resort, previous dashboard as it was: tag `v2.1.0`. Note it expects `/` and `/dashboard`, not `/v1`.
+
+Nothing in the data needs undoing. If you applied `2026-10-04_v3_revoke_anon_read_at_v1_removal.sql`, run its `_rollback.sql` first.
+
 ### Backfilling a gap
 
 ```bash

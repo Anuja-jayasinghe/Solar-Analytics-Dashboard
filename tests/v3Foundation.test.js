@@ -90,7 +90,7 @@ describe('navigation', () => {
     expect(titleFor('/pro')).toBe('Pro metrics');
     expect(titleFor('/admin/bills')).toBe('Admin');
     expect(titleFor('/signin')).toBe('Sign in');
-    expect(titleFor('/nowhere')).toBe('Solar Analytics');
+    expect(titleFor('/nowhere')).toBe('Page not found');
   });
 });
 

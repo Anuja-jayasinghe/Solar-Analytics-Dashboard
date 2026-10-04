@@ -9,11 +9,9 @@ User-agent: *
 # Everything behind authentication. Crawling these yields a login redirect at
 # best and wastes crawl budget at worst.
 Disallow: /admin
-Disallow: /dashboard
 Disallow: /settings
-Disallow: /access
-Disallow: /demodashbaard
-Disallow: /demosettings
+Disallow: /signin
+Disallow: /v1/
 Disallow: /api/
 
 Allow: /

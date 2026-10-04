@@ -23,8 +23,8 @@ function ClerkAccess({ children }) {
       userId: user?.id ?? null,
       email: user?.primaryEmailAddress?.emailAddress ?? null,
       getToken: () => getToken(),
-      signIn: !isLoaded ? null : () => clerk.openSignIn({ forceRedirectUrl: '/v3/', fallbackRedirectUrl: '/v3/' }),
-      signOut: () => clerk.signOut({ redirectUrl: '/v3/' })
+      signIn: !isLoaded ? null : () => clerk.openSignIn({ forceRedirectUrl: '/', fallbackRedirectUrl: '/' }),
+      signOut: () => clerk.signOut({ redirectUrl: '/' })
     }),
     [level, user, getToken, clerk, isLoaded]
   );

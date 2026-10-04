@@ -14,6 +14,7 @@ import { verifySupabaseConnection } from "./lib/verifySupabaseConnection";
 import { Analytics } from "@vercel/analytics/react"
 import MaintenancePage from "./pages/MaintenancePage";
 import ErrorBoundary from "./components/ErrorBoundary";
+import LegacyBanner from "./components/LegacyBanner";
 
 // Clerk configuration
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -418,7 +419,8 @@ function App() {
         <ThemeProvider>
           <ErrorBoundary>
             <DataProvider>
-              <Router>
+              <Router basename="/v1">
+                <LegacyBanner />
                 <ToastManager />
                 <Analytics />
                 <ErrorBoundary>

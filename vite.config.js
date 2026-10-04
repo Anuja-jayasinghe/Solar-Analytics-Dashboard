@@ -7,6 +7,9 @@ export default defineConfig(({ mode }) => {
 
   return {
   plugins: [react()],
+  // Production bundles carry no debug chatter: log/debug/info calls are removed. console.warn and
+  // console.error are kept on purpose so real problems stay visible.
+  esbuild: mode === 'production' ? { pure: ['console.log', 'console.debug', 'console.info'], legalComments: 'none' } : {},
   server: {
     // Allow ngrok tunnel hosts for local Clerk auth testing (see docs/guides/LOCAL_DEVELOPMENT.md)
     allowedHosts: ['.ngrok-free.dev', '.ngrok.io', '.ngrok.app'],
@@ -20,53 +23,18 @@ export default defineConfig(({ mode }) => {
   build: {
     rollupOptions: {
       output: {
+        // One deliberate vendor chunk (React). Everything else is left to Rollup's own splitting along the
+        // dynamic-import boundaries (the new app, the deprecated v1 app, the PDF viewer), so opening one
+        // app never downloads the other's libraries. The previous rules (a catch-all "vendor" chunk, a
+        // Supabase chunk, an "admin" chunk, and a charts chunk whose shared helpers made every page load it)
+        // put v1-only code on the preload list of every page.
         manualChunks: (id) => {
-          // Vendor chunks
-          if (id.includes('node_modules')) {
-            // Leave react-pdf/pdfjs-dist out of the manual vendor buckets so
-            // Rollup's default chunking respects the dynamic import boundary
-            // in PdfPreview.jsx (lazy-loaded) instead of bundling this ~1MB+
-            // dependency into an eagerly-loaded vendor chunk.
-            if (id.includes('react-pdf') || id.includes('pdfjs-dist')) {
-              return undefined;
-            }
-            // Match the package by its directory name, not by substring. `includes('react')`
-            // also matched `@chakra-ui/react`, `@emotion/react`, `react-smooth`, and any
-            // other package with "react" in its path, sweeping them all into react-vendor.
-            if (/[\\/]node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom)[\\/]/.test(id)) {
-              return 'react-vendor';
-            }
-            if (/[\\/]node_modules[\\/](recharts|d3-[^\\/]+|victory-vendor)[\\/]/.test(id)) {
-              return 'chart-vendor';
-            }
-            if (id.includes('@supabase')) {
-              return 'supabase-vendor';
-            }
-            return 'vendor';
-          }
-          
-          
-          // Feature chunks
-          if (id.includes('src/components/dashboard/')) {
-            if (id.includes('EnergyCharts') || id.includes('SystemTrends')) {
-              return 'charts';
-            }
-            if (id.includes('Earnings') || id.includes('Environmental')) {
-              return 'analytics';
-            }
-            return 'dashboard';
-          }
-          
-          // PdfPreview.jsx is lazy-loaded (React.lazy) specifically to keep
-          // its react-pdf/pdfjs-dist dependency out of the eager admin
-          // bundle - excluded here so that dynamic import boundary holds.
-          if (id.includes('src/components/admin/CebDataManagement/PdfPreview')) {
-            return undefined;
-          }
-
-          if (id.includes('src/components/admin/') || id.includes('src/pages/Admin')) {
-            return 'admin';
-          }
+          if (!id.includes('node_modules')) return undefined;
+          // react-pdf/pdfjs-dist stay out of the buckets so the lazy PdfPreview boundary holds.
+          if (id.includes('react-pdf') || id.includes('pdfjs-dist')) return undefined;
+          // Match the package directory, not a substring ("react" also matches @emotion/react, react-smooth, ...).
+          if (/[\\/]node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom)[\\/]/.test(id)) return 'react-vendor';
+          return undefined;
         }
       }
     },
