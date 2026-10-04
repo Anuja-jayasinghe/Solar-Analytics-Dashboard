@@ -96,8 +96,12 @@ body text ≥ 14px / labels ≥ 12px, contrast checked against the surface the t
 - The integration branch is merged into `main` by PR when a coherent, working set is ready (never half a feature), after
   merging `origin/main` into it first so the PR is conflict-free. Merge commits, so the history of each slice stays visible.
 - Delete a sub-branch when its PR merges. Never push straight to `main` or an integration branch.
-- Exception: the keepalive workflow's heartbeat commit pushes to `main` as `github-actions[bot]`; any branch rule must allow it
-  or scheduled workflows get disabled again (see `.github/workflows/keepalive.yml`).
+- Enforced by GitHub rulesets: `protect-main` (PR, `build` + `secrets` green, branch up to date, threads resolved, no
+  force-push or delete; the repository admin role may bypass for emergencies, not as a habit) and
+  `protect-integration-branches` (`integration/*`, same without the up-to-date rule).
+- Exception: the keepalive heartbeat commits to `main`. The Actions bot cannot be exempted on a personal repository, so it
+  pushes as the owner with the fine-grained PAT secret `KEEPALIVE_PAT` (Contents write, this repo only). If that secret is
+  missing or expired the heartbeat fails and scheduled workflows risk being disabled after 60 days idle: renew it.
 - Every PR states what changed, what did not, and the checks run; anything skipped is a `v3-deferred` issue (section 7).
 
 ## 8. Operating

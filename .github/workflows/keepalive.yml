@@ -78,9 +78,14 @@ jobs:
     permissions:
       contents: write
     steps:
+      # main is protected by a ruleset (PR + green CI). The GitHub Actions bot cannot be exempted on a
+      # personal repository, so the heartbeat pushes as the owner using a fine-grained PAT with
+      # Contents: read and write on this repo only, stored as the secret KEEPALIVE_PAT. The repository
+      # admin role is the ruleset bypass. If the secret is missing this job fails loudly (see WORKING_RULES 7a).
       - uses: actions/checkout@v4
         with:
           ref: main
+          token: ${{ secrets.KEEPALIVE_PAT }}
 
       - name: 💓 Write heartbeat and push
         run: |
