@@ -15,13 +15,21 @@ function UploadCard({ onUploaded }) {
   const upload = async (file) => {
     if (!file) return;
     setState({ status: 'working', message: `Uploading ${file.name}…` });
+    let up = null;
     try {
-      const up = await api.uploadBill(file);
-      setState({ status: 'working', message: 'Reading the bill…' });
-      await api.extract(up.ingestionId);
-      setState({ status: 'done', message: 'Uploaded and read. Check the figures below, then approve.' });
+      up = await api.uploadBill(file);
     } catch (err) {
       setState({ status: 'error', message: uploadProblem(err) });
+    }
+    if (up) {
+      setState({ status: 'working', message: 'Reading the bill…' });
+      try {
+        await api.extract(up.ingestionId);
+        setState({ status: 'done', message: 'Uploaded and read. Check the figures below, then approve.' });
+      } catch {
+        // The file is stored; only the reading failed. It sits in the queue below to retry or discard.
+        setState({ status: 'error', message: 'Uploaded, but the file could not be read as a CEB bill. Try reading it again or discard it below.' });
+      }
     }
     onUploaded();
     if (input.current) input.current.value = '';
@@ -94,7 +102,7 @@ function QueueItem({ item, onDone }) {
         {item.kind === 'failed' && <button type="button" className="v3-btn primary" disabled={busy} onClick={retry}>Try reading again</button>}
         {!confirming
           ? <button type="button" className="v3-btn" disabled={busy} onClick={() => setConfirming(true)}>{item.kind === 'failed' ? 'Discard' : 'Reject'}</button>
-          : <span className="v3-confirm">Permanently delete this upload and its file? <button type="button" className="v3-btn" disabled={busy} onClick={discard}>Yes, delete</button> <button type="button" className="v3-btn" onClick={() => setConfirming(false)}>Keep</button></span>}
+          : <span className="v3-confirm">Permanently delete this upload and its file? <button type="button" className="v3-btn" disabled={busy} onClick={discard}>{busy ? 'Deleting…' : 'Yes, delete'}</button> <button type="button" className="v3-btn" onClick={() => setConfirming(false)}>Keep</button></span>}
       </div>
     </div>
   );
