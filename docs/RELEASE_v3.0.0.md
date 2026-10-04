@@ -44,8 +44,9 @@ Checked 2026-10-04 on the release candidate. "Evidence" says how it was verified
 | Real-world flows on production | Overview, Pro, Admin (bills, people, data health), Settings save and restore, upload of a duplicate bill (correctly refused), upload of a non-bill (stored, reading failed, discarded) | session log in `docs/V3_REFACTOR_PLAN.md` |
 | Approving a brand-new bill | Covered by tests only: both real bills offered for testing were already ingested, and approving a duplicate would create extra ingestion rows | to be exercised with the next real bill |
 | Performance | The first page of the new app now loads **React (81 KB gz) + its own code (about 45 KB gz)**. Before this release the entry also preloaded the Supabase, "vendor" and v1-admin chunks (about 76 KB gz) and a charts chunk (101 KB gz) for every page. Recharts (90 KB gz) now loads only in v1. No perpetual animation beyond the Today circle and status bulb, both disabled by `prefers-reduced-motion` | `dist/` sizes before and after |
-| Accessibility | Skip link, one `h1` per page, labelled controls and regions, keyboard-operable "Mark above" slider, per-point hints that work by tap and keyboard on every chart, and a **table view for the CEB chart only** (a table view for the other charts is a gap), `prefers-reduced-motion` honoured, status never by colour alone. **Lighthouse was not run**; run it on the deployed `/` and record the scores here | code review + tests |
+| Accessibility | Skip link, one `h1` per page, labelled controls and regions, keyboard-operable "Mark above" slider, per-point hints that work by tap and keyboard on every chart, and a **table view for the CEB chart only** (a table view for the other charts is a gap), `prefers-reduced-motion` honoured, status never by colour alone. **Lighthouse on production `/` (mobile profile, slow 4G): Accessibility 100** | code review + tests |
 | SEO and crawlers | `robots.txt` and `sitemap.xml` updated for the new paths; the page `<title>` follows the page | files |
+| **Lighthouse (production `/`, mobile profile, 2026-10-04)** | First run found Performance 57, Accessibility 97, CLS 0.45 and one ARIA failure; fixed (visitors skip the wait for Clerk's script using its signed-out cookie, card heights reserved, `role=img`, Overview bundled, demo prefetched). Final two runs: **Performance 79 and 93, Accessibility 100, Best practices 100, SEO 100, CLS 0.04 to 0.05, TBT 80 to 170 ms, FCP 1.6 to 1.8 s** (performance varies run to run in the lab) | `npx lighthouse` against production |
 | Browser tab | Each page sets its own title | test |
 | Rollback | `docs/RUNBOOK.md` "Rolling back v3.0.0": promote the previous deployment (instant) or revert the release merge | runbook |
 | **Open risk: real data is still publicly readable** | The previous dashboard reads the database directly with the public anon key, so until it is removed, anyone holding that key can read ceb_data, daily summaries and settings, and (until `2026-09-24_revoke_anon_bill_access.sql` is applied) bill account numbers and PDF paths. The new dashboard does not need any of that | read-only query of `pg_policies` on 2026-10-04 |
@@ -65,7 +66,7 @@ Making v3 the default does not by itself close the exposure above. Two steps, bo
 - Sending invitations from Admin and the collector's run history (new endpoints needed): V3-D8.
 - Weather chip on Pro metrics: no data source chosen (#178).
 - Alerts when the inverter stops (#151).
-- Lighthouse scores to be recorded after deploy.
+- Largest Contentful Paint is 3.1 to 4.6 s on the slow-4G lab profile (it is a chain of round trips: page, app code, then the first data); worth another pass if real-user numbers disagree.
 
 ## How to remove v1 (when you are ready)
 
