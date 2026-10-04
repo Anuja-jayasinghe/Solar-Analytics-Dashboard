@@ -6,6 +6,7 @@ Simple index of approved logic entries in this directory.
 - [LR-001: CEB vs Inverter Monthly Alignment](LR-001-ceb-vs-inverter-monthly-alignment.md)
 - [LR-002: Inverter Uptime and Interruptions](LR-002-inverter-uptime-and-interruptions.md)
 - [LR-003: Custom Range Aggregation (inverter only)](LR-003-custom-range-aggregation.md)
+- [LR-004: CEB vs Inverter Earnings Difference](LR-004-earnings-difference.md)
 
 ## Directory rules
 - Each logic gets its own self-contained file.
