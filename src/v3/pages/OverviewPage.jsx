@@ -1,36 +1,49 @@
+import { useEffect, useState } from 'react';
 import { useResource } from '../data/context.js';
-import { Glass } from '../ui/Glass.jsx';
-import { Pill } from '../ui/Pill.jsx';
 import { Note } from '../ui/Note.jsx';
+import { TotalsRow } from '../overview/TotalsRow.jsx';
+import { LiveRow } from '../overview/LiveRow.jsx';
 
-const kw = (v) => (v === null || v === undefined ? '—' : `${Number(v).toLocaleString('en-US', { maximumFractionDigits: 1 })} kW`);
-const kwh = (v) => (v === null || v === undefined ? '—' : `${Number(v).toLocaleString('en-US', { maximumFractionDigits: 1 })} kWh`);
+/** Re-render about once a minute so "2 min ago" and the freshness ring keep moving between data polls. */
+function useNow(intervalMs = 30_000) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(t);
+  }, [intervalMs]);
+  return now;
+}
 
 /**
- * FOUNDATION PLACEHOLDER. The real Overview arrives in the overview-live, ceb-compare, generation and
- * overview-phone slices (docs/V3_REFACTOR_PLAN.md, P5b). This page exists to prove the pipeline end to
- * end: access level -> data source (demo or live) -> /api/data/live -> render, with unknown shown as "—".
+ * Overview. This slice (overview-live) builds the headline tiles and the live row. The CEB comparison,
+ * generation charts and statistics arrive in the following slices (docs/V3_REFACTOR_PLAN.md, P5b).
  */
 export default function OverviewPage() {
-  const { data, error, loading, mode } = useResource('live', {}, { pollMs: 60_000 });
+  const now = useNow();
+  const live = useResource('live', {}, { pollMs: 60_000 });
+  const totals = useResource('totals');
+  const settings = useResource('settings');
+  const todayKey = live.data?.todayKey ?? null;
+  const comparison = useResource('comparison', { year: todayKey ? Number(todayKey.slice(0, 4)) : undefined }, { enabled: todayKey !== null });
+
+  const failed = [live, totals, comparison].filter((r) => r.error);
+  const s = settings.data?.settings ?? null;
+
   return (
     <>
-      <Glass card>
-        <div>
-          <h2 className="v3-h2">Live status</h2>
-          <div className="v3-sub">Foundation check · reading from the {mode === 'live' ? 'real API' : 'demo data'}</div>
-        </div>
-        {loading && !data && <div className="v3-skeleton" style={{ height: 56 }} aria-busy="true" aria-label="Loading" />}
-        {error && <Note tone="bad">Could not load live status ({error.code ?? 'error'}). Nothing is shown rather than a made-up zero.</Note>}
-        {data && (
-          <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Pill tone={data.status === 'online' ? 'good' : 'warn'}>{data.status ?? 'unknown'}</Pill>
-            <div><div className="v3-mut" style={{ fontSize: 12 }}>Now</div><div className="v3-num" style={{ fontSize: 26 }}>{kw(data.currentPowerKw)}</div></div>
-            <div><div className="v3-mut" style={{ fontSize: 12 }}>Today</div><div className="v3-num" style={{ fontSize: 26 }}>{kwh(data.todayKwh)}</div></div>
-          </div>
-        )}
-      </Glass>
-      <Note>The full Overview is being built slice by slice against the signed-off design (docs/design/v3).</Note>
+      {failed.length > 0 && (
+        <Note tone="bad">
+          Some figures could not be loaded ({[...new Set(failed.map((r) => r.error.code ?? 'error'))].join(', ')}). They are shown as a dash, never as zero.
+        </Note>
+      )}
+      <TotalsRow
+        totals={totals.data}
+        comparison={comparison.data}
+        todayKey={todayKey}
+        loading={totals.loading || (comparison.loading && !comparison.data)}
+      />
+      <LiveRow live={live.data} targetKwh={s?.dailyTargetKwh ?? null} maxKw={s?.acRatedKw ?? null} now={now} loading={live.loading} />
+      <Note>CEB vs Inverter, generation over time and statistics are the next slices (docs/design/v3).</Note>
     </>
   );
 }

@@ -273,11 +273,48 @@ describe('uptime, alarms, telemetry, settings, live', () => {
     expect((await call(handler, req('live'))).body.currentPowerKw).toBe(12.5);
   });
 
+  it('live adds the Colombo date from the server so the browser never decides what today is', async () => {
+    const { handler } = build({ live: async () => ({ status: 'online' }) });
+    expect((await call(handler, req('live'))).body.todayKey).toBe('2026-10-03');
+  });
+
   it('a live upstream outage surfaces as 502, never a fabricated reading', async () => {
     const { handler } = build({ live: async () => { throw new HttpError(502, 'Live data is temporarily unavailable', 'upstream_unavailable'); } });
     const res = await call(handler, req('live'));
     expect(res.statusCode).toBe(502);
     expect(res.body.code).toBe('upstream_unavailable');
+  });
+});
+
+describe('totals', () => {
+  it('sums only days with a reading, reports missing days, and never turns unknown into 0', async () => {
+    const rows = [
+      { date: '2026-09-29', kwh: 100, peakKw: 20 },
+      { date: '2026-10-01', kwh: 150, peakKw: 25 },
+      { date: '2026-10-02', kwh: null, peakKw: null },
+      { date: '2026-10-03', kwh: 0, peakKw: 0 }
+    ];
+    const { handler } = build({ repo: makeRepo({ dailyRows: async () => rows }) });
+    const g = (await call(handler, req('totals'))).body.generation;
+    expect(g).toEqual({ totalKwh: 250, dayCount: 3, firstDay: '2026-09-29', lastDay: '2026-10-03', missingDays: 2 });
+  });
+
+  it('earnings count only bills that carry an earnings figure', async () => {
+    const bills = [
+      { bill_date: '2026-09-03', units_exported: 100, earnings: 4000 },
+      { bill_date: '2026-10-03', units_exported: 100, earnings: null },
+      { bill_date: '2026-08-03', units_exported: 100, earnings: 3900 }
+    ];
+    const { handler } = build({ repo: makeRepo({ bills: async () => bills }) });
+    const e = (await call(handler, req('totals'))).body.earnings;
+    expect(e).toEqual({ totalLkr: 7900, billCount: 2, billsWithoutEarnings: 1, firstBillDate: '2026-08-03', lastBillDate: '2026-10-03' });
+  });
+
+  it('with no data at all every figure is null or zero-count, not a fabricated total', async () => {
+    const { handler } = build({ repo: makeRepo({ dailyRows: async () => [], bills: async () => [] }) });
+    const body = (await call(handler, req('totals'))).body;
+    expect(body.generation).toEqual({ totalKwh: null, dayCount: 0, firstDay: null, lastDay: null, missingDays: 0 });
+    expect(body.earnings.totalLkr).toBeNull();
   });
 });
 
