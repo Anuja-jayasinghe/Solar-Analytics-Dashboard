@@ -29,6 +29,12 @@ import { createRateLimiter } from '../_lib/data/rateLimit.js';
 const INVERTER_SN = process.env.INVERTER_SN || '1811040244070066';
 
 const live = createLiveProvider({
+  // Today's readings, only to find the day's peak (cached 5 minutes by the provider).
+  fetchDay: async (dateKey) => {
+    const res = await solisFetch('/v1/api/inverterDay', { sn: INVERTER_SN, money: 'LKR', time: dateKey, timeZone: 8 });
+    if (String(res?.code) !== '0') throw new Error(`inverterDay: ${res?.msg ?? 'error'}`);
+    return res.data;
+  },
   fetchInverter: async () => {
     const res = await solisFetch('/v1/api/inverterList', { pageNo: 1, pageSize: 100 });
     if (String(res?.code) !== '0') throw new Error(`inverterList: ${res?.msg ?? 'error'}`);

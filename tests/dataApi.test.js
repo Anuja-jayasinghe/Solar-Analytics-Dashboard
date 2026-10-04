@@ -395,3 +395,44 @@ describe('route module', () => {
     expect(typeof mod.default).toBe('function');
   });
 });
+
+describe('live peak today', () => {
+  const rec = { state: 1, pac: 12.5, pacStr: 'kW', etoday: 80.5, etodayStr: 'kWh', etotal1: 100970, dataTimestamp: 1790922598529 };
+  // 2036-09-10 05:30Z = 11:00 Colombo
+  const pt = (hhmmZ, kw) => ({ dataTimestamp: Date.parse('2036-09-10T' + hhmmZ + ':00Z'), pac: kw, pacStr: 'kW', state: 1 });
+  const dayPoints = [pt('05:30', 20), pt('06:25', 26.34), pt('07:00', 18)];
+  const noon = Date.parse('2036-09-10T06:30:00Z');
+
+  it('adds the day peak and its Colombo time to the live reading', async () => {
+    const live = createLiveProvider({ fetchInverter: async () => rec, fetchDay: async () => dayPoints, now: () => noon });
+    expect(await live()).toMatchObject({ peakTodayKw: 26.3, peakTodayAt: '11:55' });
+  });
+
+  it('without a day reader, or when it fails, the peak is unknown and live still works', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const plain = createLiveProvider({ fetchInverter: async () => rec, now: () => noon });
+    expect(await plain()).toMatchObject({ status: 'online', peakTodayKw: null, peakTodayAt: null });
+    const broken = createLiveProvider({ fetchInverter: async () => rec, fetchDay: async () => { throw new Error('solis down'); }, now: () => noon });
+    expect(await broken()).toMatchObject({ status: 'online', peakTodayKw: null, peakTodayAt: null });
+    spy.mockRestore();
+  });
+
+  it('a day with no readable points has no peak (null, not 0 kW)', async () => {
+    const live = createLiveProvider({ fetchInverter: async () => rec, fetchDay: async () => [], now: () => noon });
+    expect(await live()).toMatchObject({ peakTodayKw: null, peakTodayAt: null });
+  });
+
+  it('reuses the peak for 5 minutes and keeps the last one if a refresh fails', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    let t = noon; let fail = false;
+    const fetchDay = vi.fn(async () => { if (fail) throw new Error('x'); return dayPoints; });
+    const live = createLiveProvider({ fetchInverter: async () => rec, fetchDay, ttlMs: 1000, peakTtlMs: 300_000, now: () => t });
+    await live();
+    t += 60_000; await live();
+    expect(fetchDay).toHaveBeenCalledTimes(1);
+    fail = true; t += 400_000;
+    expect(await live()).toMatchObject({ peakTodayKw: 26.3 });
+    expect(fetchDay).toHaveBeenCalledTimes(2);
+    spy.mockRestore();
+  });
+});
