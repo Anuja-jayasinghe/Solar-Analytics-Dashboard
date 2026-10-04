@@ -205,3 +205,96 @@
   .v3-gauge-max { right: 8px; }
   .v3-gauge-share { font-size: 10.5px; text-align: center; max-width: none; }
 }
+
+/* ---- charts: CEB vs Inverter ---- */
+.v3-ceb { --plot-h: 250px; --axis-w: 56px; }
+.v3-tilehead { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.v3-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.v3-stepper { display: flex; align-items: center; gap: 8px; }
+.v3-steplabel { font-size: 12.5px; font-weight: 600; min-width: 128px; text-align: center; }
+.v3-legendrow { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
+.v3-legend { display: flex; gap: 18px; font-size: 12px; color: var(--ink2); flex-wrap: wrap; }
+.v3-legend span { display: flex; align-items: center; gap: 7px; }
+.v3-legend i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+.v3-legend i.v3-hatch { width: 16px; height: 10px; border-radius: 2px; border: 1px solid var(--gen); background: repeating-linear-gradient(135deg, var(--gen) 0 4px, var(--gen-a30) 4px 7px); }
+.v3-legend i.v3-ghost { width: 16px; height: 10px; border-radius: 2px; border: 1.5px dashed var(--ceb); opacity: .75; }
+.v3-markrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.v3-field-label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink2); }
+
+.v3-chartgrid { display: flex; gap: 10px; }
+.v3-yaxis { display: flex; flex-direction: column; justify-content: space-between; height: var(--plot-h); width: var(--axis-w); flex: 0 0 auto; text-align: right; font-size: 11px; color: var(--ink2); }
+.v3-yaxis span { line-height: 0; }
+.v3-plotwrap { flex: 1 1 0; min-width: 0; }
+.v3-plot { position: relative; }
+.v3-plot-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.v3-gridline { position: absolute; left: 0; right: 0; border-top: 1px solid var(--grid); }
+.v3-cols { position: absolute; inset: 0; display: flex; gap: 4px; align-items: stretch; }
+.v3-cols > .v3-tip { flex: 1 1 0; min-width: 0; display: flex; }
+.v3-col { position: relative; width: 100%; height: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 3px; padding: 0 8%; }
+.v3-bar { flex: 1 1 0; max-width: 20px; border-radius: 5px 5px 2px 2px; }
+.v3-dot { position: absolute; left: 50%; border-radius: 50%; border: 2px solid var(--bg); transform: translate(-50%, 50%); box-sizing: border-box; }
+.v3-xlabels { display: flex; gap: 4px; margin-top: 9px; }
+.v3-xlabel { flex: 1 1 0; min-width: 0; text-align: center; }
+.v3-xmain { font-size: 12px; font-weight: 600; }
+.v3-xtag { font-size: 10.5px; margin-top: 2px; color: var(--ink2); min-height: 13px; }
+.v3-xtag[data-tone='warn'] { color: var(--warn); }
+.v3-thr-line { position: absolute; left: 0; right: 0; height: 0; border-top: 2px dashed var(--thr); pointer-events: none; z-index: 5; }
+.v3-thr-handle { position: absolute; right: 0; transform: translateY(50%); z-index: 6; background: var(--thr); color: var(--thr-ink); font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; box-shadow: 0 4px 14px rgba(0, 0, 0, .3); cursor: ns-resize; touch-action: none; user-select: none; white-space: nowrap; }
+
+.v3-gap { border-top: 1px solid var(--grid); padding-top: 16px; display: flex; flex-direction: column; gap: 14px; }
+.v3-gap-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.v3-gap-title { margin: 0; font-size: 13px; font-weight: 600; }
+.v3-gap-value { font-size: 28px; margin-top: 6px; }
+.v3-gap-chips { display: flex; gap: 10px; flex-wrap: wrap; }
+.v3-gapchip { padding: 9px 14px; }
+.v3-gapchip div { font-size: 11.5px; color: var(--ink2); }
+.v3-gapchip b { font-size: 16px; margin-top: 2px; display: block; }
+.v3-gap-axis { width: var(--axis-w); flex: 0 0 auto; text-align: right; font-size: 10.5px; line-height: 1.25; color: var(--ink2); display: flex; flex-direction: column; justify-content: space-between; height: 120px; }
+.v3-gap-plot { position: relative; height: 120px; }
+.v3-gap-zero { position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid var(--ink2); opacity: .5; }
+.v3-gapcol { padding: 0; }
+.v3-gapbar { position: absolute; left: 50%; width: 20px; margin-left: -10px; border-radius: 4px; }
+.v3-gapdash { position: absolute; left: 0; right: 0; top: 50%; margin-top: -8px; text-align: center; font-size: 11px; color: var(--ink2); }
+.v3-gapamt { font-size: 11.5px; min-height: 15px; }
+.v3-gap-note { text-align: center; margin: 6px 0 0; }
+
+.v3-gap-allphone { display: none; }
+.v3-details { font-size: 12.5px; color: var(--ink2); }
+.v3-details summary { cursor: pointer; width: max-content; padding: 4px 0; }
+.v3-details summary:focus-visible { outline: 2px solid var(--gen); outline-offset: 2px; }
+.v3-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12.5px; color: var(--ink); }
+.v3-table th, .v3-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--grid); }
+.v3-table thead th { color: var(--ink2); font-weight: 600; font-size: 11.5px; }
+.v3-table tbody th { font-weight: 600; }
+
+@media (max-width: 700px) {
+  .v3-ceb { --plot-h: 140px; --axis-w: 34px; }
+  .v3-tilehead { gap: 8px; }
+  .v3-controls { gap: 6px; justify-content: space-between; width: 100%; }
+  .v3-steplabel { font-size: 11px; min-width: 100px; }
+  .v3-legendrow { gap: 6px; }
+  .v3-legend { gap: 8px; font-size: 10px; }
+  .v3-legend span:nth-child(n+3) { display: none; }
+  .v3-markrow { width: 100%; justify-content: space-between; gap: 6px; font-size: 11px; }
+  .v3-markrow .v3-field { height: 28px; font-size: 12px; padding: 0 6px; }
+  .v3-markrow .v3-pill { font-size: 10.5px; padding: 3px 8px; }
+  .v3-yaxis, .v3-gap-axis { font-size: 9.5px; }
+  .v3-chartgrid { gap: 6px; }
+  .v3-cols, .v3-xlabels { gap: 2px; }
+  .v3-col { padding: 0 4%; gap: 2px; }
+  .v3-bar { max-width: 13px; border-radius: 3px 3px 1px 1px; }
+  .v3-xmain { font-size: 10px; }
+  .v3-xtag { font-size: 9px; }
+  .v3-thr-handle { font-size: 10.5px; padding: 5px 9px; }
+  .v3-gap { padding-top: 8px; gap: 6px; }
+  .v3-gap-title { font-size: 11px; font-weight: 500; color: var(--ink2); }
+  .v3-gap-value { font-size: 15px; margin-top: 2px; }
+  .v3-gap-head .v3-sub { font-size: 9.5px; }
+  .v3-gap-chips { display: none; }
+  .v3-gap-axis { height: 44px; font-size: 8.5px; }
+  .v3-gap-plot { height: 44px; }
+  .v3-gapbar { width: 10px; margin-left: -5px; border-radius: 2px; }
+  .v3-gapamt { font-size: 9.5px; }
+  .v3-gap-note { display: none; }
+  .v3-gap-allphone { display: block; font-size: 9.5px; color: var(--ink2); }
+}
