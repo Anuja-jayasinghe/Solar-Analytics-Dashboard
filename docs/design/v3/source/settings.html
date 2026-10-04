@@ -1,0 +1,49 @@
+      <sc-if value="{{isSet}}" hint-placeholder-val="{{ false }}">
+      <section class="glass card" aria-label="Appearance">
+        <div><h2 class="h2">Appearance</h2><div class="sub">Every theme is just a set of colour variables, so new ones drop in here without touching the screens.</div></div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap: 14px">
+          <sc-for list="{{themeCards}}" as="t" hint-placeholder-count="3">
+            <button onClick="{{t.pick}}" aria-pressed="{{t.on}}" style="text-align: left; border-radius: 18px; padding: 12px; cursor: pointer; font-family: inherit; color: var(--ink); border: 2px solid {{t.border}}; background: var(--chip-bg); opacity: {{t.opacity}}">
+              <div style="height: 86px; border-radius: 12px; position: relative; overflow: hidden; background: {{t.bg}}">
+                <div style="position: absolute; left: 10px; top: 10px; width: 54px; height: 26px; border-radius: 8px; background: {{t.glass}}"></div>
+                <div style="position: absolute; left: 70px; top: 10px; width: 54px; height: 26px; border-radius: 8px; background: {{t.glass}}"></div>
+                <div style="position: absolute; left: 10px; bottom: 10px; right: 10px; height: 26px; border-radius: 8px; background: {{t.glass}}"></div>
+                <div style="position: absolute; right: 12px; top: 12px; width: 16px; height: 16px; border-radius: 50%; background: {{t.gen}}"></div>
+                <div style="position: absolute; right: 36px; top: 16px; width: 10px; height: 10px; border-radius: 50%; background: {{t.ceb}}"></div>
+              </div>
+              <div style="margin-top: 10px; font-size: 13.5px; font-weight: 700">{{t.name}}</div>
+              <div style="font-size: 11.5px; color: var(--ink2)">{{t.note}}</div>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+
+      <section class="glass card" aria-label="Plant settings">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap">
+          <div><h2 class="h2">Plant</h2><div class="sub">Used by the daily target and the live gauge. Admin only.</div></div>
+          <span class="pill" style="{{adminOnlyStyle}}">{{adminOnlyText}}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 14px">
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--ink2)">Daily target (kWh)<input class="field" type="number" value="150" disabled="{{plantLocked}}" style="width: 100%"></label>
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--ink2)">Array size (kWp, DC)<input class="field" type="number" value="41.76" disabled="{{plantLocked}}" style="width: 100%"></label>
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--ink2)">Inverter rating (kW, AC)<input class="field" type="number" value="40" disabled="{{plantLocked}}" style="width: 100%"></label>
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--ink2)">Reference tariff (LKR / kWh)<input class="field" type="number" value="44" disabled="{{plantLocked}}" style="width: 100%"></label>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap"><button class="btn primary" disabled="{{plantLocked}}">Save</button><span class="sub" style="margin: 0">The reference tariff is only used if you choose it for LKR figures; the default is each bill's own rate.</span></div>
+      </section>
+
+      <section class="glass card" aria-label="Preferences">
+        <div><h2 class="h2">Preferences</h2><div class="sub">Per person, saved in this browser.</div></div>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <sc-for list="{{prefRows}}" as="p" hint-placeholder-count="3">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--grid)">
+              <div><div style="font-size: 13.5px; font-weight: 600">{{p.label}}</div><div class="sub" style="margin-top: 2px">{{p.note}}</div></div>
+              <span class="pill" style="{{p.style}}">{{p.value}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+      <section class="glass card" aria-label="Prototype">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap"><div><h2 class="h2">Preview as</h2><div class="sub">Prototype only: switch role to see what each person gets.</div></div><div class="seg" role="group" aria-label="Role"><sc-for list="{{roleOpts}}" as="o" hint-placeholder-count="3"><button class="segbtn" onClick="{{o.pick}}" aria-pressed="{{o.on}}">{{o.label}}</button></sc-for></div></div>
+      </section>
+      </sc-if>

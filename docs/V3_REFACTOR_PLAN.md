@@ -197,3 +197,18 @@ Newest first. One entry per meaningful change: date, what, commit/PR, deviations
   (CEB 5,859 vs inverter 3,827) is a CEB meter-read timing shift, not a data error: with the next bill (2,748 vs 4,675) the pair totals
   8,607 vs 8,501 kWh, 1.2% apart.
 - **2026-10-04 (merge + nightly live)** — PR #164 merged to main (a5f24f2); production serves revision a5f24f2 with v1 intact, readiness probe healthy, /api/data refuses unauthenticated calls. The nightly collector ran on GitHub with the real secrets (manual run: 7 days, 1,337 points, 0 failures) and then on its own schedule. Freshness check armed (#165). CLAUDE.md updated to the v3 state.
+- **2026-10-04 (UI design, round 3, issue #159)** — Artifact prototype revised after the owner's review (still design only, no frontend code).
+  Decisions recorded: Statistics tile keeps only average per day, best day, lowest day, drawn on one range chart (total, specific yield,
+  capacity factor, estimated earnings, days-above removed: duplicates or not relevant); "Mark above" threshold added to CEB vs Inverter
+  (inverter series highlighted); data-freshness ring moved into the daily-target tile, gauge keeps only the online bulb; inverter generation
+  defaults to an area chart; new "Generation through the day" tile (pick a day, kWh per hour); sidebar is full height, collapses to icons,
+  duplicate buttons removed (theme switch is in the header and in Settings > Appearance); all colours are theme variables so further themes
+  are a block of tokens plus a card in Settings; Pro metrics, Admin (bills, access, data health), Settings and a sign-in doorway are in the
+  prototype. The earnings difference is kept and specified as **LR-004** (`shared/domain/earningsDifference.js`, 6 tests): per complete bill
+  `(inverter kWh - CEB kWh) x that bill's own rate`, ineligible bills excluded and counted, never today's tariff, no "accounting error"
+  warning. Dropped by the owner after review: the "Revenue lost to downtime" estimate card (modelled figure, no rule). Settings page reads/writes and weather source are build-phase items (#160).
+- **2026-10-04 (UI design signed off, #159)** — Owner approved the design after four review rounds. Saved to `docs/design/v3/` (README with decisions and
+  build rules, the published boards, the editable sources and demo-data scripts). Round 4 changes: money-gap sign convention fixed (CEB paid minus
+  generation worth; negative = CEB paid less; LR-004, code and tests updated), "Revenue lost to downtime" removed, Pro metrics / Sign in / Admin
+  and phone boards added, and a dedicated compact phone Overview (hero + totals + CEB chart in the first 844 px, Explore tiles behind tabs).
+  Next: P5b frontend build (#160) against `docs/design/v3/README.md`.

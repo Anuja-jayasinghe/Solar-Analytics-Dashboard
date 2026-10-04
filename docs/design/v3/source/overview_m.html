@@ -1,0 +1,207 @@
+      <sc-if value="{{isOvM}}" hint-placeholder-val="{{ false }}">
+      <!-- PHONE OVERVIEW: first screen = hero (today + live) + 3 totals + CEB vs inverter; Explore tiles sit behind tabs -->
+      <section class="glass cp" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 12px; position: relative" aria-label="Today and live">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding-right: 8px; border-right: 1px solid var(--grid); min-width: 0">
+          <div style="position: relative; width: 92px; height: 92px; border-radius: 50%; overflow: hidden; border: 1.5px solid var(--glass-line); background: var(--well); box-sizing: border-box">
+            <div class="liquid" style="top: {{fillTop}}%">
+              <svg class="wave" viewBox="0 0 200 14" preserveAspectRatio="none"><path d="M0 7 Q 12.5 0 25 7 T 50 7 T 75 7 T 100 7 T 125 7 T 150 7 T 175 7 T 200 7 V 14 H 0 Z" style="fill: var(--gen-hi)"></path></svg>
+              <svg class="wave two" viewBox="0 0 200 14" preserveAspectRatio="none"><path d="M0 7 Q 12.5 14 25 7 T 50 7 T 75 7 T 100 7 T 125 7 T 150 7 T 175 7 T 200 7 V 14 H 0 Z" style="fill: var(--gen)"></path></svg>
+            </div>
+            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center"><span class="num" style="font-size: 21px; color: var(--ink)">{{fillPct}}%</span></div>
+          </div>
+          <div style="text-align: center; line-height: 1.25">
+            <div class="num" style="font-size: 18px">{{todayKwh}}<span style="font-size: 10.5px; font-weight: 500; color: var(--ink2); margin-left: 3px">kWh today</span></div>
+            <div style="font-size: 10.5px; color: var(--ink2)">of {{target}} · peak {{peakKw}} kW at {{peakAt}}</div>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 2px; padding-left: 8px; min-width: 0; position: relative">
+          <span style="position: absolute; top: -2px; right: -2px; display: inline-flex; align-items: center; gap: 5px"><span class="bulb" style="width: 8px; height: 8px; background: var(--good); box-shadow: 0 0 0 2px var(--good-a20), 0 0 8px var(--good)"></span><span style="font-size: 10px; color: var(--ink2); font-weight: 600">Online</span></span>
+          <div style="position: relative; width: 132px; height: 100px; margin-top: 8px">
+            <svg viewBox="0 0 200 160" width="132" height="100" style="display: block">
+              <path d="M 30.72 140 A 80 80 0 1 1 169.28 140" pathLength="100" fill="none" style="stroke: var(--track)" stroke-width="15" stroke-linecap="round"></path>
+              <path d="M 30.72 140 A 80 80 0 1 1 169.28 140" pathLength="100" fill="none" stroke="url(#gaugeGrad)" stroke-width="15" stroke-linecap="round" stroke-dasharray="{{gaugeDash}}"></path>
+            </svg>
+            <div style="position: absolute; left: 0; right: 0; top: 36px; text-align: center"><div class="num" style="font-size: 22px; line-height: 1">{{liveKw}}</div><div style="font-size: 10.5px; color: var(--ink2); margin-top: 2px">kW now</div></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--ink2)"><span>{{liveSharePct}}% of 40 kW</span><span style="opacity: .5">·</span><span style="display: inline-flex; align-items: center; gap: 4px; opacity: .6"><svg width="11" height="11" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" style="stroke: var(--track)" stroke-width="2.5"></circle><circle cx="10" cy="10" r="8" fill="none" style="stroke: var(--ink)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="40 50.3" transform="rotate(-90 10 10)"></circle></svg>2 min</span></div>
+        </div>
+      </section>
+
+      <section style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px" aria-label="Totals">
+        <sc-for list="{{mKpis}}" as="k" hint-placeholder-count="3">
+          <div class="glass kp" style="padding: 8px 10px; display: flex; flex-direction: column; gap: 1px; min-width: 0">
+            <div style="font-size: 10px; color: var(--ink2); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{k.label}}</div>
+            <div class="num" style="font-size: 15px; line-height: 1.2; white-space: nowrap">{{k.value}}<span style="font-size: 10px; font-weight: 500; color: var(--ink2); margin-left: 3px">{{k.unit}}</span></div>
+            <div style="font-size: 9.5px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{k.sub}}</div>
+          </div>
+        </sc-for>
+      </section>
+
+      <section class="glass cp" style="display: flex; flex-direction: column; gap: 8px; padding: 12px" aria-label="CEB versus inverter">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px">
+          <h2 class="h2" style="font-size: 14px">CEB vs Inverter</h2>
+          <div style="display: flex; align-items: center; gap: 4px">
+            <button class="navbtn sm" onClick="{{cebPrev}}" disabled="{{cebPrevOff}}" aria-label="Earlier periods"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></button>
+            <span style="font-size: 11px; font-weight: 600; min-width: 112px; text-align: center">{{cebRangeLabel}}</span>
+            <button class="navbtn sm" onClick="{{cebNext}}" disabled="{{cebNextOff}}" aria-label="Later periods"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></button>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px">
+          <div class="seg sm" role="group" aria-label="Chart style"><sc-for list="{{cebStyles}}" as="o" hint-placeholder-count="3"><button class="segbtn" onClick="{{o.pick}}" aria-pressed="{{o.on}}">{{o.label}}</button></sc-for></div>
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--ink2)"><span style="display: flex; align-items: center; gap: 4px"><span style="width: 8px; height: 8px; border-radius: 2px; background: var(--gen)"></span>Inverter</span><span style="display: flex; align-items: center; gap: 4px"><span style="width: 8px; height: 8px; border-radius: 2px; background: var(--ceb)"></span>CEB</span></div>
+          <div class="seg sm" role="group" aria-label="Periods shown"><sc-for list="{{cebCounts}}" as="o" hint-placeholder-count="3"><button class="segbtn" onClick="{{o.pick}}" aria-pressed="{{o.on}}">{{o.label}}</button></sc-for></div>
+        </div>
+
+        <div style="display: flex; gap: 6px">
+          <div style="display: flex; flex-direction: column; justify-content: space-between; height: 140px; text-align: right; font-size: 9.5px; color: var(--ink2); width: 30px; flex: 0 0 auto">
+            <sc-for list="{{cebAxis}}" as="a" hint-placeholder-count="5"><span style="line-height: 0">{{a.label}}</span></sc-for>
+          </div>
+          <div style="flex: 1 1 0; min-width: 0">
+            <div style="position: relative; height: 140px">
+              <sc-for list="{{cebAxis}}" as="a" hint-placeholder-count="5"><div style="position: absolute; left: 0; right: 0; bottom: {{a.pct}}%; border-top: 1px solid var(--grid)"></div></sc-for>
+              <sc-if value="{{cebIsBars}}" hint-placeholder-val="{{ true }}">
+                <div style="position: absolute; inset: 0; display: flex; gap: 2px; align-items: stretch">
+                  <sc-for list="{{cebCols}}" as="c" hint-placeholder-count="8">
+                    <div style="flex: 1 1 0; min-width: 0; display: flex; align-items: flex-end; justify-content: center; gap: 2px; padding: 0 4%">
+                      <div style="flex: 1 1 0; max-width: 13px; border-radius: 3px 3px 1px 1px; box-sizing: border-box; {{c.invStyle}}"></div>
+                      <div style="flex: 1 1 0; max-width: 13px; border-radius: 3px 3px 1px 1px; box-sizing: border-box; {{c.cebStyle}}"></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{cebIsLine}}" hint-placeholder-val="{{ false }}">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none">
+                  <path d="{{cebAreaInv}}" style="fill: var(--gen-a16); stroke: none; display: {{cebAreaShow}}"></path>
+                  <path d="{{cebLineInv}}" fill="none" style="stroke: var(--gen)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+                  <path d="{{cebLineCeb}}" fill="none" style="stroke: var(--ceb)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+                </svg>
+              </sc-if>
+              <div style="position: absolute; left: 0; right: 0; bottom: {{cebThrPct}}%; height: 0; border-top: 1.5px dashed var(--thr); pointer-events: none; z-index: 5"></div>
+              <div onPointerDown="{{mCebDragStart}}" onPointerMove="{{mCebDragMove}}" onPointerUp="{{dragEnd}}" onPointerCancel="{{dragEnd}}" style="position: absolute; right: 0; bottom: {{cebThrPct}}%; transform: translateY(50%); z-index: 6; touch-action: none; cursor: ns-resize; background: var(--thr); color: var(--thr-ink); font-size: 10.5px; font-weight: 700; padding: 5px 9px; border-radius: 999px; box-shadow: 0 3px 10px rgba(0,0,0,.3)">{{cebThr}} ⇅</div>
+            </div>
+            <div style="display: flex; gap: 2px; margin-top: 5px">
+              <sc-for list="{{cebCols}}" as="c" hint-placeholder-count="8">
+                <div style="flex: 1 1 0; min-width: 0; text-align: center"><div style="font-size: 10px; font-weight: 600">{{c.label}}</div><div style="font-size: 9px; margin-top: 1px; {{c.tagStyle}}">{{c.tag}}</div></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11px; color: var(--ink2)">
+          <label style="display: flex; align-items: center; gap: 6px">Mark above <input class="field" type="number" min="0" step="50" value="{{cebThr}}" onChange="{{onCebThr}}" style="width: 66px; height: 28px; font-size: 12px; padding: 0 6px" aria-label="Threshold in kWh"></label>
+          <span style="padding: 4px 9px; border-radius: 999px; background: var(--gen-a16); color: var(--gen); font-weight: 600; font-size: 10.5px">{{cebAboveShort}}</span>
+        </div>
+
+        <div style="border-top: 1px solid var(--grid); padding-top: 8px; display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px">
+            <span style="font-size: 11px; color: var(--ink2)">Money gap, CEB paid minus generation worth</span>
+            <span class="num" style="font-size: 15px; color: {{edColor}}">{{edWindow}}</span>
+          </div>
+          <div style="display: flex; gap: 6px">
+            <div style="width: 30px; flex: 0 0 auto; font-size: 8.5px; line-height: 1.15; color: var(--ink2); text-align: right; display: flex; flex-direction: column; justify-content: space-between; height: 44px"><span style="color: var(--good)">paid more</span><span style="color: var(--warn)">paid less</span></div>
+            <div style="flex: 1 1 0; position: relative; height: 44px">
+              <div style="position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid var(--ink2); opacity: .5"></div>
+              <div style="position: absolute; inset: 0; display: flex; gap: 2px">
+                <sc-for list="{{edCols}}" as="c" hint-placeholder-count="8">
+                  <div style="flex: 1 1 0; min-width: 0; position: relative"><div style="position: absolute; left: 50%; width: 10px; margin-left: -5px; border-radius: 2px; {{c.style}}"></div><div style="position: absolute; left: 0; right: 0; top: 50%; margin-top: -7px; text-align: center; font-size: 10px; color: var(--ink2); display: {{c.dashShow}}">–</div></div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          <div style="font-size: 9.5px; color: var(--ink2)">All-time {{edAll}} over {{edBills}} bills · each at its own rate · dash = days missing</div>
+        </div>
+      </section>
+
+      <!-- Explore: one tile, three tabs -->
+      <section class="glass cp" style="display: flex; flex-direction: column; gap: 10px; padding: 12px" aria-label="Explore">
+        <div class="seg sm" role="tablist" aria-label="Explore" style="align-self: stretch; display: flex"><sc-for list="{{mTabs}}" as="o" hint-placeholder-count="3"><button class="segbtn" style="flex: 1 1 0" onClick="{{o.pick}}" aria-pressed="{{o.on}}">{{o.label}}</button></sc-for></div>
+
+        <sc-if value="{{tabGen}}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap">
+            <div class="seg sm" role="group" aria-label="Range"><sc-for list="{{rangeOpts}}" as="o" hint-placeholder-count="4"><button class="segbtn" onClick="{{o.pick}}" aria-pressed="{{o.on}}">{{o.label}}</button></sc-for></div>
+            <div class="seg sm" role="group" aria-label="Chart style"><sc-for list="{{dayStyles}}" as="o" hint-placeholder-count="3"><button class="segbtn" onClick="{{o.pick}}" aria-pressed="{{o.on}}">{{o.label}}</button></sc-for></div>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px">
+            <button class="navbtn sm" onClick="{{dayPrev}}" disabled="{{dayNavOff}}" aria-label="Earlier"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></button>
+            <span style="font-size: 11.5px; font-weight: 600; text-align: center">{{dayRangeLabel}}</span>
+            <button class="navbtn sm" onClick="{{dayNext}}" disabled="{{dayNextOff}}" aria-label="Later"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></button>
+          </div>
+          <sc-if value="{{isCustom}}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; gap: 8px"><input class="field" type="date" value="{{cFrom}}" min="{{minDate}}" max="{{maxDate}}" onChange="{{onFrom}}" style="flex: 1 1 0; min-width: 0; height: 30px; font-size: 12px"><input class="field" type="date" value="{{cTo}}" min="{{minDate}}" max="{{maxDate}}" onChange="{{onTo}}" style="flex: 1 1 0; min-width: 0; height: 30px; font-size: 12px"></div>
+          </sc-if>
+          <div style="display: flex; gap: 6px">
+            <div style="display: flex; flex-direction: column; justify-content: space-between; height: 150px; text-align: right; font-size: 9.5px; color: var(--ink2); width: 30px; flex: 0 0 auto"><sc-for list="{{dayAxis}}" as="a" hint-placeholder-count="5"><span style="line-height: 0">{{a.label}}</span></sc-for></div>
+            <div style="flex: 1 1 0; min-width: 0">
+              <div style="position: relative; height: 150px">
+                <sc-for list="{{dayAxis}}" as="a" hint-placeholder-count="5"><div style="position: absolute; left: 0; right: 0; bottom: {{a.pct}}%; border-top: 1px solid var(--grid)"></div></sc-for>
+                <sc-if value="{{dayIsBars}}" hint-placeholder-val="{{ false }}">
+                  <div style="position: absolute; inset: 0; display: flex; gap: 1px; align-items: stretch"><sc-for list="{{dayCols}}" as="c" hint-placeholder-count="30"><div style="flex: 1 1 0; min-width: 0; display: flex; align-items: flex-end; justify-content: center; padding: 0 {{barPadM}}%"><div style="width: 100%; max-width: 16px; border-radius: 3px 3px 1px 1px; {{c.style}}"></div></div></sc-for></div>
+                </sc-if>
+                <sc-if value="{{dayIsLine}}" hint-placeholder-val="{{ true }}">
+                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none">
+                    <path d="{{dayArea}}" fill="url(#dayFill)" style="display: {{dayAreaShow}}"></path>
+                    <path d="{{dayLine}}" fill="none" style="stroke: var(--gen)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+                  </svg>
+                </sc-if>
+                <div style="position: absolute; left: 0; right: 0; bottom: {{thrPct}}%; height: 0; border-top: 1.5px dashed var(--thr); pointer-events: none; z-index: 5"></div>
+                <div onPointerDown="{{mDayDragStart}}" onPointerMove="{{mDayDragMove}}" onPointerUp="{{dragEnd}}" onPointerCancel="{{dragEnd}}" style="position: absolute; right: 0; bottom: {{thrPct}}%; transform: translateY(50%); z-index: 6; touch-action: none; cursor: ns-resize; background: var(--thr); color: var(--thr-ink); font-size: 10.5px; font-weight: 700; padding: 5px 9px; border-radius: 999px; box-shadow: 0 3px 10px rgba(0,0,0,.3)">{{thrValue}} ⇅</div>
+              </div>
+              <div style="display: flex; gap: 1px; margin-top: 5px"><sc-for list="{{dayCols}}" as="c" hint-placeholder-count="30"><div style="flex: 1 1 0; min-width: 0; text-align: center; font-size: 9.5px; color: var(--ink2); white-space: nowrap; overflow: visible; height: 12px">{{c.label}}</div></sc-for></div>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11px; color: var(--ink2)">
+            <label style="display: flex; align-items: center; gap: 6px">Mark above <input class="field" type="number" min="0" step="1" value="{{thrValue}}" onChange="{{onThr}}" style="width: 66px; height: 28px; font-size: 12px; padding: 0 6px" aria-label="Threshold"> <span>{{thrUnit}}</span></label>
+            <span style="padding: 4px 9px; border-radius: 999px; background: var(--gen-a16); color: var(--gen); font-weight: 600; font-size: 10.5px">{{aboveText}}</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{tabDay}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px">
+            <button class="navbtn sm" onClick="{{hrPrev}}" disabled="{{hrPrevOff}}" aria-label="Previous day"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></button>
+            <input class="field" type="date" value="{{hrDate}}" min="{{minDate}}" max="{{maxDate}}" onChange="{{onHrDate}}" aria-label="Day" style="height: 30px; font-size: 12px; flex: 1 1 0; min-width: 0">
+            <button class="navbtn sm" onClick="{{hrNext}}" disabled="{{hrNextOff}}" aria-label="Next day"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></button>
+            <div class="seg sm" role="group" aria-label="Chart style"><sc-for list="{{hrStyles}}" as="o" hint-placeholder-count="2"><button class="segbtn" onClick="{{o.pick}}" aria-pressed="{{o.on}}">{{o.label}}</button></sc-for></div>
+          </div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap"><span class="pill" style="background: var(--gen-a16); color: var(--gen); font-size: 10.5px; padding: 3px 9px">{{hrTotal}}</span><span class="pill" style="background: var(--chip-bg); color: var(--ink2); font-size: 10.5px; padding: 3px 9px">{{hrPeak}}</span></div>
+          <div style="display: flex; gap: 6px">
+            <div style="display: flex; flex-direction: column; justify-content: space-between; height: 150px; text-align: right; font-size: 9.5px; color: var(--ink2); width: 30px; flex: 0 0 auto"><sc-for list="{{hrAxis}}" as="a" hint-placeholder-count="5"><span style="line-height: 0">{{a.label}}</span></sc-for></div>
+            <div style="flex: 1 1 0; min-width: 0">
+              <div style="position: relative; height: 150px">
+                <sc-for list="{{hrAxis}}" as="a" hint-placeholder-count="5"><div style="position: absolute; left: 0; right: 0; bottom: {{a.pct}}%; border-top: 1px solid var(--grid)"></div></sc-for>
+                <sc-if value="{{hrIsArea}}" hint-placeholder-val="{{ true }}">
+                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none"><path d="{{hrArea}}" fill="url(#hrFill)"></path><path d="{{hrLine}}" fill="none" style="stroke: var(--gen)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></path></svg>
+                </sc-if>
+                <div style="position: absolute; inset: 0; display: flex; align-items: stretch"><sc-for list="{{hrCols}}" as="c" hint-placeholder-count="15"><div style="flex: 1 1 0; min-width: 0; position: relative; display: flex; align-items: flex-end; justify-content: center"><div style="width: 60%; max-width: 16px; border-radius: 3px 3px 1px 1px; {{c.barStyle}}"></div></div></sc-for></div>
+              </div>
+              <div style="display: flex; margin-top: 5px"><sc-for list="{{hrCols}}" as="c" hint-placeholder-count="15"><div style="flex: 1 1 0; min-width: 0; text-align: center; font-size: 9.5px; color: var(--ink2)">{{c.label}}</div></sc-for></div>
+              <div style="text-align: center; font-size: 9.5px; color: var(--ink2); margin-top: 3px">hour of day (9 = 09:00 to 10:00)</div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{tabStats}}" hint-placeholder-val="{{ false }}">
+          <div style="font-size: 10.5px; color: var(--ink2)">{{statsRange}}</div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px">
+            <sc-for list="{{stats}}" as="s" hint-placeholder-count="3">
+              <div class="chip" style="padding: 8px 9px; display: flex; flex-direction: column; gap: 2px; min-width: 0; border-left: 3px solid {{s.color}}">
+                <div style="font-size: 10px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.shortLabel}}</div>
+                <div class="num" style="font-size: 16px; white-space: nowrap">{{s.value}}<span style="font-size: 9.5px; font-weight: 500; color: var(--ink2); margin-left: 2px">{{s.unit}}</span></div>
+                <div style="font-size: 9.5px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.sub}}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="position: relative; height: 110px; border-radius: 12px; background: var(--chip-bg); border: 1px solid var(--chip-line)">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; inset: 8px 10px; width: calc(100% - 20px); height: calc(100% - 16px); overflow: visible">
+              <path d="{{spArea}}" fill="url(#stFill)"></path>
+              <path d="{{spLine}}" fill="none" style="stroke: var(--gen)" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+              <line x1="0" x2="100" y1="{{spAvgY}}" y2="{{spAvgY}}" style="stroke: var(--ink2)" stroke-width="1.2" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"></line>
+            </svg>
+            <div style="position: absolute; inset: 8px 10px">
+              <span style="position: absolute; left: {{bestX}}%; top: {{bestY}}%; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%; background: var(--gen); border: 2px solid var(--bg); box-shadow: 0 0 0 3px var(--gen-a30); box-sizing: border-box"></span>
+              <span style="position: absolute; left: {{worstX}}%; top: {{worstY}}%; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%; background: var(--warn); border: 2px solid var(--bg); box-shadow: 0 0 0 3px var(--warn-a20); box-sizing: border-box"></span>
+            </div>
+          </div>
+          <div style="font-size: 10px; color: var(--ink2)">Over the range chosen on the Generation tab · dashed line = average</div>
+        </sc-if>
+      </section>
+      </sc-if>

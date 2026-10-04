@@ -1,0 +1,148 @@
+      <sc-if value="{{isPro}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap">
+        <div class="sub" style="margin: 0; max-width: 560px">Health of the plant, not its output: is it running, what tripped it, are the strings balanced, and what the bills really paid.</div>
+        <div class="seg" role="group" aria-label="Range"><sc-for list="{{proRanges}}" as="o" hint-placeholder-count="3"><button class="segbtn" onClick="{{o.pick}}" aria-pressed="{{o.on}}">{{o.label}}</button></sc-for></div>
+      </div>
+
+      <!-- health row -->
+      <section class="kpi2" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr)); gap: 20px" aria-label="Health">
+        <sc-for list="{{proKpis}}" as="k" hint-placeholder-count="4">
+          <div class="glass ringtile" data-tip="{{k.tip}}" style="padding: 18px 22px; display: flex; align-items: center; gap: 16px; cursor: default">
+            <svg width="62" height="62" viewBox="0 0 36 36" style="flex: 0 0 auto"><circle cx="18" cy="18" r="15.5" fill="none" style="stroke: var(--track)" stroke-width="4"></circle><circle cx="18" cy="18" r="15.5" fill="none" style="stroke: {{k.color}}" stroke-width="4" stroke-linecap="round" pathLength="100" stroke-dasharray="{{k.dash}}" transform="rotate(-90 18 18)"></circle></svg>
+            <div style="min-width: 0">
+              <div style="font-size: 12.5px; color: var(--ink2); font-weight: 500">{{k.label}}</div>
+              <div class="num" style="font-size: 26px; line-height: 1.15">{{k.value}}<span style="font-size: 13px; font-weight: 500; color: var(--ink2); margin-left: 5px">{{k.unit}}</span></div>
+              <div style="font-size: 11.5px; color: var(--ink2)">{{k.sub}}</div>
+            </div>
+          </div>
+        </sc-for>
+      </section>
+
+      <!-- uptime strip -->
+      <section class="glass card" aria-label="Uptime by day">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap">
+          <div><h2 class="h2">Uptime by day</h2><div class="sub">Share of the daylight window the inverter was running · hover a day</div></div>
+          <div style="display: flex; gap: 16px; font-size: 12px; color: var(--ink2); flex-wrap: wrap">
+            <span style="display: flex; align-items: center; gap: 6px"><span style="width: 11px; height: 11px; border-radius: 3px; background: var(--good)"></span>99%+</span>
+            <span style="display: flex; align-items: center; gap: 6px"><span style="width: 11px; height: 11px; border-radius: 3px; background: var(--warn)"></span>95 to 99%</span>
+            <span style="display: flex; align-items: center; gap: 6px"><span style="width: 11px; height: 11px; border-radius: 3px; background: var(--bad)"></span>under 95%</span>
+            <span style="display: flex; align-items: center; gap: 6px"><span style="width: 11px; height: 11px; border-radius: 3px; background: var(--nodata)"></span>no data</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 3px; align-items: flex-end; height: 92px">
+          <sc-for list="{{upCols}}" as="c" hint-placeholder-count="30">
+            <div data-tip="{{c.tip}}" style="flex: 1 1 0; min-width: 0; border-radius: 4px; cursor: default; {{c.style}}"></div>
+          </sc-for>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--ink2)"><span>{{upFrom}}</span><span>{{upTo}}</span></div>
+      </section>
+
+      <!-- alarms + data & logger -->
+      <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 20px">
+        <div class="glass card" style="gap: 12px" aria-label="Alarm history">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px">
+            <div><h2 class="h2">Alarm history</h2><div class="sub">Latest first · inverter-reported</div></div>
+            <span class="pill" style="background: var(--chip-bg); color: var(--ink2)">{{alarmTotal}}</span>
+          </div>
+          <div style="overflow-x: auto">
+            <table class="t">
+              <thead><tr><th>When</th><th>Code</th><th>What</th><th>Length</th><th>Level</th></tr></thead>
+              <tbody>
+                <sc-for list="{{alarmRows}}" as="a" hint-placeholder-count="8">
+                  <tr data-tip="{{a.tip}}" style="cursor: default"><td style="white-space: nowrap">{{a.when}}</td><td class="num" style="font-size: 12px">{{a.code}}</td><td>{{a.msg}}</td><td style="white-space: nowrap">{{a.len}}</td><td><span class="pill" style="{{a.lvlStyle}}">{{a.lvl}}</span></td></tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+          <div class="sub" style="margin: 0">Code 1D4C2 (lost internet) is shown as a logger event, never as inverter downtime.</div>
+        </div>
+
+        <div class="glass card" style="gap: 14px" aria-label="Data and logger">
+          <div><h2 class="h2">Data and logger</h2><div class="sub">Can we trust the numbers?</div></div>
+          <sc-for list="{{dataRows}}" as="r" hint-placeholder-count="4">
+            <div data-tip="{{r.tip}}" style="display: flex; flex-direction: column; gap: 6px; cursor: default">
+              <div style="display: flex; justify-content: space-between; font-size: 12.5px"><span style="color: var(--ink2)">{{r.label}}</span><span style="font-weight: 600">{{r.value}}</span></div>
+              <div style="height: 6px; border-radius: 99px; background: var(--track); overflow: hidden"><div style="height: 100%; border-radius: 99px; background: {{r.color}}; width: {{r.pct}}%"></div></div>
+            </div>
+          </sc-for>
+          <div class="chip" style="padding: 11px 14px; font-size: 12px; color: var(--ink2)">Last nightly collection: today 00:15 · 7 days re-read · all tables written</div>
+        </div>
+      </section>
+
+      <!-- electrical health -->
+      <section class="glass card" aria-label="Electrical health">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap">
+          <div><h2 class="h2">Electrical health</h2><div class="sub">Latest full day · 14 Sep 2036 · while producing</div></div>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap">
+            <span class="pill" style="background: var(--chip-bg); color: var(--ink2)">Grid {{acv}} V</span>
+            <span class="pill" style="background: var(--chip-bg); color: var(--ink2)">Power factor {{pf}}</span>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 22px">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <div style="font-size: 12.5px; font-weight: 600">String balance <span class="mut" style="font-weight: 500">· average current</span></div>
+            <sc-for list="{{stringRows}}" as="r" hint-placeholder-count="8">
+              <div data-tip="{{r.tip}}" style="display: flex; align-items: center; gap: 10px; font-size: 12px; cursor: default">
+                <span style="width: 34px; color: var(--ink2)">{{r.label}}</span>
+                <div style="flex: 1 1 0; height: 10px; border-radius: 99px; background: var(--track); overflow: hidden"><div style="height: 100%; border-radius: 99px; background: {{r.color}}; width: {{r.pct}}%"></div></div>
+                <span class="num" style="width: 52px; text-align: right; font-size: 12px">{{r.value}}</span>
+              </div>
+            </sc-for>
+            <div class="sub" style="margin: 0">{{stringNote}}</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <div style="font-size: 12.5px; font-weight: 600">Inverter temperature <span class="mut" style="font-weight: 500">· hourly max, °C</span></div>
+            <div style="position: relative; height: 150px">
+              <sc-for list="{{tempAxis}}" as="a" hint-placeholder-count="3"><div style="position: absolute; left: 0; right: 0; bottom: {{a.pct}}%; border-top: 1px solid var(--grid); font-size: 10.5px; color: var(--ink2)"><span style="position: relative; top: -14px">{{a.label}}</span></div></sc-for>
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none">
+                <defs><linearGradient id="tempFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color: var(--gen); stop-opacity: .35"></stop><stop offset="1" style="stop-color: var(--gen); stop-opacity: .02"></stop></linearGradient></defs>
+                <path d="{{tempArea}}" fill="url(#tempFill)"></path>
+                <path d="{{tempLine}}" fill="none" style="stroke: var(--gen)" stroke-width="2.2" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+              </svg>
+              <div style="position: absolute; inset: 0; display: flex"><sc-for list="{{tempCols}}" as="c" hint-placeholder-count="12"><div data-tip="{{c.tip}}" style="flex: 1 1 0; position: relative"><span style="position: absolute; left: 50%; bottom: {{c.pct}}%; width: 7px; height: 7px; margin: 0 0 -3.5px -3.5px; border-radius: 50%; background: var(--gen)"></span></div></sc-for></div>
+            </div>
+            <div style="display: flex"><sc-for list="{{tempCols}}" as="c" hint-placeholder-count="12"><div style="flex: 1 1 0; text-align: center; font-size: 10.5px; color: var(--ink2)">{{c.label}}</div></sc-for></div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <div style="font-size: 12.5px; font-weight: 600">Grid frequency <span class="mut" style="font-weight: 500">· hourly range, Hz</span></div>
+            <div style="position: relative; height: 150px">
+              <div style="position: absolute; left: 0; right: 0; top: 16%; bottom: 16%; background: var(--good-a20); border-radius: 8px"></div>
+              <div style="position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed var(--ink2); opacity: .6"></div>
+              <span style="position: absolute; right: 4px; top: 16%; margin-top: -15px; font-size: 10.5px; color: var(--ink2)">50.5</span>
+              <span style="position: absolute; right: 4px; top: 50%; margin-top: -15px; font-size: 10.5px; color: var(--ink2)">50.0 nominal</span>
+              <span style="position: absolute; right: 4px; bottom: 16%; margin-bottom: -15px; font-size: 10.5px; color: var(--ink2)">49.5</span>
+              <div style="position: absolute; inset: 0; display: flex"><sc-for list="{{facCols}}" as="c" hint-placeholder-count="12"><div data-tip="{{c.tip}}" style="flex: 1 1 0; position: relative"><div style="position: absolute; left: 50%; width: 8px; margin-left: -4px; border-radius: 99px; background: var(--ceb); {{c.style}}"></div></div></sc-for></div>
+            </div>
+            <div style="display: flex"><sc-for list="{{facCols}}" as="c" hint-placeholder-count="12"><div style="flex: 1 1 0; text-align: center; font-size: 10.5px; color: var(--ink2)">{{c.label}}</div></sc-for></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- money -->
+      <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 20px">
+        <div class="glass card" aria-label="Tariff drift">
+          <div><h2 class="h2">What each bill really paid</h2><div class="sub">Effective LKR per kWh = bill earnings ÷ units exported</div></div>
+          <div style="position: relative; height: 170px">
+            <sc-for list="{{rateAxis}}" as="a" hint-placeholder-count="3"><div style="position: absolute; left: 0; right: 0; bottom: {{a.pct}}%; border-top: 1px solid var(--grid)"><span style="position: relative; top: -14px; font-size: 10.5px; color: var(--ink2)">{{a.label}}</span></div></sc-for>
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none"><path d="{{rateLine}}" fill="none" style="stroke: var(--ceb)" stroke-width="2.4" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path></svg>
+            <div style="position: absolute; inset: 0; display: flex"><sc-for list="{{rateCols}}" as="c" hint-placeholder-count="20"><div data-tip="{{c.tip}}" style="flex: 1 1 0; position: relative"><span style="position: absolute; left: 50%; bottom: {{c.pct}}%; width: 8px; height: 8px; margin: 0 0 -4px -4px; border-radius: 50%; background: var(--ceb); border: 2px solid var(--bg); box-sizing: border-box"></span></div></sc-for></div>
+          </div>
+          <div class="sub" style="margin: 0">{{rateNote}}</div>
+        </div>
+
+        <div class="glass card" aria-label="Year over year">
+          <div><h2 class="h2">Year over year</h2><div class="sub">Same bill period, last year vs this year · kWh</div></div>
+          <div style="display: flex; gap: 14px; font-size: 12px; color: var(--ink2)"><span style="display: flex; align-items: center; gap: 6px"><span style="width: 11px; height: 11px; border-radius: 3px; background: var(--gen-a34)"></span>2035</span><span style="display: flex; align-items: center; gap: 6px"><span style="width: 11px; height: 11px; border-radius: 3px; background: var(--gen)"></span>2036</span></div>
+          <div style="position: relative; height: 150px; display: flex; gap: 6px; align-items: stretch">
+            <sc-for list="{{yoyCols}}" as="c" hint-placeholder-count="8">
+              <div data-tip="{{c.tip}}" style="flex: 1 1 0; display: flex; align-items: flex-end; justify-content: center; gap: 3px; cursor: default">
+                <div style="width: 14px; border-radius: 4px 4px 1px 1px; background: var(--gen-a34); {{c.prevStyle}}"></div>
+                <div style="width: 14px; border-radius: 4px 4px 1px 1px; background: var(--gen); {{c.curStyle}}"></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display: flex; gap: 6px"><sc-for list="{{yoyCols}}" as="c" hint-placeholder-count="8"><div style="flex: 1 1 0; text-align: center; font-size: 11px; color: var(--ink2)"><div>{{c.label}}</div><div style="{{c.deltaStyle}}">{{c.delta}}</div></div></sc-for></div>
+        </div>
+      </section>
+
+      </sc-if>

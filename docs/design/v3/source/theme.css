@@ -1,0 +1,73 @@
+/* ===== THEME TOKENS: a theme is only a block of these variables. Add a theme = add a block. ===== */
+[data-theme="dark"]{--bg:#0A0F1F;--ink:#EEF1F8;--ink2:#A9B3C7;--gen:#FF8A1F;--gen-hi:#FFB65C;--gen-lo:#E0600A;--gen-ink:#241000;--gen-a16:rgba(255,138,31,.16);--gen-a30:rgba(255,138,31,.30);--gen-a34:rgba(255,138,31,.34);--ceb:#5AA9FF;--ceb-a20:rgba(90,169,255,.20);--warn:#F5C259;--warn-a20:rgba(245,194,89,.22);--good:#34D399;--good-a20:rgba(52,211,153,.2);--bad:#FF6B6B;--bad-a20:rgba(255,107,107,.2);--glass-a:rgba(255,255,255,.105);--glass-b:rgba(255,255,255,.04);--glass-line:rgba(255,255,255,.17);--glass-hi:rgba(255,255,255,.2);--shadow:0 18px 50px rgba(2,6,23,.38);--tip-bg:rgba(8,12,26,.97);--tip-ink:#EEF1F8;--tip-line:rgba(255,255,255,.2);--seg-bg:rgba(255,255,255,.07);--seg-line:rgba(255,255,255,.12);--field-bg:rgba(8,12,26,.45);--field-line:rgba(255,255,255,.2);--grid:rgba(255,255,255,.08);--track:rgba(255,255,255,.12);--chip-bg:rgba(255,255,255,.055);--chip-line:rgba(255,255,255,.1);--hover:rgba(255,255,255,.08);--well:rgba(8,12,26,.5);--glow1:rgba(255,122,0,.30);--glow2:rgba(90,169,255,.20);--glow3:rgba(255,122,0,.16);--thr:#FFD08A;--thr-ink:#2A1700;--nodata:rgba(255,255,255,.28)}
+[data-theme="light"]{--bg:#F5F2EC;--ink:#172033;--ink2:#5A6479;--gen:#F26A00;--gen-hi:#FF9A3D;--gen-lo:#D95A00;--gen-ink:#FFFFFF;--gen-a16:rgba(242,106,0,.13);--gen-a30:rgba(242,106,0,.28);--gen-a34:rgba(242,106,0,.30);--ceb:#2D7DE0;--ceb-a20:rgba(45,125,224,.16);--warn:#B7791F;--warn-a20:rgba(183,121,31,.18);--good:#12A150;--good-a20:rgba(18,161,80,.16);--bad:#D93B3B;--bad-a20:rgba(217,59,59,.14);--glass-a:rgba(255,255,255,.86);--glass-b:rgba(255,255,255,.58);--glass-line:rgba(20,30,60,.10);--glass-hi:rgba(255,255,255,.95);--shadow:0 14px 40px rgba(60,70,100,.14);--tip-bg:rgba(24,30,48,.96);--tip-ink:#F4F6FB;--tip-line:rgba(255,255,255,.14);--seg-bg:rgba(20,30,60,.06);--seg-line:rgba(20,30,60,.10);--field-bg:rgba(255,255,255,.85);--field-line:rgba(20,30,60,.18);--grid:rgba(20,30,60,.08);--track:rgba(20,30,60,.10);--chip-bg:rgba(20,30,60,.04);--chip-line:rgba(20,30,60,.08);--hover:rgba(20,30,60,.06);--well:rgba(255,255,255,.7);--glow1:rgba(255,138,31,.22);--glow2:rgba(90,169,255,.18);--glow3:rgba(255,138,31,.12);--thr:#B45309;--thr-ink:#FFFFFF;--nodata:rgba(20,30,60,.22)}
+/* ===== components only ever read tokens ===== */
+body{margin:0}
+.glass{background:linear-gradient(180deg,var(--glass-a),var(--glass-b));border:1px solid var(--glass-line);box-shadow:inset 0 1px 0 var(--glass-hi),var(--shadow);backdrop-filter:blur(30px) saturate(170%);-webkit-backdrop-filter:blur(30px) saturate(170%);border-radius:22px}
+.num{font-family:Sora,system-ui,sans-serif;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.mut{color:var(--ink2)}
+[data-tip],[data-tip-r]{position:relative}
+[data-tip]:hover::after,[data-tip-r]:hover::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);background:var(--tip-bg);border:1px solid var(--tip-line);color:var(--tip-ink);padding:8px 11px;border-radius:10px;font-family:Manrope,system-ui,sans-serif;font-size:11.5px;font-weight:500;line-height:1.4;white-space:normal;width:max-content;max-width:250px;z-index:30;pointer-events:none;box-shadow:0 12px 34px rgba(0,0,0,.45);text-align:left}
+[data-tip-r]:hover::after{content:attr(data-tip-r);left:calc(100% + 12px);bottom:auto;top:50%;transform:translateY(-50%)}
+[data-tip-r=""]:hover::after{display:none}
+.seg{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:var(--seg-bg);border:1px solid var(--seg-line)}
+.segbtn{border:0;background:transparent;color:var(--ink2);font-family:inherit;font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px;cursor:pointer;min-height:30px}
+.segbtn[aria-pressed="true"]{background:var(--gen);color:var(--gen-ink)}
+.segbtn:hover{color:var(--ink)}
+.segbtn[aria-pressed="true"]:hover{color:var(--gen-ink)}
+.navbtn{width:34px;height:34px;border-radius:50%;border:1px solid var(--glass-line);background:var(--chip-bg);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+.navbtn[disabled]{opacity:.35;cursor:default}
+.navitem{display:flex;align-items:center;gap:14px;height:48px;padding:0 15px;border:0;border-radius:14px;background:transparent;color:var(--ink2);cursor:pointer;font-family:Manrope,system-ui,sans-serif;font-size:14px;font-weight:600;text-align:left;white-space:nowrap;overflow:visible;box-sizing:border-box;width:100%}
+.navitem:hover{color:var(--ink);background:var(--hover)}
+.field{height:34px;box-sizing:border-box;border-radius:10px;border:1px solid var(--field-line);background:var(--field-bg);color:var(--ink);font-family:Manrope,system-ui,sans-serif;font-size:13px;font-weight:600;padding:0 10px}
+.btn{height:36px;padding:0 16px;border-radius:999px;border:1px solid var(--glass-line);background:var(--chip-bg);color:var(--ink);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--gen);border-color:transparent;color:var(--gen-ink)}
+.btn[disabled]{opacity:.45;cursor:default}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.02em}
+.card{padding:22px 26px;display:flex;flex-direction:column;gap:16px}
+.h2{margin:0;font-family:Sora,sans-serif;font-weight:600;font-size:17px}
+.sub{font-size:12.5px;color:var(--ink2);margin-top:4px}
+.chip{border-radius:14px;background:var(--chip-bg);border:1px solid var(--chip-line)}
+table.t{width:100%;border-collapse:collapse;font-size:12.5px}
+table.t th{text-align:left;font-weight:600;color:var(--ink2);padding:8px 10px;border-bottom:1px solid var(--grid);font-size:11.5px;letter-spacing:.03em}
+table.t td{padding:10px;border-bottom:1px solid var(--grid)}
+@keyframes drift{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@keyframes fillup{from{transform:translateY(105%)}to{transform:translateY(0)}}
+@keyframes breathe{0%,100%{opacity:.55}50%{opacity:1}}
+.liquid{position:absolute;left:0;width:100%;height:100%;animation:fillup 1.8s cubic-bezier(.2,.8,.2,1) both;background:linear-gradient(180deg,var(--gen-hi) 0%,var(--gen) 45%,var(--gen-lo) 100%)}
+.wave{position:absolute;left:0;top:-13px;width:200%;height:14px;animation:drift 6s linear infinite}
+.wave.two{top:-9px;animation-duration:9.5s;animation-direction:reverse;opacity:.55}
+.bulb{width:10px;height:10px;border-radius:50%;animation:breathe 2.6s ease-in-out infinite}
+
+/* ===== phone layout (max 700px): sidebar becomes a bottom tab bar, tiles stack, padding tightens ===== */
+@media (max-width: 700px){
+.wrap{flex-direction:column !important}
+.rail{order:2;width:auto !important;position:sticky;bottom:0;z-index:40;margin-top:auto;border-radius:20px 20px 0 0 !important;border-left:1px solid var(--glass-line) !important;border-bottom:0 !important}
+.railin{height:auto !important;flex-direction:row !important;padding:6px 8px 10px !important;position:static !important}
+.railin>div{flex-direction:row !important;gap:0 !important;flex:1 1 auto;justify-content:space-around}
+.hidem,.navitem>span.hidem{display:none !important}
+.navitem{flex-direction:column !important;height:56px !important;gap:3px !important;padding:4px 2px !important;font-size:10.5px !important;justify-content:center !important;width:auto !important;flex:1 1 0;border-radius:12px !important;border:0 !important;background:transparent}
+.navitem>span{display:inline !important}
+.mainc{padding:14px 14px 20px !important;gap:14px !important;max-width:none !important}
+.mainc h1{font-size:22px !important}
+.mainc .glass{padding:16px !important;border-radius:20px !important}
+.hdr{gap:8px !important}
+.kpi2{grid-template-columns:1fr 1fr !important;gap:12px !important}
+.ringtile{flex-direction:column !important;align-items:flex-start !important;gap:10px !important}
+}
+
+.seg.sm .segbtn{font-size:11px;padding:4px 9px;min-height:26px}
+.seg.sm{padding:2px}
+.navbtn.sm{width:28px;height:28px}
+.app{scrollbar-width:none}
+.app::-webkit-scrollbar{display:none}
+@media (max-width: 700px){
+.mainc{padding:10px 10px 12px !important;gap:8px !important}
+.mainc .glass.cp{padding:12px !important;border-radius:18px !important}
+.mainc .glass.kp{padding:8px 10px !important;border-radius:14px !important}
+.mainc h1{font-size:18px !important}
+.hdr{padding:0 2px !important}
+.railin{padding:4px 8px 8px !important}
+.navitem{height:50px !important}
+}
