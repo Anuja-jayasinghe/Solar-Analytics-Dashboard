@@ -50,7 +50,15 @@ export function createAdminApi({ getToken, fetchImpl = (...a) => globalThis.fetc
     discard: (ingestionId) => call('DELETE', '/api/ceb-bills/delete', { json: { ingestionId } }),
     /** A five-minute link to one bill PDF. */
     signedUrl: (filePath) => call('POST', '/api/ceb-bills/signed-url', { json: { filePath } }),
+    /** Every saved bill with all columns (needed for ids and to carry unedited columns through an edit). */
+    listRecords: () => call('GET', '/api/ceb-bills/records'),
+    /** Edit a saved bill: the endpoint validates the whole record. */
+    updateRecord: (id, record) => call('PATCH', '/api/ceb-bills/records', { json: { id, record } }),
+    /** Permanently delete one saved bill (and the upload and PDF behind it). */
+    deleteRecord: (recordId) => call('DELETE', '/api/ceb-bills/delete', { json: { recordId } }),
     listUsers: () => call('GET', '/api/admin/users'),
+    /** Remove a person's account entirely. The server refuses to delete the caller. */
+    deleteUser: (userId) => call('DELETE', `/api/admin/users/${encodeURIComponent(userId)}`),
     setRole: (userId, role) => call('PATCH', `/api/admin/users/${encodeURIComponent(userId)}`, { json: { role } })
   };
 }

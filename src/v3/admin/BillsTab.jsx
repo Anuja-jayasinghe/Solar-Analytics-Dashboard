@@ -5,6 +5,7 @@ import { Note } from '../ui/Note.jsx';
 import { useResource } from '../data/context.js';
 import { fmtNum, longDate } from '../overview/format.js';
 import { BILL_FIELDS, buildRecord, impliedRate, queueItems, toBillDraft, uploadProblem, validateBillDraft } from './billForm.js';
+import { ApprovedBills } from './ApprovedBills.jsx';
 import { useAdminApi, useAdminLoad } from './useAdmin.js';
 
 function UploadCard({ onUploaded }) {
@@ -127,40 +128,6 @@ function QueueCard({ queue }) {
   );
 }
 
-function ApprovedCard({ bills }) {
-  const rows = (bills.data?.bills ?? []).slice(0, 8);
-  return (
-    <Glass card aria-label="Approved bills" style={{ gap: 12 }}>
-      <div>
-        <h2 className="v3-h2">Approved bills</h2>
-        <div className="v3-sub">Latest first · the last {rows.length || 'few'} of {bills.data?.bills?.length ?? '—'}</div>
-      </div>
-      {bills.error && <Note tone="bad">Could not load bills ({bills.error.code ?? 'error'}).</Note>}
-      {bills.loading && !bills.data && <div className="v3-skeleton" style={{ height: 120 }} aria-busy="true" aria-label="Loading" />}
-      {rows.length > 0 && (
-        <div style={{ overflowX: 'auto' }}>
-          <table className="v3-table">
-            <caption className="v3-sr">Approved CEB bills, latest first</caption>
-            <thead><tr><th scope="col">Bill date</th><th scope="col">CEB kWh</th><th scope="col">Earnings</th><th scope="col">Rate</th><th scope="col">Status</th></tr></thead>
-            <tbody>
-              {rows.map((b) => (
-                <tr key={b.billDate}>
-                  <th scope="row">{longDate(b.billDate)}</th>
-                  <td>{fmtNum(b.cebKwh)}</td>
-                  <td>{b.earningsLkr === null ? '—' : `LKR ${fmtNum(b.earningsLkr)}`}</td>
-                  <td>{b.effectiveRatePerKwh === null ? '—' : fmtNum(b.effectiveRatePerKwh, 2)}</td>
-                  <td><Pill tone="good">Approved</Pill></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <div className="v3-sub" style={{ margin: 0 }}>Editing or deleting an approved bill is still done in the current dashboard's admin screen (tracked for cutover).</div>
-    </Glass>
-  );
-}
-
 /** Bills: upload, review the extraction, approve. Approving refreshes the bill list everywhere. */
 export function BillsTab() {
   const api = useAdminApi();
@@ -173,7 +140,7 @@ export function BillsTab() {
         <UploadCard onUploaded={() => queue.reload()} />
         <QueueCard queue={{ ...queue, onChanged }} />
       </section>
-      <ApprovedCard bills={bills} />
+      <ApprovedBills onChanged={() => bills.refresh()} />
     </>
   );
 }
