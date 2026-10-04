@@ -4,10 +4,16 @@ import { dataModeFor } from '../access/level.js';
 import { cacheKey, createDemoSource, createLiveSource } from './client.js';
 import { createResourceCache } from './cache.js';
 import { DataContext } from './context.js';
+import { signedOutHint } from '../access/level.js';
 
 // The demo "API" runs the shared resource code in the browser; load it only when it is needed so the
 // signed-in path does not ship the demo generator.
-const demoRequest = async (name, query) => (await import('../../../shared/demo/demoApi.js')).demoRequest(name, query);
+const loadDemo = () => import('../../../shared/demo/demoApi.js');
+const demoRequest = async (name, query) => (await loadDemo()).demoRequest(name, query);
+
+// A visitor who is (by Clerk's cookie) signed out will need the demo straight away: start downloading it now,
+// in parallel with the rest of the page, instead of when the first request is made. Signed-in people skip it.
+if (typeof document !== 'undefined' && signedOutHint(document.cookie)) loadDemo().catch(() => {});
 
 export function DataProvider({ children }) {
   const { level, userId, getToken } = useAccess();

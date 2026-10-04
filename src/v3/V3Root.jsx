@@ -8,9 +8,11 @@ import { RequireAccess } from './access/RequireAccess.jsx';
 import { DataProvider } from './data/DataProvider.jsx';
 import { AppShell } from './shell/AppShell.jsx';
 import { AppErrorBoundary } from './ui/AppErrorBoundary.jsx';
+// The Overview is what nearly everyone opens first: bundled with the app so the first paint does not wait
+// for one more round trip. Every other page is loaded when it is visited.
+import OverviewPage from './pages/OverviewPage.jsx';
 import { legacyRedirect } from './routes.js';
 
-const OverviewPage = lazy(() => import('./pages/OverviewPage.jsx'));
 const AdminPage = lazy(() => import('./pages/AdminPage.jsx'));
 const ProPage = lazy(() => import('./pages/ProPage.jsx'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'));
