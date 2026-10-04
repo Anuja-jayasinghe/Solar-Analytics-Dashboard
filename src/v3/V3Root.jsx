@@ -10,6 +10,7 @@ import { AppShell } from './shell/AppShell.jsx';
 import ComingSoon from './pages/ComingSoon.jsx';
 
 const OverviewPage = lazy(() => import('./pages/OverviewPage.jsx'));
+const ProPage = lazy(() => import('./pages/ProPage.jsx'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'));
 const SignInPage = lazy(() => import('./pages/SignInPage.jsx'));
 
@@ -29,7 +30,7 @@ export default function V3Root() {
               <Routes>
                 <Route element={<AppShell />}>
                   <Route index element={<OverviewPage />} />
-                  <Route path="pro" element={<ComingSoon slice="pro">Health, uptime by day, alarms, electrical health and what each bill really paid.</ComingSoon>} />
+                  <Route path="pro" element={<ProPage />} />
                   <Route path="admin/*" element={<RequireAccess level="admin"><ComingSoon slice="admin">Bills, access and data health.</ComingSoon></RequireAccess>} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="signin" element={<SignInPage />} />
