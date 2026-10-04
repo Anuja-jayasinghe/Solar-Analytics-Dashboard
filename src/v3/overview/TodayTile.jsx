@@ -9,7 +9,7 @@ function FreshnessRing({ live, now }) {
   const dash = known ? `${(f.fraction * 50.3).toFixed(1)} 50.3` : '0 50.3';
   return (
     <Tip text={known ? `Data refreshed ${f.label}. The ring drains as the reading ages and refreshes every minute.` : live?.demo ? 'Demo data: nothing is being refreshed.' : 'The age of this reading is not known.'}>
-      <span className="v3-fresh" aria-label={known ? `Data refreshed ${f.label}` : 'Data age unknown'}>
+      <span className="v3-fresh" role="img" aria-label={known ? `Data refreshed ${f.label}` : 'Data age unknown'}>
         <span>{known ? f.label : live?.demo ? 'demo' : DASH}</span>
         <svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true">
           <circle cx="10" cy="10" r="8" fill="none" style={{ stroke: 'var(--track)' }} strokeWidth="2" />

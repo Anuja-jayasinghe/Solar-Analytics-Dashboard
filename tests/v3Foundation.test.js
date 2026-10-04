@@ -6,7 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { THEMES, DEFAULT_THEME, isThemeId, resolveTheme, nextTheme, schemeOf } from '../src/v3/theme/themes.js';
 import { readPref, writePref } from '../src/v3/theme/storage.js';
-import { levelForUser, dataModeFor, canSee, roleLabel } from '../src/v3/access/level.js';
+import { levelForUser, dataModeFor, canSee, roleLabel, signedOutHint } from '../src/v3/access/level.js';
 import { navFor, navGroup, titleFor } from '../src/v3/shell/nav.js';
 import { ApiError, buildQuery, cacheKey, createLiveSource, createDemoSource } from '../src/v3/data/client.js';
 import { createResourceCache } from '../src/v3/data/cache.js';
@@ -186,5 +186,25 @@ describe('resource cache', () => {
     expect(cache.size).toBe(0);
     cache.clear();
     expect(cache.peek('k')).toBeUndefined();
+  });
+});
+
+describe('Clerk signed-out hint (lets visitors skip the wait for Clerk\'s script)', () => {
+  it('no cookie, an empty one, or zeros means signed out', () => {
+    expect(signedOutHint('')).toBe(true);
+    expect(signedOutHint(undefined)).toBe(true);
+    expect(signedOutHint('a=1; theme=dark')).toBe(true);
+    expect(signedOutHint('__client_uat=0')).toBe(true);
+    expect(signedOutHint('x=1; __client_uat=0; __client_uat_AbC123=0')).toBe(true);
+  });
+  it('any non-zero timestamp means someone may be signed in, so wait for Clerk', () => {
+    expect(signedOutHint('__client_uat=1790000000')).toBe(false);
+    expect(signedOutHint('__client_uat=0; __client_uat_AbC123=1790000000')).toBe(false);
+    expect(signedOutHint('a=1; __client_uat_xyz=1790000000; b=2')).toBe(false);
+  });
+  it('only changes the level while Clerk has not loaded; once loaded the real state wins', () => {
+    expect(levelForUser({ isLoaded: false, hintSignedOut: true })).toBe('none');
+    expect(levelForUser({ isLoaded: false, hintSignedOut: false })).toBe('loading');
+    expect(levelForUser({ isLoaded: true, isSignedIn: true, publicMetadata: { role: 'admin' }, hintSignedOut: true })).toBe('admin');
   });
 });

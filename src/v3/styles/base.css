@@ -215,7 +215,7 @@
 }
 
 /* ---- charts: CEB vs Inverter ---- */
-.v3-ceb { --plot-h: 250px; --axis-w: 56px; }
+.v3-ceb { --plot-h: 250px; --axis-w: 56px; min-height: 700px; } /* reserved so the page does not jump when the data arrives */
 .v3-tilehead { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
 .v3-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .v3-stepper { display: flex; align-items: center; gap: 8px; }
@@ -276,7 +276,7 @@
 .v3-table tbody th { font-weight: 600; }
 
 @media (max-width: 700px) {
-  .v3-ceb { --plot-h: 140px; --axis-w: 34px; }
+  .v3-ceb { --plot-h: 140px; --axis-w: 34px; min-height: 560px; }
   .v3-tilehead { gap: 8px; }
   .v3-controls { gap: 6px; justify-content: space-between; width: 100%; }
   .v3-steplabel { font-size: 11px; min-width: 100px; }
@@ -308,7 +308,7 @@
 }
 
 /* ---- Explore: generation over time, one day, statistics ---- */
-.v3-explore { --plot-h: 270px; --axis-w: 56px; }
+.v3-explore { --plot-h: 270px; --axis-w: 56px; min-height: 420px; }
 .v3-explore .v3-daterow { display: flex; gap: 14px; flex-wrap: wrap; }
 .v3-markrow-wide { width: 100%; justify-content: flex-start; }
 .v3-bar.single { max-width: 26px; }
@@ -329,7 +329,7 @@
 .v3-sdot { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--bg); box-sizing: border-box; display: block; }
 
 @media (max-width: 700px) {
-  .v3-explore { --plot-h: 150px; --axis-w: 34px; }
+  .v3-explore { --plot-h: 150px; --axis-w: 34px; min-height: 360px; }
   .v3-bar.single { max-width: 16px; }
   .v3-xplain { font-size: 9.5px; height: 12px; }
   .v3-statgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }

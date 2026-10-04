@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ClerkProvider, useAuth, useClerk, useUser } from '@clerk/clerk-react';
-import { levelForUser } from './level.js';
+import { levelForUser, signedOutHint } from './level.js';
 import { AccessContext, VISITOR } from './context.js';
 
 // If Clerk cannot load (wrong domain on a preview, offline, blocked) the app must still open on the demo.
@@ -16,7 +16,8 @@ function ClerkAccess({ children }) {
     const t = setTimeout(() => setGaveUp(true), CLERK_TIMEOUT_MS);
     return () => clearTimeout(t);
   }, [isLoaded]);
-  const level = levelForUser({ isLoaded, isSignedIn, publicMetadata: user?.publicMetadata, gaveUp });
+  const [hintSignedOut] = useState(() => (typeof document !== 'undefined' ? signedOutHint(document.cookie) : false));
+  const level = levelForUser({ isLoaded, isSignedIn, publicMetadata: user?.publicMetadata, gaveUp, hintSignedOut });
   const value = useMemo(
     () => ({
       level,
