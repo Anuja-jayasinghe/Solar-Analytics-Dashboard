@@ -9,6 +9,7 @@
 
 import { aggregateUptime } from '../domain/uptime.js';
 import { uptimeRowToDay } from '../domain/telemetryPipeline.js';
+import { addDays, diffDays } from '../domain/time.js';
 import { buildAlignedRows } from '../domain/alignment.js';
 import {
   buildBillRatePeriods, compareRanges, computeRangeStats, previousPeriod, sameRangeLastYear
@@ -17,6 +18,7 @@ import { HttpError, parseCompare, parseDate, parseEnum, parseIntBounded, parseRa
 import { toCsv } from './csv.js';
 
 const MAX_SEGMENT_DAYS = 62;
+const MAX_TOTALS_DAYS = 3660;
 
 function rateFor(mode, settings, bills) {
   if (mode === 'fixed') return { mode: 'fixed', ratePerKwh: settings.ratePerKwh };
@@ -139,9 +141,63 @@ export const resources = {
     return { body: { settings: s } };
   },
 
+  /**
+   * Right-now status. `todayKey` is the SERVER's Asia/Colombo date: the browser never decides which
+   * day "today" is (its clock and timezone may differ, and the demo has its own fixed date).
+   */
   async live(repo, _query, ctx) {
     const live = await ctx.live();
-    return { body: live };
+    return { body: { ...live, todayKey: ctx.todayKey } };
+  },
+
+  /**
+   * Lifetime totals for the Overview headline tiles, without shipping every day to the browser.
+   * Generation counts only days that HAVE a reading (unknown is never 0) and reports how many days
+   * in between are missing. Earnings are the sum of bills that carry an earnings figure; bills
+   * without one are counted, not treated as 0.
+   */
+  async totals(repo, _query, ctx) {
+    const from = addDays(ctx.todayKey, -(MAX_TOTALS_DAYS - 1));
+    const [rows, bills] = await Promise.all([repo.dailyRows(from, ctx.todayKey), repo.bills()]);
+
+    let totalKwh = 0;
+    let dayCount = 0;
+    let firstDay = null;
+    let lastDay = null;
+    for (const r of rows) {
+      if (!r || typeof r.kwh !== 'number' || !Number.isFinite(r.kwh) || r.kwh < 0) continue;
+      totalKwh += r.kwh;
+      dayCount += 1;
+      if (firstDay === null || r.date < firstDay) firstDay = r.date;
+      if (lastDay === null || r.date > lastDay) lastDay = r.date;
+    }
+
+    let earningsLkr = 0;
+    let billCount = 0;
+    let billsWithoutEarnings = 0;
+    let firstBillDate = null;
+    let lastBillDate = null;
+    for (const b of bills) {
+      const e = b.earnings === null || b.earnings === undefined ? NaN : Number(b.earnings);
+      if (Number.isFinite(e)) { earningsLkr += e; billCount += 1; } else billsWithoutEarnings += 1;
+      if (b.bill_date) {
+        if (firstBillDate === null || b.bill_date < firstBillDate) firstBillDate = b.bill_date;
+        if (lastBillDate === null || b.bill_date > lastBillDate) lastBillDate = b.bill_date;
+      }
+    }
+
+    return {
+      body: {
+        generation: {
+          totalKwh: dayCount ? totalKwh : null,
+          dayCount,
+          firstDay,
+          lastDay,
+          missingDays: firstDay ? diffDays(firstDay, lastDay) + 1 - dayCount : 0
+        },
+        earnings: { totalLkr: billCount ? earningsLkr : null, billCount, billsWithoutEarnings, firstBillDate, lastBillDate }
+      }
+    };
   },
 
   /** CSV download of a range. Unknown cells are empty, never 0. */

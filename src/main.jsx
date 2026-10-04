@@ -1,6 +1,5 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
 
 // Global error handler for third-party scripts
 window.addEventListener('error', (event) => {
@@ -12,6 +11,12 @@ window.addEventListener('error', (event) => {
   }
 });
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <App />
-);
+// v3 lives at /v3 until cutover. Each app is imported on demand so neither ships (nor loads its
+// global stylesheet) on the other's routes.
+const isV3 = window.location.pathname === '/v3' || window.location.pathname.startsWith('/v3/');
+const load = isV3 ? import("./v3/V3Root") : import("./App");
+
+load.then((mod) => {
+  const Root = mod.default;
+  ReactDOM.createRoot(document.getElementById("root")).render(<Root />);
+});
