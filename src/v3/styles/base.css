@@ -492,3 +492,26 @@ select.v3-field { padding-right: 8px; }
 .v3-footer a { color: inherit; text-decoration: none; font-weight: 600; }
 .v3-footer a:hover { color: var(--gen); }
 .v3-footer-icon { display: inline-flex; }
+
+/* ---- values printed on charts (small, just the number) ---- */
+.v3-bar, .v3-stripcell, .v3-yoybars i { position: relative; }
+.v3-val { position: absolute; bottom: calc(100% + 3px); left: 50%; transform: translateX(-50%); font-size: 9.5px; font-weight: 700; line-height: 1; color: var(--ink2); white-space: nowrap; pointer-events: none; font-variant-numeric: tabular-nums; }
+.v3-val:empty { display: none; }
+.v3-val-pt { bottom: auto; }
+.v3-sval { position: absolute; left: 50%; bottom: calc(100% + 4px); transform: translateX(-50%); font-size: 10px; font-weight: 800; white-space: nowrap; }
+.v3-sval.below { bottom: auto; top: calc(100% + 4px); }
+@media (max-width: 700px) {
+  .v3-val { font-size: 8.5px; }
+  .v3-cols[data-dense] .v3-val { display: none; } /* too many columns for numbers on a phone */
+}
+
+/* ---- "working on it": shown the moment a choice is clicked, while the new data loads ---- */
+.v3-stack { display: flex; flex-direction: column; gap: 20px; }
+[data-busy='true'] { position: relative; }
+[data-busy='true']::before { content: ''; position: absolute; z-index: 5; top: 0; left: 18px; right: 18px; height: 3px; border-radius: 99px; background: linear-gradient(90deg, transparent, var(--gen), transparent); background-size: 40% 100%; background-repeat: no-repeat; animation: v3-busy 0.9s ease-in-out infinite; }
+.v3-stack[data-busy='true']::before { top: -10px; left: 0; right: 0; }
+.v3-chartgrid[data-busy='true']::before { top: -8px; left: 0; right: 0; }
+[data-busy='true'] .v3-plotwrap, [data-busy='true'] .v3-statgrid, [data-busy='true'] .v3-spread, [data-busy='true'] .v3-strip, .v3-stack[data-busy='true'] > * { opacity: .45; transition: opacity .15s ease; }
+.v3-plotwrap, .v3-statgrid, .v3-spread, .v3-strip, .v3-stack > * { transition: opacity .2s ease; }
+@keyframes v3-busy { from { background-position: -40% 0; } to { background-position: 140% 0; } }
+@media (prefers-reduced-motion: reduce) { [data-busy='true']::before { animation: none; background: var(--gen); opacity: .6; } }

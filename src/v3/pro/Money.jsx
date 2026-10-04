@@ -1,7 +1,7 @@
 import { Glass } from '../ui/Glass.jsx';
 import { Tip } from '../ui/Tip.jsx';
 import { Note } from '../ui/Note.jsx';
-import { linePath, xPct } from '../charts/scale.js';
+import { chartNum, linePath, xPct } from '../charts/scale.js';
 import { fmtNum, longDate } from '../overview/format.js';
 
 /** What each bill really paid per kWh (earnings / units exported), bill by bill. Never today's tariff. */
@@ -25,8 +25,8 @@ export function RateHistory({ rates, loading, error }) {
             <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d={linePath(pts)} fill="none" style={{ stroke: 'var(--ceb)' }} strokeWidth="2.4" strokeLinejoin="round" vectorEffect="non-scaling-stroke" /></svg>
             <div className="v3-cols">
               {rates.map((r, i) => (
-                <Tip key={r.key} value={`${longDate(r.key)} · LKR ${fmtNum(r.rate, 2)} / kWh`} text={`Bill ending ${longDate(r.key)} · LKR ${fmtNum(r.rate, 2)} per kWh${r.earningsLkr === null ? '' : ` (LKR ${fmtNum(r.earningsLkr)} for ${fmtNum(r.cebKwh)} kWh)`}`}>
-                  <div className="v3-col" style={{ padding: 0 }}><span className="v3-dot" style={{ bottom: `${100 - pts[i][1]}%`, background: 'var(--ceb)', width: 8, height: 8 }} /></div>
+                <Tip key={r.key} text={`Bill ending ${longDate(r.key)} · LKR ${fmtNum(r.rate, 2)} per kWh${r.earningsLkr === null ? '' : ` (LKR ${fmtNum(r.earningsLkr)} for ${fmtNum(r.cebKwh)} kWh)`}`}>
+                  <div className="v3-col" style={{ padding: 0 }}><span className="v3-dot" style={{ bottom: `${100 - pts[i][1]}%`, background: 'var(--ceb)', width: 8, height: 8 }} />{(i === 0 || r.rate !== rates[i - 1].rate) && <span className="v3-val v3-val-pt" style={{ bottom: `calc(${100 - pts[i][1]}% + 8px)`, color: 'var(--ceb)' }}>{fmtNum(r.rate, 0)}</span>}</div>
                 </Tip>
               ))}
             </div>
@@ -55,9 +55,9 @@ export function YearOverYear({ pairs, loading }) {
           <div className="v3-legend"><span><i style={{ background: 'var(--gen-a34)' }} />{years[0]}</span><span><i style={{ background: 'var(--gen)' }} />{years[1]}</span></div>
           <div className="v3-yoy">
             {pairs.map((p) => (
-              <Tip key={`${p.label}-${p.year}`} value={`${p.label} · ${fmtNum(p.prev)} → ${fmtNum(p.cur)} kWh`} text={`${p.label} bill period: ${fmtNum(p.prev)} kWh in ${p.year - 1}, ${fmtNum(p.cur)} kWh in ${p.year}${p.deltaPct === null ? '' : ` (${p.deltaPct >= 0 ? '+' : '−'}${Math.abs(p.deltaPct).toFixed(1)}%)`}. Weather differs between years, so read it as a trend, not a fault.`}>
+              <Tip key={`${p.label}-${p.year}`} text={`${p.label} bill period: ${fmtNum(p.prev)} kWh in ${p.year - 1}, ${fmtNum(p.cur)} kWh in ${p.year}${p.deltaPct === null ? '' : ` (${p.deltaPct >= 0 ? '+' : '−'}${Math.abs(p.deltaPct).toFixed(1)}%)`}. Weather differs between years, so read it as a trend, not a fault.`}>
                 <div className="v3-yoycol">
-                  <div className="v3-yoybars"><i style={{ height: `${(p.prev / max) * 100}%`, background: 'var(--gen-a34)' }} /><i style={{ height: `${(p.cur / max) * 100}%`, background: 'var(--gen)' }} /></div>
+                  <div className="v3-yoybars"><i style={{ height: `${(p.prev / max) * 100}%`, background: 'var(--gen-a34)' }}><span className="v3-val">{chartNum(p.prev, { dense: true })}</span></i><i style={{ height: `${(p.cur / max) * 100}%`, background: 'var(--gen)' }}><span className="v3-val">{chartNum(p.cur, { dense: true })}</span></i></div>
                   <div className="v3-xmain">{p.label}</div>
                   <div className="v3-xtag" style={{ fontWeight: 700, color: p.deltaPct === null ? undefined : p.deltaPct >= 0 ? 'var(--good)' : 'var(--warn)' }}>{p.deltaPct === null ? '' : `${p.deltaPct >= 0 ? '+' : '−'}${Math.abs(p.deltaPct).toFixed(1)}%`}</div>
                 </div>

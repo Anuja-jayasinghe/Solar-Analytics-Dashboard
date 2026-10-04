@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { addDays } from '../../../shared/domain/time.js';
-import { useResource } from '../data/context.js';
+import { usePrefetch, useResource } from '../data/context.js';
 import { Tip } from '../ui/Tip.jsx';
 import { Segmented } from '../ui/Segmented.jsx';
 import { Note } from '../ui/Note.jsx';
 import { DatePicker } from '../ui/Calendar.jsx';
-import { axisTicks, maxOf, niceMax, smoothPath, xPct, yPct } from '../charts/scale.js';
+import { axisTicks, chartNum, maxOf, niceMax, smoothPath, xPct, yPct } from '../charts/scale.js';
 import { DASH, fmtNum } from '../overview/format.js';
 import { dayLabelYear } from './series.js';
 import { hourlyFromTelemetry } from './hourly.js';
@@ -21,6 +21,8 @@ export function DayBody({ showHead, bounds }) {
   const enabled = !!date;
   const res = useResource('telemetry', { date }, { enabled });
   const day = useMemo(() => hourlyFromTelemetry(res.data?.points), [res.data]);
+  // the neighbouring days, so stepping with the arrows is instant
+  usePrefetch(date ? [['telemetry', { date: addDays(date, -1) }], ...(bounds.max && date < bounds.max ? [['telemetry', { date: addDays(date, 1) }]] : [])] : [], !!res.data);
 
   const hours = day?.hours ?? [];
   const yMax = niceMax(Math.max(maxOf(hours.map((h) => h.kwh), 1) * 1.12, 1));
@@ -60,7 +62,7 @@ export function DayBody({ showHead, bounds }) {
       {enabled && res.loading && !day && <div className="v3-skeleton" style={{ height: 200 }} aria-busy="true" aria-label="Loading" />}
 
       {day && (
-        <div className="v3-chartgrid">
+        <div className="v3-chartgrid" data-busy={res.refreshing ? 'true' : undefined}>
           <div className="v3-yaxis" aria-hidden="true">{axisTicks(yMax, (v) => fmtNum(v, v < 10 && v % 1 ? 1 : 0)).map((t) => <span key={t.pct}>{t.label}</span>)}</div>
           <div className="v3-plotwrap">
             <div className="v3-plot" style={{ height: 'var(--plot-h)' }}>
@@ -73,11 +75,11 @@ export function DayBody({ showHead, bounds }) {
               )}
               <div className="v3-cols" style={{ gap: 0 }}>
                 {hours.map((h, i) => (
-                  <Tip key={h.hour} value={`${h.hour}:00 to ${h.hour + 1}:00 · ${fmtNum(h.kwh, 1)} kWh`}>
+                  <Tip key={h.hour}>
                     <div className="v3-col" style={{ padding: 0 }}>
                       {style === 'bars'
-                        ? <div className="v3-bar single" style={{ height: `${(h.kwh / yMax) * 100}%`, background: 'var(--gen)', maxWidth: 30, width: '60%', flex: '0 0 auto' }} />
-                        : <span className="v3-dot" style={{ bottom: `${100 - pts[i][1]}%`, background: 'var(--gen)', width: 8, height: 8 }} />}
+                        ? <div className="v3-bar single" style={{ height: `${(h.kwh / yMax) * 100}%`, background: 'var(--gen)', maxWidth: 30, width: '60%', flex: '0 0 auto' }}><span className="v3-val">{h.kwh > 0 ? chartNum(h.kwh) : ''}</span></div>
+                        : <><span className="v3-dot" style={{ bottom: `${100 - pts[i][1]}%`, background: 'var(--gen)', width: 8, height: 8 }} />{h.kwh > 0 && <span className="v3-val v3-val-pt" style={{ bottom: `calc(${100 - pts[i][1]}% + 8px)` }}>{chartNum(h.kwh)}</span>}</>}
                     </div>
                   </Tip>
                 ))}
