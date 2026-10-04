@@ -65,6 +65,10 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          # Armed 2026-10-04 after the first successful nightly telemetry runs (issue #165): an EMPTY
+          # collector_runs / inverter_day_uptime now fails the check instead of being skipped, so a
+          # collector that silently stops (or is never wired up) cannot stay invisible.
+          TELEMETRY_REQUIRED: 'true'
         run: |
           set -o pipefail
           node scripts/check_data_freshness.js 2>&1 | tee freshness-report.txt

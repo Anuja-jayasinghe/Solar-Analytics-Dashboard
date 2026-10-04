@@ -124,7 +124,7 @@ Every row has a GitHub issue. Add a row the moment something is skipped.
 |---|---|---|---|
 | V3-D1 | Revoke `anon` SELECT on existing real tables is staged to cutover, not P1 | v1 reads with anon until cutover | #155 |
 | V3-D2 | Downtime/fault alerting | Out of scope for v3 | #151 |
-| V3-D4 | Freshness check for the telemetry pipeline ships unarmed (empty = skipped) so deploying it cannot raise a false outage | Arm with TELEMETRY_REQUIRED=true after the first successful nightly run | #165 |
+| V3-D4 | ~~Freshness check for the telemetry pipeline ships unarmed~~ **Resolved 2026-10-04**: armed after the first successful nightly runs | done | #165 (closed) |
 | V3-D5 | P3 leftovers: real-deployment verification of /api/data, CSP tightening, request logging, delete-endpoint merge, distributed rate limit, ETag | Cannot observe the protected Vercel preview; the rest need browser testing or are low value now | #166 |
 | V3-D3 | UI-impacting cleanup held for the design phase. **Mostly resolved by `main` (PRs #143-#150, 2026-09-24)**: Chakra/emotion/crypto-js removed, vite `manualChunks` rewritten, Open-Meteo CSP entry gone. **Still open**: duplicate `ErrorBoundary`/`SkeletonLoader`, the 1,989-line `SolisExplorer` (rebuilt as the Pro page), stale ESLint refs, `/demodashbaard` typo, `VITE_USE_CLERK_AUTH` flag | Changing them alters what users see; UI waits for design sign-off | #162 |
 
@@ -196,3 +196,4 @@ Newest first. One entry per meaningful change: date, what, commit/PR, deviations
   counter (+103 kWh net) and the missing 2026-06-03 row inserted. Reconciliation afterwards: 0 disagreeing days. The 2025-08-04 bill period
   (CEB 5,859 vs inverter 3,827) is a CEB meter-read timing shift, not a data error: with the next bill (2,748 vs 4,675) the pair totals
   8,607 vs 8,501 kWh, 1.2% apart.
+- **2026-10-04 (merge + nightly live)** — PR #164 merged to main (a5f24f2); production serves revision a5f24f2 with v1 intact, readiness probe healthy, /api/data refuses unauthenticated calls. The nightly collector ran on GitHub with the real secrets (manual run: 7 days, 1,337 points, 0 failures) and then on its own schedule. Freshness check armed (#165). CLAUDE.md updated to the v3 state.
