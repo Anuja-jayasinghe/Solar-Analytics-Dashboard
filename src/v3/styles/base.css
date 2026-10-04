@@ -82,6 +82,7 @@
 .v3-iconbtn:disabled { opacity: .35; cursor: default; }
 .v3-iconbtn.sm { width: 28px; height: 28px; }
 .v3-field { height: 34px; border-radius: 10px; border: 1px solid var(--field-line); background: var(--field-bg); color: var(--ink); font-family: inherit; font-size: 13px; font-weight: 600; padding: 0 10px; }
+.v3-field:disabled { opacity: .6; cursor: not-allowed; }
 .v3-btn { height: 36px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--glass-line); background: var(--chip-bg); color: var(--ink); font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
 .v3-btn:hover { background: var(--hover); }
 .v3-btn.primary { background: var(--gen); border-color: transparent; color: var(--gen-ink); }
