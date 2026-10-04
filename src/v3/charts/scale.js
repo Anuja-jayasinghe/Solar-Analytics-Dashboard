@@ -67,3 +67,23 @@ export function valueFromPointer(clientY, rectTop, rectHeight, max, step = 1) {
   const frac = clamp(1 - (clientY - rectTop) / rectHeight, 0, 1);
   return Math.round((frac * max) / step) * step;
 }
+
+/**
+ * A smooth curve (Catmull-Rom converted to cubic Béziers) through [x, y] points on a 0..100 grid. Control
+ * points are kept inside 0..100 so a curve never dips below the baseline. Needs known points only:
+ * use it for continuous measurements such as hourly output, not for gappy daily data.
+ */
+export function smoothPath(points) {
+  if (points.length === 0) return '';
+  if (points.length < 3) return linePath(points);
+  const c = (v) => clamp(v, 0, 100);
+  let d = `M ${points[0][0].toFixed(2)} ${points[0][1].toFixed(2)}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] || points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] || p2;
+    d += ` C ${(p1[0] + (p2[0] - p0[0]) / 6).toFixed(2)} ${c(p1[1] + (p2[1] - p0[1]) / 6).toFixed(2)} ${(p2[0] - (p3[0] - p1[0]) / 6).toFixed(2)} ${c(p2[1] - (p3[1] - p1[1]) / 6).toFixed(2)} ${p2[0].toFixed(2)} ${p2[1].toFixed(2)}`;
+  }
+  return d;
+}

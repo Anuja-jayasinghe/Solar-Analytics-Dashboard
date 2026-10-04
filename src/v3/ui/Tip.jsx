@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react';
  * A hint that works on hover, keyboard focus AND tap (the design boards only had hover). Wrap any
  * readout: <Tip text="..."><span>...</span></Tip>. The bubble is aria-describedby, so screen readers get it.
  */
-export function Tip({ text, children, side }) {
+export function Tip({ text, children, side, className = '', style }) {
   const [open, setOpen] = useState(false);
   const id = useId();
   const ref = useRef(null);
@@ -25,7 +25,7 @@ export function Tip({ text, children, side }) {
   return (
     <span
       ref={ref}
-      className="v3-tip"
+      className={`v3-tip${className ? ` ${className}` : ''}`}
       data-open={open}
       data-side={side}
       aria-describedby={id}
@@ -33,7 +33,7 @@ export function Tip({ text, children, side }) {
       onClick={() => setOpen((v) => !v)}
       onFocus={() => setOpen(true)}
       onBlur={() => setOpen(false)}
-      style={{ cursor: 'default' }}
+      style={{ cursor: 'default', ...style }}
     >
       {children}
       <span id={id} role="tooltip" className="v3-tip-bubble">{text}</span>
