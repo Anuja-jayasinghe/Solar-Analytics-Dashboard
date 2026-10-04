@@ -4,6 +4,7 @@ import { Note } from '../ui/Note.jsx';
 import { TotalsRow } from '../overview/TotalsRow.jsx';
 import { LiveRow } from '../overview/LiveRow.jsx';
 import { CebCompare } from '../ceb/CebCompare.jsx';
+import { ExploreSection } from '../explore/ExploreSection.jsx';
 
 /** Re-render about once a minute so "2 min ago" and the freshness ring keep moving between data polls. */
 function useNow(intervalMs = 30_000) {
@@ -16,8 +17,8 @@ function useNow(intervalMs = 30_000) {
 }
 
 /**
- * Overview. Built slice by slice: headline tiles and live row (overview-live), CEB vs Inverter (ceb-compare);
- * generation charts and statistics arrive in the following slices (docs/V3_REFACTOR_PLAN.md, P5b).
+ * Overview. Built slice by slice: headline tiles and live row (overview-live), CEB vs Inverter (ceb-compare),
+ * generation over time + through the day + statistics (generation) (docs/V3_REFACTOR_PLAN.md, P5b).
  */
 export default function OverviewPage() {
   const now = useNow();
@@ -46,7 +47,7 @@ export default function OverviewPage() {
       />
       <LiveRow live={live.data} targetKwh={s?.dailyTargetKwh ?? null} maxKw={s?.acRatedKw ?? null} now={now} loading={live.loading} />
       <CebCompare bills={bills.data} comparison={comparison.data} todayKey={todayKey} loading={bills.loading || comparison.loading} error={bills.error} />
-      <Note>Generation over time, the through-the-day tile and statistics are the next slices (docs/design/v3).</Note>
+      <ExploreSection totals={totals.data} todayKey={todayKey} />
     </>
   );
 }
