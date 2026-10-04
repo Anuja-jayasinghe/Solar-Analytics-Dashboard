@@ -136,7 +136,8 @@ Reference — how it works now:
 - `docs/SECURITY.md` — who can do what, the RLS / storage policy matrix, new-endpoint checklist
 - `docs/MIGRATIONS.md` — how schema changes are made, and the ledger of what has been applied
 - `docs/RUNBOOK.md` — operating procedures and incident response
-- `docs/logic-registry/` — specs for the non-obvious domain rules
+- `docs/logic-registry/` — specs for the non-obvious domain rules (LR-001 alignment, LR-002 uptime, LR-003 ranges, LR-004 earnings difference)
+- `docs/design/v3/` — the signed-off v3 UI design (boards, tokens, decisions); the frontend build follows it
 
 History — why it is the way it is:
 

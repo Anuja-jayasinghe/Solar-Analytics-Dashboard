@@ -1,0 +1,45 @@
+<svg width="0" height="0" style="position: absolute" aria-hidden="true"><defs><linearGradient id="gaugeGrad" x1="0" y1="1" x2="1" y2="0"><stop offset="0" style="stop-color: var(--gen-hi)"></stop><stop offset="1" style="stop-color: var(--gen)"></stop></linearGradient><linearGradient id="dayFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color: var(--gen); stop-opacity: .38"></stop><stop offset="1" style="stop-color: var(--gen); stop-opacity: .02"></stop></linearGradient><linearGradient id="hrFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color: var(--gen); stop-opacity: .45"></stop><stop offset="1" style="stop-color: var(--gen); stop-opacity: .02"></stop></linearGradient><linearGradient id="stFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color: var(--gen); stop-opacity: .30"></stop><stop offset="1" style="stop-color: var(--gen); stop-opacity: .02"></stop></linearGradient></defs></svg>
+<div class="app" data-theme="{{theme}}" style="position: relative; overflow: hidden; background: var(--bg); color: var(--ink); font-family: Manrope, system-ui, sans-serif; min-height: 2400px">
+  <div style="position: absolute; left: -160px; top: -200px; width: 760px; height: 760px; background: radial-gradient(circle, var(--glow1), transparent 66%)"></div>
+  <div style="position: absolute; right: -220px; top: 520px; width: 820px; height: 820px; background: radial-gradient(circle, var(--glow2), transparent 66%)"></div>
+  <div style="position: absolute; left: 10%; bottom: -260px; width: 800px; height: 800px; background: radial-gradient(circle, var(--glow3), transparent 66%)"></div>
+
+  <div class="wrap" style="position: relative; display: flex; align-items: stretch; min-height: 2400px">
+
+    <!-- sidebar: full page height, collapses to icons -->
+    <nav class="glass rail" aria-label="Main" style="flex: 0 0 auto; width: {{railW}}px; border-radius: 0 26px 26px 0; border-left: 0; transition: width .22s ease; box-sizing: border-box">
+      <div class="railin" style="position: sticky; top: 0; height: min(100vh, 920px); display: flex; flex-direction: column; justify-content: space-between; padding: 18px 12px; box-sizing: border-box">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div class="hidem" style="display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 12px; margin-bottom: 10px">
+            <span style="flex: 0 0 auto; width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(135deg, var(--gen-hi), var(--gen-lo)); display: inline-flex; align-items: center; justify-content: center; font-family: Sora, sans-serif; font-weight: 700; font-size: 14px; color: var(--gen-ink)" aria-hidden="true">S</span>
+            <span class="num" style="display: {{labelShow}}; font-size: 16px; white-space: nowrap">Solar Analytics</span>
+          </div>
+          <button class="navitem" onClick="{{goOv}}" style="{{navOv.style}}" data-tip-r="{{navOv.tip}}" aria-label="Overview"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: 0 0 auto"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg><span style="display: {{labelShow}}">Overview</span></button>
+          <button class="navitem" onClick="{{goPro}}" style="{{navPro.style}}" data-tip-r="{{navPro.tip}}" aria-label="Pro metrics"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: 0 0 auto"><path d="M3 12h4l3-8 4 16 3-8h4"></path></svg><span style="display: {{labelShow}}">Pro metrics</span></button>
+          <button class="navitem" onClick="{{goAdm}}" style="{{navAdm.style}}" data-tip-r="{{navAdm.tip}}" aria-label="Admin"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: 0 0 auto"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z"></path><path d="M9 12l2 2 4-4"></path></svg><span style="display: {{labelShow}}">Admin</span></button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <button class="navitem" onClick="{{goSet}}" style="{{navSet.style}}" data-tip-r="{{navSet.tip}}" aria-label="Settings"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: 0 0 auto"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg><span style="display: {{labelShow}}">Settings</span></button>
+
+          <button class="navitem" onClick="{{cycleRole}}" data-tip-r="{{roleTip}}" aria-label="Account" style="height: 56px; background: var(--chip-bg); border: 1px solid var(--chip-line)">
+            <span style="flex: 0 0 auto; width: 28px; height: 28px; border-radius: 50%; background: var(--gen-a30); color: var(--gen); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px">{{roleInitial}}</span>
+            <span class="hidem" style="display: {{labelShow}}; flex-direction: column; line-height: 1.25; min-width: 0"><span style="color: var(--ink); font-size: 13px">{{roleLabel}}</span><span style="font-size: 11px; font-weight: 500; color: var(--ink2)">{{roleSub}}</span></span>
+          </button>
+          <button class="navitem hidem" onClick="{{toggleRail}}" data-tip-r="{{collapseTip}}" aria-label="Collapse sidebar" style="height: 40px"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: 0 0 auto; transform: rotate({{collapseRot}}deg)"><path d="M15 18l-6-6 6-6"></path></svg><span style="display: {{labelShow}}">Collapse</span></button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- content -->
+    <main class="mainc" style="flex: 1 1 0; min-width: 0; max-width: 1240px; display: flex; flex-direction: column; gap: 20px; padding: 24px 28px 40px; box-sizing: border-box">
+
+      <header class="hdr" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 4px 4px 0">
+        <h1 style="margin: 0; font-family: Sora, sans-serif; font-weight: 600; font-size: 26px; letter-spacing: -.02em">{{pageTitle}}</h1>
+        <div style="display: flex; align-items: center; gap: 14px; font-size: 12.5px; color: var(--ink2)">
+          <span style="display: {{weatherShow}}; align-items: center; gap: 6px; opacity: .8" data-tip="Optional weather context (demo). Shown on Pro metrics only; switch off in Settings."><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>31° · 20% cloud</span>
+          <span><span style="font-weight: 700; letter-spacing: .08em; font-size: 11px; color: var(--gen)">DEMO DATA</span> · 15 Sep 2036</span>
+          <button class="navbtn" onClick="{{toggleTheme}}" aria-label="Switch theme" data-tip="{{themeTip}}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="display: {{sunShow}}"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="display: {{moonShow}}"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg></button>
+        </div>
+      </header>
+

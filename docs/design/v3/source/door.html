@@ -1,0 +1,19 @@
+      <sc-if value="{{isDoor}}" hint-placeholder-val="{{ false }}">
+      <section style="display: flex; flex-direction: column; align-items: center; gap: 28px; padding-top: 30px">
+        <div class="glass" style="width: 100%; max-width: 440px; padding: 34px 32px; display: flex; flex-direction: column; gap: 18px; align-items: stretch; text-align: center; box-sizing: border-box">
+          <span style="align-self: center; width: 44px; height: 44px; border-radius: 13px; background: linear-gradient(135deg, var(--gen-hi), var(--gen-lo)); display: inline-flex; align-items: center; justify-content: center; font-family: Sora, sans-serif; font-weight: 700; font-size: 22px; color: var(--gen-ink)">S</span>
+          <div><h2 class="h2" style="font-size: 22px">Sign in for the live plant</h2><div class="sub">Invite only. Without signing in you can still explore everything on demo data.</div></div>
+          <button class="btn primary" style="height: 44px; font-size: 14px" onClick="{{doorSignIn}}">Sign in</button>
+          <button class="btn" style="height: 44px; font-size: 14px" onClick="{{doorDemo}}">Keep exploring the demo</button>
+          <div class="sub" style="margin: 0">Need access? Ask the owner to invite your email.</div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 16px; width: 100%">
+          <sc-for list="{{doorRoles}}" as="r" hint-placeholder-count="3">
+            <div class="glass" style="padding: 18px 20px; display: flex; flex-direction: column; gap: 8px">
+              <span class="pill" style="align-self: flex-start; {{r.style}}">{{r.name}}</span>
+              <div style="font-size: 13px; line-height: 1.5; color: var(--ink2)">{{r.text}}</div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+      </sc-if>

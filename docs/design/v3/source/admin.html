@@ -1,0 +1,56 @@
+      <sc-if value="{{isAdm}}" hint-placeholder-val="{{ false }}">
+      <div class="seg" role="tablist" aria-label="Admin sections" style="align-self: flex-start"><sc-for list="{{adminTabs}}" as="o" hint-placeholder-count="3"><button class="segbtn" onClick="{{o.pick}}" aria-pressed="{{o.on}}">{{o.label}}</button></sc-for></div>
+
+      <sc-if value="{{tabBills}}" hint-placeholder-val="{{ true }}">
+      <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 20px">
+        <div class="glass card" style="gap: 14px">
+          <div><h2 class="h2">Upload a CEB bill</h2><div class="sub">PDF, then duplicate check, then read by the extractor, then you confirm</div></div>
+          <div style="border: 2px dashed var(--glass-line); border-radius: 18px; padding: 30px 16px; text-align: center; color: var(--ink2); font-size: 13px"><div style="font-size: 26px; color: var(--gen)">↑</div>Drop a bill PDF here or <span style="color: var(--gen); font-weight: 700">browse</span></div>
+          <div class="chip" style="padding: 11px 14px; font-size: 12px; color: var(--ink2)">The September 2036 bill is due around 3 Oct 2036. The Overview shows "awaiting bill" until it is approved.</div>
+        </div>
+        <div class="glass card" style="gap: 12px">
+          <div style="display: flex; justify-content: space-between; align-items: baseline"><div><h2 class="h2">Needs your check</h2><div class="sub">Extracted values you confirm or edit</div></div><span class="pill" style="background: var(--warn-a20); color: var(--warn)">1 waiting</span></div>
+          <div class="chip" style="padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+            <div style="display: flex; justify-content: space-between; font-size: 13px; gap: 8px; flex-wrap: wrap"><b>Bill dated 3 Sep 2036</b><span class="mut">DEMO-2036-09.pdf</span></div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px">
+              <label style="font-size: 11.5px; color: var(--ink2); display: flex; flex-direction: column; gap: 4px">Units exported<input class="field" value="4,102" style="width: 100%"></label>
+              <label style="font-size: 11.5px; color: var(--ink2); display: flex; flex-direction: column; gap: 4px">Earnings (LKR)<input class="field" value="180,488" style="width: 100%"></label>
+              <label style="font-size: 11.5px; color: var(--ink2); display: flex; flex-direction: column; gap: 4px">Rate it implies<input class="field" value="44.00" disabled style="width: 100%"></label>
+            </div>
+            <div style="display: flex; gap: 10px"><button class="btn primary">Approve</button><button class="btn">Reject</button></div>
+          </div>
+        </div>
+      </section>
+      <section class="glass card" style="gap: 12px">
+        <div><h2 class="h2">Approved bills</h2><div class="sub">Latest first</div></div>
+        <div style="overflow-x: auto"><table class="t"><thead><tr><th>Bill date</th><th>Period</th><th>CEB kWh</th><th>Earnings</th><th>Rate</th><th>Status</th></tr></thead><tbody>
+          <sc-for list="{{billRows}}" as="b" hint-placeholder-count="6"><tr><td>{{b.date}}</td><td>{{b.period}}</td><td>{{b.kwh}}</td><td>LKR {{b.earn}}</td><td>{{b.rate}}</td><td><span class="pill" style="background: var(--good-a20); color: var(--good)">Approved</span></td></tr></sc-for>
+        </tbody></table></div>
+      </section>
+      </sc-if>
+
+      <sc-if value="{{tabAccess}}" hint-placeholder-val="{{ false }}">
+      <section class="glass card" style="gap: 14px">
+        <div><h2 class="h2">Who can see the real data</h2><div class="sub">Everyone else sees demo data dated 2035 onwards.</div></div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap"><input class="field" placeholder="name@example.com" style="flex: 1 1 240px; height: 38px"><button class="btn primary">Invite as viewer</button></div>
+        <div style="overflow-x: auto"><table class="t"><thead><tr><th>Person</th><th>Role</th><th>Can do</th><th></th></tr></thead><tbody>
+          <sc-for list="{{people}}" as="p" hint-placeholder-count="3"><tr><td>{{p.name}}</td><td><span class="pill" style="{{p.style}}">{{p.role}}</span></td><td class="mut">{{p.can}}</td><td style="text-align: right"><button class="btn" disabled="{{p.locked}}">Remove</button></td></tr></sc-for>
+        </tbody></table></div>
+      </section>
+      </sc-if>
+
+      <sc-if value="{{tabHealth}}" hint-placeholder-val="{{ false }}">
+      <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 20px">
+        <div class="glass card" style="gap: 12px">
+          <div><h2 class="h2">Nightly collection</h2><div class="sub">Last 7 runs</div></div>
+          <div style="display: flex; gap: 6px"><sc-for list="{{runs}}" as="r" hint-placeholder-count="7"><div data-tip="{{r.tip}}" style="flex: 1 1 0; height: 42px; border-radius: 8px; background: {{r.color}}; cursor: default"></div></sc-for></div>
+          <div class="sub" style="margin: 0">An empty or failed night opens a data-outage issue on its own.</div>
+        </div>
+        <div class="glass card" style="gap: 12px">
+          <div><h2 class="h2">Maintenance</h2><div class="sub">Always a dry run first; take a snapshot before any write</div></div>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap"><button class="btn">Take DB snapshot</button><button class="btn">Backfill telemetry (dry run)</button><button class="btn">Re-derive uptime (dry run)</button></div>
+          <div class="chip" style="padding: 11px 14px; font-size: 12px; color: var(--ink2)">These open the matching GitHub workflow; nothing here writes by itself.</div>
+        </div>
+      </section>
+      </sc-if>
+      </sc-if>

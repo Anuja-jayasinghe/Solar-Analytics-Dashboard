@@ -1,0 +1,134 @@
+{
+ "v": 3,
+ "attachments": {},
+ "boards": {
+  "Main.dc.html": {
+   "expand": "fill",
+   "h": 2400,
+   "is_interactive": true,
+   "title": "Overview (sidebar also switches pages)",
+   "w": 1440,
+   "x": 0,
+   "y": 0
+  },
+  "Pro.dc.html": {
+   "expand": "fill",
+   "h": 2230,
+   "is_interactive": true,
+   "title": "Pro metrics",
+   "w": 1440,
+   "x": 1520,
+   "y": 0
+  },
+  "Login.dc.html": {
+   "expand": "fill",
+   "h": 1000,
+   "is_interactive": true,
+   "title": "Sign in (doorway)",
+   "w": 1440,
+   "x": 3040,
+   "y": 0
+  },
+  "Admin.dc.html": {
+   "expand": "fill",
+   "h": 1500,
+   "is_interactive": true,
+   "title": "Admin dashboard",
+   "w": 1440,
+   "x": 4560,
+   "y": 0
+  },
+  "Overview-mobile.dc.html": {
+   "expand": "fill",
+   "h": 844,
+   "is_interactive": true,
+   "title": "Phone: Overview (dark), first screen",
+   "w": 390,
+   "x": 0,
+   "y": 3000
+  },
+  "Overview-mobile-light.dc.html": {
+   "expand": "fill",
+   "h": 844,
+   "is_interactive": true,
+   "title": "Phone: Overview (light), first screen",
+   "w": 390,
+   "x": 470,
+   "y": 3000
+  },
+  "Pro-mobile.dc.html": {
+   "expand": "fill",
+   "h": 3400,
+   "is_interactive": true,
+   "title": "Phone: Pro metrics",
+   "w": 390,
+   "x": 940,
+   "y": 3000
+  },
+  "Admin-mobile.dc.html": {
+   "expand": "fill",
+   "h": 1700,
+   "is_interactive": true,
+   "title": "Phone: Admin",
+   "w": 390,
+   "x": 1410,
+   "y": 3000
+  },
+  "Login-mobile.dc.html": {
+   "expand": "fill",
+   "h": 1100,
+   "is_interactive": true,
+   "title": "Phone: Sign in",
+   "w": 390,
+   "x": 1880,
+   "y": 3000
+  },
+  "B-Sunrise-Navy-dark.dc.html": {
+   "h": 560,
+   "title": "Palette B: Sunrise on Navy (chosen)",
+   "w": 760,
+   "x": 2370,
+   "y": 3000
+  }
+ },
+ "createdOnFiles": {
+  "at": "2026-10-04T04:12:08.537Z",
+  "v": 1
+ },
+ "designSystems": [],
+ "launch": {
+  "view": "canvas"
+ },
+ "notes": {
+  "t1": {
+   "kind": "title1",
+   "maxW": 6000,
+   "text": "v3 design: Overview, Pro metrics, Sign in, Admin",
+   "w": 240,
+   "x": 0,
+   "y": -300
+  },
+  "t2": {
+   "kind": "title1",
+   "maxW": 2270,
+   "text": "Phone layout: bottom tab bar, stacked tiles",
+   "w": 240,
+   "x": 0,
+   "y": 2700
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Pro.dc.html",
+  "Login.dc.html",
+  "Admin.dc.html",
+  "Overview-mobile.dc.html",
+  "Overview-mobile-light.dc.html",
+  "Pro-mobile.dc.html",
+  "Admin-mobile.dc.html",
+  "Login-mobile.dc.html",
+  "B-Sunrise-Navy-dark.dc.html"
+ ],
+ "pages": [],
+ "title": "Solar Analytics v3 Design"
+}
