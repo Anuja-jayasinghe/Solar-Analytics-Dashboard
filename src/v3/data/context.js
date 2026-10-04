@@ -11,9 +11,10 @@ export function useDataSource() {
 
 /**
  * Read one resource. `data` stays null until a real response arrives: a failed or pending read is
- * never rendered as zero. `refresh()` forces a re-read; `pollMs` re-reads on an interval.
+ * never rendered as zero. `refresh()` forces a re-read; `pollMs` re-reads on an interval; `enabled: false`
+ * waits (for a query that depends on another resource) and reports not-loading with no data.
  */
-export function useResource(name, query, { pollMs = 0 } = {}) {
+export function useResource(name, query, { pollMs = 0, enabled = true } = {}) {
   const { ready, mode, epoch, request, peek } = useDataSource();
   const key = cacheKey(name, query);
   const [state, setState] = useState(() => ({ data: peek(name, query) ?? null, error: null, loading: true }));
@@ -33,7 +34,10 @@ export function useResource(name, query, { pollMs = 0 } = {}) {
   );
 
   useEffect(() => {
-    if (!ready) return undefined;
+    if (!ready || !enabled) {
+      setState((s) => (s.loading ? { ...s, loading: false } : s));
+      return undefined;
+    }
     let alive = true;
     const cached = peek(name, queryRef.current);
     setState((s) => ({ data: cached ?? (s.error ? null : s.data), error: null, loading: cached === undefined }));
@@ -45,7 +49,7 @@ export function useResource(name, query, { pollMs = 0 } = {}) {
       if (timer) clearInterval(timer);
     };
     // `key` and `epoch` stand for the query and the data mode/user
-  }, [ready, name, key, epoch, pollMs, load, peek]);
+  }, [ready, enabled, name, key, epoch, pollMs, load, peek]);
 
   const refresh = useCallback(() => {
     setState((s) => ({ ...s, loading: true }));

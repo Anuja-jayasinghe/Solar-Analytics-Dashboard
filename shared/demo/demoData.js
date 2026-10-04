@@ -212,6 +212,6 @@ export function demoLive() {
   return {
     status: 'online', abnormalOffline: false, faultCode: null,
     currentPowerKw: 21.4, todayKwh: 98.2, totalKwh: 187654,
-    dataTimestamp: null, fetchedAt: null, stale: false, demo: true
+    peakTodayKw: 26.3, peakTodayAt: '11:55', dataTimestamp: null, fetchedAt: null, stale: false, demo: true
   };
 }

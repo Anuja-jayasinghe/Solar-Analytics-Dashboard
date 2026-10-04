@@ -285,7 +285,8 @@ is never read as a full one.
 | `uptime` | `from`, `to` | Per-day uptime rows, weighted aggregate, and timeline `segments` (ranges ≤ 62 days; otherwise `null`) (LR-002) |
 | `alarms` | `from`, `to` (≤ 400 days), `limit` (1–500, default 200) | Alarm log, counts by code, `truncated` flag |
 | `telemetry` | `date` | One day of 5-minute points (power, string V/I, AC V/I, frequency, PF, temperature) |
-| `live` | – | Right-now status from SolisCloud: `status` (`online`/`offline`/`alarm`), `abnormalOffline`, `currentPowerKw`, `todayKwh`, `totalKwh`; cached 60 s; `stale: true` when serving the last good value during an upstream outage |
+| `live` | – | Right-now status from SolisCloud: `status` (`online`/`offline`/`alarm`), `abnormalOffline`, `currentPowerKw`, `todayKwh`, `totalKwh`, **`todayKey`** (the server's Asia/Colombo date; clients never use their own clock for date keys); optional `peakTodayKw` / `peakTodayAt` (demo only for now, absent on real data until the live peak is built; see the v3-deferred issue); cached 60 s; `stale: true` when serving the last good value during an upstream outage |
+| `totals` | – | Overview headline figures without shipping every day: `generation` (`totalKwh` over days that have a reading, `dayCount`, `firstDay`, `lastDay`, `missingDays`; `null` when there is no data) and `earnings` (`totalLkr` summed over bills that carry an earnings figure, `billCount`, `billsWithoutEarnings`, first/last bill date) |
 | `settings` | – | `ratePerKwh`, `capacityKwp`, `acRatedKw`, `dailyTargetKwh` (null when unset; never a guessed default) |
 | `export` | `kind=daily\|uptime\|alarms`, `from`, `to` | `text/csv` attachment; RFC 4180 quoting; spreadsheet-formula injection neutralised |
 

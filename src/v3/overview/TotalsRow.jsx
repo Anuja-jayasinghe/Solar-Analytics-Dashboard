@@ -1,0 +1,71 @@
+import { Glass } from '../ui/Glass.jsx';
+import { Tip } from '../ui/Tip.jsx';
+import { DASH, energyCompact, fmtNum, longDate, lkrCompact, monthsBetween, openBillPeriod, shortDate } from './format.js';
+
+function Tile({ label, value, unit, sub, tip, loading }) {
+  return (
+    <Tip text={tip}>
+      <Glass className="v3-kpi" aria-label={label}>
+        <div className="v3-kpi-label">{label}</div>
+        {loading ? (
+          <div className="v3-skeleton" style={{ height: 30, width: '70%' }} aria-busy="true" aria-label="Loading" />
+        ) : (
+          <div className="v3-num v3-kpi-value">{value}{unit ? <span className="v3-kpi-unit">{unit}</span> : null}</div>
+        )}
+        <div className="v3-kpi-sub">{loading ? ' ' : sub}</div>
+      </Glass>
+    </Tip>
+  );
+}
+
+/**
+ * The three headline tiles: the open billing period, all-time generation, all-time earnings.
+ * Every figure is null-safe: while loading a skeleton, when unknown a dash, never a made-up 0.
+ */
+export function TotalsRow({ totals, comparison, todayKey, loading }) {
+  const open = openBillPeriod(comparison?.rows);
+  const gen = totals?.generation;
+  const earn = totals?.earnings;
+
+  const periodTip = open
+    ? `Billing period ${shortDate(open.startKey)} to today. Inverter generation is recorded on ${open.daysPresent ?? DASH} of ${open.daysInPeriod ?? DASH} days; the CEB bill for this period has not been issued yet.`
+    : 'There is no open billing period right now: the latest bill covers everything up to today.';
+  const period = {
+    value: open ? fmtNum(open.kwh) : DASH,
+    sub: open ? `since ${shortDate(open.startKey)} · awaiting bill` : 'no open period'
+  };
+
+  const energy = energyCompact(gen?.totalKwh ?? null);
+  const months = gen?.firstDay ? monthsBetween(gen.firstDay, todayKey ?? gen.lastDay) : null;
+  const genTip = gen?.totalKwh == null
+    ? 'No generation has been recorded yet.'
+    : `${fmtNum(gen.totalKwh)} kWh generated over ${fmtNum(gen.dayCount)} recorded days since ${longDate(gen.firstDay)}.${gen.missingDays ? ` ${gen.missingDays} day${gen.missingDays === 1 ? '' : 's'} in that span have no reading and are not counted as zero.` : ''}`;
+
+  const money = lkrCompact(earn?.totalLkr ?? null);
+  const avgBill = lkrCompact(earn?.billCount ? earn.totalLkr / earn.billCount : null);
+  const earnTip = earn?.totalLkr == null
+    ? 'No bill with an earnings figure yet.'
+    : `Sum of ${earn.billCount} CEB bills (${longDate(earn.firstBillDate)} to ${longDate(earn.lastBillDate)}), about ${avgBill.value}${avgBill.unit} per bill.${earn.billsWithoutEarnings ? ` ${earn.billsWithoutEarnings} bill(s) have no earnings figure and are left out.` : ''}`;
+
+  return (
+    <section className="v3-kpis" aria-label="Totals">
+      <Tile label="This billing period" value={period.value} unit="kWh" sub={period.sub} tip={periodTip} loading={loading} />
+      <Tile
+        label="All-time generation"
+        value={energy.value}
+        unit={energy.unit}
+        sub={gen?.firstDay ? `since ${longDate(gen.firstDay)}${months ? ` · ${months} months` : ''}` : 'no data yet'}
+        tip={genTip}
+        loading={loading}
+      />
+      <Tile
+        label="All-time earnings"
+        value={money.value}
+        unit={money.unit}
+        sub={earn?.billCount ? `from ${earn.billCount} CEB bills${months ? ` · ${monthsBetween(earn.firstBillDate, earn.lastBillDate) ?? months} months` : ''}` : 'no bills yet'}
+        tip={earnTip}
+        loading={loading}
+      />
+    </section>
+  );
+}
