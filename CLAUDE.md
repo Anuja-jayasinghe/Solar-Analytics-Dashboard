@@ -155,7 +155,7 @@ with the reference documents, the reference documents are right.
 The new frontend (`src/v3/`, design in `docs/design/v3/`) is served at **`/`**; the previous dashboard is **deprecated and lives
 under `/v1`** with a banner (`src/App.jsx`, `src/main.jsx` picks the app by path). Visitors see demo data; viewers and admins see
 real data through `/api/data/*`. Release notes and the production-readiness analysis: `docs/RELEASE_v3.0.0.md`. Rollback: `docs/RUNBOOK.md`.
-**Still open:** real data stays publicly readable by the anon key until `/v1` is removed and
+**Bill tables and the bill PDF bucket were closed to the anon key on 2026-10-04. Still open:** the dashboard tables stay publicly readable by the anon key until `/v1` is removed and
 `scripts/sql/2026-10-04_v3_revoke_anon_read_at_v1_removal.sql` is applied (#155). Workflow: `docs/WORKING_RULES.md` 7a.
 
 ## v3 foundations are live (2026-10-04)

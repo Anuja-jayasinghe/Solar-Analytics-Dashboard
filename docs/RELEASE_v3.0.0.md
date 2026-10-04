@@ -49,15 +49,14 @@ Checked 2026-10-04 on the release candidate. "Evidence" says how it was verified
 | **Lighthouse (production `/`, mobile profile, 2026-10-04)** | First run found Performance 57, Accessibility 97, CLS 0.45 and one ARIA failure; fixed (visitors skip the wait for Clerk's script using its signed-out cookie, card heights reserved, `role=img`, Overview bundled, demo prefetched). Final two runs: **Performance 79 and 93, Accessibility 100, Best practices 100, SEO 100, CLS 0.04 to 0.05, TBT 80 to 170 ms, FCP 1.6 to 1.8 s** (performance varies run to run in the lab) | `npx lighthouse` against production |
 | Browser tab | Each page sets its own title | test |
 | Rollback | `docs/RUNBOOK.md` "Rolling back v3.0.0": promote the previous deployment (instant) or revert the release merge | runbook |
-| **Open risk: real data is still publicly readable** | The previous dashboard reads the database directly with the public anon key, so until it is removed, anyone holding that key can read ceb_data, daily summaries and settings, and (until `2026-09-24_revoke_anon_bill_access.sql` is applied) bill account numbers and PDF paths. The new dashboard does not need any of that | read-only query of `pg_policies` on 2026-10-04 |
+| **Open risk: real data is still publicly readable** | **Bill tables and the bill PDF bucket are now closed to the public key (migration applied 2026-10-04, snapshot first; verified as anon).** Until the previous dashboard is removed, anyone holding the public anon key can still read `ceb_data`, the daily summaries and settings, because v1 reads them directly in the browser | read-only `pg_policies` query and anon REST/storage calls |
 
-### The one thing that is not done: making the data private
+### What is left to make the data private
 
-Making v3 the default does not by itself close the exposure above. Two steps, both written, neither applied
-(both change the production database, so they need the owner's go-ahead):
+Making v3 the default does not by itself close the rest of the exposure. Two steps were written; the first is applied:
 
-1. **Safe now:** `scripts/sql/2026-09-24_revoke_anon_bill_access.sql` (closes the two bill tables and the bucket;
-   the code that replaced those browser reads has been deployed for weeks).
+1. **Done 2026-10-04:** `scripts/sql/2026-09-24_revoke_anon_bill_access.sql` (closed the two bill tables and the bucket, which
+   also allowed anonymous uploads and deletes; the code that replaced those browser reads had been deployed for weeks).
 2. **At v1 removal:** `scripts/sql/2026-10-04_v3_revoke_anon_read_at_v1_removal.sql` (+ rollback). It breaks
    `/v1`, so it goes together with deleting `/v1`.
 
