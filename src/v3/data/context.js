@@ -3,6 +3,23 @@ import { cacheKey } from './client.js';
 
 export const DataContext = createContext(null);
 
+/**
+ * Load other queries in the background (the choices a person is likely to click next), so switching to them is
+ * instant. Runs once the main data is in; failures are ignored here and surface normally if the view is opened.
+ * @param {Array<[string, object]>} items  [resourceName, query] pairs
+ */
+export function usePrefetch(items, when = true) {
+  const { request, ready } = useDataSource();
+  const key = JSON.stringify(items);
+  useEffect(() => {
+    if (!ready || !when) return undefined;
+    const t = setTimeout(() => {
+      for (const [name, query] of JSON.parse(key)) request(name, query).promise.catch(() => {});
+    }, 300);
+    return () => clearTimeout(t);
+  }, [key, ready, when, request]);
+}
+
 export function useDataSource() {
   const ctx = useContext(DataContext);
   if (!ctx) throw new Error('useDataSource must be used inside <DataProvider>');
@@ -56,5 +73,7 @@ export function useResource(name, query, { pollMs = 0, enabled = true } = {}) {
     return load(true).then(setState);
   }, [load]);
 
-  return { ...state, refresh, mode };
+  // Showing the previous result while the new one loads: the screen should say it is working.
+  const refreshing = state.loading && state.data !== null;
+  return { ...state, refreshing, refresh, mode };
 }

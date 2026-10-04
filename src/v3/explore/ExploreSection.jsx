@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { addDays } from '../../../shared/domain/time.js';
-import { useResource } from '../data/context.js';
+import { usePrefetch, useResource } from '../data/context.js';
 import { Glass } from '../ui/Glass.jsx';
 import { Segmented } from '../ui/Segmented.jsx';
 import { useIsPhone } from '../ui/useIsPhone.js';
@@ -55,6 +55,24 @@ export function ExploreSection({ totals, todayKey }) {
   const periodLabel = STATS_PERIODS.find((p) => p.value === period)?.label ?? '';
   const statsText = sRange ? `${periodLabel} · ${dayLabelYear(sRange.from)} to ${dayLabelYear(sRange.to)}${stats.data ? ` · ${stats.data.stats.presentDays} of ${stats.data.stats.daysInRange} days with data` : ''}` : '';
 
+  // Load the likely next choices in the background so clicking them is instant.
+  const neighbours = [];
+  if (ready && bounds.max) {
+    for (const k of ['week', 'month', 'year']) {
+      const r = presetRange(k, bounds.max, bounds);
+      neighbours.push(['range', { from: r.from, to: r.to }]);
+    }
+    if (range && kind !== 'custom' && canStep(kind, range, -1, bounds)) {
+      const back = stepRange(kind, range, -1, bounds);
+      neighbours.push(['range', { from: back.from, to: back.to }]);
+    }
+    for (const p of STATS_PERIODS) {
+      const r = statsRange(p.value, bounds);
+      if (r) neighbours.push(['range', { from: r.from, to: r.to }]);
+    }
+  }
+  usePrefetch(neighbours, !!res.data);
+
   const changeKind = (k) => {
     if (k === 'custom') setCustom(range ? { from: range.from, to: range.to } : null);
     else setEndKey(null);
@@ -99,7 +117,7 @@ export function ExploreSection({ totals, todayKey }) {
 
   if (phone) {
     return (
-      <Glass card className="v3-explore" aria-label="Explore">
+      <Glass card className="v3-explore" aria-label="Explore" data-busy={(tab === 'gen' && res.refreshing) || (tab === 'stats' && stats.refreshing) ? 'true' : undefined}>
         <Segmented small fill role="tablist" options={TABS} value={tab} onChange={setTab} label="Explore" />
         {tab === 'gen' && genBody}
         {tab === 'day' && dayBody}
@@ -109,7 +127,7 @@ export function ExploreSection({ totals, todayKey }) {
   }
   return (
     <>
-      <Glass card className="v3-explore" aria-label="Inverter generation">
+      <Glass card className="v3-explore" aria-label="Inverter generation" data-busy={view === 'gen' && res.refreshing ? 'true' : undefined} aria-busy={view === 'gen' && res.refreshing}>
         <div className="v3-tilehead">
           <div>
             <h2 className="v3-h2">{view === 'gen' ? 'Inverter generation' : 'Generation through the day'}</h2>
@@ -119,7 +137,7 @@ export function ExploreSection({ totals, todayKey }) {
         </div>
         {view === 'gen' ? genBody : dayBody}
       </Glass>
-      <Glass card className="v3-explore v3-stats-tile" aria-label="Statistics">{statsBody}</Glass>
+      <Glass card className="v3-explore v3-stats-tile" aria-label="Statistics" data-busy={stats.refreshing ? 'true' : undefined} aria-busy={stats.refreshing}>{statsBody}</Glass>
     </>
   );
 }

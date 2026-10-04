@@ -52,8 +52,8 @@ export function StatsBody({ showHead, stats, loading, error, rangeText, period, 
             {geo.avgY !== null && <line x1="0" x2="100" y1={geo.avgY} y2={geo.avgY} style={{ stroke: 'var(--ink2)' }} strokeWidth="1.4" strokeDasharray="5 4" vectorEffect="non-scaling-stroke" />}
           </svg>
           <div className="v3-spread-dots">
-            <Tip className="v3-sdot-wrap" style={{ left: `${geo.best.x}%`, top: `${geo.best.y}%` }} value={best ? `Best day · ${dayLabelYear(best.date)} · ${fmtNum(best.kwh, 1)} kWh` : ''}><span className="v3-sdot" style={{ background: 'var(--good)', boxShadow: '0 0 0 4px var(--good-a20)' }} /></Tip>
-            <Tip className="v3-sdot-wrap" style={{ left: `${geo.worst.x}%`, top: `${geo.worst.y}%` }} value={worst ? `Lowest day · ${dayLabelYear(worst.date)} · ${fmtNum(worst.kwh, 1)} kWh` : ''}><span className="v3-sdot" style={{ background: 'var(--warn)', boxShadow: '0 0 0 4px var(--warn-a20)' }} /></Tip>
+            <Tip className="v3-sdot-wrap" style={{ left: `${geo.best.x}%`, top: `${geo.best.y}%` }} text={best ? `Best day · ${dayLabelYear(best.date)}` : ''}><span className="v3-sdot" style={{ background: 'var(--good)', boxShadow: '0 0 0 4px var(--good-a20)' }} /><span className="v3-sval" style={{ color: 'var(--good)' }}>{best ? fmtNum(best.kwh, 1) : ''}</span></Tip>
+            <Tip className="v3-sdot-wrap" style={{ left: `${geo.worst.x}%`, top: `${geo.worst.y}%` }} text={worst ? `Lowest day · ${dayLabelYear(worst.date)}` : ''}><span className="v3-sdot" style={{ background: 'var(--warn)', boxShadow: '0 0 0 4px var(--warn-a20)' }} /><span className="v3-sval below" style={{ color: 'var(--warn)' }}>{worst ? fmtNum(worst.kwh, 1) : ''}</span></Tip>
           </div>
         </div>
       ) : !loading && !error ? <Note>No generation was recorded in this range.</Note> : null}

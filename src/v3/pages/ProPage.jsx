@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useResource } from '../data/context.js';
+import { usePrefetch, useResource } from '../data/context.js';
 import { Segmented } from '../ui/Segmented.jsx';
 import { Note } from '../ui/Note.jsx';
 import { buildCebRows } from '../ceb/rows.js';
@@ -36,6 +36,10 @@ export default function ProPage() {
   const rates = useMemo(() => rateSeries(bills.data), [bills.data]);
   const pairs = useMemo(() => yoyPairs(buildCebRows(bills.data?.bills, null, null)), [bills.data]);
 
+  const others = todayKey ? PRO_RANGES.filter((d) => d !== days).flatMap((d) => { const r = proRange(todayKey, d); return [['uptime', { from: r.from, to: r.to }], ['alarms', { from: r.from, to: r.to, limit: 50 }]]; }) : [];
+  usePrefetch(others, !!uptime.data);
+  const busy = uptime.refreshing || alarms.refreshing;
+
   const failed = [live, uptime, alarms, telemetry, totals, bills].filter((r) => r.error);
   const waiting = !ready || uptime.loading || alarms.loading;
 
@@ -46,12 +50,14 @@ export default function ProPage() {
         <Segmented small options={OPTIONS} value={days} onChange={setDays} label="Range" />
       </div>
       {failed.length > 0 && <Note tone="bad">Some figures could not be loaded ({[...new Set(failed.map((r) => r.error.code ?? 'error'))].join(', ')}). They are shown as a dash or left empty, never as zero.</Note>}
-      <HealthRow summary={summary} loading={waiting && !uptime.data} />
-      <UptimeStrip days={uptime.data?.days} loading={uptime.loading} error={uptime.error} />
-      <section className="v3-twocol">
-        <AlarmTable alarms={alarms.data} loading={alarms.loading} error={alarms.error} />
-        <DataAndLogger summary={summary} uptime={uptime.data} loading={uptime.loading} />
-      </section>
+      <div className="v3-stack" data-busy={busy ? 'true' : undefined} aria-busy={busy}>
+        <HealthRow summary={summary} loading={waiting && !uptime.data} />
+        <UptimeStrip days={uptime.data?.days} loading={uptime.loading} error={uptime.error} />
+        <section className="v3-twocol">
+          <AlarmTable alarms={alarms.data} loading={alarms.loading} error={alarms.error} />
+          <DataAndLogger summary={summary} uptime={uptime.data} loading={uptime.loading} />
+        </section>
+      </div>
       <Electrical e={electrical} date={range?.to} loading={telemetry.loading} error={telemetry.error} />
       <section className="v3-twocol">
         <RateHistory rates={rates} loading={bills.loading} error={bills.error} />

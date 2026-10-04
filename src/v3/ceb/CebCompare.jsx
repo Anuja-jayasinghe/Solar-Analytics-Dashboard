@@ -7,7 +7,7 @@ import { Note } from '../ui/Note.jsx';
 import { ThresholdPlot } from '../charts/ThresholdPlot.jsx';
 import { MarkToggle } from '../charts/MarkToggle.jsx';
 import { usePrefs } from '../prefs/context.js';
-import { areaPath, axisTicks, linePath, maxOf, niceMax, xPct, yPct } from '../charts/scale.js';
+import { MAX_LABELLED_COLUMNS, areaPath, axisTicks, chartNum, linePath, maxOf, niceMax, xPct, yPct } from '../charts/scale.js';
 import { fmtNum } from '../overview/format.js';
 import { aboveSummary, buildCebRows, columnTip, defaultThreshold, gapSummary, isPartial, stepEnd, varianceTag, windowOf } from './rows.js';
 import { GapStrip } from './GapStrip.jsx';
@@ -19,6 +19,9 @@ const STRIPE = 'repeating-linear-gradient(135deg, var(--gen) 0 5px, var(--gen-a3
 
 function Columns({ rows, yMax, threshold, style }) {
   const n = rows.length;
+  const dense = n > 12;
+  const labels = n <= MAX_LABELLED_COLUMNS;
+  const num = (v) => (labels ? chartNum(v, { dense }) : '');
   const invPts = rows.map((r, i) => (r.inverterKwh === null ? null : [xPct(i, n), yPct(r.inverterKwh, yMax)]));
   const cebPts = rows.map((r, i) => (r.cebKwh === null ? null : [xPct(i, n), yPct(r.cebKwh, yMax)]));
   return (
@@ -30,30 +33,32 @@ function Columns({ rows, yMax, threshold, style }) {
           <path d={linePath(cebPts)} fill="none" style={{ stroke: 'var(--ceb)' }} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         </svg>
       )}
-      <div className="v3-cols">
+      <div className="v3-cols" data-dense={n > 16 || undefined}>
         {rows.map((r) => {
           const hi = r.inverterKwh !== null && r.inverterKwh > threshold;
           const invPct = r.inverterKwh === null ? 0 : (r.inverterKwh / yMax) * 100;
           const cebPct = r.cebKwh === null ? 0 : (r.cebKwh / yMax) * 100;
           const striped = r.status === 'provisional' || isPartial(r);
           return (
-            <Tip key={r.id} value={`${r.label} ${r.year} · Inverter ${fmtNum(r.inverterKwh)} kWh · ${r.status === 'provisional' ? 'bill not issued yet' : `CEB ${fmtNum(r.cebKwh)} kWh`}`} text={columnTip(r, threshold)}>
+            <Tip key={r.id} text={columnTip(r, threshold)}>
               <div className="v3-col">
                 {style === 'bars' ? (
                   <>
                     {r.inverterKwh !== null && (
-                      <div className="v3-bar" style={{ height: `${invPct}%`, background: striped ? STRIPE : 'var(--gen)', border: striped ? '1px solid var(--gen)' : undefined, opacity: hi ? 1 : 0.5 }} />
+                      <div className="v3-bar" style={{ height: `${invPct}%`, background: striped ? STRIPE : 'var(--gen)', border: striped ? '1px solid var(--gen)' : undefined, opacity: hi ? 1 : 0.5 }}><span className="v3-val">{num(r.inverterKwh)}</span></div>
                     )}
                     {r.status === 'provisional' ? (
                       <div className="v3-bar" style={{ height: `${invPct * 0.9}%`, border: '1.5px dashed var(--ceb)', opacity: 0.6 }} />
                     ) : r.cebKwh !== null ? (
-                      <div className="v3-bar" style={{ height: `${cebPct}%`, background: 'var(--ceb)' }} />
+                      <div className="v3-bar" style={{ height: `${cebPct}%`, background: 'var(--ceb)' }}><span className="v3-val">{num(r.cebKwh)}</span></div>
                     ) : null}
                   </>
                 ) : (
                   <>
                     {r.inverterKwh !== null && <span className="v3-dot" style={{ bottom: `${invPct}%`, background: 'var(--gen)', width: hi ? 11 : 8, height: hi ? 11 : 8 }} />}
+                    {r.inverterKwh !== null && <span className="v3-val v3-val-pt" style={{ bottom: `calc(${invPct}% + 8px)`, color: 'var(--gen)' }}>{num(r.inverterKwh)}</span>}
                     {r.cebKwh !== null && <span className="v3-dot" style={{ bottom: `${cebPct}%`, background: 'var(--ceb)', width: 9, height: 9 }} />}
+                    {r.cebKwh !== null && <span className="v3-val v3-val-pt below" style={{ bottom: `calc(${cebPct}% - 20px)`, color: 'var(--ceb)' }}>{num(r.cebKwh)}</span>}
                   </>
                 )}
               </div>

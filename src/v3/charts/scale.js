@@ -87,3 +87,17 @@ export function smoothPath(points) {
   }
   return d;
 }
+
+/** Labels above bars/points are drawn when there is room: off beyond this many columns. */
+export const MAX_LABELLED_COLUMNS = 40;
+
+/**
+ * The small number printed above a bar or point: just the value, no unit. Compact ("4.2k") when the chart is
+ * crowded and the value is large; one decimal below 10. Unknown prints nothing (never "0").
+ */
+export function chartNum(v, { dense = false } = {}) {
+  if (!isNum(v)) return '';
+  const a = Math.abs(v);
+  if (dense && a >= 1000) return `${(v / 1000).toFixed(1)}k`;
+  return v.toLocaleString('en-US', { maximumFractionDigits: a < 10 ? 1 : 0, minimumFractionDigits: 0 });
+}

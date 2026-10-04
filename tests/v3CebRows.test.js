@@ -206,3 +206,19 @@ describe('column hints', () => {
     expect(gapLabel(null)).toBe('');
   });
 });
+
+import { chartNum, MAX_LABELLED_COLUMNS } from '../src/v3/charts/scale.js';
+
+describe('value labels on charts', () => {
+  it('prints just the number: whole above 10, one decimal below, compact when crowded', () => {
+    expect(chartNum(4102)).toBe('4,102');
+    expect(chartNum(4102, { dense: true })).toBe('4.1k');
+    expect(chartNum(152.34)).toBe('152');
+    expect(chartNum(7.26)).toBe('7.3');
+    expect(chartNum(0)).toBe('0'); // a measured zero is shown
+    expect(chartNum(null)).toBe(''); // unknown prints nothing, never 0
+    expect(chartNum(NaN)).toBe('');
+    expect(chartNum(-5800, { dense: true })).toBe('-5.8k');
+    expect(MAX_LABELLED_COLUMNS).toBe(40);
+  });
+});
