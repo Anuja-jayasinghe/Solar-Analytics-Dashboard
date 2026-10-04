@@ -3,6 +3,7 @@ import { useResource } from '../data/context.js';
 import { Note } from '../ui/Note.jsx';
 import { TotalsRow } from '../overview/TotalsRow.jsx';
 import { LiveRow } from '../overview/LiveRow.jsx';
+import { CebCompare } from '../ceb/CebCompare.jsx';
 
 /** Re-render about once a minute so "2 min ago" and the freshness ring keep moving between data polls. */
 function useNow(intervalMs = 30_000) {
@@ -15,7 +16,7 @@ function useNow(intervalMs = 30_000) {
 }
 
 /**
- * Overview. This slice (overview-live) builds the headline tiles and the live row. The CEB comparison,
+ * Overview. Built slice by slice: headline tiles and live row (overview-live), CEB vs Inverter (ceb-compare);
  * generation charts and statistics arrive in the following slices (docs/V3_REFACTOR_PLAN.md, P5b).
  */
 export default function OverviewPage() {
@@ -24,9 +25,10 @@ export default function OverviewPage() {
   const totals = useResource('totals');
   const settings = useResource('settings');
   const todayKey = live.data?.todayKey ?? null;
+  const bills = useResource('bills');
   const comparison = useResource('comparison', { year: todayKey ? Number(todayKey.slice(0, 4)) : undefined }, { enabled: todayKey !== null });
 
-  const failed = [live, totals, comparison].filter((r) => r.error);
+  const failed = [live, totals, comparison, bills].filter((r) => r.error);
   const s = settings.data?.settings ?? null;
 
   return (
@@ -43,7 +45,8 @@ export default function OverviewPage() {
         loading={totals.loading || (comparison.loading && !comparison.data)}
       />
       <LiveRow live={live.data} targetKwh={s?.dailyTargetKwh ?? null} maxKw={s?.acRatedKw ?? null} now={now} loading={live.loading} />
-      <Note>CEB vs Inverter, generation over time and statistics are the next slices (docs/design/v3).</Note>
+      <CebCompare bills={bills.data} comparison={comparison.data} todayKey={todayKey} loading={bills.loading || comparison.loading} error={bills.error} />
+      <Note>Generation over time, the through-the-day tile and statistics are the next slices (docs/design/v3).</Note>
     </>
   );
 }
