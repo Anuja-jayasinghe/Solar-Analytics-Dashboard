@@ -302,6 +302,8 @@ the Settings tariff for every day. The response always states which was used.
 
 ### `PUT` | `POST /api/settings`
 
+_Update by name (v3): `PUT { setting_name, setting_value }` is accepted as well as `{ id, setting_value }`; the name must be allowlisted (`api/_lib/settingsRules.js`)._
+
 - `PUT` — one setting: `{ id, setting_value }`
 - `POST` — seed several: `{ settings: [{ setting_name, setting_value, description? }, ...] }`
 
