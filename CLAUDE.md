@@ -150,6 +150,10 @@ History — why it is the way it is:
 The history documents are a **record**, not a description of the present. Where they disagree
 with the reference documents, the reference documents are right.
 
+## v3 UI is built at /v3 (2026-10-04)
+
+The new frontend (`src/v3/`, design in `docs/design/v3/`) lives at **`/v3`** beside the unchanged v1. Visitors see demo data; viewers and admins see real data through `/api/data/*`. Cutover (v1 replaced, anon SELECT revoked) is a separate owner-approved step, blocked on #181. Workflow: `docs/WORKING_RULES.md` 7a.
+
 ## v3 foundations are live (2026-10-04)
 
 The non-UI half of the v3 refactor is merged and running; **v1 (`/dashboard`) is unchanged and still the

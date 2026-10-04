@@ -2,11 +2,11 @@ import { Glass } from '../ui/Glass.jsx';
 import { Tip } from '../ui/Tip.jsx';
 import { DASH, energyCompact, fmtNum, longDate, lkrCompact, monthsBetween, openBillPeriod, shortDate } from './format.js';
 
-function Tile({ label, value, unit, sub, tip, loading }) {
+function Tile({ label, short, value, unit, sub, tip, loading }) {
   return (
     <Tip text={tip}>
       <Glass className="v3-kpi" aria-label={label}>
-        <div className="v3-kpi-label">{label}</div>
+        <div className="v3-kpi-label"><span className="v3-long">{label}</span><span className="v3-short">{short ?? label}</span></div>
         {loading ? (
           <div className="v3-skeleton" style={{ height: 30, width: '70%' }} aria-busy="true" aria-label="Loading" />
         ) : (
@@ -49,9 +49,10 @@ export function TotalsRow({ totals, comparison, todayKey, loading }) {
 
   return (
     <section className="v3-kpis" aria-label="Totals">
-      <Tile label="This billing period" value={period.value} unit="kWh" sub={period.sub} tip={periodTip} loading={loading} />
+      <Tile label="This billing period" short="This period" value={period.value} unit="kWh" sub={period.sub} tip={periodTip} loading={loading} />
       <Tile
         label="All-time generation"
+        short="All-time gen"
         value={energy.value}
         unit={energy.unit}
         sub={gen?.firstDay ? `since ${longDate(gen.firstDay)}${months ? ` · ${months} months` : ''}` : 'no data yet'}
@@ -60,6 +61,7 @@ export function TotalsRow({ totals, comparison, todayKey, loading }) {
       />
       <Tile
         label="All-time earnings"
+        short="All-time earned"
         value={money.value}
         unit={money.unit}
         sub={earn?.billCount ? `from ${earn.billCount} CEB bills${months ? ` · ${monthsBetween(earn.firstBillDate, earn.lastBillDate) ?? months} months` : ''}` : 'no bills yet'}
