@@ -37,7 +37,7 @@ function Columns({ rows, yMax, threshold, style }) {
           const cebPct = r.cebKwh === null ? 0 : (r.cebKwh / yMax) * 100;
           const striped = r.status === 'provisional' || isPartial(r);
           return (
-            <Tip key={r.id} text={columnTip(r, threshold)}>
+            <Tip key={r.id} value={`${r.label} ${r.year} · Inverter ${fmtNum(r.inverterKwh)} kWh · ${r.status === 'provisional' ? 'bill not issued yet' : `CEB ${fmtNum(r.cebKwh)} kWh`}`} text={columnTip(r, threshold)}>
               <div className="v3-col">
                 {style === 'bars' ? (
                   <>

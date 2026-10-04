@@ -27,7 +27,7 @@ export function UptimeStrip({ days, loading, error }) {
         <>
           <div className="v3-strip">
             {cells.map((c) => (
-              <Tip key={c.key} text={stripTip(c)}>
+              <Tip key={c.key} value={stripTip(c)}>
                 <div className="v3-stripcell" style={{ height: `${c.height}%`, background: TONE[c.tone] }} />
               </Tip>
             ))}

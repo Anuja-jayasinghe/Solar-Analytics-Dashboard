@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../shell/icons.jsx';
 import { Note } from '../ui/Note.jsx';
 import { useAdminApi } from './useAdmin.js';
+import { Portal } from '../ui/Portal.jsx';
 
 /**
  * A bill PDF shown inside the dashboard. The server signs a five-minute link for a file that belongs to a
@@ -24,12 +25,12 @@ export function PdfModal({ filePath, title, onClose }) {
     closeRef.current?.focus();
     const esc = (e) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', esc);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.removeEventListener('keydown', esc); document.body.style.overflow = prev; };
+    return () => document.removeEventListener('keydown', esc);
   }, [onClose]);
 
+  // Drawn in the top layer: inside a card the frosted-glass effect trapped it (only half was visible).
   return (
+    <Portal>
     <div className="v3-modal-backdrop" role="presentation" onPointerDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="v3-glass v3-modal" role="dialog" aria-modal="true" aria-label={title}>
         <div className="v3-modal-head">
@@ -44,5 +45,6 @@ export function PdfModal({ filePath, title, onClose }) {
         {state.url && <iframe className="v3-pdfframe" src={state.url} title={title} />}
       </div>
     </div>
+    </Portal>
   );
 }

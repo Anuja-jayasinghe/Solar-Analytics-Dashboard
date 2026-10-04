@@ -6,6 +6,7 @@ import { Header } from './Header.jsx';
 import { titleFor } from './nav.js';
 import { SvgDefs } from '../ui/SvgDefs.jsx';
 import { blockCopy } from './copy.js';
+import { Footer } from './Footer.jsx';
 
 /** Page frame: glow background, sidebar / bottom tab bar, header, and the routed page. */
 export function AppShell() {
@@ -35,6 +36,7 @@ export function AppShell() {
         <main className="v3-main" id="main">
           <Header />
           <Outlet />
+          <Footer />
         </main>
       </div>
     </div>

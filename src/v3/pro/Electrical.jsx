@@ -41,7 +41,7 @@ export function Electrical({ e, date, loading, error }) {
             {e.strings.map((s) => {
               const low = s.deviationPct !== null && s.deviationPct < -8;
               return (
-                <Tip key={s.n} text={`String ${s.n}: ${s.amps === null ? 'no reading' : `${fmtNum(s.amps, 1)} A`}${s.volts === null ? '' : ` at about ${fmtNum(s.volts)} V`}${s.deviationPct === null ? '' : ` · ${s.deviationPct >= 0 ? '+' : '−'}${Math.abs(s.deviationPct).toFixed(1)}% vs the average`}`}>
+                <Tip key={s.n} value={`String ${s.n} · ${s.amps === null ? 'no reading' : `${fmtNum(s.amps, 1)} A`}`} text={`String ${s.n}: ${s.amps === null ? 'no reading' : `${fmtNum(s.amps, 1)} A`}${s.volts === null ? '' : ` at about ${fmtNum(s.volts)} V`}${s.deviationPct === null ? '' : ` · ${s.deviationPct >= 0 ? '+' : '−'}${Math.abs(s.deviationPct).toFixed(1)}% vs the average`}`}>
                   <div className="v3-strrow">
                     <span>S{s.n}</span>
                     <div className="v3-barbg"><div style={{ width: `${s.amps === null ? 0 : (s.amps / maxA) * 100}%`, background: low ? 'var(--warn)' : 'var(--gen)' }} /></div>
@@ -63,7 +63,7 @@ export function Electrical({ e, date, loading, error }) {
                     <path d={tLine} fill="none" style={{ stroke: 'var(--gen)' }} strokeWidth="2.2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
                   </svg>
                   <span className="v3-mini-hi">{fmtNum(tHi)}</span><span className="v3-mini-lo">{fmtNum(tLo)}</span>
-                  <div className="v3-cols">{temps.map((t, i) => <Tip key={t.hour} text={`${t.hour}:00 to ${t.hour + 1}:00 · max ${fmtNum(t.max, 1)} °C`}><div className="v3-col"><span className="v3-dot" style={{ bottom: `${100 - tPts[i][1]}%`, background: 'var(--gen)', width: 7, height: 7 }} /></div></Tip>)}</div>
+                  <div className="v3-cols">{temps.map((t, i) => <Tip key={t.hour} value={`${t.hour}:00 to ${t.hour + 1}:00 · max ${fmtNum(t.max, 1)} °C`}><div className="v3-col"><span className="v3-dot" style={{ bottom: `${100 - tPts[i][1]}%`, background: 'var(--gen)', width: 7, height: 7 }} /></div></Tip>)}</div>
                 </div>
                 <div className="v3-xlabels" style={{ gap: 0 }}>{temps.map((t) => <div key={t.hour} className="v3-xlabel v3-xplain">{t.hour}</div>)}</div>
               </>
@@ -85,7 +85,7 @@ export function Electrical({ e, date, loading, error }) {
                       const top = Math.max(0, fy(f.hi));
                       const h = Math.max(4, Math.min(100, fy(f.lo)) - top);
                       return (
-                        <Tip key={f.hour} text={`${f.hour}:00 to ${f.hour + 1}:00 · ${fmtNum(f.lo, 2)} to ${fmtNum(f.hi, 2)} Hz`}>
+                        <Tip key={f.hour} value={`${f.hour}:00 to ${f.hour + 1}:00 · ${fmtNum(f.lo, 2)} to ${fmtNum(f.hi, 2)} Hz`}>
                           <div className="v3-col" style={{ padding: 0 }}><div className="v3-freqbar" style={{ top: `${top}%`, height: `${h}%` }} /></div>
                         </Tip>
                       );

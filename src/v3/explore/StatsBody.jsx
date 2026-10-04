@@ -16,8 +16,8 @@ export function StatsBody({ showHead, stats, loading, error, rangeText, period, 
   const worst = stats?.worst ?? null;
   const geo = stats ? spreadGeometry(stats.series ?? [], best, worst, avg) : null;
   const items = [
-    { label: 'Average per day', short: 'Avg / day', color: 'var(--ink2)', value: avg, sub: stats ? `over ${stats.presentDays} recorded days` : '', tip: 'Total for the range divided by the days that have data. Days with no reading are left out, never counted as zero.' },
-    { label: 'Best day', short: 'Best day', color: 'var(--gen)', value: best?.kwh ?? null, sub: best ? dayLabelYear(best.date) : '', tip: 'Highest single-day generation in the range.' },
+    { label: 'Average per day', short: 'Avg / day', color: 'var(--ceb)', value: avg, sub: stats ? `over ${stats.presentDays} recorded days` : '', tip: 'Total for the range divided by the days that have data. Days with no reading are left out, never counted as zero.' },
+    { label: 'Best day', short: 'Best day', color: 'var(--good)', value: best?.kwh ?? null, sub: best ? dayLabelYear(best.date) : '', tip: 'Highest single-day generation in the range.' },
     { label: 'Lowest day', short: 'Lowest day', color: 'var(--warn)', value: worst?.kwh ?? null, sub: worst ? dayLabelYear(worst.date) : '', tip: 'Lowest single-day generation in the range. A measured zero would show as 0.' }
   ];
 
@@ -47,13 +47,13 @@ export function StatsBody({ showHead, stats, loading, error, rangeText, period, 
       {geo ? (
         <div className="v3-spread" role="img" aria-label={`Daily generation over the range. Best day ${best ? fmtNum(best.kwh, 1) : DASH} kWh, lowest day ${worst ? fmtNum(worst.kwh, 1) : DASH} kWh, average ${fmtNum(avg, 1)} kWh.`}>
           <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-            <path d={areaPath(geo.points)} fill="url(#areaFill)" />
-            <path d={linePath(geo.points)} fill="none" style={{ stroke: 'var(--gen)' }} strokeWidth="1.8" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            <path d={areaPath(geo.points)} fill="url(#areaFillCeb)" />
+            <path d={linePath(geo.points)} fill="none" style={{ stroke: 'var(--ceb)' }} strokeWidth="1.8" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
             {geo.avgY !== null && <line x1="0" x2="100" y1={geo.avgY} y2={geo.avgY} style={{ stroke: 'var(--ink2)' }} strokeWidth="1.4" strokeDasharray="5 4" vectorEffect="non-scaling-stroke" />}
           </svg>
           <div className="v3-spread-dots">
-            <Tip className="v3-sdot-wrap" style={{ left: `${geo.best.x}%`, top: `${geo.best.y}%` }} text={best ? `Best day · ${dayLabelYear(best.date)} · ${fmtNum(best.kwh, 1)} kWh` : ''}><span className="v3-sdot" style={{ background: 'var(--gen)', boxShadow: '0 0 0 4px var(--gen-a30)' }} /></Tip>
-            <Tip className="v3-sdot-wrap" style={{ left: `${geo.worst.x}%`, top: `${geo.worst.y}%` }} text={worst ? `Lowest day · ${dayLabelYear(worst.date)} · ${fmtNum(worst.kwh, 1)} kWh` : ''}><span className="v3-sdot" style={{ background: 'var(--warn)', boxShadow: '0 0 0 4px var(--warn-a20)' }} /></Tip>
+            <Tip className="v3-sdot-wrap" style={{ left: `${geo.best.x}%`, top: `${geo.best.y}%` }} value={best ? `Best day · ${dayLabelYear(best.date)} · ${fmtNum(best.kwh, 1)} kWh` : ''}><span className="v3-sdot" style={{ background: 'var(--good)', boxShadow: '0 0 0 4px var(--good-a20)' }} /></Tip>
+            <Tip className="v3-sdot-wrap" style={{ left: `${geo.worst.x}%`, top: `${geo.worst.y}%` }} value={worst ? `Lowest day · ${dayLabelYear(worst.date)} · ${fmtNum(worst.kwh, 1)} kWh` : ''}><span className="v3-sdot" style={{ background: 'var(--warn)', boxShadow: '0 0 0 4px var(--warn-a20)' }} /></Tip>
           </div>
         </div>
       ) : !loading && !error ? <Note>No generation was recorded in this range.</Note> : null}

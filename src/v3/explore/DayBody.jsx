@@ -5,6 +5,7 @@ import { useResource } from '../data/context.js';
 import { Tip } from '../ui/Tip.jsx';
 import { Segmented } from '../ui/Segmented.jsx';
 import { Note } from '../ui/Note.jsx';
+import { DatePicker } from '../ui/Calendar.jsx';
 import { axisTicks, maxOf, niceMax, smoothPath, xPct, yPct } from '../charts/scale.js';
 import { DASH, fmtNum } from '../overview/format.js';
 import { dayLabelYear } from './series.js';
@@ -42,7 +43,7 @@ export function DayBody({ showHead, bounds }) {
           <Segmented small options={STYLES} value={style} onChange={setStyle} label="Chart style" />
           <div className="v3-stepper">
             <button type="button" className="v3-iconbtn sm" onClick={() => move(-1)} disabled={!date || (bounds.min && date <= bounds.min)} aria-label="Previous day"><ChevronLeft size={15} /></button>
-            <input className="v3-field" type="date" value={date ?? ''} min={bounds.min ?? undefined} max={bounds.max ?? undefined} aria-label="Day" onChange={(e) => e.target.value && setPicked(e.target.value)} />
+            <DatePicker value={date} min={bounds.min} max={bounds.max} onChange={setPicked} />
             <button type="button" className="v3-iconbtn sm" onClick={() => move(1)} disabled={!date || (bounds.max && date >= bounds.max)} aria-label="Next day"><ChevronRight size={15} /></button>
           </div>
         </div>
@@ -72,7 +73,7 @@ export function DayBody({ showHead, bounds }) {
               )}
               <div className="v3-cols" style={{ gap: 0 }}>
                 {hours.map((h, i) => (
-                  <Tip key={h.hour} text={`${dayLabelYear(date)} · ${h.hour}:00 to ${h.hour + 1}:00 · ${fmtNum(h.kwh, 1)} kWh`}>
+                  <Tip key={h.hour} value={`${h.hour}:00 to ${h.hour + 1}:00 · ${fmtNum(h.kwh, 1)} kWh`}>
                     <div className="v3-col" style={{ padding: 0 }}>
                       {style === 'bars'
                         ? <div className="v3-bar single" style={{ height: `${(h.kwh / yMax) * 100}%`, background: 'var(--gen)', maxWidth: 30, width: '60%', flex: '0 0 auto' }} />
