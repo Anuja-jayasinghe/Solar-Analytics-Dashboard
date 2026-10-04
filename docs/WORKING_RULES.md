@@ -85,6 +85,21 @@ body text ≥ 14px / labels ≥ 12px, contrast checked against the surface the t
   register and (b) a GitHub issue labelled `v3-deferred`, **at the moment it happens**.
 - Commits reference the phase (`chore(v3/P0): …`). Superseded docs move to `docs/archive/`.
 
+## 7a. Branching and merging
+
+`main` is always deployable and only changes through a pull request with green CI (`build` and `secrets`).
+
+- **Small changes**: `type/short-slug` branched from a fresh `origin/main`, one PR, merged with a merge commit.
+- **Long efforts** (the v3 frontend, #160) use an **integration branch**: `integration/<name>`, cut from `origin/main`.
+  Each feature is its own sub-branch `feat/<name>-<slice>` cut from the integration branch, merged back into it by PR
+  (CI runs on every PR, whatever its base). Keep slices small enough to review in one sitting.
+- The integration branch is merged into `main` by PR when a coherent, working set is ready (never half a feature), after
+  merging `origin/main` into it first so the PR is conflict-free. Merge commits, so the history of each slice stays visible.
+- Delete a sub-branch when its PR merges. Never push straight to `main` or an integration branch.
+- Exception: the keepalive workflow's heartbeat commit pushes to `main` as `github-actions[bot]`; any branch rule must allow it
+  or scheduled workflows get disabled again (see `.github/workflows/keepalive.yml`).
+- Every PR states what changed, what did not, and the checks run; anything skipped is a `v3-deferred` issue (section 7).
+
 ## 8. Operating
 
 - One site, one inverter (SN `1811040244070066`, 40 kW). Do not build multi-plant abstractions.
