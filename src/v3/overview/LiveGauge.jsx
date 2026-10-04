@@ -12,7 +12,8 @@ const ARC = 'M 30.72 140 A 80 80 0 1 1 169.28 140';
 export function LiveGauge({ live, maxKw, loading }) {
   const kw = live?.currentPowerKw ?? null;
   const frac = gaugeFraction(kw, maxKw ?? null);
-  const state = liveState(live);
+  // Before the first reading arrives the bulb says so, instead of claiming the status is unknown.
+  const state = loading && !live ? { key: 'loading', label: 'Checking…', tone: 'neutral' } : liveState(live);
   const pct = frac === null ? null : Math.round(frac * 100);
   const meter = frac === null ? {} : { 'aria-valuemin': 0, 'aria-valuemax': maxKw, 'aria-valuenow': kw, 'aria-valuetext': `${fmtNum(kw, 1)} kilowatts` };
 
