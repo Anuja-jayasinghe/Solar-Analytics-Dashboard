@@ -165,3 +165,31 @@ describe('settings cards', () => {
     expect(admin).toContain('>Sign out<');
   });
 });
+
+import AdminPage from '../src/v3/pages/AdminPage.jsx';
+
+describe('admin page', () => {
+  const renderAdmin = (level) =>
+    renderToString(
+      h(AccessContext.Provider, { value: access(level) },
+        h(DataContext.Provider, { value: data('live') },
+          h(MemoryRouter, { initialEntries: ['/admin'] },
+            h(Routes, null,
+              h(Route, { path: '/admin', element: h(RequireAccess, { level: 'admin' }, h(AdminPage)) }))))));
+
+  it('an admin sees the three sections with Bills open: upload, the review queue and approved bills', () => {
+    const html = renderAdmin('admin');
+    expect(html).toContain('aria-label="Admin sections"');
+    for (const t of ['Bills', 'Access', 'Data health']) expect(html).toContain(`>${t}<`);
+    expect(html).toContain('Upload a CEB bill');
+    expect(html).toContain('Needs your check');
+    expect(html).toContain('Approved bills');
+    expect(html).toMatch(/aria-selected="true"[^>]*>Bills</);
+  });
+
+  it('a viewer never sees admin content, only the access message', () => {
+    const html = renderAdmin('viewer');
+    expect(html).not.toContain('Upload a CEB bill');
+    expect(html).toContain('does not have access');
+  });
+});
