@@ -15,6 +15,8 @@
 .v3-root[data-scheme='dark'] { color-scheme: dark; }
 .v3-root[data-scheme='light'] { color-scheme: light; }
 
+.v3-skip { position: absolute; left: 12px; top: -48px; z-index: 100; background: var(--gen); color: var(--gen-ink); padding: 8px 14px; border-radius: 999px; font-weight: 700; font-size: 13px; text-decoration: none; }
+.v3-skip:focus { top: 12px; }
 .v3-glows { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
 .v3-glows i { position: absolute; border-radius: 50%; }
 .v3-glows i:nth-child(1) { left: -160px; top: -200px; width: 760px; height: 760px; background: radial-gradient(circle, var(--glow1), transparent 66%); }

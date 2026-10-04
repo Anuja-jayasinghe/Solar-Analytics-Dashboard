@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Only the three publicly reachable routes are listed. Every other route in
-  src/App.jsx is behind Clerk authentication, so including it would advertise a
-  URL that returns a login redirect to any crawler that follows it.
+  Only the public pages are listed: the Overview and Pro metrics both work for anonymous visitors on demo
+  data. Settings and Admin need an account, so they are not advertised.
 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
@@ -11,13 +10,8 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://solaredge.anujajay.com/login</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://solaredge.anujajay.com/signup</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
+    <loc>https://solaredge.anujajay.com/pro</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
   </url>
 </urlset>

@@ -2,7 +2,30 @@
 
 All notable changes to the Solar Analytics Dashboard project.
 
-## [Unreleased] - 2026-09-24
+## [3.0.0] - 2026-10-04
+
+The new dashboard becomes the default. Full notes and the production-readiness analysis:
+[`RELEASE_v3.0.0.md`](RELEASE_v3.0.0.md). `v2.1.0` is the last build of the previous dashboard.
+
+### Changed
+- **`/` is now the new dashboard** (Overview, Pro metrics, Settings, Admin, sign-in). The previous dashboard is deprecated:
+  it is served under `/v1` with a "V1 · DEPRECATED" banner on every page. Old paths (`/dashboard`, `/demodashbaard`,
+  `/login`, `/admin/dashboard/…`, the `/v3` preview prefix) redirect to their new home; anything else is a real 404 page.
+- Production bundles no longer contain `console.log/debug/info` (warn and error are kept). The new app's first page no longer
+  preloads the Supabase, vendor, v1-admin or charts chunks.
+- Real data is private to invited users through the authenticated read API; visitors get demo data dated 2035+.
+
+### Added
+- LR-004 earnings difference (CEB paid minus what the generation was worth, at each bill's own rate).
+- Live peak kW today and its time on real data; `totals` resource; `live.todayKey`; `PUT /api/settings` by setting name.
+- Admin: edit/delete saved bills, remove people. Error boundary, 404 page, skip link, per-page titles.
+- Branch rulesets on `main` and `integration/*`, PR template, branching model in `docs/WORKING_RULES.md` 7a.
+
+### Staged, not applied (need the owner)
+- `scripts/sql/2026-10-04_v3_revoke_anon_read_at_v1_removal.sql` (+ rollback): makes the real data private. Apply when `/v1` is removed.
+- `2026-09-24_revoke_anon_bill_access.sql` is safe to apply now.
+
+## [Unreleased - earlier] - 2026-09-24
 
 Remediation of the repository audit in [`REPO_AUDIT_2026-09-24.md`](REPO_AUDIT_2026-09-24.md).
 The three SQL migrations it adds are **not applied automatically** — see
