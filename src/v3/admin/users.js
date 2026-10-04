@@ -42,3 +42,14 @@ export function roleProblem(err) {
   if (err?.status === 400) return err.message || 'That role change was refused.';
   return `Could not change the role (${err?.code ?? 'error'}).`;
 }
+
+/** The list without one person (after they are removed). */
+export function withoutUser(users, userId) {
+  return (users ?? []).filter((u) => u.id !== userId);
+}
+
+export function removeProblem(err) {
+  if (err?.status === 403) return 'Only an admin can remove people.';
+  if (err?.status === 400) return err.message || 'That person could not be removed.';
+  return `Could not remove the person (${err?.code ?? 'error'}).`;
+}

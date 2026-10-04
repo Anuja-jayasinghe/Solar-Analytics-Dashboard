@@ -5,8 +5,8 @@
 // exactly what the endpoints accept and never invents a value.
 
 import { describe, it, expect, vi } from 'vitest';
-import { BILL_FIELDS, toBillDraft, validateBillDraft, buildRecord, impliedRate, queueItems, uploadProblem } from '../src/v3/admin/billForm.js';
-import { ROLE_OPTIONS, roleOfLevel, levelLabel, displayName, sortUsers, canChangeRole, withRole, roleProblem } from '../src/v3/admin/users.js';
+import { BILL_FIELDS, toBillDraft, validateBillDraft, buildRecord, impliedRate, queueItems, uploadProblem, rowToDraft, buildRecordFromRow, describeChanges, recordProblem } from '../src/v3/admin/billForm.js';
+import { ROLE_OPTIONS, roleOfLevel, levelLabel, displayName, sortUsers, canChangeRole, withRole, roleProblem, withoutUser, removeProblem } from '../src/v3/admin/users.js';
 import { freshnessItems, MAINTENANCE, workflowUrl, REPO_URL } from '../src/v3/admin/health.js';
 import { createAdminApi } from '../src/v3/data/adminApi.js';
 
@@ -197,5 +197,70 @@ describe('admin API wrapper', () => {
   it('an empty success body is an empty object, not an error', async () => {
     const f = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => { throw new Error('no body'); } });
     expect(await api(f).discard('in1')).toEqual({});
+  });
+});
+
+describe('editing a saved bill', () => {
+  const row = {
+    id: 'rec1', bill_date: '2036-09-03', billing_period_start: '2036-08-06', billing_period_end: '2036-09-03',
+    meter_reading: 97597, units_exported: 4102, earnings: 180488, account_number: 'ACC-1', billing_month: '2036-09',
+    data_source: 'dashboard_upload', file_path: 'ceb/x.pdf', ingestion_id: '123e4567-e89b-12d3-a456-426614174000', created_at: 'x'
+  };
+  it('starts from the saved values as text', () => {
+    expect(rowToDraft(row)).toEqual({ billing_period_start: '2036-08-06', billing_period_end: '2036-09-03', meter_reading: '97597', units_exported: '4102', earnings: '180488' });
+    expect(rowToDraft({ bill_date: '2036-09-03' }).billing_period_end).toBe('2036-09-03'); // older rows without a period fall back to the bill date
+    expect(rowToDraft({ units_exported: null }).units_exported).toBe('');
+  });
+  it('builds the whole record the endpoint validates, carrying unedited columns through and dropping unknown ones', () => {
+    const draft = { ...rowToDraft(row), earnings: '180000' };
+    const rec = buildRecordFromRow(draft, row);
+    expect(rec).toEqual({
+      bill_date: '2036-09-03', billing_period_start: '2036-08-06', billing_period_end: '2036-09-03',
+      meter_reading: 97597, units_exported: 4102, earnings: 180000,
+      account_number: 'ACC-1', billing_month: '2036-09', data_source: 'dashboard_upload', file_path: 'ceb/x.pdf', ingestion_id: '123e4567-e89b-12d3-a456-426614174000'
+    });
+    expect(rec).not.toHaveProperty('created_at');
+    expect(rec).not.toHaveProperty('id');
+    expect(buildRecordFromRow(rowToDraft({ id: 1, bill_date: '2036-09-03', billing_period_start: '2036-08-06', meter_reading: 1, units_exported: 2, earnings: 3 }), { account_number: null })).not.toHaveProperty('account_number');
+    expect(() => buildRecordFromRow({ ...rowToDraft(row), units_exported: '' }, row)).toThrow(RangeError);
+  });
+  it('says exactly what changed, and nothing when nothing did', () => {
+    expect(describeChanges(row, rowToDraft(row))).toEqual([]);
+    expect(describeChanges(row, { ...rowToDraft(row), earnings: '180000', meter_reading: '97600' })).toEqual(['Meter reading: 97597 → 97600', 'Earnings (LKR): 180488 → 180000']);
+  });
+  it('turns failures into plain sentences', () => {
+    expect(recordProblem({ status: 400, message: 'earnings is required' })).toBe('earnings is required');
+    expect(recordProblem({ status: 404 })).toContain('no longer exists');
+    expect(recordProblem({ status: 403 })).toContain('admin');
+    expect(recordProblem({ code: 'network' })).toContain('network');
+  });
+  it('the admin API reads, patches and deletes saved bills', async () => {
+    const f = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ records: [] }) });
+    const a = createAdminApi({ getToken: async () => 'tok', fetchImpl: f });
+    await a.listRecords();
+    await a.updateRecord('rec1', { bill_date: '2036-09-03' });
+    await a.deleteRecord('rec1');
+    expect(f.mock.calls.map(([url, init]) => [init.method, url, init.body ? JSON.parse(init.body) : undefined])).toEqual([
+      ['GET', '/api/ceb-bills/records', undefined],
+      ['PATCH', '/api/ceb-bills/records', { id: 'rec1', record: { bill_date: '2036-09-03' } }],
+      ['DELETE', '/api/ceb-bills/delete', { recordId: 'rec1' }]
+    ]);
+  });
+});
+
+describe('removing a person', () => {
+  it('drops them from the list without touching the original', () => {
+    const users = [{ id: 'a' }, { id: 'b' }];
+    expect(withoutUser(users, 'a')).toEqual([{ id: 'b' }]);
+    expect(users).toHaveLength(2);
+    expect(withoutUser(undefined, 'a')).toEqual([]);
+  });
+  it('explains failures and calls DELETE on the user', async () => {
+    expect(removeProblem({ status: 400, message: 'You cannot delete yourself' })).toContain('yourself');
+    expect(removeProblem({ status: 403 })).toContain('admin');
+    expect(removeProblem({ code: 'network' })).toContain('network');
+    const f = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
+    await createAdminApi({ getToken: async () => 't', fetchImpl: f }).deleteUser('user_9');
+    expect([f.mock.calls[0][1].method, f.mock.calls[0][0]]).toEqual(['DELETE', '/api/admin/users/user_9']);
   });
 });

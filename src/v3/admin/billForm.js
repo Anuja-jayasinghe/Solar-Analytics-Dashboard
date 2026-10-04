@@ -93,3 +93,50 @@ export function uploadProblem(err) {
   if (err?.status === 403 || err?.status === 401) return 'Only an admin can upload bills.';
   return `Upload failed (${err?.code ?? 'error'}).`;
 }
+
+/** A saved bill (ceb_data row) -> the same text draft the review form uses. */
+export function rowToDraft(row) {
+  return toBillDraft({
+    billing_period_start: row?.billing_period_start,
+    billing_period_end: row?.billing_period_end ?? row?.bill_date,
+    meter_reading: row?.meter_reading,
+    units_exported: row?.units_exported,
+    earnings: row?.earnings
+  });
+}
+
+/**
+ * The `record` for PATCH /api/ceb-bills/records when editing a saved bill. The endpoint validates a whole
+ * record, so the columns we do not edit (account, month, file, ingestion) are carried over unchanged.
+ * Throws if the draft is not valid.
+ */
+export function buildRecordFromRow(draft, row) {
+  const errors = validateBillDraft(draft);
+  if (Object.keys(errors).length) throw new RangeError(`invalid bill draft: ${Object.keys(errors).join(', ')}`);
+  const record = {
+    bill_date: draft.billing_period_end,
+    billing_period_start: draft.billing_period_start,
+    billing_period_end: draft.billing_period_end,
+    meter_reading: Number(draft.meter_reading),
+    units_exported: Number(draft.units_exported),
+    earnings: Number(draft.earnings)
+  };
+  for (const k of ['account_number', 'billing_month', 'data_source', 'file_path', 'ingestion_id']) {
+    if (row?.[k] !== undefined && row?.[k] !== null && row?.[k] !== '') record[k] = row[k];
+  }
+  return record;
+}
+
+/** What an edit changes, in words, for the confirmation line. Empty when nothing differs. */
+export function describeChanges(row, draft) {
+  const before = rowToDraft(row);
+  return BILL_FIELDS.filter((f) => before[f.key] !== (draft[f.key] ?? '').trim()).map((f) => `${f.label}: ${before[f.key] || 'blank'} → ${draft[f.key].trim()}`);
+}
+
+/** A readable message for a failed edit or delete of a saved bill. */
+export function recordProblem(err) {
+  if (err?.status === 400) return err.message || 'The server refused those values.';
+  if (err?.status === 404) return 'That bill no longer exists. Reload the list.';
+  if (err?.status === 403 || err?.status === 401) return 'Only an admin can change bills.';
+  return `Could not save (${err?.code ?? 'error'}).`;
+}

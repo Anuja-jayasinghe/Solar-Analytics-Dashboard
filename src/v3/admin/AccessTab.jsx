@@ -3,7 +3,7 @@ import { Glass } from '../ui/Glass.jsx';
 import { Pill } from '../ui/Pill.jsx';
 import { Note } from '../ui/Note.jsx';
 import { useAccess } from '../access/context.js';
-import { ROLE_OPTIONS, canChangeRole, displayName, levelLabel, roleOfLevel, roleProblem, sortUsers, withRole } from './users.js';
+import { ROLE_OPTIONS, canChangeRole, displayName, levelLabel, removeProblem, roleOfLevel, roleProblem, sortUsers, withRole, withoutUser } from './users.js';
 import { useAdminApi, useAdminLoad } from './useAdmin.js';
 
 /** Who can see the real data. Roles are saved through the admin API; you cannot change your own. */
@@ -14,6 +14,7 @@ export function AccessTab() {
   const [users, setUsers] = useState(null);
   const [saving, setSaving] = useState(null);
   const [problem, setProblem] = useState(null);
+  const [removing, setRemoving] = useState(null); // the person being confirmed for removal
   const shown = sortUsers(users ?? list.data?.users);
 
   const change = async (u, role) => {
@@ -24,6 +25,19 @@ export function AccessTab() {
       setUsers(withRole(shown, u.id, role));
     } catch (err) {
       setProblem(roleProblem(err));
+    }
+    setSaving(null);
+  };
+
+  const remove = async (u) => {
+    setSaving(u.id);
+    setProblem(null);
+    try {
+      await api.deleteUser(u.id);
+      setUsers(withoutUser(shown, u.id));
+      setRemoving(null);
+    } catch (err) {
+      setProblem(removeProblem(err));
     }
     setSaving(null);
   };
@@ -41,7 +55,7 @@ export function AccessTab() {
         <div style={{ overflowX: 'auto' }}>
           <table className="v3-table">
             <caption className="v3-sr">People and their access</caption>
-            <thead><tr><th scope="col">Person</th><th scope="col">Now</th><th scope="col">Change to</th></tr></thead>
+            <thead><tr><th scope="col">Person</th><th scope="col">Now</th><th scope="col">Change to</th><th scope="col"><span className="v3-sr">Remove</span></th></tr></thead>
             <tbody>
               {shown.map((u) => {
                 const me = !canChangeRole(u, userId);
@@ -54,6 +68,11 @@ export function AccessTab() {
                         {ROLE_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                       </select>
                     </td>
+                    <td style={{ textAlign: 'right' }}>
+                      {!me && (removing === u.id
+                        ? <span className="v3-confirm">Remove this account for good? <button type="button" className="v3-btn" disabled={saving === u.id} onClick={() => remove(u)}>{saving === u.id ? 'Removing…' : 'Yes, remove'}</button> <button type="button" className="v3-btn" onClick={() => setRemoving(null)}>Keep</button></span>
+                        : <button type="button" className="v3-btn" style={{ height: 28, fontSize: 12 }} onClick={() => setRemoving(u.id)} aria-label={`Remove ${displayName(u)}`}>Remove</button>)}
+                    </td>
                   </tr>
                 );
               })}
@@ -61,7 +80,7 @@ export function AccessTab() {
           </table>
         </div>
       )}
-      <div className="v3-sub" style={{ margin: 0 }}>People sign up themselves, then appear here as "No access" until you make them a viewer. Sending invitations from here is not built yet.</div>
+      <div className="v3-sub" style={{ margin: 0 }}>People sign up themselves, then appear here as "No access" until you make them a viewer. Sending invitations from here is not built yet (#181).</div>
     </Glass>
   );
 }
