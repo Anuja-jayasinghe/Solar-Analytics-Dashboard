@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAccess } from '../access/context.js';
 import { roleLabel } from '../access/level.js';
-import { AVATARS, AVATAR_GROUPS, FEATURED_AVATAR_IDS, NICKNAME_MAX, avatarById, displayNameFor, savedAvatarId } from '../access/avatars.js';
+import { AVATAR_GROUPS, FEATURED_AVATAR_IDS, NICKNAME_MAX, avatarById, displayNameFor, savedAvatarId } from '../access/avatars.js';
 import { Avatar } from './Avatar.jsx';
 import { Icon } from './icons.jsx';
 
@@ -132,7 +132,7 @@ export function AccountMenu() {
                 </div>
               )}
             </div>
-            <button type="button" className="v3-avatar-more" aria-expanded={showAll} onClick={() => setShowAll((v) => !v)}>{showAll ? 'Show featured' : `View all ${AVATARS.length} avatars`}</button>
+            <button type="button" className="v3-avatar-more" aria-expanded={showAll} onClick={() => setShowAll((v) => !v)}>{showAll ? 'Show featured' : 'View more'}</button>
             <div className="v3-sub" style={{ margin: 0, minHeight: 16 }} role="status">{status || (signedIn ? 'Saved to your account.' : 'Saved in this browser.')}</div>
           </div>
 
