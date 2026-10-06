@@ -6,18 +6,18 @@ import { AVATARS, AVATAR_GROUPS, FEATURED_AVATAR_IDS, NICKNAME_MAX, avatarById, 
 import { Avatar } from './Avatar.jsx';
 import { Icon } from './icons.jsx';
 
-const REMINDER_SEEN_KEY = 'solar.v3.returningSignInReminderSeen';
+const REMINDER_SEEN_STORAGE_NAME = 'solar.v3.returningSignInReminderSeen';
 
 function reminderSeenThisTab() {
-  try { return globalThis.sessionStorage?.getItem(REMINDER_SEEN_KEY) === '1'; } catch { return false; }
+  try { return globalThis.sessionStorage?.getItem(REMINDER_SEEN_STORAGE_NAME) === '1'; } catch { return false; }
 }
 
 function markReminderSeenThisTab() {
-  try { globalThis.sessionStorage?.setItem(REMINDER_SEEN_KEY, '1'); } catch { /* The popover still works without storage. */ }
+  try { globalThis.sessionStorage?.setItem(REMINDER_SEEN_STORAGE_NAME, '1'); } catch { /* The popover still works without storage. */ }
 }
 
 function resetReminderForNextSignOut() {
-  try { globalThis.sessionStorage?.removeItem(REMINDER_SEEN_KEY); } catch { /* This tab can still track the reminder in memory. */ }
+  try { globalThis.sessionStorage?.removeItem(REMINDER_SEEN_STORAGE_NAME); } catch { /* This tab can still track the reminder in memory. */ }
 }
 
 function AvatarOption({ avatar, name, selected, onSelect, radioName }) {
