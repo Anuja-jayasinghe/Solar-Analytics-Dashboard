@@ -52,8 +52,10 @@ No new analytics beyond what v1 showed, only better presented. Environmental imp
 
 **Pro metrics** (admin and viewers; visitors see the demo version): health rings (uptime, time stopped,
 open alarms, data completeness), uptime by day, alarm history (lost-internet alarms are logger events,
-never downtime), data and logger, electrical health (string balance, temperature, grid frequency,
-grid voltage, power factor), per-bill effective rate, year over year. Tiny optional weather chip.
+never downtime), data and logger, electrical readings (unmapped PV input current, temperature,
+grid frequency, separate AC phase voltages, power factor), per-bill effective rate, year over year.
+The PV input display makes no string-fault claim until the physical wiring is known.
+Tiny optional weather chip.
 "Revenue lost to downtime" was considered and **dropped**.
 
 **Sidebar.** Full page height, collapses to icons, only: Overview, Pro metrics, Admin (admin only),

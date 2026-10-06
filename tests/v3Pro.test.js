@@ -103,14 +103,23 @@ describe('electrical health from telemetry', () => {
   const colomboHour = (ts) => colomboClock(ts).hour;
   const pt = (hhmmZ, o = {}) => ({ ts: `2036-09-10T${hhmmZ}:00Z`, pac_kw: 20, pv_a: [3.5, 3.5, 2.5, 3.5], pv_v: [550, 550, 550, 550], ac_v: [233, 235, 232], fac_hz: 50.1, power_factor: 1, temp_c: 50, ...o });
 
-  it('averages string currents and flags a string more than 8% below the mean', () => {
+  it('shows PV input readings without inferring occupancy or a string fault', () => {
     const e = electricalFromTelemetry([pt('04:00'), pt('04:05')], colomboHour);
-    expect(e.strings).toHaveLength(4);
-    expect(e.meanAmps).toBeCloseTo(3.25, 6);
-    expect(e.strings[2].deviationPct).toBeLessThan(-8);
-    expect(e.lowStrings).toEqual([3]);
-    expect(e.gridVolts).toBeCloseTo((233 + 235 + 232) / 3, 6);
+    expect(e.pvInputs).toHaveLength(4);
+    expect(e.pvInputs[2]).toEqual({ n: 3, amps: 2.5, volts: 550 });
+    expect(e).not.toHaveProperty('lowStrings');
+    expect(e.acPhaseVolts).toEqual([233, 235, 232]);
+    expect(e.acPhaseSpreadVolts).toBe(3);
     expect(e.powerFactor).toBe(1);
+  });
+  it('keeps separate phase medians and only computes spread when all three are reported', () => {
+    const e = electricalFromTelemetry([
+      pt('04:00', { ac_v: [220, 230, 245] }),
+      pt('04:05', { ac_v: [222, null, 247] }),
+      pt('04:10', { ac_v: [224, 234, 249] })
+    ], colomboHour);
+    expect(e.acPhaseVolts).toEqual([222, 232, 247]);
+    expect(e.acPhaseSpreadVolts).toBe(25);
   });
   it('groups temperature (max) and frequency (range) by Colombo hour', () => {
     const e = electricalFromTelemetry([pt('04:00', { temp_c: 50, fac_hz: 50.0 }), pt('04:30', { temp_c: 55, fac_hz: 50.2 }), pt('05:00', { temp_c: 52, fac_hz: 49.9 })], colomboHour);
@@ -123,10 +132,9 @@ describe('electrical health from telemetry', () => {
     expect(electricalFromTelemetry(undefined, colomboHour)).toBeNull();
     expect(electricalFromTelemetry([pt('04:00', { pac_kw: null })], colomboHour)).toBeNull();
   });
-  it('a string with no current reading is unknown, not 0', () => {
+  it('an input with no current reading is unknown, not 0', () => {
     const e = electricalFromTelemetry([pt('04:00', { pv_a: [3, null, 3, 3] })], colomboHour);
-    expect(e.strings[1].amps).toBeNull();
-    expect(e.strings[1].deviationPct).toBeNull();
+    expect(e.pvInputs[1].amps).toBeNull();
   });
 });
 

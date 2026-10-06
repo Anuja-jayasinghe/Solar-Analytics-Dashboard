@@ -105,21 +105,30 @@ export function alarmRows(alarms, limit = 8) {
 const PRODUCING_KW = 1;
 
 /**
- * Electrical health from one day of 5-minute telemetry, over producing points only.
- * Strings: average current each, with the deviation from the mean (below -8% is flagged).
+ * Electrical readings from one day of 5-minute telemetry, over producing points only.
+ * PV input occupancy is unknown, so currents are shown without a cross-input fault threshold.
  */
 export function electricalFromTelemetry(points, colomboHour) {
   const live = (points ?? []).filter((p) => p && isNum(p.pac_kw) && p.pac_kw > PRODUCING_KW);
   if (live.length === 0) return null;
   const avg = (xs) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : null);
-  const nStrings = Math.max(0, ...live.map((p) => (Array.isArray(p.pv_a) ? p.pv_a.length : 0)));
-  const strings = Array.from({ length: nStrings }, (_, i) => ({
+  const median = (xs) => {
+    if (!xs.length) return null;
+    const sorted = [...xs].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  };
+  const nInputs = Math.max(0, ...live.map((p) => (Array.isArray(p.pv_a) ? p.pv_a.length : 0)));
+  const pvInputs = Array.from({ length: nInputs }, (_, i) => ({
     n: i + 1,
     amps: avg(live.map((p) => num(p.pv_a?.[i])).filter(isNum)),
     volts: avg(live.map((p) => num(p.pv_v?.[i])).filter(isNum))
   }));
-  const mean = avg(strings.map((s) => s.amps).filter(isNum));
-  const withDev = strings.map((s) => ({ ...s, deviationPct: isNum(s.amps) && mean ? (s.amps / mean - 1) * 100 : null }));
+  const acPhaseVolts = [0, 1, 2].map((i) => median(live.map((p) => num(p.ac_v?.[i])).filter(isNum)));
+  const acPhaseSpreadVolts = median(live.flatMap((p) => {
+    const phases = [0, 1, 2].map((i) => num(p.ac_v?.[i]));
+    return phases.every(isNum) ? [Math.max(...phases) - Math.min(...phases)] : [];
+  }));
   const byHour = new Map();
   for (const p of live) {
     const h = colomboHour(p.ts);
@@ -129,13 +138,12 @@ export function electricalFromTelemetry(points, colomboHour) {
   const hours = [...byHour.keys()].sort((a, b) => a - b);
   const mm = (xs, f) => xs.map(f).filter(isNum);
   return {
-    strings: withDev,
-    meanAmps: mean,
-    lowStrings: withDev.filter((s) => s.deviationPct !== null && s.deviationPct < -8).map((s) => s.n),
+    pvInputs,
     temperature: hours.map((h) => ({ hour: h, max: Math.max(...mm(byHour.get(h), (p) => num(p.temp_c))) })).filter((t) => isNum(t.max) && t.max !== -Infinity),
     frequency: hours.map((h) => ({ hour: h, lo: Math.min(...mm(byHour.get(h), (p) => num(p.fac_hz))), hi: Math.max(...mm(byHour.get(h), (p) => num(p.fac_hz))) })).filter((f) => Number.isFinite(f.lo) && Number.isFinite(f.hi)),
     powerFactor: avg(mm(live, (p) => num(p.power_factor))),
-    gridVolts: avg(live.flatMap((p) => (Array.isArray(p.ac_v) && p.ac_v.length ? [avg(p.ac_v.map(num).filter(isNum))] : [])).filter(isNum))
+    acPhaseVolts,
+    acPhaseSpreadVolts
   };
 }
 

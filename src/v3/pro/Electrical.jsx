@@ -13,7 +13,7 @@ export function Electrical({ e, date, loading, error }) {
   const tHi = tVals.length ? Math.ceil(Math.max(...tVals) / 5) * 5 + 5 : 1;
   const tPts = temps.map((t, i) => [xPct(i, temps.length), 100 - ((t.max - tLo) / (tHi - tLo)) * 100]);
   const tLine = smoothPath(tPts);
-  const maxA = e ? Math.max(...e.strings.map((s) => s.amps ?? 0), 0.0001) : 1;
+  const maxA = e ? Math.max(...e.pvInputs.map((s) => s.amps ?? 0), 0.0001) : 1;
   const freq = e?.frequency ?? [];
   const fy = (v) => 50 - (v - 50) * 68; // the panel shows 49.3 to 50.7 Hz
 
@@ -26,7 +26,7 @@ export function Electrical({ e, date, loading, error }) {
         </div>
         {e && (
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <Pill>Grid {e.gridVolts === null ? '—' : fmtNum(e.gridVolts)} V</Pill>
+            <Pill>AC V1/V2/V3 {e.acPhaseVolts.map((v) => v === null ? '—' : fmtNum(v)).join(' / ')} V</Pill>
             <Pill>Power factor {e.powerFactor === null ? '—' : fmtNum(e.powerFactor, 2)}</Pill>
           </div>
         )}
@@ -37,20 +37,18 @@ export function Electrical({ e, date, loading, error }) {
       {e && (
         <div className="v3-elec">
           <div className="v3-elec-col">
-            <div className="v3-elec-title">String balance <span>· average current</span></div>
-            {e.strings.map((s) => {
-              const low = s.deviationPct !== null && s.deviationPct < -8;
-              return (
-                <Tip key={s.n} text={`String ${s.n}: ${s.amps === null ? 'no reading' : `${fmtNum(s.amps, 1)} A`}${s.volts === null ? '' : ` at about ${fmtNum(s.volts)} V`}${s.deviationPct === null ? '' : ` · ${s.deviationPct >= 0 ? '+' : '−'}${Math.abs(s.deviationPct).toFixed(1)}% vs the average`}`}>
-                  <div className="v3-strrow">
-                    <span>S{s.n}</span>
-                    <div className="v3-barbg"><div style={{ width: `${s.amps === null ? 0 : (s.amps / maxA) * 100}%`, background: low ? 'var(--warn)' : 'var(--gen)' }} /></div>
-                    <b className="v3-num">{s.amps === null ? '—' : `${fmtNum(s.amps, 1)} A`}</b>
-                  </div>
-                </Tip>
-              );
-            })}
-            <div className="v3-sub" style={{ margin: 0 }}>{e.lowStrings.length ? `String ${e.lowStrings.join(', ')} ${e.lowStrings.length === 1 ? 'is' : 'are'} more than 8% below the average: worth a look.` : 'All strings within 8% of the average.'}</div>
+            <div className="v3-elec-title">PV inputs <span>· mean current</span></div>
+            {e.pvInputs.map((s) => (
+              <Tip key={s.n} text={`PV input ${s.n}: ${s.amps === null ? 'no current reading' : `${fmtNum(s.amps, 1)} A`}${s.volts === null ? '' : ` · reported voltage about ${fmtNum(s.volts)} V`}`}>
+                <div className="v3-strrow">
+                  <span>PV{s.n}</span>
+                  <div className="v3-barbg"><div style={{ width: `${s.amps === null ? 0 : (s.amps / maxA) * 100}%`, background: 'var(--gen)' }} /></div>
+                  <b className="v3-num">{s.amps === null ? '—' : `${fmtNum(s.amps, 1)} A`}</b>
+                </div>
+              </Tip>
+            ))}
+            <div className="v3-sub" style={{ margin: 0 }}>The physical string map is unverified. A low or zero input current may mean an unused input; these bars alone cannot diagnose a string fault.</div>
+            <div className="v3-sub" style={{ margin: 0 }}>AC phase readings are shown separately above. Median simultaneous phase spread: {e.acPhaseSpreadVolts === null ? '—' : `${fmtNum(e.acPhaseSpreadVolts, 1)} V`}. Confirm unusual readings with measurements at the inverter.</div>
           </div>
 
           <div className="v3-elec-col">

@@ -46,7 +46,7 @@ export default function ProPage() {
   return (
     <>
       <div className="v3-tilehead">
-        <div className="v3-sub" style={{ margin: 0, maxWidth: 560 }}>Health of the plant, not its output: is it running, what tripped it, are the strings balanced, and what the bills really paid.</div>
+        <div className="v3-sub" style={{ margin: 0, maxWidth: 560 }}>Check uptime, alarms, PV input readings and bill rates. The electrical card uses the latest completed day; the range selector applies to uptime and alarms.</div>
         <Segmented small options={OPTIONS} value={days} onChange={setDays} label="Range" />
       </div>
       {failed.length > 0 && <Note tone="bad">Some figures could not be loaded ({[...new Set(failed.map((r) => r.error.code ?? 'error'))].join(', ')}). They are shown as a dash or left empty, never as zero.</Note>}

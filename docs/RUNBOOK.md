@@ -96,6 +96,46 @@ flowchart TD
 4. **SolisCloud itself.** Credentials rotated, or the API changed. `POST /api/solis/explore`
    is the diagnostic proxy.
 
+### PV input or AC phase readings look abnormal
+
+Start with the dated [Solis investigation](../diagnostics/solis/FINDINGS-2026-10-06.md)
+and reproduce the relevant day using the [read-only probe](../diagnostics/solis/README.md).
+The Pro electrical card displays **reported PV input currents**, not a verified
+string-fault diagnosis. For this S5-GC40K, the eight reported voltage fields
+behaved as four identical input pairs over a seven-day producing sample. An
+input with little or no current may be unused.
+
+1. Record the local date and raw `dataTimestamp`, inverter state, AC power,
+   `iPv1–8`, `uPv1–8`, `uAc1–3`, `iAc1–3`, frequency, temperature, and alarms.
+   Compare several producing periods, not a dawn or dusk sample alone.
+2. Obtain the installer string schedule or have a qualified installer identify
+   occupied DC terminals, MPPT pairing, module counts, orientation and shading.
+   Do not declare a faulty string or estimate loss until comparable connected
+   inputs are known.
+3. If the AC phases differ or `1010`/`1011`/F017 alarms recur, arrange a
+   qualified onsite check of phase voltages, configured grid standard and AC
+   wiring/grounding. Keep cloud readings and physical measurements separate.
+
+### Historical daily energy is missing from SolisCloud
+
+The April 14–21, 2025 example is documented in the
+[investigation](../diagnostics/solis/FINDINGS-2026-10-06.md): both inverter
+and plant monthly endpoints omit those dates, while the inverter lifetime
+counter increased. `inverterAll` and `stationAll` annual rollups also omit
+most of that counter increase. The backfill-daily-summaries workflow reads
+Solis's monthly endpoint, so rerunning it cannot recover dates that endpoint
+does not return.
+
+1. Check the authenticated dashboard `totals` and `range` resources for the
+   affected dates. Verify that absent rows are shown as missing or unknown,
+   and that billing comparisons mark incomplete periods.
+2. Compare the first and last available `eTotal` readings and nearby
+   `eToday` values. State a combined counter-derived estimate with its
+   rounding and timestamp limits; do not assign it to individual missing days.
+3. Use an independent utility meter, installer export or Solis support
+   recovery if exact daily figures are needed. Review any proposed database
+   correction as a separate, snapshotted operation; preserve provenance.
+
 ### Daily summary failing
 
 The job **fails deliberately** when it processes zero rows — "SolisCloud returned nothing" and

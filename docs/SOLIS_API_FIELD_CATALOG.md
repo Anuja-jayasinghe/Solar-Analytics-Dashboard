@@ -1,5 +1,21 @@
 # SolisCloud API: Field Catalog and Findings
 
+> **2026-10-06 interpretation update:** This is the historical 2026-10-03
+> field inventory. The newer [read-only investigation](../diagnostics/solis/FINDINGS-2026-10-06.md)
+> and [endpoint matrix](../diagnostics/solis/ENDPOINTS.md) supersede its health
+> interpretations. In particular, eight `iPv` positions in the response do
+> **not** establish eight connected strings. PV1/PV2, PV3/PV4, PV5/PV6 and
+> PV7/PV8 reported identical paired voltages on every producing sample in a
+> seven-day check. The Pro card's prior eight-input average could therefore
+> label unused inputs as underperforming. The actual wiring is unknown.
+> Current Solis [user data-access docs](https://developer.soliscloud.com/guide/data-access-user.html)
+> list only four `inverterDay` PV channels and prescribe `minId` pagination;
+> this account returned eight channels and advanced `alarmList` by `pageNo`.
+> The October 2026 check also identified absent April 14–21, 2025 daily
+> archive records, despite a rising inverter lifetime counter. Keep those
+> dates unknown in daily analyses; do not fill them with zero or invented
+> per-day energy.
+
 **Date:** 2026-10-03 · **Issue:** #153 · **Source:** `SolisCloud Platform API Document V2.0.3.pdf`
 (131 pp, 45 endpoints) plus **live read-only probes** of our own station (36 calls, all `code=0`
 except two, noted below).
@@ -283,4 +299,3 @@ code=I0000 · records=0 · fields=0 (0 populated, 0 always empty/zero)
 ```
 
 ```
-
