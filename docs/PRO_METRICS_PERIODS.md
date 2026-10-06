@@ -29,7 +29,11 @@ the SolisCloud source probe alone cannot confirm stored rows.
 Electrical calculations include only timestamps with AC power above 1 kW.
 PV input current is the mean over those samples; AC phase voltage and
 simultaneous phase spread are medians; temperature is the highest recorded
-value and frequency is the recorded minimum–maximum range. The physical
+value and frequency is the recorded minimum–maximum range. Whole-range
+statistics weight dates by their number of stored producing readings. The
+page states this and lists daily results because sampling density varies.
+It flags dates with no stored telemetry separately from dates with telemetry
+but no reading above 1 kW. The physical
 string-to-input map is unknown, so no PV fault is inferred from an input's
 current. Cloud phase readings require qualified onsite confirmation before
 diagnosing an electrical cause.

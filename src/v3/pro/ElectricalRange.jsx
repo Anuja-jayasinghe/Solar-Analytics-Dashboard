@@ -9,6 +9,8 @@ const display = (value, digits = 1) => value === null || value === undefined ? '
 export function ElectricalRange({ data, loading, error }) {
   const summary = data?.summary ?? null;
   const maxA = summary ? Math.max(...summary.pvInputs.map((p) => p.amps ?? 0), 0.0001) : 1;
+  const missingDays = summary ? summary.daysRequested - summary.daysWithTelemetry : 0;
+  const nonProducingDays = summary ? summary.daysWithTelemetry - summary.daysProducing : 0;
   return (
     <Glass card aria-label="Electrical health over selected days">
       <div className="v3-tilehead">
@@ -20,9 +22,12 @@ export function ElectricalRange({ data, loading, error }) {
       </div>
       {error && <Note tone="bad">Could not load electrical history ({error.code ?? 'error'}).</Note>}
       {loading && !data && <div className="v3-skeleton" style={{ height: 170 }} aria-busy="true" aria-label="Loading" />}
+      {missingDays > 0 && <Note>{missingDays} selected {missingDays === 1 ? 'day has' : 'days have'} no stored telemetry. Range statistics exclude those days; their readings are unknown, not zero.</Note>}
+      {nonProducingDays > 0 && <Note>{nonProducingDays} {nonProducingDays === 1 ? 'day has' : 'days have'} telemetry but no readings above 1 kW. This alone does not establish why.</Note>}
       {summary && summary.producingSamples === 0 && <Note>No producing telemetry was stored for this range. Missing days are unknown, not zero-current days.</Note>}
       {summary && summary.producingSamples > 0 && (
         <>
+          <div className="v3-sub">Range statistics use recorded producing readings. Days with more samples carry more weight; use the daily table to compare dates.</div>
           <div className="v3-sub">{summary.daysProducing} days with producing readings · {summary.producingSamples} producing readings · AC V1/V2/V3 median {summary.acPhaseVolts.map((v) => display(v)).join(' / ')} V · median phase spread {display(summary.acPhaseSpreadVolts)} V · mean power factor {display(summary.powerFactor, 2)}</div>
           <div className="v3-elec-col">
             <div className="v3-elec-title">PV inputs <span>· mean current across producing readings</span></div>

@@ -59,6 +59,10 @@ interpretation.
 ## Verification gate
 
 The Pro and API tests, lint and production build pass in this branch.
-Before merging, review the UI wording with the owner. A deployment would
-require the normal CI and release process; this investigation does not write
-to the production database or issue Solis control commands.
+The [production telemetry storage audit](TELEMETRY_STORAGE_AUDIT-2026-10-06.md)
+confirms stored rows and field shape, including historical gaps. Before
+merging or publishing, exercise the new electrical endpoint against that
+database in an authenticated preview and verify the returned missing-day
+markers and pagination. A production deployment requires the normal CI and
+release process; this investigation does not write to the production database
+or issue Solis control commands.

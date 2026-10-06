@@ -12,6 +12,9 @@ database comparison remains open. Phase 5–6 findings and limits are in
 `FINDINGS-2026-10-06.md`. Physical wiring and service records are unavailable.
 The [project change log](PROJECT_CHANGES.md) tracks the dashboard and
 documentation corrections in this branch and the remaining checks.
+The [production telemetry storage audit](TELEMETRY_STORAGE_AUDIT-2026-10-06.md)
+records the read-only database coverage check for the proposed electrical
+range view and its release gate.
 
 ## Phases and completion gates
 
