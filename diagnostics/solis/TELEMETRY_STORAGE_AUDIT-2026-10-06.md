@@ -48,19 +48,34 @@ without producing readings separately. It also states that whole-range
 statistics weight dates by their number of stored producing readings, since
 the cadence is uneven. The daily table supports date-by-date review.
 
-## Release gate
+## Release and authenticated production verification
 
-Database coverage and field-shape checks pass for the latest 31 completed
-days. A draft Vercel preview was deployed on 2026-10-06, but its standard
-`vercel.app` host cannot use this project's Clerk production key: Clerk
-rejected the origin because the key is restricted to `solaredge.anujajay.com`.
-The preview also revealed an initial-render bug in the month comparison;
-that has been fixed and given a regression test. No credential or origin
-protection was weakened to work around the preview restriction.
+The draft Vercel preview's standard `vercel.app` host could not use this
+project's Clerk production key: Clerk rejected that origin because the key is
+restricted to `solaredge.anujajay.com`. The preview also revealed an
+initial-render bug in the month comparison; it was fixed with a regression
+test. No credential or origin protection was weakened. The owner then
+authorized a production-first test with rollback if a release check failed.
 
-Keep the electrical-history feature off production until an authenticated
-test on an allowed host calls the new `/api/data/electrical` endpoint against
-this database and confirms its date boundaries, pagination and missing-day
-responses. The endpoint is not deployed on the current production site, so
-this audit cannot claim that end-to-end check has passed. Recheck the latest
-31-day counts immediately before release; the production table changes daily.
+[PR #197](https://github.com/Anuja-jayasinghe/Solar-Analytics-Dashboard/pull/197)
+merged as `b575cd6` on 2026-10-06. Post-merge CI passed, Vercel reported a
+successful production deployment, and `/healthz` and `/ready` both returned
+`status: ok` with revision `b575cd6`; `/ready` also reported successful
+Supabase and service-key-role checks. An unauthenticated request to
+`/api/data/electrical` returned 401. The following checks used an authenticated
+Admin session on the production Pro page around 06:38–06:43 UTC:
+
+| Production check | Observed result |
+| --- | --- |
+| Custom 2026-09-05 through 2026-10-05 | 31/31 days with telemetry; the 31 daily rows summed to **4,845 stored** and **4,055 producing** samples, exactly matching the independent pre-release SQL audit. The first row was 134 of 152 on Sep 5; the last was 126 of 147 on Oct 5. This crosses multiple 1,000-row PostgREST pages. |
+| Preset 30 days, 2026-09-06 through 2026-10-05 | 30/30 days; 4,693 stored and 3,921 producing samples, consistent with removing the Sep 5 row from the audited 31-day window. |
+| Custom 2025-04-10 through 2025-04-25 | 8/16 days with telemetry. Apr 14–21 each said `No telemetry`; their electrical cells were dashes, not measured zeros. The range note explicitly said those days were unknown. |
+| Custom 2025-11-28 through 2025-11-30 | 3/3 days with telemetry, all three labeled `No producing readings`; electrical cells were dashes. The note did not infer a cause. |
+| Other Pro controls | Switching uptime from 30 to 14 days changed uptime/alarm figures while the electrical custom range stayed Nov 28–30. The alarm guide explained the observed 1011, 1010 and 1D4C2 codes. Choosing a different month changed the calendar-month comparison and its day-coverage counts. |
+| Browser errors | No error-level console entries after these interactions. |
+
+These checks clear the release gate for the **tested production windows**;
+rollback was not needed. They do not establish that every possible custom
+31-day window stays below the 20,000-row paging safety limit, or that stored
+measurements match an independent meter. The physical PV string map remains
+unknown, so low-current inputs are not identified as faults from this view.
