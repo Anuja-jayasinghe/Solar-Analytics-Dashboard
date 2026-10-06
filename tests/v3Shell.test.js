@@ -197,7 +197,7 @@ describe('admin page', () => {
   });
 });
 
-import { AVATARS, avatarById, cleanNickname, displayNameFor, initialOf, normalizeProfile, NICKNAME_MAX } from '../src/v3/access/avatars.js';
+import { AVATARS, AVATAR_GROUPS, FEATURED_AVATAR_IDS, assignMissingAvatar, avatarById, cleanNickname, displayNameFor, initialOf, normalizeProfile, randomAvatarId, savedAvatarId, NICKNAME_MAX } from '../src/v3/access/avatars.js';
 import { openPeriodSoFar, lifetimeGeneration } from '../src/v3/overview/format.js';
 import { blockCopy } from '../src/v3/shell/copy.js';
 import { PREF_DEFAULTS } from '../src/v3/prefs/context.js';
@@ -223,9 +223,17 @@ describe('round 2 fixes', () => {
     expect(html).not.toContain('role="tooltip"'); // no labels on the sidebar at all
   });
 
-  it('profile: preset avatars, a clean nickname, and a sensible name', () => {
-    expect(AVATARS[0].id).toBe('initial');
+  it('profile: 28 Solar Crew choices, legacy migration, a clean nickname, and a sensible name', () => {
+    expect(AVATARS).toHaveLength(28);
+    expect(AVATAR_GROUPS.map((group) => group.avatars.length)).toEqual([7, 7, 7, 7]);
+    expect(new Set(AVATARS.map((avatar) => avatar.id)).size).toBe(28);
+    expect(FEATURED_AVATAR_IDS).toHaveLength(8);
     expect(avatarById('nope').id).toBe('initial');
+    expect(savedAvatarId('initial')).toBeNull();
+    expect(savedAvatarId('sun')).toBe('sol');
+    expect(savedAvatarId('moon')).toBe('luna');
+    expect(randomAvatarId(() => 0)).toBe('sol');
+    expect(randomAvatarId(() => 0.999999)).toBe('fern');
     expect(cleanNickname('  Solar   Fan  ')).toBe('Solar Fan');
     expect(cleanNickname('x'.repeat(40))).toHaveLength(NICKNAME_MAX);
     expect(displayNameFor({ nickname: '', firstName: 'Anuja', email: 'a@b.c', fallback: 'Admin' })).toBe('Anuja');
@@ -234,8 +242,21 @@ describe('round 2 fixes', () => {
     expect(displayNameFor({ fallback: 'Visitor' })).toBe('Visitor');
     expect(initialOf('anuja')).toBe('A');
     expect(initialOf('')).toBe('?');
-    expect(normalizeProfile({ nickname: ' n ', avatar: 'sun', extra: 1 })).toEqual({ nickname: 'n', avatar: 'sun' });
+    expect(normalizeProfile({ nickname: ' n ', avatar: 'sun', extra: 1 })).toEqual({ nickname: 'n', avatar: 'sol' });
     expect(normalizeProfile(undefined)).toEqual({ nickname: '', avatar: 'initial' });
+  });
+
+  it('assigns a random character only when a signed-in account has no saved choice', async () => {
+    const updates = [];
+    const user = { unsafeMetadata: { preference: 'keep', profile: { nickname: 'Solar Fan', avatar: 'initial' } }, update: async (next) => { updates.push(next); } };
+    expect(await assignMissingAvatar(user, () => 0.5)).toBe('nova');
+    expect(updates).toEqual([{ unsafeMetadata: { preference: 'keep', profile: { nickname: 'Solar Fan', avatar: 'nova' } } }]);
+    user.unsafeMetadata.profile.avatar = 'orbit';
+    expect(await assignMissingAvatar(user, () => 0)).toBe('orbit');
+    expect(updates).toHaveLength(1);
+    user.unsafeMetadata.profile.avatar = 'leaf';
+    expect(await assignMissingAvatar(user, () => 0)).toBe('terra');
+    expect(updates).toHaveLength(1);
   });
 
   it('the open billing period includes today from the live reading until today is stored', () => {
