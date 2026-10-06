@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  proRange, minutesLabel, uptimeTone, healthSummary, stripCell, stripTip, alarmRows, electricalFromTelemetry, rateSeries, yoyPairs, PRO_RANGES
+  proRange, lastCompleteMonth, monthWindow, minutesLabel, uptimeTone, healthSummary, stripCell, stripTip, alarmRows, alarmLegend, electricalFromTelemetry, rateSeries, yoyPairs, PRO_RANGES
 } from '../src/v3/pro/metrics.js';
 import { colomboClock } from '../src/v3/explore/hourly.js';
 
@@ -20,6 +20,13 @@ describe('range and labels', () => {
     expect(minutesLabel(45)).toBe('45 m');
     expect(minutesLabel(0)).toBe('0 m');
     expect(minutesLabel(null)).toBe('—');
+  });
+  it('uses completed calendar months, including leap years', () => {
+    expect(lastCompleteMonth('2026-10-06')).toBe('2026-09');
+    expect(lastCompleteMonth('2026-01-01')).toBe('2025-12');
+    expect(monthWindow('2024-02')).toEqual({ from: '2024-02-01', to: '2024-02-29' });
+    expect(monthWindow('2025-02')).toEqual({ from: '2025-02-01', to: '2025-02-28' });
+    expect(monthWindow('2026-13')).toBeNull();
   });
   it('tones uptime', () => {
     expect(uptimeTone(99.5)).toBe('good');
@@ -52,6 +59,10 @@ describe('health summary', () => {
   it('everything unknown stays null, never 0', () => {
     const s = healthSummary({ uptime: null, alarms: null, totals: null });
     expect(s).toMatchObject({ uptimePct: null, downMinutes: null, tripCount: null, affectedDays: null, openAlarms: null, completenessPct: null });
+  });
+  it('does not report a partial alarm list as an exact unresolved count', () => {
+    const s = healthSummary({ uptime, alarms: { alarms: [{ end_ts: null }], truncated: true }, totals });
+    expect(s).toMatchObject({ openAlarms: null, alarmsListed: 1, alarmsTruncated: true });
   });
 });
 
@@ -96,6 +107,13 @@ describe('alarm rows', () => {
     expect(alarmRows(undefined)).toEqual([]);
     expect(alarmRows({ alarms: [{ alarm_code: 'x', begin_ts: 'a', end_ts: 'b', duration_ms: null, level: 9 }] })[0]).toMatchObject({ length: '—', level: 'Low' });
     expect(alarmRows({ alarms: [{ alarm_code: 'y', begin_ts: 'a', end_ts: 'b', duration_ms: 20000 }] })[0].length).toBe('< 1 min');
+  });
+  it('explains known codes and preserves uncertainty for unknown ones', () => {
+    const legend = alarmLegend({ alarms: [{ alarm_code: '1011' }, { alarm_code: '1011' }, { alarm_code: 'F017' }, { alarm_code: 'other' }] });
+    expect(legend[0]).toMatchObject({ code: '1011', count: 2, meaning: 'Grid voltage too low' });
+    expect(legend.find((item) => item.code === 'F017').explanation).toContain('qualified installer');
+    expect(legend.find((item) => item.code === 'OTHER').meaning).toBe('Description from Solis record');
+    expect(alarmRows({ alarms: [{ alarm_code: '1011', begin_ts: '2036-09-10T01:00:00Z' }] })[0].meaning).toBe('Grid voltage too low');
   });
 });
 

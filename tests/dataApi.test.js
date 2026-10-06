@@ -43,6 +43,7 @@ function makeRepo(overrides = {}) {
     segments: track('segments', async () => []),
     alarms: track('alarms', async () => []),
     telemetryDay: track('telemetryDay', async () => []),
+    telemetryRange: track('telemetryRange', async () => []),
     settings: track('settings', async () => ({ ratePerKwh: 37, capacityKwp: 41.76, acRatedKw: 40, dailyTargetKwh: 140 })),
     ...overrides
   };
@@ -152,6 +153,18 @@ describe('rate limiting and caching', () => {
 });
 
 // ---- resources --------------------------------------------------------------------------------
+describe('electrical history', () => {
+  it('returns summarized completed days without exposing raw telemetry', async () => {
+    const repo = makeRepo({ telemetryRange: async () => [{ ts: '2026-10-01T06:00:00Z', pac_kw: 20, pv_a: [5, 0], pv_v: [560, 560], ac_v: [220, 232, 246], fac_hz: 50, temp_c: 48, power_factor: 1 }] });
+    const { handler } = build({ repo });
+    const res = await call(handler, req('electrical', { from: '2026-10-01', to: '2026-10-02' }));
+    expect(res.statusCode).toBe(200);
+    expect(res.body.summary).toMatchObject({ daysRequested: 2, daysProducing: 1, producingSamples: 1 });
+    expect(res.body.days[1]).toMatchObject({ samples: 0, producingSamples: 0 });
+    expect(JSON.stringify(res.body)).not.toContain('pac_kw');
+  });
+});
+
 describe('range', () => {
   it('computes Explore figures, with the tariff basis stated', async () => {
     const { handler } = build();

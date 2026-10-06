@@ -5,7 +5,7 @@
 // Unknown is null and renders as a dash; a day without data is its own state, not a 0% day.
 
 import { isCommsAlarmCode } from '../../../shared/domain/uptime.js';
-import { addDays } from '../../../shared/domain/time.js';
+import { addDays, isDateKey } from '../../../shared/domain/time.js';
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
@@ -17,6 +17,17 @@ export const PRO_RANGES = Object.freeze([14, 30, 60]);
 export function proRange(todayKey, days) {
   const to = addDays(todayKey, -1);
   return { from: addDays(to, -(days - 1)), to };
+}
+
+export function lastCompleteMonth(todayKey) {
+  return addDays(`${todayKey.slice(0, 7)}-01`, -1).slice(0, 7);
+}
+
+export function monthWindow(month) {
+  if (!/^\d{4}-\d{2}$/.test(month ?? '') || !isDateKey(`${month}-01`)) return null;
+  const [year, number] = month.split('-').map(Number);
+  const next = new Date(Date.UTC(year, number, 1)).toISOString().slice(0, 10);
+  return { from: `${month}-01`, to: addDays(next, -1) };
 }
 
 /** 473 -> '7 h 53 m', 45 -> '45 m'. */
@@ -49,8 +60,9 @@ export function healthSummary({ uptime, alarms, totals }) {
     tripCount: agg?.tripCount ?? null,
     affectedDays: agg ? affected : null,
     totalDays: days.length,
-    openAlarms: alarms ? (alarms.alarms ?? []).filter((a) => a.end_ts === null || a.end_ts === undefined).length : null,
+    openAlarms: alarms && !alarms.truncated ? (alarms.alarms ?? []).filter((a) => a.end_ts === null || a.end_ts === undefined).length : null,
     alarmsListed: alarms ? (alarms.alarms ?? []).length : null,
+    alarmsTruncated: !!alarms?.truncated,
     completenessPct: gen && span ? (gen.dayCount / span) * 100 : null,
     dataDays: gen?.dayCount ?? null,
     spanDays: span
@@ -76,6 +88,26 @@ export function stripTip(cell) {
 }
 
 const LEVELS = { 1: { label: 'Low', tone: 'neutral' }, 2: { label: 'Medium', tone: 'warn' }, 3: { label: 'High', tone: 'bad' } };
+const ALARM_HELP = Object.freeze({
+  '1010': { meaning: 'Grid voltage too high', explanation: 'The inverter reports AC grid voltage above its configured protection limit.' },
+  '1011': { meaning: 'Grid voltage too low', explanation: 'The inverter reports AC grid voltage below its configured protection limit.' },
+  '1015': { meaning: 'Grid connection absent', explanation: 'The inverter reports that it cannot detect the AC grid.' },
+  F017: { meaning: 'Line-to-earth check failed', explanation: 'Solis describes low resistance between an AC line and protective earth. Ask a qualified installer to inspect the AC side.' },
+  '1D4C2': { meaning: 'Logger lost internet', explanation: 'The data logger lost its cloud connection. This alone does not mean the inverter stopped generating.' }
+});
+
+export function alarmLegend(alarms) {
+  const counts = new Map();
+  for (const alarm of alarms?.alarms ?? []) {
+    const code = String(alarm.alarm_code ?? 'unknown').toUpperCase();
+    counts.set(code, (counts.get(code) ?? 0) + 1);
+  }
+  return [...counts].sort((a, b) => b[1] - a[1]).map(([code, count]) => ({
+    code, count,
+    meaning: ALARM_HELP[code]?.meaning ?? 'Description from Solis record',
+    explanation: ALARM_HELP[code]?.explanation ?? 'No verified plain-language definition is available here; inspect the Solis message and ask the installer if this recurs.'
+  }));
+}
 
 /** Alarm rows for the table, latest first. A lost-internet alarm is a LOGGER event, never inverter downtime. */
 export function alarmRows(alarms, limit = 8) {
@@ -84,13 +116,16 @@ export function alarmRows(alarms, limit = 8) {
     .slice(0, limit)
     .map((a) => {
       const logger = isCommsAlarmCode(a.alarm_code);
+      const code = String(a.alarm_code ?? 'unknown').toUpperCase();
       const open = a.end_ts === null || a.end_ts === undefined;
       const min = isNum(Number(a.duration_ms)) && a.duration_ms !== null ? Math.round(Number(a.duration_ms) / 6000) / 10 : null;
       const lvl = LEVELS[a.level] ?? LEVELS[1];
       return {
         key: `${a.alarm_code}-${a.begin_ts}`,
-        code: String(a.alarm_code ?? ''),
+        code,
         message: logger ? 'Lost internet (logger)' : a.message || 'Alarm',
+        meaning: ALARM_HELP[code]?.meaning ?? (a.message || 'Meaning not verified'),
+        explanation: ALARM_HELP[code]?.explanation ?? 'No verified plain-language definition is available here.',
         logger,
         open,
         beginTs: a.begin_ts,

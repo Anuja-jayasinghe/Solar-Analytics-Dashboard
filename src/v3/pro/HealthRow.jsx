@@ -30,7 +30,7 @@ function RingTile({ label, value, unit, sub, tip, pct, color, loading }) {
   );
 }
 
-/** Four rings: uptime, time stopped, open alarms, data completeness. All from the API; unknown shows a dash and an empty ring. */
+/** Four rings: uptime, time stopped, unresolved alarms in the period, and all-time coverage. */
 export function HealthRow({ summary: s, loading }) {
   const upTone = uptimeTone(s.uptimePct);
   return (
@@ -50,14 +50,14 @@ export function HealthRow({ summary: s, loading }) {
         tip="Total minutes the inverter was stopped inside daylight windows (trips and unexplained gaps). The ring is the share of days affected."
       />
       <RingTile
-        label="Open alarms" loading={loading}
+        label="Unresolved in period" loading={loading}
         value={s.openAlarms === null ? '—' : String(s.openAlarms)} unit=""
-        sub={s.alarmsListed === null ? '' : `${s.alarmsListed} in the log below`}
+        sub={s.alarmsListed === null ? '' : `${s.alarmsListed}${s.alarmsTruncated ? '+' : ''} in selected period`}
         pct={s.openAlarms === null ? null : 100} color={s.openAlarms ? 'var(--bad)' : 'var(--good)'}
-        tip="Alarms the inverter reports as still active right now."
+        tip="Alarms that began in the selected uptime and alarm period and have no recorded end. Earlier active alarms are outside this count. A dash means the returned alarm list may be incomplete."
       />
       <RingTile
-        label="Data completeness" loading={loading}
+        label="All-time coverage" loading={loading}
         value={s.completenessPct === null ? '—' : fmtNum(s.completenessPct, 1)} unit={s.completenessPct === null ? '' : '%'}
         sub={s.dataDays === null ? '' : `${fmtNum(s.dataDays)} of ${fmtNum(s.spanDays)} days collected`}
         pct={s.completenessPct} color={s.completenessPct !== null && s.completenessPct >= 99 ? 'var(--good)' : 'var(--warn)'}

@@ -69,6 +69,13 @@ export function createRepo(supabase, inverterSn) {
       return data;
     },
 
+    telemetryRange(from, to) {
+      return paged(() => supabase.from('inverter_telemetry')
+        .select('ts,pac_kw,pv_v,pv_a,ac_v,fac_hz,power_factor,temp_c')
+        .eq('inverter_sn', inverterSn).gte('ts', dayStart(from))
+        .lt('ts', dayStart(addDays(to, 1))).order('ts', { ascending: true }));
+    },
+
     async settings() {
       const { data, error } = await supabase.from('system_settings').select('setting_name,setting_value');
       if (error) throw new Error(error.message);

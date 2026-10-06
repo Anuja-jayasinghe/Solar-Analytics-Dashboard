@@ -15,6 +15,19 @@ belongs in Git.
 | API evidence | Add read-only, allowlisted probe and private-response workflow under `diagnostics/solis/`. | Reproduce live contract checks without changing the collector or database. |
 | Documentation | Link the dated report from the README, put an interpretation update on the older field catalog, and add PV/AC and historical-gap procedures to the runbook. | Keep the original catalog as an audit trail while correcting its health interpretation. |
 
+## Pro metrics follow-up
+
+The [period and data guide](../../docs/PRO_METRICS_PERIODS.md) records the
+contract for the new controls and distinguishes data availability from health
+interpretation.
+
+| Area | Change | Evidence and limit |
+| --- | --- | --- |
+| Period clarity | Identify exactly which panels the 14/30/60-day selector changes. Give electrical readings and generation comparisons independent controls. | The API returns range-tagged uptime and alarms; the UI rejects stale responses when the selected range changes. |
+| Alarm codes | Show verified plain-language meanings and an expandable code guide alongside the original Solis message. | The dated investigation and Solis alarm reference support the listed mappings. Unmapped codes stay unmapped. The API caps returned alarms at 500, so a truncated list cannot give an exact unresolved count. |
+| Electrical history | Add a server-side summary resource for up to 31 completed days of stored telemetry, with last day, 7-day, 30-day and custom controls. Show daily coverage, PV input current and voltage, AC phase values and spread, temperature, frequency and power factor. | The existing `inverter_telemetry` columns provide these readings. Missing stored days remain unknown. The feature cannot identify a physical string fault without the wiring map. |
+| Generation comparison | Let the user select 3, 8, 12 or all matching bill-period pairs, or any two completed calendar months. | The existing `range` resource supplies daily energy totals and completeness. Percentage comparison requires every day in both chosen months; weather and month length remain confounders. |
+
 ## Open checks before further product logic
 
 1. **Stored-data reconciliation:** With an authorized dashboard viewer session,
@@ -45,7 +58,7 @@ belongs in Git.
 
 ## Verification gate
 
-The focused Pro tests, lint of changed source files and production build pass.
+The Pro and API tests, lint and production build pass in this branch.
 Before merging, review the UI wording with the owner. A deployment would
 require the normal CI and release process; this investigation does not write
 to the production database or issue Solis control commands.
