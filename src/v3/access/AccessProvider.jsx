@@ -34,7 +34,14 @@ function ClerkAccess({ children }) {
   }, [isLoaded]);
   const [hintSignedOut] = useState(() => (typeof document !== 'undefined' ? signedOutHint(document.cookie) : false));
   const level = levelForUser({ isLoaded, isSignedIn, publicMetadata: user?.publicMetadata, gaveUp, hintSignedOut });
+  const [hadLiveAccessHere, setHadLiveAccessHere] = useState(() => readPref('hadLiveAccess', '') === '1');
   const initialAssignment = useRef(null);
+
+  useEffect(() => {
+    if (level !== 'viewer' && level !== 'admin') return;
+    setHadLiveAccessHere(true);
+    writePref('hadLiveAccess', '1');
+  }, [level]);
 
   useEffect(() => {
     if (!isSignedIn) { initialAssignment.current = null; return; }
@@ -66,12 +73,14 @@ function ClerkAccess({ children }) {
       email: user?.primaryEmailAddress?.emailAddress ?? null,
       firstName: user?.firstName ?? null,
       clerk: true,
+      signedOut: isLoaded && !isSignedIn,
+      hadLiveAccessHere,
       profile,
       saveProfile,
       getToken: () => getToken(),
       signOut: () => clerk.signOut({ redirectUrl: '/' })
     }),
-    [level, user, getToken, clerk, profile, saveProfile]
+    [level, user, getToken, clerk, profile, saveProfile, isLoaded, isSignedIn, hadLiveAccessHere]
   );
   return <AccessContext.Provider value={value}>{children}</AccessContext.Provider>;
 }

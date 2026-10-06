@@ -6,6 +6,20 @@ import { AVATARS, AVATAR_GROUPS, FEATURED_AVATAR_IDS, NICKNAME_MAX, avatarById, 
 import { Avatar } from './Avatar.jsx';
 import { Icon } from './icons.jsx';
 
+const REMINDER_SEEN_KEY = 'solar.v3.returningSignInReminderSeen';
+
+function reminderSeenThisTab() {
+  try { return globalThis.sessionStorage?.getItem(REMINDER_SEEN_KEY) === '1'; } catch { return false; }
+}
+
+function markReminderSeenThisTab() {
+  try { globalThis.sessionStorage?.setItem(REMINDER_SEEN_KEY, '1'); } catch { /* The popover still works without storage. */ }
+}
+
+function resetReminderForNextSignOut() {
+  try { globalThis.sessionStorage?.removeItem(REMINDER_SEEN_KEY); } catch { /* This tab can still track the reminder in memory. */ }
+}
+
 function AvatarOption({ avatar, name, selected, onSelect, radioName }) {
   return (
     <label className="v3-avatar-choice" data-selected={selected}>
@@ -21,21 +35,34 @@ function AvatarOption({ avatar, name, selected, onSelect, radioName }) {
  * Settings, and sign in / sign out. Signed-in profiles are saved to the account; visitors' to this browser.
  */
 export function AccountMenu() {
-  const { level, email, firstName, profile, saveProfile, signOut, clerk } = useAccess();
+  const { level, email, firstName, profile, saveProfile, signOut, clerk, signedOut, hadLiveAccessHere } = useAccess();
   const [open, setOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [nick, setNick] = useState(profile.nickname);
   const [status, setStatus] = useState('');
   const ref = useRef(null);
+  const reminderSeen = useRef(reminderSeenThisTab());
   const menuId = useId();
   const role = roleLabel(level === 'loading' ? 'none' : level);
   const name = displayNameFor({ nickname: profile.nickname, firstName, email, fallback: role.label });
   const signedIn = level === 'viewer' || level === 'admin';
+  const showSignInReminder = clerk && signedOut && hadLiveAccessHere;
   const currentAvatar = savedAvatarId(profile.avatar);
   const featuredIds = currentAvatar && !FEATURED_AVATAR_IDS.includes(currentAvatar)
     ? [currentAvatar, ...FEATURED_AVATAR_IDS.slice(0, 7)] : FEATURED_AVATAR_IDS;
 
   useEffect(() => { setNick(profile.nickname); }, [profile.nickname]);
+  useEffect(() => {
+    if (!signedIn) return;
+    reminderSeen.current = false;
+    resetReminderForNextSignOut();
+  }, [signedIn]);
+  useEffect(() => {
+    if (!showSignInReminder || reminderSeen.current) return;
+    reminderSeen.current = true;
+    markReminderSeenThisTab();
+    setOpen(true);
+  }, [showSignInReminder]);
   useEffect(() => {
     if (!open) return undefined;
     const away = (e) => { if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setShowAll(false); } };
@@ -71,6 +98,14 @@ export function AccountMenu() {
             </div>
           </div>
 
+          {showSignInReminder && (
+            <div className="v3-menu-reminder" role="status">
+              <strong>You’re viewing demo data</strong>
+              <span>Sign in to see your inverter’s readings.</span>
+              <Link to="/signin" className="v3-btn primary" onClick={() => { setOpen(false); setShowAll(false); }}>Sign in</Link>
+            </div>
+          )}
+
           <form className="v3-menu-section" onSubmit={(e) => { e.preventDefault(); save({ nickname: nick }); }}>
             <label className="v3-plantfield" style={{ gap: 6 }}>
               <span>Nickname</span>
@@ -104,9 +139,9 @@ export function AccountMenu() {
           <div className="v3-menu-actions">
             <Link to="/settings" className="v3-menu-item" onClick={() => { setOpen(false); setShowAll(false); }}><Icon id="settings" size={17} />Settings</Link>
             {signedIn && signOut && (
-              <button type="button" className="v3-menu-item" onClick={() => { setOpen(false); setShowAll(false); signOut(); }}><Icon id="signout" size={17} />Sign out</button>
+              <button type="button" className="v3-menu-item" onClick={() => { reminderSeen.current = true; markReminderSeenThisTab(); setOpen(false); setShowAll(false); signOut(); }}><Icon id="signout" size={17} />Sign out</button>
             )}
-            {!signedIn && clerk && (
+            {!signedIn && clerk && !showSignInReminder && (
               <Link to="/signin" className="v3-menu-item" onClick={() => { setOpen(false); setShowAll(false); }}><Icon id="signin" size={17} />Sign in</Link>
             )}
           </div>
