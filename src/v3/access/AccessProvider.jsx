@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ClerkProvider, useAuth, useClerk, useUser } from '@clerk/clerk-react';
 import { levelForUser, signedOutHint } from './level.js';
 import { AccessContext, VISITOR } from './context.js';
-import { normalizeProfile } from './avatars.js';
+import { assignMissingAvatar, normalizeProfile, savedAvatarId } from './avatars.js';
 import { readPref, writePref } from '../theme/storage.js';
 
 // If Clerk cannot load (wrong domain on a preview, offline, blocked) the app must still open on the demo.
@@ -34,12 +34,32 @@ function ClerkAccess({ children }) {
   }, [isLoaded]);
   const [hintSignedOut] = useState(() => (typeof document !== 'undefined' ? signedOutHint(document.cookie) : false));
   const level = levelForUser({ isLoaded, isSignedIn, publicMetadata: user?.publicMetadata, gaveUp, hintSignedOut });
+  const [hadLiveAccessHere, setHadLiveAccessHere] = useState(() => readPref('hadLiveAccess', '') === '1');
+  const initialAssignment = useRef(null);
+
+  useEffect(() => {
+    if (level !== 'viewer' && level !== 'admin') return;
+    setHadLiveAccessHere(true);
+    writePref('hadLiveAccess', '1');
+  }, [level]);
+
+  useEffect(() => {
+    if (!isSignedIn) { initialAssignment.current = null; return; }
+    if (!isLoaded || !user?.id || savedAvatarId(user.unsafeMetadata?.profile?.avatar)) return;
+    if (initialAssignment.current?.userId === user.id) return;
+    const promise = assignMissingAvatar(user);
+    initialAssignment.current = { userId: user.id, promise };
+    promise.catch((error) => console.error('Could not assign a Solar Crew avatar:', error));
+  }, [isLoaded, isSignedIn, user]);
 
   // Signed in: the profile lives on the Clerk user (unsafeMetadata is user-editable and holds nothing sensitive),
   // so it follows the person across devices. Signed out: this browser.
   const profile = isSignedIn && user ? normalizeProfile(user.unsafeMetadata?.profile) : localProfile;
   const saveProfile = useCallback(async (next) => {
     if (isSignedIn && user) {
+      if (initialAssignment.current?.userId === user.id) {
+        await initialAssignment.current.promise.catch(() => {});
+      }
       await user.update({ unsafeMetadata: { ...(user.unsafeMetadata ?? {}), profile: normalizeProfile(next) } });
     } else {
       await saveLocal(next);
@@ -53,12 +73,14 @@ function ClerkAccess({ children }) {
       email: user?.primaryEmailAddress?.emailAddress ?? null,
       firstName: user?.firstName ?? null,
       clerk: true,
+      signedOut: isLoaded && !isSignedIn,
+      hadLiveAccessHere,
       profile,
       saveProfile,
       getToken: () => getToken(),
       signOut: () => clerk.signOut({ redirectUrl: '/' })
     }),
-    [level, user, getToken, clerk, profile, saveProfile]
+    [level, user, getToken, clerk, profile, saveProfile, isLoaded, isSignedIn, hadLiveAccessHere]
   );
   return <AccessContext.Provider value={value}>{children}</AccessContext.Provider>;
 }

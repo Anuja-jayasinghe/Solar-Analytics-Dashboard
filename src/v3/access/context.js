@@ -7,6 +7,7 @@ import { createContext, useContext } from 'react';
 //   saveProfile:  persists it (Clerk user metadata when signed in, this browser otherwise)
 export const VISITOR = Object.freeze({
   level: 'none', userId: null, email: null, firstName: null, clerk: false,
+  signedOut: false, hadLiveAccessHere: false,
   profile: { nickname: '', avatar: 'initial' },
   getToken: async () => null, signOut: null, saveProfile: async () => {}
 });

@@ -1,0 +1,2 @@
+# False positive in 5c04842: a browser sessionStorage name, not an API key.
+5c04842d5a842b81ec81fc776651c8d8d03b0baf:src/v3/shell/AccountMenu.jsx:generic-api-key:9
