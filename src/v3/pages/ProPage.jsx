@@ -74,9 +74,9 @@ export default function ProPage() {
       <div className="v3-stack" data-busy={busy ? 'true' : undefined} aria-busy={busy}>
         <HealthRow summary={summary} loading={waiting && !uptime.data} />
         <UptimeStrip days={periodUptime?.days} loading={waiting} error={uptime.error} />
-        <section className="v3-twocol">
-          <AlarmTable alarms={periodAlarms} loading={waiting} error={alarms.error} />
+        <section className="v3-pro-monitoring">
           <DataAndLogger summary={summary} uptime={periodUptime} loading={waiting} />
+          <AlarmTable alarms={periodAlarms} loading={waiting} error={alarms.error} />
         </section>
       </div>
       <div className="v3-tilehead">
@@ -88,7 +88,7 @@ export default function ProPage() {
       {electricalKind === 'day'
         ? <Electrical e={electrical} date={electricalRange?.to} loading={telemetry.loading} error={telemetry.error} />
         : <ElectricalRange data={historyData} loading={electricalHistory.loading} error={electricalHistory.error} />}
-      <section className="v3-twocol">
+      <section className="v3-twocol v3-pro-comparison">
         <RateHistory rates={rates} loading={bills.loading} error={bills.error} />
         <YearOverYear pairs={pairs} loading={bills.loading} todayKey={todayKey} firstDay={totals.data?.generation?.firstDay ?? null} />
       </section>

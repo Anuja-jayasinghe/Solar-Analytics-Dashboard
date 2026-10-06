@@ -29,22 +29,25 @@ export function AlarmTable({ alarms, loading, error }) {
       {loading && !alarms && <div className="v3-skeleton" style={{ height: 160 }} aria-busy="true" aria-label="Loading" />}
       {alarms && rows.length === 0 && <Note>No alarms in this range.</Note>}
       {rows.length > 0 && (
-        <div style={{ overflowX: 'auto' }}>
-          <table className="v3-table">
-            <caption className="v3-sr">Inverter alarms, latest first</caption>
-            <thead><tr><th scope="col">When</th><th scope="col">Code</th><th scope="col">What</th><th scope="col">Length</th><th scope="col">Level</th></tr></thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.key}>
-                  <td style={{ whiteSpace: 'nowrap' }}>{localWhen(r.beginTs)}</td>
-                  <td className="v3-num" style={{ fontSize: 12 }}>{r.code}</td>
-                  <td><strong>{r.meaning}</strong>{r.message !== r.meaning && <div className="v3-sub">Solis: {r.message}</div>}{r.advice && <Tip text={r.advice}><span className="v3-sub">Advice from Solis ⓘ</span></Tip>}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}>{r.length}</td>
-                  <td><Pill tone={r.tone === 'neutral' ? undefined : r.tone}>{r.level}</Pill></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div>
+          <div className="v3-sub v3-alarm-scrollhint">Swipe the table for duration and level.</div>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="v3-table v3-alarm-table">
+              <caption className="v3-sr">Inverter alarms, latest first</caption>
+              <thead><tr><th scope="col">When</th><th scope="col">Code</th><th scope="col">What</th><th scope="col">Length</th><th scope="col">Level</th></tr></thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.key}>
+                    <td style={{ whiteSpace: 'nowrap' }}>{localWhen(r.beginTs)}</td>
+                    <td className="v3-num" style={{ fontSize: 12 }}>{r.code}</td>
+                    <td><strong>{r.meaning}</strong>{r.message !== r.meaning && <div className="v3-sub">Solis: {r.message}</div>}{r.advice && <Tip text={r.advice}><span className="v3-sub">Advice from Solis ⓘ</span></Tip>}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{r.length}</td>
+                    <td><Pill tone={r.tone === 'neutral' ? undefined : r.tone}>{r.level}</Pill></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
       {legend.length > 0 && (
@@ -85,12 +88,12 @@ export function DataAndLogger({ summary: s, uptime, loading }) {
         <div className="v3-sub">Can we trust the numbers?</div>
       </div>
       {loading && !uptime ? <div className="v3-skeleton" style={{ height: 120 }} aria-busy="true" aria-label="Loading" /> : (
-        <>
+        <div className="v3-logger-grid">
           <Bar label="Days with a collected reading · all-time" value={s.completenessPct === null ? '—' : `${fmtNum(s.completenessPct, 1)}%`} pct={s.completenessPct ?? 0} color="var(--good)" tip={s.dataDays === null ? 'Not known yet.' : `${fmtNum(s.dataDays)} of ${fmtNum(s.spanDays)} days since the first reading.`} />
           <Bar label={`Logger connection · ${days.length} days`} value={days.length ? (commsMin ? `${minutesLabel(commsMin)} offline` : 'no gaps') : '—'} pct={windowMin ? 100 - (commsMin / windowMin) * 100 : 0} color={commsMin ? 'var(--warn)' : 'var(--good)'} tip="Minutes the data logger lost its internet link inside daylight windows. Counted as a data gap, not as inverter downtime." />
           <Bar label="Days with alarms known" value={days.length ? `${alarmsKnown} of ${days.length}` : '—'} pct={days.length ? (alarmsKnown / days.length) * 100 : 0} color="var(--good)" tip="Uptime is only trusted when the alarm log for that day was readable." />
           <Bar label="Days with logger status known" value={days.length ? `${loggerKnown} of ${days.length}` : '—'} pct={days.length ? (loggerKnown / days.length) * 100 : 0} color="var(--good)" tip="Distinguishes the logger being offline from the inverter being stopped." />
-        </>
+        </div>
       )}
     </Glass>
   );

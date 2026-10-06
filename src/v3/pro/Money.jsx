@@ -25,7 +25,7 @@ export function RateHistory({ rates, loading, error }) {
       {loading && rates.length === 0 && <div className="v3-skeleton" style={{ height: 170 }} aria-busy="true" aria-label="Loading" />}
       {rates.length > 0 && (
         <>
-          <div className="v3-miniplot" style={{ height: 170, marginTop: 18 }}>
+          <div className="v3-miniplot v3-pro-rateplot" style={{ marginTop: 18 }}>
             {[0, 50, 100].map((p) => <div key={p} className="v3-gridline" style={{ bottom: `${p}%` }}><span className="v3-mini-tick">{fmtNum(lo + ((hi - lo) * p) / 100)}</span></div>)}
             <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d={linePath(pts)} fill="none" style={{ stroke: 'var(--ceb)' }} strokeWidth="2.4" strokeLinejoin="round" vectorEffect="non-scaling-stroke" /></svg>
             <div className="v3-cols">
