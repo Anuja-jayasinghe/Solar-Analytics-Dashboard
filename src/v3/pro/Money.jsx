@@ -59,8 +59,8 @@ export function YearOverYear({ pairs, loading, todayKey, firstDay }) {
     && (!earliest || (monthA >= earliest && monthB >= earliest));
   const a = useResource('range', { from: rangeA?.from, to: rangeA?.to }, { enabled: mode === 'months' && monthsValid });
   const b = useResource('range', { from: rangeB?.from, to: rangeB?.to }, { enabled: mode === 'months' && monthsValid });
-  const statsA = a.data?.from === rangeA?.from && a.data?.to === rangeA?.to ? a.data.stats : null;
-  const statsB = b.data?.from === rangeB?.from && b.data?.to === rangeB?.to ? b.data.stats : null;
+  const statsA = a.data && rangeA && a.data.from === rangeA.from && a.data.to === rangeA.to ? a.data.stats : null;
+  const statsB = b.data && rangeB && b.data.from === rangeB.from && b.data.to === rangeB.to ? b.data.stats : null;
   const completeA = statsA && statsA.presentDays === statsA.daysInRange;
   const completeB = statsB && statsB.presentDays === statsB.daysInRange;
   const deltaPct = completeA && completeB && statsB.totalKwh > 0 ? (statsA.totalKwh / statsB.totalKwh - 1) * 100 : null;

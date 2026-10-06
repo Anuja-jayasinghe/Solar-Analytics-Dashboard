@@ -51,8 +51,15 @@ the cadence is uneven. The daily table supports date-by-date review.
 ## Release gate
 
 Database coverage and field-shape checks pass for the latest 31 completed
-days. Keep the electrical-history feature off production until an
-authenticated preview calls the new `/api/data/electrical` endpoint against
+days. A draft Vercel preview was deployed on 2026-10-06, but its standard
+`vercel.app` host cannot use this project's Clerk production key: Clerk
+rejected the origin because the key is restricted to `solaredge.anujajay.com`.
+The preview also revealed an initial-render bug in the month comparison;
+that has been fixed and given a regression test. No credential or origin
+protection was weakened to work around the preview restriction.
+
+Keep the electrical-history feature off production until an authenticated
+test on an allowed host calls the new `/api/data/electrical` endpoint against
 this database and confirms its date boundaries, pagination and missing-day
 responses. The endpoint is not deployed on the current production site, so
 this audit cannot claim that end-to-end check has passed. Recheck the latest

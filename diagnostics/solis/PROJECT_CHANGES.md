@@ -62,7 +62,9 @@ The Pro and API tests, lint and production build pass in this branch.
 The [production telemetry storage audit](TELEMETRY_STORAGE_AUDIT-2026-10-06.md)
 confirms stored rows and field shape, including historical gaps. Before
 merging or publishing, exercise the new electrical endpoint against that
-database in an authenticated preview and verify the returned missing-day
-markers and pagination. A production deployment requires the normal CI and
+database on a Clerk-allowed host and verify the returned missing-day markers
+and pagination. The standard Vercel preview host is rejected by the project's
+production Clerk key; do not weaken the origin restriction to bypass this.
+A production deployment requires the normal CI and
 release process; this investigation does not write to the production database
 or issue Solis control commands.
