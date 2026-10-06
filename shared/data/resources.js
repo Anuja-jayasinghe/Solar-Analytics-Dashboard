@@ -8,6 +8,7 @@
 // how complete the data is) carries that choice in the response.
 
 import { aggregateUptime } from '../domain/uptime.js';
+import { summarizeElectricalRange } from '../domain/electricalRange.js';
 import { uptimeRowToDay } from '../domain/telemetryPipeline.js';
 import { addDays, diffDays } from '../domain/time.js';
 import { buildAlignedRows } from '../domain/alignment.js';
@@ -136,6 +137,13 @@ export const resources = {
     return { body: { date, points: await repo.telemetryDay(date) } };
   },
 
+  /** Up to 31 completed local days of electrical telemetry, summarized before leaving the server. */
+  async electrical(repo, query, ctx) {
+    const { from, to } = parseRange(query, { maxDays: 31 });
+    if (to >= ctx.todayKey) throw new HttpError(400, 'electrical range must contain completed days only', 'invalid_range');
+    return { body: summarizeElectricalRange(await repo.telemetryRange(from, to), from, to) };
+  },
+
   async settings(repo) {
     const s = await repo.settings();
     return { body: { settings: s } };
@@ -250,4 +258,3 @@ export function resolveResource(name) {
   }
   return resources[name];
 }
-

@@ -11,6 +11,7 @@
 //   GET /api/data/uptime?from&to                                         uptime + timeline (LR-002)
 //   GET /api/data/alarms?from&to&limit                                   alarm log
 //   GET /api/data/telemetry?date                                         one day, 5-minute points
+//   GET /api/data/electrical?from&to                                     up to 31 completed days, summarized
 //   GET /api/data/live                                                   right-now status
 //   GET /api/data/settings                                               tariff / capacity / target
 //   GET /api/data/export?kind=daily|uptime|alarms&from&to                CSV

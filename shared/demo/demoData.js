@@ -203,6 +203,13 @@ export function createDemoRepo(dataset = createDemoDataset()) {
       return dataset.alarmRows.filter((a) => inRange(a.begin_ts.slice(0, 10), addDays(from, -1), addDays(to, 1))).slice(0, limit);
     },
     async telemetryDay(date) { return inRange(date, DEMO.start, addDays(DEMO.today, -1)) ? demoTelemetryDay(date) : []; },
+    async telemetryRange(from, to) {
+      const out = [];
+      for (let date = from; date <= to; date = addDays(date, 1)) {
+        if (inRange(date, DEMO.start, addDays(DEMO.today, -1))) out.push(...demoTelemetryDay(date));
+      }
+      return out;
+    },
     async settings() { return dataset.settings; }
   };
 }

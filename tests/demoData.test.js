@@ -36,6 +36,7 @@ describe('obviously fake', () => {
       ['uptime', { from: '2036-08-01', to: '2036-09-14' }],
       ['alarms', { from: '2036-06-01', to: '2036-09-14' }],
       ['telemetry', { date: '2036-09-14' }],
+      ['electrical', { from: '2036-09-08', to: '2036-09-14' }],
       ['live', {}],
       ['settings', {}]
     ];
@@ -159,6 +160,6 @@ describe('runs through the real resource code', () => {
   });
 
   it('createDemoRepo has the same method surface as the real repository', () => {
-    expect(Object.keys(createDemoRepo(ds)).sort()).toEqual(['alarms', 'bills', 'dailyRows', 'segments', 'settings', 'telemetryDay', 'uptimeDays']);
+    expect(Object.keys(createDemoRepo(ds)).sort()).toEqual(['alarms', 'bills', 'dailyRows', 'segments', 'settings', 'telemetryDay', 'telemetryRange', 'uptimeDays']);
   });
 });

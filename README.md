@@ -13,7 +13,7 @@ A production monitoring dashboard for a 40 kW rooftop array in Sri Lanka. It rec
 inverter telemetry against Ceylon Electricity Board bills — so under-billing becomes visible
 instead of invisible.
 
-[**Live site**](https://solaredge.anujajay.com) · [**Architecture**](docs/ARCHITECTURE.md) · [**API**](docs/API.md) · [**Runbook**](docs/RUNBOOK.md)
+[**Live site**](https://solaredge.anujajay.com) · [**Architecture**](docs/ARCHITECTURE.md) · [**API**](docs/API.md) · [**Pro metrics guide**](docs/PRO_METRICS_PERIODS.md) · [**Runbook**](docs/RUNBOOK.md) · [**Solis diagnostics**](diagnostics/solis/README.md)
 
 <br>
 
