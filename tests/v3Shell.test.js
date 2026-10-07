@@ -266,6 +266,7 @@ describe('round 2 fixes', () => {
     expect(openPeriodSoFar(longer, { todayKwh: 100 }, '2026-10-03', '2026-10-04').kwh).toBe(1300);
     // already stored: not counted twice
     expect(openPeriodSoFar(longer, { todayKwh: 100 }, '2026-10-04', '2026-10-04')).toMatchObject({ kwh: 1200, includesToday: false });
+    expect(openPeriodSoFar(longer, { todayKwh: 100 }, undefined, '2026-10-04')).toMatchObject({ kwh: 1200, includesToday: false });
     // no live reading and nothing stored: unknown, not zero
     expect(openPeriodSoFar(open, null, '2026-10-03', '2026-10-04').kwh).toBeNull();
     expect(openPeriodSoFar(null, { todayKwh: 1 }, null, '2026-10-04')).toBeNull();

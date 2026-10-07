@@ -47,7 +47,7 @@ export default function OverviewPage() {
         loading={totals.loading || (comparison.loading && !comparison.data)}
       />
       <LiveRow live={live.data} targetKwh={s?.dailyTargetKwh ?? null} maxKw={s?.acRatedKw ?? null} now={now} loading={live.loading} />
-      <CebCompare bills={bills.data} comparison={comparison.data} todayKey={todayKey} loading={bills.loading || comparison.loading} error={bills.error} />
+      <CebCompare bills={bills.data} comparison={comparison.data} live={live.data} lastStoredDay={totals.data?.generation?.lastDay} todayKey={todayKey} loading={bills.loading || comparison.loading} error={bills.error} />
       <ExploreSection totals={totals.data} todayKey={todayKey} />
     </>
   );

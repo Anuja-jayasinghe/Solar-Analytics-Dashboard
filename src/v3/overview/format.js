@@ -107,15 +107,17 @@ export function openBillPeriod(rows) {
 }
 
 /**
- * The open billing period's generation so far. Daily totals are stored after each day ends, so the stored sum
- * never contains today; today's live reading is added when the period runs to today and today is not stored
- * yet (`lastStoredDay` before today). Unknown stays null: nothing stored and no live reading -> null.
+ * The open billing period's generation so far. Today's live reading is added when the period runs to today
+ * and today's daily total is not stored yet (`lastStoredDay` before today, or a confirmed null when no
+ * daily rows exist). An undefined
+ * last stored day means the totals response has not arrived, so today's value is not added yet.
+ * Unknown stays null: nothing stored and no live reading -> null.
  * @returns {null | {kwh:number|null, includesToday:boolean, daysPresent:number|null, daysInPeriod:number|null}}
  */
 export function openPeriodSoFar(open, live, lastStoredDay, todayKey) {
   if (!open) return null;
   const today = live?.todayKwh;
-  const addToday = isNum(today) && !!todayKey && open.endKey === todayKey && (lastStoredDay == null || lastStoredDay < todayKey);
+  const addToday = isNum(today) && !!todayKey && open.endKey === todayKey && lastStoredDay !== undefined && (lastStoredDay === null || lastStoredDay < todayKey);
   const stored = isNum(open.kwh) ? open.kwh : null;
   const kwh = stored === null && !addToday ? null : (stored ?? 0) + (addToday ? today : 0);
   return {

@@ -8,7 +8,7 @@ import { ThresholdPlot } from '../charts/ThresholdPlot.jsx';
 import { MarkToggle } from '../charts/MarkToggle.jsx';
 import { usePrefs } from '../prefs/context.js';
 import { MAX_LABELLED_COLUMNS, areaPath, axisTicks, chartNum, linePath, maxOf, niceMax, xPct, yPct } from '../charts/scale.js';
-import { fmtNum } from '../overview/format.js';
+import { fmtNum, openBillPeriod, openPeriodSoFar } from '../overview/format.js';
 import { aboveSummary, buildCebRows, columnTip, defaultThreshold, gapSummary, isPartial, stepEnd, varianceTag, windowOf } from './rows.js';
 import { GapStrip } from './GapStrip.jsx';
 import { CebTable } from './CebTable.jsx';
@@ -74,11 +74,12 @@ function Columns({ rows, yMax, threshold, style }) {
  * CEB vs Inverter: one column per bill period (LR-001), the open period last and marked "awaiting bill",
  * a draggable "Mark above" line, and the money gap (LR-004) aligned underneath.
  */
-export function CebCompare({ bills, comparison, todayKey, loading, error }) {
+export function CebCompare({ bills, comparison, live, lastStoredDay, todayKey, loading, error }) {
   const open = useMemo(() => {
     const r = (comparison?.rows ?? []).find((x) => x && x.status === 'provisional');
-    return r ? { month: r.month, year: comparison.year, periodStart: r.periodStart, inverter: r.inverter, daysPresent: r.daysPresent, daysInPeriod: r.daysInPeriod } : null;
-  }, [comparison]);
+    const soFar = openPeriodSoFar(openBillPeriod(comparison?.rows), live, lastStoredDay, todayKey);
+    return r && soFar ? { month: r.month, year: comparison.year, periodStart: r.periodStart, inverter: soFar.kwh, daysPresent: soFar.daysPresent, daysInPeriod: soFar.daysInPeriod, includesToday: soFar.includesToday } : null;
+  }, [comparison, live, lastStoredDay, todayKey]);
   const rows = useMemo(() => buildCebRows(bills?.bills, open, todayKey), [bills, open, todayKey]);
 
   const [style, setStyle] = useState('bars');
@@ -126,7 +127,7 @@ export function CebCompare({ bills, comparison, todayKey, loading, error }) {
             <div className="v3-legend">
               <span><i style={{ background: 'var(--gen)' }} />Inverter generated</span>
               <span><i style={{ background: 'var(--ceb)' }} />CEB paid for</span>
-              <span><i className="v3-hatch" />days missing: partial</span>
+              <span><i className="v3-hatch" />open period or missing days</span>
               <span><i className="v3-ghost" />bill not issued yet</span>
             </div>
             <div className="v3-markrow">
