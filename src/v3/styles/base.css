@@ -516,7 +516,7 @@ select.v3-field { padding-right: 8px; }
 }
 
 /* ---- footer ---- */
-.v3-footer { display: flex; justify-content: center; align-items: center; gap: 10px; padding: 18px 0 6px; font-size: 11.5px; color: var(--ink2); opacity: .7; }
+.v3-footer { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: auto; padding: 18px 0 6px; font-size: 11.5px; color: var(--ink2); opacity: .7; }
 .v3-footer a { color: inherit; text-decoration: none; font-weight: 600; }
 .v3-footer a:hover { color: var(--gen); }
 .v3-footer-icon { display: inline-flex; }
