@@ -21,7 +21,7 @@ export function generationMonth(billDate) {
 
 /**
  * @param {object[]} bills  rows of GET /api/data/bills (any order)
- * @param {object|null} open  the provisional LR-001 row ({ month, periodStart, inverter, daysPresent, daysInPeriod }) with `year`
+ * @param {object|null} open  the provisional LR-001 display row ({ month, periodStart, inverter, daysPresent, daysInPeriod, includesToday }) with `year`
  * @param {string|null} todayKey
  * @returns {object[]} oldest first; each: id, label, year, status, periodStart, periodEnd, inverterKwh, cebKwh,
  *   daysPresent, daysInPeriod, complete, ratePerKwh, earningsLkr, variancePct, gapLkr, gapReason
@@ -66,6 +66,7 @@ export function buildCebRows(bills, open, todayKey) {
       cebKwh: null,
       daysPresent: open.daysPresent ?? null,
       daysInPeriod: open.daysInPeriod ?? null,
+      includesToday: !!open.includesToday,
       complete: false,
       ratePerKwh: null,
       earningsLkr: null,
@@ -158,7 +159,7 @@ export function columnTip(row, threshold) {
   const parts = [`${row.label} ${row.year ?? ''}`.trim(), `${dm(row.periodStart)} to ${dm(row.periodEnd)}`];
   parts.push(`Inverter ${kwh(row.inverterKwh)}${isNum(row.inverterKwh) && isNum(threshold) && row.inverterKwh > threshold ? ' (above the line)' : ''}`);
   if (row.status === 'provisional') {
-    parts.push(`CEB bill not issued yet · ${row.daysPresent ?? '—'} of ${row.daysInPeriod ?? '—'} days so far`);
+    parts.push(`CEB bill not issued yet · ${row.daysPresent ?? '—'} of ${row.daysInPeriod ?? '—'} days so far${row.includesToday ? ' · includes today so far' : ''}`);
   } else {
     parts.push(`CEB ${kwh(row.cebKwh)}`);
     if (isPartial(row)) parts.push(`only ${row.daysPresent} of ${row.daysInPeriod} days recorded, so no variance is claimed`);

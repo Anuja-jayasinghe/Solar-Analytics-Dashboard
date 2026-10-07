@@ -57,6 +57,17 @@ Each month row in the chart is a comparison record with these fields:
 - periodEnd = today
 - inverter = sum(daily_generation_kwh in [periodStart, periodEnd])
 
+The v3 Overview presents this stored daily sum as a **provisional, up-to-now** total in both
+“This billing period” and the open column of “CEB vs Inverter.” It adds the live reading
+`todayKwh` only when the open period ends on the server's `todayKey` and the newest stored
+daily summary (`totals.generation.lastDay`) is before today, or the loaded totals confirm no
+stored daily rows. Both displays use the same rule. A pending totals response does not add
+today's reading yet.
+The displayed day count increases by one when that live reading is included. If today's
+daily summary is already stored, it is not added again. If neither a stored sum nor a valid
+live reading exists, the total remains `null`. Finalized bill periods, CEB values, variance,
+and money-gap calculations do not use this provisional addition.
+
 4. Future months:
 - inverter = null
 - ceb = null

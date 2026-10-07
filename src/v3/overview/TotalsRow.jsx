@@ -24,7 +24,7 @@ function Tile({ label, short, value, unit, sub, tip, loading }) {
  */
 export function TotalsRow({ totals, comparison, live, todayKey, loading }) {
   const gen = totals?.generation;
-  const open = openPeriodSoFar(openBillPeriod(comparison?.rows), live, gen?.lastDay ?? null, todayKey);
+  const open = openPeriodSoFar(openBillPeriod(comparison?.rows), live, gen ? gen.lastDay : undefined, todayKey);
   const start = openBillPeriod(comparison?.rows)?.startKey ?? null;
   const earn = totals?.earnings;
 

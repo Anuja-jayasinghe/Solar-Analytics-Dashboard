@@ -11,6 +11,7 @@ import {
   liveState, freshness, openBillPeriod, FRESH_WINDOW_MIN
 } from '../src/v3/overview/format.js';
 import { TotalsRow } from '../src/v3/overview/TotalsRow.jsx';
+import { CebCompare } from '../src/v3/ceb/CebCompare.jsx';
 import { TodayTile } from '../src/v3/overview/TodayTile.jsx';
 import { LiveGauge } from '../src/v3/overview/LiveGauge.jsx';
 
@@ -121,6 +122,55 @@ describe('rendered tiles', () => {
     expect(html).toContain('LKR 3.07');
     expect(html).toContain('20 CEB bills');
     expect(html).toContain('awaiting bill');
+  });
+
+  it('the open chart column matches the billing tile when today is still live-only', () => {
+    const todayKey = '2036-09-15';
+    const live = { todayKwh: 98.2 };
+    const openComparison = { year: 2036, rows: [{
+      status: 'provisional', month: 'Sep', periodStart: '2036-09-04', periodEnd: todayKey,
+      inverter: 1464.1, daysPresent: 11, daysInPeriod: 12
+    }] };
+    const tile = renderToString(h(TotalsRow, { totals, comparison: openComparison, live, todayKey, loading: false }));
+    const chart = renderToString(h(CebCompare, {
+      bills: { bills: [] }, comparison: openComparison, live, lastStoredDay: totals.generation.lastDay,
+      todayKey, loading: false, error: null
+    }));
+    expect(tile).toContain('1,562');
+    expect(chart).toContain('>1,562</td>');
+    expect(chart).not.toContain('>1,464</td>');
+  });
+
+  it('does not add the live reading again when today is already stored', () => {
+    const todayKey = '2036-09-15';
+    const storedToday = { ...totals, generation: { ...totals.generation, lastDay: todayKey } };
+    const openComparison = { year: 2036, rows: [{
+      status: 'provisional', month: 'Sep', periodStart: '2036-09-04', periodEnd: todayKey,
+      inverter: 1562.3, daysPresent: 12, daysInPeriod: 12
+    }] };
+    const live = { todayKwh: 98.2 };
+    const tile = renderToString(h(TotalsRow, { totals: storedToday, comparison: openComparison, live, todayKey, loading: false }));
+    const chart = renderToString(h(CebCompare, {
+      bills: { bills: [] }, comparison: openComparison, live, lastStoredDay: todayKey,
+      todayKey, loading: false, error: null
+    }));
+    expect(tile).toContain('1,562');
+    expect(chart).toContain('>1,562</td>');
+    expect(chart).not.toContain('>1,660</td>');
+  });
+
+  it('shows a live-only first day in the open chart without inventing a CEB value', () => {
+    const todayKey = '2036-09-15';
+    const openComparison = { year: 2036, rows: [{
+      status: 'provisional', month: 'Sep', periodStart: todayKey, periodEnd: todayKey,
+      inverter: null, daysPresent: 0, daysInPeriod: 1
+    }] };
+    const chart = renderToString(h(CebCompare, {
+      bills: { bills: [] }, comparison: openComparison, live: { todayKwh: 98.2 }, lastStoredDay: null,
+      todayKey, loading: false, error: null
+    }));
+    expect(chart).toContain('>98</td><td>awaiting bill</td>');
+    expect(chart).not.toContain('>0</td>');
   });
 
   it('missing data renders dashes, never zeros', () => {
