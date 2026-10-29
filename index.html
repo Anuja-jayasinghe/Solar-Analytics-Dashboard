@@ -11,18 +11,13 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
     <!--
-      Both origins are contacted by the very first render: Clerk to resolve the
-      session, Supabase to fetch dashboard data. Without these hints the browser
-      only discovers them after the JS bundle parses, and Lighthouse measured
-      312ms (Clerk) + 300ms (Supabase) of avoidable connection setup.
-
-      Neither host is a secret: the Supabase project ref and the Clerk domain
-      already ship inside the client bundle via VITE_ vars.
+      Clerk is contacted by the very first render, to resolve the session; without the hint the
+      browser only discovers it after the JS bundle parses (Lighthouse measured 312ms of avoidable
+      connection setup). Supabase is no longer preconnected: since v1 was removed the browser never
+      talks to it — every dashboard read goes through /api/data/*.
     -->
     <link rel="preconnect" href="https://clerk.solaredge.anujajay.com" crossorigin />
-    <link rel="preconnect" href="https://mqrlrkerjtfsjypaeppf.supabase.co" crossorigin />
     <link rel="dns-prefetch" href="https://clerk.solaredge.anujajay.com" />
-    <link rel="dns-prefetch" href="https://mqrlrkerjtfsjypaeppf.supabase.co" />
 
     <link rel="canonical" href="https://solaredge.anujajay.com/" />
 

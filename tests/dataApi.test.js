@@ -323,6 +323,13 @@ describe('totals', () => {
     expect(e).toEqual({ totalLkr: 7900, billCount: 2, billsWithoutEarnings: 1, firstBillDate: '2026-08-03', lastBillDate: '2026-10-03' });
   });
 
+  it('carries the server\'s Colombo date, so pages need not wait on SolisCloud to know which day it is', async () => {
+    // now = 2026-10-03T10:00Z = 15:30 in Colombo, same calendar day
+    const { handler } = build({ live: async () => { throw new HttpError(502, 'down', 'upstream_unavailable'); } });
+    const body = (await call(handler, req('totals'))).body;
+    expect(body.todayKey).toBe('2026-10-03');
+  });
+
   it('with no data at all every figure is null or zero-count, not a fabricated total', async () => {
     const { handler } = build({ repo: makeRepo({ dailyRows: async () => [], bills: async () => [] }) });
     const body = (await call(handler, req('totals'))).body;

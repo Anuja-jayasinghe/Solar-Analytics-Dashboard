@@ -6,7 +6,7 @@
 //   node functions/collect_telemetry/index.js                       dry run, last 7 completed days
 //   node functions/collect_telemetry/index.js --write               nightly: write last 7 days
 //   node functions/collect_telemetry/index.js --from 2024-08-02 --to 2026-10-02 --write
-//   node functions/collect_telemetry/index.js --fill-peaks --write  also set NULL summary peaks
+//   node functions/collect_telemetry/index.js --fill-peaks --write  also raise summary peaks that are NULL or lower
 //   node functions/collect_telemetry/index.js --from 2024-08-02 --concurrency 4   long ranges: several days in flight
 //
 // SAFE BY DEFAULT: without --write nothing is written anywhere. Today is never processed
@@ -129,10 +129,13 @@ function makeDb(supabase, sn) {
           .eq('inverter_sn', sn).gte('summary_date', from).lte('summary_date', to)
       );
     },
-    async setPeakIfNull(day, peakKw) {
+    // Raise only: the WHERE clause repeats the rule, so a concurrent writer can never be lowered.
+    async raisePeak(day, peakKw) {
+      if (!Number.isFinite(peakKw)) return false;
       const data = await must(
         supabase.from('inverter_data_daily_summary').update({ peak_power_kw: peakKw })
-          .eq('inverter_sn', sn).eq('summary_date', day).is('peak_power_kw', null).select('id')
+          .eq('inverter_sn', sn).eq('summary_date', day)
+          .or(`peak_power_kw.is.null,peak_power_kw.lt.${peakKw}`).select('id')
       );
       return data.length > 0;
     }

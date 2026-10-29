@@ -187,8 +187,9 @@ node functions/collect_telemetry/index.js --from 2024-08-02 --concurrency 4 --wr
 ```
 
 (or run the **Backfill Inverter Telemetry** workflow with `dry_run` unticked; note a workflow is
-only dispatchable once it exists on the default branch). `--fill-peaks` sets `peak_power_kw` on
-daily-summary rows where it is NULL; it never overwrites a value and never creates a row.
+only dispatchable once it exists on the default branch). `--fill-peaks` raises `peak_power_kw` on
+daily-summary rows where it is NULL or lower than the telemetry peak; it never lowers a value and
+never creates a row. The nightly collector runs with it since 2026-10-29.
 Expect about 25–30 minutes for the full history: each Solis call has ~5 s latency and the
 collector keeps request *starts* 700 ms apart (the API limit is 2 per second).
 
@@ -285,6 +286,9 @@ The release only changed which app is served; the database, collector and API ar
    release merge → "Promote to Production".
 2. Or revert: `git revert -m 1 <merge commit of the release PR>` on a branch, open a PR, merge it (the main rules apply).
 3. Last resort, previous dashboard as it was: tag `v2.1.0`. Note it expects `/` and `/dashboard`, not `/v1`.
+
+v1 itself was removed on 2026-10-29, so "serve /v1 again" is no longer an option; reverting that PR brings it back.
+**v1 cannot read anything once the anon revoke is applied** — revert the removal only together with the revoke's `_rollback.sql`.
 
 Nothing in the data needs undoing. If you applied `2026-10-04_v3_revoke_anon_read_at_v1_removal.sql`, run its `_rollback.sql` first.
 
@@ -386,29 +390,13 @@ exit successfully having done nothing — a silent no-op indistinguishable from 
 > Run on 2026-09-13: 19 objects removed, 17.5 MB. The bucket now reconciles at 25 objects
 > against 25 ingestion rows, with nothing unreferenced.
 
-### Reading Edge Function failures
+### Reading live-data failures
 
-`solis-live-data` backs the live-power widget. When it misbehaves, the status code says whose
-fault it is:
-
-| Status | Meaning |
-|---|---|
-| `500` | **Ours** — a Supabase secret is missing. The body names which. |
-| `502` | **SolisCloud** — rejected us, declined, or was unreachable after 3 attempts |
-
-It retries transport failures and 5xx three times with exponential backoff and full jitter,
-8s timeout per attempt. It does **not** retry 4xx or a `success: false` body — a bad signature
-and a declined request do not improve on repetition.
-
-```sql
--- in Supabase → Logs, or via the MCP log query
-select timestamp, event_message from logs
-where source = 'function_logs' and event_message ilike '%Solis%'
-order by timestamp desc limit 20;
-```
-
-A run of `SolisCloud returned 502 (attempt 1/3)` warnings followed by a 200 is the retry
-working as designed, not an incident.
+The live tile reads `GET /api/data/live`. Filter the Vercel function log on `[REQUEST]` and
+`data/live`: a `502` with `latencyMs` near 30000 is the SolisCloud request ceiling
+(`SOLIS_TIMEOUT_MS`); a quick `502` is SolisCloud answering with an error. Either way only the
+live tiles are affected; every other figure reads the database. (The `solis-live-data` Edge
+Function that served v1 was deleted on 2026-10-29.)
 
 ### Rotating credentials
 

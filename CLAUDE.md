@@ -23,8 +23,9 @@ inverter    = sum of daily generation within that window
 fabricated zeros have caused real data corruption here twice.
 
 Spec: `docs/logic-registry/LR-001-ceb-vs-inverter-monthly-alignment.md`
-Implementation: `buildAlignedEnergyComparisonRows` in `src/lib/dataService.js`
-Tests: `tests/energyAlignment.test.js`
+Implementation: `buildAlignedRows` in `shared/domain/alignment.js` (date keys, timezone-independent)
+Tests: `tests/alignment.test.js` — including a differential check against the removed v1 implementation,
+frozen in `tests/fixtures/v1Alignment.js` (also exercised by `tests/energyAlignment.test.js`)
 
 ---
 
@@ -101,7 +102,7 @@ smoke suite (`e2e/smoke.spec.js`) against the production build as a signed-out v
 
 | Workflow | Purpose |
 |---|---|
-| Fetch Live Inverter Data | every 5 min, Solis → `inverter_data_live` |
+| Fetch Live Inverter Data | scheduled every 5 min, Solis → `inverter_data_live`. **GitHub actually runs it ~5×/day** (Oct 2026); daily totals stay correct, peaks come from telemetry |
 | Generate Daily Inverter Summary | 2×/day, aggregates into `inverter_data_daily_summary` |
 | Data Freshness Check | daily; opens a `data-outage` issue if rows stop arriving |
 | Collect Inverter Telemetry | nightly 00:15 Colombo; last 7 days of Solis `inverterDay` + `collector/day` + `alarmList` → telemetry, alarms, uptime tables (v3, ADR-001) |
@@ -154,11 +155,13 @@ with the reference documents, the reference documents are right.
 
 ## v3 is the default dashboard (2026-10-04, release v3.0.0)
 
-The new frontend (`src/v3/`, design in `docs/design/v3/`) is served at **`/`**; the previous dashboard is **deprecated and lives
-under `/v1`** with a banner (`src/App.jsx`, `src/main.jsx` picks the app by path). Visitors see demo data; viewers and admins see
-real data through `/api/data/*`. Release notes and the production-readiness analysis: `docs/RELEASE_v3.0.0.md`. Rollback: `docs/RUNBOOK.md`.
-**Bill tables and the bill PDF bucket were closed to the anon key on 2026-10-04. Still open:** the dashboard tables stay publicly readable by the anon key until `/v1` is removed and
-`scripts/sql/2026-10-04_v3_revoke_anon_read_at_v1_removal.sql` is applied (#155). Workflow: `docs/WORKING_RULES.md` 7a.
+The new frontend (`src/v3/`, design in `docs/design/v3/`) is served at **`/`** and is the only app. The previous dashboard,
+deprecated under `/v1` at the cutover, was **removed on 2026-10-29**; `/v1` addresses redirect into v3 (`src/v3/routes.js`) and
+`tests/v3Cutover.test.js` fails if a legacy app or a browser Supabase client comes back. Visitors see demo data; viewers and admins
+see real data through `/api/data/*`. Release notes: `docs/RELEASE_v3.0.0.md`. Rollback: `docs/RUNBOOK.md`.
+**All real data is private (2026-10-29).** Bill tables and the bill PDF bucket closed to the anon key on 2026-10-04; the dashboard
+tables followed on 2026-10-29 (`2026-10-04_v3_revoke_anon_read_at_v1_removal.sql`, applied after the v1 removal reached production):
+`anon` holds SELECT on no table in `public` and no policy grants it anything. Reads go through `/api/data/*` with the service role.
 
 ## v3 foundations are live (2026-10-04)
 
@@ -174,10 +177,12 @@ UI**. The new UI waits for a design phase (issue #159). Plan, decisions and the 
   no I/O, runs in browser, API and collectors. LR-003 specifies custom ranges (inverter only).
 - **Read API** `GET /api/data/*`: viewer-level (Clerk `role: viewer`, or admin). The demo runs the same
   resource code on generated data dated 2035+.
-- **Still public until cutover**: `anon` can SELECT the real tables because v1 reads them directly
-  (deferred V3-D1, #155). Write-class privileges were already revoked from `anon`.
+- **Private since 2026-10-29**: `anon` can no longer SELECT any table (V3-D1, #155 done). Write-class
+  privileges were revoked from `anon` on 2026-10-03.
 - Array size is **41.76 kWp** (`capacity_kwp`, DC; use for kWh/kWp); the 40 kW is the AC rating.
-- Daily summaries are reconciled against the inverter's own counter (0 disagreeing days at 2026-10-03).
+- Daily summaries are reconciled against the inverter's own counter (0 disagreeing days at 2026-10-03; 21 of 21 again
+  on 2026-10-29). **Daily peak power comes from telemetry**, raise-only: GitHub runs the 5-minute live job only a
+  few times a day, so its sampled peak was far too low (`shared/domain/dailySummaryMerge.js`, nightly `--fill-peaks`).
 
 ## State as of v2.1.0 (2026-09-13)
 
@@ -228,11 +233,11 @@ reintroduced from memory:
   `approved`, which also protects them, since `/extract` refuses to re-parse an approved
   ingestion. All 25 ingestions now reconcile 25/25/25.
 - *"Edge Function `solis-live-data` returns 500 (unused by the current data path)."* Wrong on
-  both counts. It is called by `DataContext.jsx` and `dataService.js` for the live-power
+  both counts. It was called by v1's `DataContext.jsx` and `dataService.js` for the live-power
   widget, and 48 of 55 calls succeeded — every failure was an upstream SolisCloud 502/504
   surfacing as a 500 because one failed fetch threw straight to the catch block. It now
   retries three times with exponential backoff and full jitter, times out at 8s per attempt,
   and returns 502 (not 500) when SolisCloud is genuinely down.
-
-The function's source now lives in `supabase/functions/solis-live-data/`. For its first 29
-versions it existed only in the Supabase dashboard — production code with no history.
+  **Deleted 2026-10-29.** Once v1 was removed nothing called it (v3's live tile uses `/api/data/live`), and it was
+  still deployed as v30 with `verify_jwt: false` — callable by anyone, spending SolisCloud quota. The project now has
+  no Edge Functions; its source (`supabase/functions/solis-live-data/`) is in git history before that date.

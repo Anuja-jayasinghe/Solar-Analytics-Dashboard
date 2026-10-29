@@ -42,15 +42,22 @@ except the two `2026-04-23_…anon…` files, which are superseded (see the ledg
 | `2026-09-12_baseline_schema.sql` | Point-in-time reconstruction of the live schema. `if not exists` throughout, so a no-op on the live project | Recorded as generated *from* the live database |
 | `2026-09-12_revoke_anon_writes.sql` | Removed `anon` INSERT/UPDATE on `ceb_data` and `system_settings`, and the `admin_users` policies | **Not recorded — verify** with the policy query in [`SECURITY.md`](./SECURITY.md) |
 | `2026-09-24_revoke_anon_bill_access.sql` | Closes the bill tables and the `ceb_bills` bucket to `anon`. **Deploy the code that adds `/signed-url` and `?view=queue` first** | **Yes — 2026-10-04** (DB Snapshot run 37193304087 taken first) |
-| `2026-09-24_approve_ceb_extraction.sql` | `approve_ceb_extraction()` — bill approval in one transaction. Safe before or after the code; the API falls back and warns until it is installed | **Not applied** |
-| `2026-09-24_ceb_data_public_columns.sql` | Limits `anon` to four `ceb_data` columns (`id`, `bill_date`, `earnings`, `units_exported`). **Deploy the code that adds `GET /api/ceb-bills/records` first** — the old admin table did `select *` from the browser | **Not applied** |
-| `2026-09-24_drop_cascade_trigger.sql` | Drops the live-only `trg_cascade_delete_ceb_data` trigger, now redundant. Read its header first: snapshot, deploy the merged `/delete` endpoint, read the definition | **Not applied** |
+| `2026-09-24_approve_ceb_extraction.sql` | `approve_ceb_extraction()` — bill approval in one transaction. Safe before or after the code; the API falls back and warns until it is installed | **Yes — 2026-10-29** (DB Snapshot run 40849945507 first; `supabase db query --linked`; verified: installed, EXECUTE for `service_role` only, not `anon`) |
+| `2026-09-24_ceb_data_public_columns.sql` | Limits `anon` to four `ceb_data` columns (`id`, `bill_date`, `earnings`, `units_exported`). **Deploy the code that adds `GET /api/ceb-bills/records` first** — the old admin table did `select *` from the browser | **Yes — 2026-10-29** (same snapshot; verified: `anon` may read exactly `id`, `bill_date`, `earnings`, `units_exported`; anon REST for `account_number` or `*` → 42501; v1's four-column read still 200) |
+| `2026-09-24_drop_cascade_trigger.sql` | Drops the live-only `trg_cascade_delete_ceb_data` trigger, now redundant. Read its header first: snapshot, deploy the merged `/delete` endpoint, read the definition | **Yes — 2026-10-29** (owner-confirmed; snapshot run 40849945507; verified: no trigger left on `ceb_data`; definitions recorded below for rollback) |
 | `2026-10-03_v3_telemetry_schema.sql` | v3: six new **private** tables (`inverter_telemetry`, `collector_heartbeats`, `inverter_alarms`, `inverter_day_uptime`, `inverter_status_segments`, `collector_runs`) and the `capacity_kwp` setting. Purely additive; RLS on, no policies, no privileges for `anon`/`authenticated`. Rollback: `…_rollback.sql` | **Yes — 2026-10-03** (via Supabase `apply_migration` after DB Snapshot run 37134535084; verified: RLS on, 0 policies, `anon` denied) |
 | `2026-10-03_v3_harden_public_role_privileges.sql` | Revokes INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER from `anon` and `authenticated` on all public tables (they held them; only RLS blocked writes) and sets default privileges so new tables do not get them back. **SELECT is untouched** | **Yes — 2026-10-03** (verified: v1 reads still 200; an `anon` PATCH now fails at privilege level, 42501) |
-| `2026-09-24_ceb_schema_drift.sql` | Adds `confidence_score` and `meter_reading_previous`, which the code writes but no migration declared. No-op on the live project | **Not applied** (no-op if the columns exist) |
-| `2026-10-04_v3_revoke_anon_read_at_v1_removal.sql` (+ `_rollback.sql`) | v3 cutover, final step (#155): drops every `anon` SELECT policy on the dashboard tables and revokes `SELECT` from `anon`. **Breaks the deprecated `/v1` dashboard, which reads these tables in the browser: apply together with removing `/v1`.** | **Not applied** (staged) |
+| `2026-09-24_ceb_schema_drift.sql` | Adds `confidence_score` and `meter_reading_previous`, which the code writes but no migration declared. No-op on the live project | **No-op — verified 2026-10-29**: both columns already exist on the live project; nothing to run |
+| `2026-10-04_v3_revoke_anon_read_at_v1_removal.sql` (+ `_rollback.sql`) | v3 cutover, final step (#155): drops every `anon` SELECT policy on the dashboard tables and revokes `SELECT` from `anon`. **Breaks the deprecated `/v1` dashboard, which reads these tables in the browser: apply together with removing `/v1`.** | **Yes — 2026-10-29** (after #206 reached production, revision 662f713; DB Snapshot run 40853414353 first; verified: no anon/public policy left, anon SELECT on no table or `ceb_data` column, anon REST on every table → 42501, `/` 200 on demo, `/ready` ok; advisors: +7 INFO `rls_enabled_no_policy`, the newly private tables) |
+| `2026-10-29_daily_peak_from_telemetry.sql` | **Data** correction: raises `inverter_data_daily_summary.peak_power_kw` to the day's highest `inverter_telemetry` reading where stored is NULL or lower (sparse live samples made it far too low); capped at the inverter's 44 kW maximum; raise-only, totals untouched. Apply after the code that stops the daily-summary job lowering peaks is deployed | **Not applied** |
 
 When you apply one, change its last cell to `Yes — YYYY-MM-DD`.
+
+**No Supabase branch on the Free plan.** `WORKING_RULES.md` §4 asks for a branch first; the org is on
+Free, where branching is unavailable (checked 2026-10-29). Until that changes, migrations follow the
+2026-10-04 precedent: DB Snapshot workflow run first, then the migration, then the security and
+performance advisors compared with their pre-change output, then the file's own verification.
+Applied this way on 2026-10-29: no advisor finding added or removed.
 
 ## Data repairs (not migrations)
 
@@ -79,6 +86,29 @@ Recorded here because they changed production rows and the ledger is where a fut
    reload the admin CEB table and the public dashboard, and run the column check in `SECURITY.md`.
 6. `2026-09-24_drop_cascade_trigger.sql` — once the merged `/delete` endpoint is live. Read its
    header first; it asks you to record the trigger's definition before dropping it.
+
+## Removed by `2026-09-24_drop_cascade_trigger.sql` (recorded for rollback)
+
+Captured on 2026-10-29 before the drop. The function was kept (nothing calls it); to restore the old
+behaviour, run the trigger statement alone.
+
+```sql
+CREATE TRIGGER trg_cascade_delete_ceb_data AFTER DELETE ON public.ceb_data
+  FOR EACH ROW EXECUTE FUNCTION cascade_delete_ceb_data();
+
+-- the function, still present:
+CREATE OR REPLACE FUNCTION public.cascade_delete_ceb_data()
+ RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO ''
+AS $function$
+BEGIN
+    IF OLD.ingestion_id IS NOT NULL THEN
+        DELETE FROM public.ceb_bill_extractions WHERE ingestion_id = OLD.ingestion_id;
+        DELETE FROM public.ceb_bill_ingestions WHERE id = OLD.ingestion_id;
+    END IF;
+    RETURN OLD;
+END;
+$function$;
+```
 
 ## Things deliberately not migrated yet
 

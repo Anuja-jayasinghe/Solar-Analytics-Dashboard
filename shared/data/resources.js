@@ -160,6 +160,11 @@ export const resources = {
 
   /**
    * Lifetime totals for the Overview headline tiles, without shipping every day to the browser.
+   *
+   * Also carries `todayKey`, the server's Colombo date (the demo's fixed date on the demo source).
+   * `live` carries it too, but `live` waits on SolisCloud and fails when SolisCloud does; pages that
+   * only need to know which day it is (Pro's periods, the CEB comparison year) fall back to this one,
+   * which reads only the database (src/v3/data/today.js).
    * Generation counts only days that HAVE a reading (unknown is never 0) and reports how many days
    * in between are missing. Earnings are the sum of bills that carry an earnings figure; bills
    * without one are counted, not treated as 0.
@@ -203,7 +208,8 @@ export const resources = {
           lastDay,
           missingDays: firstDay ? diffDays(firstDay, lastDay) + 1 - dayCount : 0
         },
-        earnings: { totalLkr: billCount ? earningsLkr : null, billCount, billsWithoutEarnings, firstBillDate, lastBillDate }
+        earnings: { totalLkr: billCount ? earningsLkr : null, billCount, billsWithoutEarnings, firstBillDate, lastBillDate },
+        todayKey: ctx.todayKey
       }
     };
   },

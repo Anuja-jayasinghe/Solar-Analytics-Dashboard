@@ -2,7 +2,7 @@
 //
 // Core of the telemetry collector (issue #156). Pure orchestration with INJECTED adapters, so the
 // behaviour that matters — dry run writes nothing, a failed day never produces a fake row, an
-// empty result is a failure, peak back-fill never overwrites — is covered by tests without a
+// empty result is a failure, peak back-fill only ever RAISES a peak — is covered by tests without a
 // network or a database. The CLI wiring (real Solis + Supabase) lives in index.js.
 //
 // For each local day: fetch inverterDay + collector/day, build rows (shared/domain), derive
@@ -17,7 +17,7 @@
 //   db.upsert(table, rows, onConflict)
 //   db.replaceSegments(sn, dateKey, rows)
 //   db.getSummary(fromKey, toKey)              -> [{ summary_date, total_generation_kwh, peak_power_kw }]
-//   db.setPeakIfNull(dateKey, peakKw)          -> boolean (true if a row was changed)
+//   db.raisePeak(dateKey, peakKw)              -> boolean (true if a row was changed: its peak was NULL or lower)
 
 import { addDays } from '../../shared/domain/time.js';
 import { buildDayRecords, prepareAlarms, toAlarmRow } from '../../shared/domain/telemetryPipeline.js';
@@ -50,7 +50,8 @@ async function writeChunked(db, table, rows, onConflict) {
  * @param {object} a
  * @param {string[]} a.dates       local date keys to process, ascending
  * @param {boolean} a.write        false = dry run: nothing is written anywhere
- * @param {boolean} [a.fillPeaks]  also set peak_power_kw on summary rows where it is NULL
+ * @param {boolean} [a.fillPeaks]  also raise peak_power_kw on summary rows where it is NULL or lower
+ *                                 than the telemetry peak (never lowers, never creates a row)
  */
 export async function runCollector({ solis, db, dates, write, fillPeaks = false, concurrency = 1, now = Date.now(), log = () => {}, job = 'collect_telemetry' }) {
   const report = {
@@ -136,10 +137,17 @@ export async function runCollector({ solis, db, dates, write, fillPeaks = false,
         }
       }
 
-      // Peak back-fill: only where the summary row EXISTS and its peak is NULL. Never overwrites.
-      if (fillPeaks && rec.peakKw !== null && summary && summary.peak_power_kw === null) {
+      // Peak back-fill: only where the summary row EXISTS, and only UPWARDS. The stored peak comes
+      // from the live job's few samples a day (GitHub runs its 5-minute schedule a handful of times
+      // a day), so it is often far below the real one; both are real readings, so the higher wins
+      // (shared/domain/dailySummaryMerge.js applies the same rule from the other side).
+      // Rounded to the column's 2 decimals first, or 33.524 would "raise" a stored 33.52 every night.
+      const peakKw = rec.peakKw === null ? null : Math.round(rec.peakKw * 100) / 100;
+      const storedPeak = summary ? summary.peak_power_kw : undefined;
+      const raises = storedPeak === null || (storedPeak !== undefined && Number(storedPeak) < peakKw);
+      if (fillPeaks && peakKw !== null && summary && raises) {
         if (write) {
-          if (await db.setPeakIfNull(dateKey, rec.peakKw)) report.peaksFilled++;
+          if (await db.raisePeak(dateKey, peakKw)) report.peaksFilled++;
         } else {
           report.peaksWouldFill++;
         }
