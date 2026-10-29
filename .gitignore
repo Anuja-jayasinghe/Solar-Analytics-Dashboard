@@ -79,3 +79,6 @@ resorces/
 resources/*
 !resources/README.md
 *.bill.pdf
+
+# Supabase CLI link state (project ref, CLI version cache)
+supabase/.temp/
