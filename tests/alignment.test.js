@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { buildAlignedRows } from '../shared/domain/alignment.js';
-import { buildAlignedEnergyComparisonRows } from '../src/lib/dataService.js';
+import { buildAlignedEnergyComparisonRows } from './fixtures/v1Alignment.js';
 
 function range(startIso, endIso, kwh) {
   const rows = [];

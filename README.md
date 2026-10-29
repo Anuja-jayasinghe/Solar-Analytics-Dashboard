@@ -269,10 +269,9 @@ api/                      Vercel serverless functions (10 of 12 used)
 └── health.js             /healthz and /ready
 
 src/
-├── lib/dataService.js    Read layer and bill-period alignment
-├── contexts/             Auth, data and theme providers
-├── pages/                Landing · dashboards · settings · admin
-└── components/           UI, including the bill verification queue
+├── main.jsx              Entry: renders the v3 app
+└── v3/                   The dashboard: pages, data client, access, admin (bills, users)
+shared/                   Pure domain logic (LR-001 alignment, uptime, ranges) for browser, API, collectors
 
 functions/                GitHub Actions collectors
 supabase/functions/       Supabase Edge Functions (Deno)

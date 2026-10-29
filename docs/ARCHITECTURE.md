@@ -153,10 +153,12 @@ secret in the bundle is a published secret.
 
 ### The live-power widget takes a third path
 
-Separate from the cron collectors, the dashboard's current-power reading comes from a Supabase
-**Edge Function**, `solis-live-data` (`supabase/functions/solis-live-data/`), called by
-`DataContext.jsx`. It signs its own SolisCloud request in Deno rather than reusing
-`solisAuth.js`, because it runs on a different platform entirely.
+**Superseded.** The v1 dashboard's current-power reading came from a Supabase **Edge Function**,
+`solis-live-data` (`supabase/functions/solis-live-data/`), called by v1's `DataContext.jsx`. v3's
+live tile reads `/api/data/live` instead, and since v1 was removed (2026-10-29) nothing calls the
+function. It is still deployed and answers anyone with the anon key; deleting it is deferred. The
+rest of this section describes it as it was. It signs its own SolisCloud request in Deno rather
+than reusing `solisAuth.js`, because it runs on a different platform entirely.
 
 SolisCloud's gateway fails roughly 13% of the time with a 502 or 504. Originally a single
 failed fetch threw straight to the catch block, so every upstream blip became a 500 from us —
@@ -318,8 +320,10 @@ sunshine to September. Every figure downstream is then wrong by one month, and �
 output varies seasonally — wrong in a way that looks plausible.
 
 - Spec: [`logic-registry/LR-001-ceb-vs-inverter-monthly-alignment.md`](./logic-registry/LR-001-ceb-vs-inverter-monthly-alignment.md)
-- Implementation: `buildAlignedEnergyComparisonRows` in `src/lib/dataService.js`
-- Tests: `tests/energyAlignment.test.js`
+- Implementation: `buildAlignedRows` in `shared/domain/alignment.js` — on date keys, so the API and the
+  browser compute identical rows in any timezone
+- Tests: `tests/alignment.test.js`, including a differential check against the removed v1
+  implementation, frozen in `tests/fixtures/v1Alignment.js`
 
 ### `null` is not `0`
 
@@ -600,9 +604,9 @@ api/                        Vercel serverless functions (10 of 12 used)
 └── health.js               /healthz + /ready (one function, two paths)
 
 src/
-├── lib/dataService.js      Read layer + LR-001 alignment
-├── pages/                  Landing · dashboards · settings · admin
-└── components/             UI, incl. admin/CebDataManagement/VerificationQueue.jsx
+├── main.jsx                Entry: renders src/v3/V3Root.jsx
+└── v3/                     The app (pages, data client, access, admin) — design in docs/design/v3/
+shared/                     Pure domain logic used by the browser, the API and the collectors
 
 functions/                  GitHub Actions collectors (devDeps available here)
 supabase/functions/         Supabase Edge Functions (Deno)

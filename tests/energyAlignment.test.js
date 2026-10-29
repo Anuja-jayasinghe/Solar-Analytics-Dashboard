@@ -13,7 +13,7 @@
 // Conflating them is what produced the fabricated peak-power zeros found in the 2026 audit.
 
 import { describe, it, expect } from 'vitest';
-import { buildAlignedEnergyComparisonRows } from '../src/lib/dataService.js';
+import { buildAlignedEnergyComparisonRows } from './fixtures/v1Alignment.js';
 
 /** Build daily rows of a constant value across an inclusive date range. */
 function dailyRange(startIso, endIso, kwhPerDay) {

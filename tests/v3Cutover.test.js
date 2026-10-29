@@ -1,8 +1,8 @@
 // tests/v3Cutover.test.js
 //
-// What makes v3 safe to be the default: old addresses still land somewhere sensible, an unknown address is a
-// real 404, a crashing page does not blank the screen, the old dashboard is clearly marked, and production
-// bundles carry no debug logging.
+// What makes v3 safe to be the only app: old addresses (including the removed /v1) still land somewhere
+// sensible, an unknown address is a real 404, a crashing page does not blank the screen, v1 is gone for good,
+// and production bundles carry no debug logging.
 
 import { describe, it, expect, vi } from 'vitest';
 import { createElement as h } from 'react';
@@ -13,7 +13,6 @@ import path from 'node:path';
 import { legacyRedirect } from '../src/v3/routes.js';
 import NotFoundPage from '../src/v3/pages/NotFoundPage.jsx';
 import { AppErrorBoundary } from '../src/v3/ui/AppErrorBoundary.jsx';
-import LegacyBanner from '../src/components/LegacyBanner.jsx';
 
 describe('old addresses', () => {
   it('sends the old dashboard, demo, login and admin paths to their new home', () => {
@@ -25,6 +24,17 @@ describe('old addresses', () => {
     expect(legacyRedirect('/access')).toBe('/signin');
     expect(legacyRedirect('/admin/dashboard')).toBe('/admin');
     expect(legacyRedirect('/admin/dashboard/ceb-billing')).toBe('/admin');
+  });
+  it('sends the removed /v1 app to its v3 equivalent, or the Overview', () => {
+    expect(legacyRedirect('/v1')).toBe('/');
+    expect(legacyRedirect('/v1/')).toBe('/');
+    expect(legacyRedirect('/v1/dashboard')).toBe('/');
+    expect(legacyRedirect('/v1/settings')).toBe('/settings');
+    expect(legacyRedirect('/v1/demodashbaard')).toBe('/');
+    expect(legacyRedirect('/v1/admin/dashboard/users')).toBe('/admin');
+    expect(legacyRedirect('/v1/login')).toBe('/signin');
+    expect(legacyRedirect('/v1/anything-else')).toBe('/');
+    expect(legacyRedirect('/v10')).toBeNull();
   });
   it('drops the old /v3 preview prefix', () => {
     expect(legacyRedirect('/v3')).toBe('/');
@@ -74,20 +84,31 @@ describe('error boundary', () => {
   });
 });
 
-describe('deprecated v1', () => {
-  it('is labelled on every page and links to the new dashboard', () => {
-    const html = renderToString(h(LegacyBanner));
-    expect(html).toContain('V1');
-    expect(html).toContain('DEPRECATED');
-    expect(html).toContain('href="/"');
-  });
-  it('the legacy app is mounted under /v1 and the entry picks the app by that prefix', () => {
-    const app = fs.readFileSync('src/App.jsx', 'utf8');
-    expect(app).toMatch(/<Router basename="\/v1">/);
-    expect(app).toContain('<LegacyBanner />');
+describe('v1 is removed', () => {
+  // v1 read the dashboard tables in the browser with the public anon key; while it existed those tables had
+  // to stay readable by anyone (2026-10-04_v3_revoke_anon_read_at_v1_removal.sql). It must not come back.
+  it('the entry renders v3 directly, with no path switch to a legacy app', () => {
     const main = fs.readFileSync('src/main.jsx', 'utf8');
-    expect(main).toContain("path === '/v1'");
     expect(main).toContain('./v3/V3Root');
+    expect(main).not.toMatch(/import\(["']\.\/App["']\)/);
+    expect(main).not.toContain("'/v1'");
+  });
+  it('no legacy app source is left outside src/v3', () => {
+    const top = fs.readdirSync('src').filter((f) => f !== 'v3' && f !== 'main.jsx' && f !== 'lib');
+    expect(top).toEqual([]);
+    expect(fs.existsSync('src/App.jsx')).toBe(false);
+  });
+  it('nothing in the browser bundle talks to Supabase directly', () => {
+    const offenders = [];
+    const walk = (dir) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, e.name);
+        if (e.isDirectory()) walk(p);
+        else if (/\.(js|jsx)$/.test(e.name) && fs.readFileSync(p, 'utf8').includes('@supabase/supabase-js')) offenders.push(p);
+      }
+    };
+    walk('src');
+    expect(offenders).toEqual([]);
   });
 });
 

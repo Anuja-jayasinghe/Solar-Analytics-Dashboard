@@ -23,8 +23,9 @@ inverter    = sum of daily generation within that window
 fabricated zeros have caused real data corruption here twice.
 
 Spec: `docs/logic-registry/LR-001-ceb-vs-inverter-monthly-alignment.md`
-Implementation: `buildAlignedEnergyComparisonRows` in `src/lib/dataService.js`
-Tests: `tests/energyAlignment.test.js`
+Implementation: `buildAlignedRows` in `shared/domain/alignment.js` (date keys, timezone-independent)
+Tests: `tests/alignment.test.js` — including a differential check against the removed v1 implementation,
+frozen in `tests/fixtures/v1Alignment.js` (also exercised by `tests/energyAlignment.test.js`)
 
 ---
 
@@ -152,11 +153,13 @@ with the reference documents, the reference documents are right.
 
 ## v3 is the default dashboard (2026-10-04, release v3.0.0)
 
-The new frontend (`src/v3/`, design in `docs/design/v3/`) is served at **`/`**; the previous dashboard is **deprecated and lives
-under `/v1`** with a banner (`src/App.jsx`, `src/main.jsx` picks the app by path). Visitors see demo data; viewers and admins see
-real data through `/api/data/*`. Release notes and the production-readiness analysis: `docs/RELEASE_v3.0.0.md`. Rollback: `docs/RUNBOOK.md`.
-**Bill tables and the bill PDF bucket were closed to the anon key on 2026-10-04. Still open:** the dashboard tables stay publicly readable by the anon key until `/v1` is removed and
-`scripts/sql/2026-10-04_v3_revoke_anon_read_at_v1_removal.sql` is applied (#155). Workflow: `docs/WORKING_RULES.md` 7a.
+The new frontend (`src/v3/`, design in `docs/design/v3/`) is served at **`/`** and is the only app. The previous dashboard,
+deprecated under `/v1` at the cutover, was **removed on 2026-10-29**; `/v1` addresses redirect into v3 (`src/v3/routes.js`) and
+`tests/v3Cutover.test.js` fails if a legacy app or a browser Supabase client comes back. Visitors see demo data; viewers and admins
+see real data through `/api/data/*`. Release notes: `docs/RELEASE_v3.0.0.md`. Rollback: `docs/RUNBOOK.md`.
+**Bill tables and the bill PDF bucket were closed to the anon key on 2026-10-04.** The dashboard tables close when
+`scripts/sql/2026-10-04_v3_revoke_anon_read_at_v1_removal.sql` is applied — **after** the v1 removal is deployed to production
+(#155); its header has the order and the check. Until then they remain readable with the anon key, though nothing uses that any more.
 
 ## v3 foundations are live (2026-10-04)
 
@@ -226,11 +229,13 @@ reintroduced from memory:
   `approved`, which also protects them, since `/extract` refuses to re-parse an approved
   ingestion. All 25 ingestions now reconcile 25/25/25.
 - *"Edge Function `solis-live-data` returns 500 (unused by the current data path)."* Wrong on
-  both counts. It is called by `DataContext.jsx` and `dataService.js` for the live-power
+  both counts. It was called by v1's `DataContext.jsx` and `dataService.js` for the live-power
   widget, and 48 of 55 calls succeeded — every failure was an upstream SolisCloud 502/504
   surfacing as a 500 because one failed fetch threw straight to the catch block. It now
   retries three times with exponential backoff and full jitter, times out at 8s per attempt,
   and returns 502 (not 500) when SolisCloud is genuinely down.
+  **Since v1 was removed (2026-10-29) nothing calls it** — v3's live tile uses `/api/data/live`. It is still deployed and
+  still answers anyone holding the anon key, spending SolisCloud quota; deleting it is a deferred item.
 
 The function's source now lives in `supabase/functions/solis-live-data/`. For its first 29
 versions it existed only in the Supabase dashboard — production code with no history.
