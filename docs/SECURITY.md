@@ -15,21 +15,29 @@ policy matrix and the checklist.
 The consequence that shapes everything else: **anything the anon key can read is public.** The
 key is not a secret, so a table or bucket is either public by design or closed to `anon`.
 
-## Policy matrix (intended state)
+## Policy matrix (as applied, 2026-10-29)
 
 `R` = SELECT, `W` = INSERT / UPDATE / DELETE, `–` = no access. The service role bypasses RLS and
-is not listed.
+is not listed. **Nothing is readable with the anon key.** Every real read goes through
+`/api/data/*` (Clerk `viewer` or `admin`, service role server-side) or the admin endpoints.
 
 | Object | `anon` | Why |
 |---|---|---|
-| `ceb_data` | R — **four columns only**: `id`, `bill_date`, `earnings`, `units_exported` | The public dashboard's billing figures. The account number, file path and ingestion id are not public |
-| `system_settings` | R | The dashboard needs the tariff and targets |
-| `inverter_data_live`, `_daily_summary`, `_monthly_summary` | R | Public generation data |
-| `system_metrics` | R | Public dashboard metrics |
+| `ceb_data` | – | Billing figures, account number, file path: read through `/api/data/*` and `/api/ceb-bills/records` |
+| `system_settings` | – | Tariff and targets: `/api/data/settings`; writes `/api/settings` |
+| `inverter_data_live`, `_daily_summary`, `_monthly_summary`, `_live_archive` | – | Generation data: `/api/data/*` |
+| `system_metrics` | – | Unused by v3 |
 | `ceb_bill_ingestions` | – | Holds bill file paths, hashes and admin e-mail addresses |
 | `ceb_bill_extractions` | – | Holds account numbers and meter readings parsed from bills |
-| `admin_users`, `api_logs`, `report_logs`, `inverter_data_live_archive` | – | Internal |
+| v3 telemetry tables (`inverter_telemetry`, `collector_heartbeats`, `inverter_alarms`, `inverter_day_uptime`, `inverter_status_segments`, `collector_runs`) | – | Private from creation (2026-10-03) |
+| `admin_users`, `api_logs`, `report_logs` | – | Internal |
 | Storage bucket `ceb_bills` | – | Every bill PDF carries the account holder's name, address, phone number and account number |
+
+Closed in steps: bills 2026-10-04, `ceb_data` narrowed to four columns 2026-10-29 (interim), then
+every remaining anon SELECT policy and privilege revoked 2026-10-29 once v1 — the last browser
+reader — was out of production. Default privileges no longer give `anon` SELECT on new tables.
+Supabase's advisor lists each of these tables as `rls_enabled_no_policy` (INFO): that is the
+intended state for a private table.
 
 No table grants `anon` any write. Every write goes through an admin API endpoint.
 
@@ -81,13 +89,13 @@ and everyone else sees a demo built from generated data.
 |---|---|---|
 | `inverter_telemetry`, `collector_heartbeats`, `inverter_alarms`, `inverter_day_uptime`, `inverter_status_segments`, `collector_runs` | **Already private**: RLS on, no policies, no `anon`/`authenticated` privileges (applied 2026-10-03) | unchanged |
 | write-class privileges on every public table | **Already revoked** from `anon`/`authenticated` (applied 2026-10-03), RLS is now the second wall | unchanged |
-| `ceb_data`, `system_settings`, `inverter_data_*` | `anon` SELECT (as in the matrix) | `anon` SELECT revoked; read only through the API |
+| `ceb_data`, `system_settings`, `inverter_data_*` | `anon` SELECT revoked **2026-10-29**; read only through the API | done |
 | Access levels | `admin` only on the server | `admin`, `viewer` (read-only dashboards), none = demo; enforced in `api/_lib/verifyAdminToken.js` (`verifyAccess`) |
 
-v1's direct browser reads were removed on 2026-10-29; nothing in the browser talks to Supabase any
-more (`tests/v3Cutover.test.js` enforces it). Until `2026-10-04_v3_revoke_anon_read_at_v1_removal.sql`
-is applied — after that removal is deployed to production — real generation and billing data is
-still readable with the anon key, exactly as the matrix says (deferred item V3-D1, issue #155).
+v1's direct browser reads were removed on 2026-10-29 and nothing in the browser talks to Supabase
+any more (`tests/v3Cutover.test.js` enforces it). The same day, once that was in production,
+`2026-10-04_v3_revoke_anon_read_at_v1_removal.sql` closed the dashboard tables to `anon`
+(V3-D1, issue #155: done).
 
 The new-endpoint checklist below was applied to `/api/data/[resource]`: authenticate (viewer), method
 gate, `blockOnConfigProblem`, allowlist validation, no dependency error text returned, tests, API.md.
