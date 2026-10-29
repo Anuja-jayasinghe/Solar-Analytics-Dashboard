@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { addDays, diffDays } from '../../../shared/domain/time.js';
 import { usePrefetch, useResource } from '../data/context.js';
+import { pageTodayKey } from '../data/today.js';
 import { DateRangePicker } from '../ui/Calendar.jsx';
 import { Segmented } from '../ui/Segmented.jsx';
 import { Note } from '../ui/Note.jsx';
@@ -27,7 +28,9 @@ export default function ProPage() {
   const [electricalKind, setElectricalKind] = useState('day');
   const [electricalCustom, setElectricalCustom] = useState(null);
   const live = useResource('live');
-  const todayKey = live.data?.todayKey ?? null;
+  const totals = useResource('totals');
+  // From live, or from totals when SolisCloud is slow or down: nothing below depends on SolisCloud.
+  const todayKey = pageTodayKey(live, totals);
   const range = useMemo(() => (todayKey ? proRange(todayKey, days) : null), [todayKey, days]);
   const ready = range !== null;
 
@@ -45,7 +48,6 @@ export default function ProPage() {
   }, [todayKey, electricalKind, electricalCustom]);
   const telemetry = useResource('telemetry', { date: electricalRange?.to }, { enabled: ready && electricalKind === 'day' });
   const electricalHistory = useResource('electrical', { from: electricalRange?.from, to: electricalRange?.to }, { enabled: ready && electricalKind !== 'day' });
-  const totals = useResource('totals');
   const bills = useResource('bills');
 
   const periodUptime = uptime.data?.from === range?.from && uptime.data?.to === range?.to ? uptime.data : null;
