@@ -27,28 +27,9 @@ export default defineConfig([
     },
   },
   {
-    files: ['api/**/*.js', 'functions/**/*.js', 'scripts/**/*.js', 'tests/**/*.js', 'vite.config.js', 'src/lib/solisAuth.js'],
+    files: ['api/**/*.js', 'functions/**/*.js', 'scripts/**/*.js', 'tests/**/*.js', 'e2e/**/*.js', 'playwright.config.js', 'vite.config.js', 'src/lib/solisAuth.js'],
     languageOptions: {
       globals: globals.node,
-    },
-  },
-  {
-    // Pre-existing violations, downgraded to warn so CI passes without
-    // masking them. See tracked issue for the real fix:
-    // - context files exporting non-component values (react-refresh/only-export-components)
-    // - AuthContext(.adapter).jsx calling Clerk hooks conditionally on isClerkEnabled()
-    //   (react-hooks/rules-of-hooks) — works today because the flag never
-    //   changes mid-session, but violates the rule's invariant.
-    files: [
-      'src/components/ThemeContext.jsx',
-      'src/components/shared/ToastManager.jsx',
-      'src/contexts/AuthContext.jsx',
-      'src/contexts/AuthContext.adapter.jsx',
-      'src/contexts/DataContext.jsx',
-    ],
-    rules: {
-      'react-refresh/only-export-components': 'warn',
-      'react-hooks/rules-of-hooks': 'error',
     },
   },
 ])

@@ -24,14 +24,11 @@ export default defineConfig(({ mode }) => {
     rollupOptions: {
       output: {
         // One deliberate vendor chunk (React). Everything else is left to Rollup's own splitting along the
-        // dynamic-import boundaries (the new app, the deprecated v1 app, the PDF viewer), so opening one
-        // app never downloads the other's libraries. The previous rules (a catch-all "vendor" chunk, a
-        // Supabase chunk, an "admin" chunk, and a charts chunk whose shared helpers made every page load it)
-        // put v1-only code on the preload list of every page.
+        // lazy page boundaries. The previous rules (a catch-all "vendor" chunk, a Supabase chunk, an "admin"
+        // chunk, and a charts chunk whose shared helpers made every page load it) put code on the preload
+        // list of pages that never used it.
         manualChunks: (id) => {
           if (!id.includes('node_modules')) return undefined;
-          // react-pdf/pdfjs-dist stay out of the buckets so the lazy PdfPreview boundary holds.
-          if (id.includes('react-pdf') || id.includes('pdfjs-dist')) return undefined;
           // Match the package directory, not a substring ("react" also matches @emotion/react, react-smooth, ...).
           if (/[\\/]node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom)[\\/]/.test(id)) return 'react-vendor';
           return undefined;

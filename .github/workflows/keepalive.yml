@@ -82,7 +82,7 @@ jobs:
       # personal repository, so the heartbeat pushes as the owner using a fine-grained PAT with
       # Contents: read and write on this repo only, stored as the secret KEEPALIVE_PAT. The repository
       # admin role is the ruleset bypass. If the secret is missing this job fails loudly (see WORKING_RULES 7a).
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: main
           token: ${{ secrets.KEEPALIVE_PAT }}

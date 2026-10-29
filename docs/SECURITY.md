@@ -84,9 +84,10 @@ and everyone else sees a demo built from generated data.
 | `ceb_data`, `system_settings`, `inverter_data_*` | `anon` SELECT (as in the matrix) | `anon` SELECT revoked; read only through the API |
 | Access levels | `admin` only on the server | `admin`, `viewer` (read-only dashboards), none = demo; enforced in `api/_lib/verifyAdminToken.js` (`verifyAccess`) |
 
-Until cutover real generation and billing data stays publicly readable, exactly as the matrix says.
-That is a known, tracked exposure (deferred item V3-D1, issue #155). The `anon` SELECT revoke and the
-matching removal of v1's direct reads ship together, because revoking first would blank the live site.
+v1's direct browser reads were removed on 2026-10-29; nothing in the browser talks to Supabase any
+more (`tests/v3Cutover.test.js` enforces it). Until `2026-10-04_v3_revoke_anon_read_at_v1_removal.sql`
+is applied — after that removal is deployed to production — real generation and billing data is
+still readable with the anon key, exactly as the matrix says (deferred item V3-D1, issue #155).
 
 The new-endpoint checklist below was applied to `/api/data/[resource]`: authenticate (viewer), method
 gate, `blockOnConfigProblem`, allowlist validation, no dependency error text returned, tests, API.md.
@@ -99,6 +100,37 @@ If the redesign needs another column on the public dashboard, add it to the `GRA
 migration and list it in the matrix above. Do not grant the whole table again: the account number
 is real customer data.
 
+## Content-Security-Policy
+
+Set in `vercel.json`, in two mutually exclusive rules: one for the production host
+(`has: host = solaredge.anujajay.com`) and one for every other host (`missing` — preview
+deployments). They are identical except that previews also allow `vercel.live`, the Vercel
+toolbar, which production has no use for. So a preview exercises the production policy.
+
+Since 2026-10-29:
+
+- **No `'unsafe-eval'`.** Nothing in the bundle needs it; `'wasm-unsafe-eval'` covers only
+  WebAssembly (pdf.js's image decoders, should a viewer ever load it).
+- `object-src 'none'` and `form-action 'self'` added; `base-uri` and `frame-ancestors` kept.
+- `https://challenges.cloudflare.com` in `script-src` and `frame-src`: Clerk's bot protection
+  (Cloudflare Turnstile) on sign-up, per Clerk's CSP guidance.
+- `'unsafe-inline'` remains in `script-src` (Clerk's guidance without nonces) and `style-src`.
+
+**Check on a preview after changing it:** sign-in and sign-out (embedded Clerk), the Overview,
+Pro and Settings pages, the admin Bills tab with a PDF preview, and Vercel Analytics — with
+the console open for `Refused to …` errors.
+
+## Audit trail
+
+Every privileged write emits one `[AUDIT]` JSON line through `api/_lib/log.js` —
+`user.update` (role/access `from` → `to`), `user.delete`, `bill.upload`, `bill.approve`,
+`bill.delete`, `record.update` / `record.upsert` (the **names** of the changed fields only),
+`setting.update` (old and new value) and `setting.seed` — with the actor's Clerk id and Vercel's
+request id. Every API request also emits one `[REQUEST]` line (route, status, latency, actor,
+access level). Per `WORKING_RULES.md` §3 neither carries e-mail addresses, account numbers or
+bill contents. Filter the Vercel function log on `[AUDIT]` or `[REQUEST]`; it is the only store,
+kept for a limited time.
+
 ## Checklist for a new endpoint
 
 1. Authenticate first: `verifyAdminToken(req, res)`; stop if it returns `null`.
@@ -109,8 +141,10 @@ is real customer data.
 5. Never echo `error.message` from a dependency to the caller; log it, return a fixed message.
 6. Order writes so a failure part-way leaves the data consistent, check every result, and make
    the operation safe to repeat.
-7. Add a unit test for the validation and update [`API.md`](./API.md).
-8. Count the function: Vercel Hobby allows 12 and the project uses 10. Anything under
+7. Export the handler through `withRequestLog('<route>', handler)`, and emit an `audit()` line
+   for anything it changes (`api/_lib/log.js`) — ids and field names, never personal data.
+8. Add a unit test for the validation and update [`API.md`](./API.md).
+9. Count the function: Vercel Hobby allows 12 and the project uses 11. Anything under
    `api/_lib/` or `api/_config/` does not count.
 
 ## Secrets

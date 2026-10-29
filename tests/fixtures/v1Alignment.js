@@ -1,6 +1,28 @@
-import { supabase } from './supabaseClient'
-import { cacheService } from './cacheService'
-import { formatDateDDMMYYYY } from './dateFormatter'
+// tests/fixtures/v1Alignment.js
+//
+// FROZEN COPY of the deprecated v1 dashboard's LR-001 implementation
+// (buildAlignedEnergyComparisonRows from src/lib/dataService.js, with the date formatter it used),
+// kept when v1 was removed so tests/alignment.test.js can go on proving that the v3 implementation
+// (shared/domain/alignment.js) gives the same answers wherever data is complete.
+//
+// Do not fix or change it: it is a reference, not product code. It knowingly reports 0 for a window
+// with no data and depends on the machine's timezone — the two things v3 does differently.
+
+function toDate(value) {
+  if (value instanceof Date) return new Date(value.getTime());
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatDateDDMMYYYY(value, fallback = 'N/A') {
+  const date = toDate(value);
+  if (!date) return fallback;
+
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
 
 const shortMonthFormatter = new Intl.DateTimeFormat('en', { month: 'short' })
 
@@ -158,38 +180,4 @@ export function buildAlignedEnergyComparisonRows(year, dailyRows, cebRows, today
       billDate: null
     }
   })
-}
-
-export async function getAlignedEnergyComparisonData(year = new Date().getFullYear(), forceRefresh = false) {
-  const selectedYear = Number(year) || new Date().getFullYear()
-  const cacheKey = `energy_comparison_${selectedYear}`
-
-  if (!forceRefresh && cacheService.has('monthly', cacheKey)) {
-    return cacheService.get('monthly', cacheKey)
-  }
-
-  const dailyStart = `${selectedYear - 1}-12-01`
-  const dailyEnd = `${selectedYear + 1}-01-31`
-
-  const [{ data: dailyRows, error: dailyError }, { data: cebRows, error: cebError }] = await Promise.all([
-    supabase
-      .from('inverter_data_daily_summary')
-      .select('summary_date, total_generation_kwh')
-      .gte('summary_date', dailyStart)
-      .lte('summary_date', dailyEnd)
-      .order('summary_date', { ascending: true }),
-    supabase
-      .from('ceb_data')
-      .select('bill_date, units_exported')
-      .gte('bill_date', dailyStart)
-      .lte('bill_date', dailyEnd)
-      .order('bill_date', { ascending: true })
-  ])
-
-  if (dailyError) throw new Error(`Aligned inverter data fetch failed: ${dailyError.message}`)
-  if (cebError) throw new Error(`Aligned CEB data fetch failed: ${cebError.message}`)
-
-  const result = buildAlignedEnergyComparisonRows(selectedYear, dailyRows || [], cebRows || [], new Date())
-  cacheService.set('monthly', cacheKey, result)
-  return result
 }

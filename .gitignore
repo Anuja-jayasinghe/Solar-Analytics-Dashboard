@@ -79,3 +79,11 @@ resorces/
 resources/*
 !resources/README.md
 *.bill.pdf
+
+# Playwright output
+/test-results/
+/playwright-report/
+/blob-report/
+
+# Supabase CLI link state (project ref, CLI version cache)
+supabase/.temp/

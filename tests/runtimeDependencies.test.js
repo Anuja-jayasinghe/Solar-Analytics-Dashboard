@@ -82,8 +82,8 @@ describe('api/ runtime dependencies', () => {
   });
 
   it('keeps pdfjs-dist in dependencies — the extractor depends on it', () => {
-    // api/_lib/pdfText.js imports pdfjs-dist at runtime. It is also used by react-pdf on the
-    // client, so it is easy to assume it is "a frontend package" and move it.
+    // api/_lib/pdfText.js imports pdfjs-dist at runtime. The v1 client also used it (via react-pdf),
+    // which made it easy to mistake for "a frontend package" and move it.
     expect(prodDeps.has('pdfjs-dist')).toBe(true);
     expect(devDeps.has('pdfjs-dist')).toBe(false);
   });
