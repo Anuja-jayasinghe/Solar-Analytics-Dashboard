@@ -159,9 +159,9 @@ The new frontend (`src/v3/`, design in `docs/design/v3/`) is served at **`/`** a
 deprecated under `/v1` at the cutover, was **removed on 2026-10-29**; `/v1` addresses redirect into v3 (`src/v3/routes.js`) and
 `tests/v3Cutover.test.js` fails if a legacy app or a browser Supabase client comes back. Visitors see demo data; viewers and admins
 see real data through `/api/data/*`. Release notes: `docs/RELEASE_v3.0.0.md`. Rollback: `docs/RUNBOOK.md`.
-**Bill tables and the bill PDF bucket were closed to the anon key on 2026-10-04.** The dashboard tables close when
-`scripts/sql/2026-10-04_v3_revoke_anon_read_at_v1_removal.sql` is applied — **after** the v1 removal is deployed to production
-(#155); its header has the order and the check. Until then they remain readable with the anon key, though nothing uses that any more.
+**All real data is private (2026-10-29).** Bill tables and the bill PDF bucket closed to the anon key on 2026-10-04; the dashboard
+tables followed on 2026-10-29 (`2026-10-04_v3_revoke_anon_read_at_v1_removal.sql`, applied after the v1 removal reached production):
+`anon` holds SELECT on no table in `public` and no policy grants it anything. Reads go through `/api/data/*` with the service role.
 
 ## v3 foundations are live (2026-10-04)
 
@@ -177,8 +177,8 @@ UI**. The new UI waits for a design phase (issue #159). Plan, decisions and the 
   no I/O, runs in browser, API and collectors. LR-003 specifies custom ranges (inverter only).
 - **Read API** `GET /api/data/*`: viewer-level (Clerk `role: viewer`, or admin). The demo runs the same
   resource code on generated data dated 2035+.
-- **Still public until cutover**: `anon` can SELECT the real tables because v1 reads them directly
-  (deferred V3-D1, #155). Write-class privileges were already revoked from `anon`.
+- **Private since 2026-10-29**: `anon` can no longer SELECT any table (V3-D1, #155 done). Write-class
+  privileges were revoked from `anon` on 2026-10-03.
 - Array size is **41.76 kWp** (`capacity_kwp`, DC; use for kWh/kWp); the 40 kW is the AC rating.
 - Daily summaries are reconciled against the inverter's own counter (0 disagreeing days at 2026-10-03).
 
@@ -236,8 +236,6 @@ reintroduced from memory:
   surfacing as a 500 because one failed fetch threw straight to the catch block. It now
   retries three times with exponential backoff and full jitter, times out at 8s per attempt,
   and returns 502 (not 500) when SolisCloud is genuinely down.
-  **Since v1 was removed (2026-10-29) nothing calls it** — v3's live tile uses `/api/data/live`. It is still deployed and
-  still answers anyone holding the anon key, spending SolisCloud quota; deleting it is a deferred item.
-
-The function's source now lives in `supabase/functions/solis-live-data/`. For its first 29
-versions it existed only in the Supabase dashboard — production code with no history.
+  **Deleted 2026-10-29.** Once v1 was removed nothing called it (v3's live tile uses `/api/data/live`), and it was
+  still deployed as v30 with `verify_jwt: false` — callable by anyone, spending SolisCloud quota. The project now has
+  no Edge Functions; its source (`supabase/functions/solis-live-data/`) is in git history before that date.
