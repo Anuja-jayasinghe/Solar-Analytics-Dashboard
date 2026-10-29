@@ -87,13 +87,15 @@ JSON — which is what made a 500 here take several deploy cycles to diagnose.
 ```bash
 pnpm dev        # dev server
 pnpm test       # vitest
+pnpm test:e2e   # Playwright smoke suite (once: pnpm exec playwright install chromium)
 pnpm lint       # eslint — 0 errors expected
 pnpm build      # production build
 pnpm audit --prod --audit-level high   # the CI security gate
 ```
 
 CI runs lint, test, build and the prod audit. All four must pass — none is `--if-present`
-any more, because two of them silently passed for months.
+any more, because two of them silently passed for months. A separate `e2e` job runs the Playwright
+smoke suite (`e2e/smoke.spec.js`) against the production build as a signed-out visitor.
 
 ## Operational workflows (Actions tab)
 
