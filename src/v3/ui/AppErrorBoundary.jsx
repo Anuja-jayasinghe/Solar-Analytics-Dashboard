@@ -1,4 +1,5 @@
 import { Component } from 'react';
+import { reportError } from './errorReporting.js';
 
 /**
  * Last line of defence: a page that throws while rendering must not leave a blank screen. Shows a plain
@@ -13,7 +14,7 @@ export class AppErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
-    console.error('Render error', error?.message, info?.componentStack);
+    reportError(error, { source: 'AppErrorBoundary', componentStack: info?.componentStack });
   }
 
   render() {

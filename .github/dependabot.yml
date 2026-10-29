@@ -1,0 +1,32 @@
+# Dependabot: dependency and GitHub Actions updates.
+#
+# Nothing watched dependencies before — 61 advisories, two critical, accumulated unnoticed
+# (see .github/workflows/ci.yml). Minor and patch updates arrive grouped, one PR a week, so they
+# get merged instead of piling up; majors come one per PR, because each has broken something
+# here before (pdfjs-dist and the server-side bill parser, Clerk and every endpoint's auth).
+#
+# Actions are pinned to commit SHAs with the version in a comment; Dependabot updates both.
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Asia/Colombo
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    labels: [dependencies]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+      timezone: Asia/Colombo
+    groups:
+      actions:
+        patterns: ['*']
+    labels: [dependencies]

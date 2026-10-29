@@ -1,10 +1,11 @@
 import { verifyAdminToken } from '../_lib/verifyAdminToken.js'
-import { buildStoragePath, createSha256, looksLikePdf, parseMultipartForm } from '../_lib/cebBillUploadUtils.js'
+import { buildStoragePath, createSha256, looksLikePdf, parseMultipartForm, MAX_UPLOAD_BYTES } from '../_lib/cebBillUploadUtils.js'
 import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
 import { supabase, blockOnConfigProblem } from '../_lib/supabaseServer.js';
+import { audit, actorOf, withRequestLog } from '../_lib/log.js';
 
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET_BILLS || 'ceb_bills'
-const MAX_BYTES = 10 * 1024 * 1024
+const MAX_BYTES = MAX_UPLOAD_BYTES
 // PDF only: the extractor reads the PDF text layer and cannot parse images, so accepting them
 // would only create ingestions that are guaranteed to fail extraction.
 const ALLOWED_TYPES = new Set(['application/pdf'])
@@ -19,7 +20,7 @@ function getAdminIdentity(user) {
   }
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (handlePreflightAndMethod(req, res, ['POST'])) return;
 
   const startedAt = Date.now()
@@ -119,15 +120,11 @@ export default async function handler(req, res) {
       throw new Error(`Failed to create ingestion row: ${insertError.message}`)
     }
 
-    const latencyMs = Date.now() - startedAt
-    console.log('CEB bill upload successful', {
-      ingestionId: insertedRow.id,
-      filePath,
-      sourceType,
-      mimeType: file.contentType,
-      sizeBytes: file.buffer.length,
-      adminId: identity.id,
-      latencyMs
+    audit(req, {
+      action: 'bill.upload',
+      actor: actorOf(adminUser),
+      target: { ingestionId: insertedRow.id },
+      changes: { sourceType, sizeBytes: file.buffer.length, latencyMs: Date.now() - startedAt }
     })
 
     res.status(201).json({
@@ -152,3 +149,5 @@ export default async function handler(req, res) {
     res.status(500).json({ error: 'Failed to upload CEB bill' })
   }
 }
+
+export default withRequestLog('ceb-bills/upload', handler);

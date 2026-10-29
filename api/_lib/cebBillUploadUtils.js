@@ -2,7 +2,15 @@ import crypto from 'crypto'
 
 const CRLF = '\r\n'
 
-function readRawBody(req, maxBytes = 10 * 1024 * 1024) {
+// Vercel rejects a function request body over 4.5 MB before our code runs, with its own HTML
+// 413 page rather than our JSON error — the same "not our error at all" failure that once took
+// several deploys to diagnose (see CLAUDE.md, pdf-parse). The limit used to be 10 MB, so a bill
+// between 4.5 and 10 MB failed that way. 4 MB leaves room for the multipart envelope.
+// Mirrored in src/v3/admin/billForm.js (this module is server-only).
+export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024
+export const VERCEL_BODY_LIMIT_BYTES = 4.5 * 1024 * 1024
+
+function readRawBody(req, maxBytes = MAX_UPLOAD_BYTES) {
   return new Promise((resolve, reject) => {
     const chunks = []
     let total = 0
@@ -55,7 +63,7 @@ function parseContentDisposition(value = '') {
   return result
 }
 
-export async function parseMultipartForm(req, maxBytes = 10 * 1024 * 1024) {
+export async function parseMultipartForm(req, maxBytes = MAX_UPLOAD_BYTES) {
   const contentType = req.headers['content-type'] || ''
   // The boundary may be quoted and may be followed by further parameters.
   const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;\s]+))/i)

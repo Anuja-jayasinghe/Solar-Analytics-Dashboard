@@ -5,6 +5,7 @@
 // bundles carry no debug logging.
 
 import { describe, it, expect, vi } from 'vitest';
+import { setErrorReporter } from '../src/v3/ui/errorReporting.js';
 import { createElement as h } from 'react';
 import { renderToString } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
@@ -66,10 +67,15 @@ describe('error boundary', () => {
     expect(html).toContain('Something went wrong');
     expect(html).toContain('Reload');
   });
-  it('reports the error with console.error (kept in production builds)', () => {
+  it('reports the error with console.error (kept in production builds) and to the error reporter', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    new AppErrorBoundary({}).componentDidCatch(new Error('boom'), { componentStack: 'in X' });
-    expect(spy).toHaveBeenCalledWith('Render error', 'boom', 'in X');
+    const reporter = vi.fn();
+    setErrorReporter(reporter);
+    const error = new Error('boom');
+    new AppErrorBoundary({}).componentDidCatch(error, { componentStack: 'in X' });
+    expect(spy).toHaveBeenCalledWith('[AppErrorBoundary]', error, { source: 'AppErrorBoundary', componentStack: 'in X' });
+    expect(reporter).toHaveBeenCalledWith(error, { source: 'AppErrorBoundary', componentStack: 'in X' });
+    setErrorReporter(null);
     spy.mockRestore();
   });
 });

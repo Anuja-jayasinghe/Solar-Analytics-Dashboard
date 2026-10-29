@@ -19,8 +19,9 @@ import { verifyAdminToken } from './_lib/verifyAdminToken.js';
 import { handlePreflightAndMethod } from './_lib/httpSecurity.js';
 import { supabase, blockOnConfigProblem } from './_lib/supabaseServer.js';
 import { isAllowedSetting, isValidSettingValue, resolveTarget, settingProblem } from './_lib/settingsRules.js';
+import { audit, actorOf, withRequestLog } from './_lib/log.js';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (handlePreflightAndMethod(req, res, ['PUT', 'POST'])) return;
 
   const adminUser = await verifyAdminToken(req, res);
@@ -36,7 +37,7 @@ export default async function handler(req, res) {
 
       // Resolve the row first so we validate against its name rather than trusting the client
       // to tell us which setting this is.
-      const lookup = supabase.from('system_settings').select('id, setting_name');
+      const lookup = supabase.from('system_settings').select('id, setting_name, setting_value');
       const { data: existing, error: lookupError } = await (target.by === 'name'
         ? lookup.eq('setting_name', target.name)
         : lookup.eq('id', target.id)
@@ -68,9 +69,12 @@ export default async function handler(req, res) {
 
       if (error) throw new Error(`Setting update failed: ${error.message}`);
 
-      console.log('system_settings updated', {
-        settingName: existing.setting_name,
-        by: adminUser?.emailAddresses?.[0]?.emailAddress || adminUser?.id
+      // Settings values (tariff, capacity, targets, theme) are configuration, not personal data.
+      audit(req, {
+        action: 'setting.update',
+        actor: actorOf(adminUser),
+        target: { settingId: id, settingName: existing.setting_name },
+        changes: { setting_value: { from: existing.setting_value, to: String(setting_value) } }
       });
 
       return res.status(200).json({ setting: data });
@@ -105,9 +109,17 @@ export default async function handler(req, res) {
 
     if (error) throw new Error(`Setting insert failed: ${error.message}`);
 
+    audit(req, {
+      action: 'setting.seed',
+      actor: actorOf(adminUser),
+      target: { settingNames: settings.map((s) => s.setting_name) }
+    });
+
     return res.status(201).json({ settings: data });
   } catch (error) {
     console.error('Settings write failed', { message: error?.message });
     return res.status(500).json({ error: 'Failed to write settings' });
   }
 }
+
+export default withRequestLog('settings', handler);

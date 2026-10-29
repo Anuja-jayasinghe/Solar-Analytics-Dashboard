@@ -27,7 +27,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['api/**/*.js', 'functions/**/*.js', 'scripts/**/*.js', 'tests/**/*.js', 'vite.config.js', 'src/lib/solisAuth.js'],
+    files: ['api/**/*.js', 'functions/**/*.js', 'scripts/**/*.js', 'tests/**/*.js', 'e2e/**/*.js', 'playwright.config.js', 'vite.config.js', 'src/lib/solisAuth.js'],
     languageOptions: {
       globals: globals.node,
     },
