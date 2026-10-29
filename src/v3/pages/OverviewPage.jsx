@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useResource } from '../data/context.js';
+import { pageTodayKey } from '../data/today.js';
 import { Note } from '../ui/Note.jsx';
 import { TotalsRow } from '../overview/TotalsRow.jsx';
 import { LiveRow } from '../overview/LiveRow.jsx';
@@ -25,7 +26,9 @@ export default function OverviewPage() {
   const live = useResource('live', {}, { pollMs: 60_000 });
   const totals = useResource('totals');
   const settings = useResource('settings');
-  const todayKey = live.data?.todayKey ?? null;
+  // From live, or from totals when SolisCloud is slow or down, so the CEB comparison and the open
+  // billing period do not wait on the live tile.
+  const todayKey = pageTodayKey(live, totals);
   const bills = useResource('bills');
   const comparison = useResource('comparison', { year: todayKey ? Number(todayKey.slice(0, 4)) : undefined }, { enabled: todayKey !== null });
 
