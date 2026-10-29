@@ -13,8 +13,8 @@ name: Backfill Inverter Telemetry
 # DRY RUN IS THE DEFAULT. It fetches from Solis, builds every row, reports per-day results and
 # any disagreement with inverter_data_daily_summary, and writes NOTHING. Untick dry_run to write.
 #
-# fill_peaks additionally sets peak_power_kw on daily-summary rows where it is NULL. It never
-# overwrites a value and never creates a row (see issue #163).
+# fill_peaks additionally raises peak_power_kw on daily-summary rows where it is NULL or lower than
+# the telemetry peak. It never lowers a value and never creates a row (see issue #163).
 #
 # Pace: Solis allows 2 calls/second; the collector starts ~1.4 calls/second and makes 2 calls per day,
 # so ~790 days takes ~25-30 minutes with concurrency 4 (it was over 2 hours before concurrency: each Solis call has ~5 s latency). Take a DB Snapshot first if writing.
@@ -37,7 +37,7 @@ on:
         required: true
         default: true
       fill_peaks:
-        description: 'Also fill NULL peak_power_kw in the daily summary (never overwrites)'
+        description: 'Also raise peak_power_kw in the daily summary to the telemetry peak (never lowers)'
         type: boolean
         required: true
         default: false
