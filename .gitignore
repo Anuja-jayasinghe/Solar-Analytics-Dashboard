@@ -84,3 +84,6 @@ resources/*
 /test-results/
 /playwright-report/
 /blob-report/
+
+# Supabase CLI link state (project ref, CLI version cache)
+supabase/.temp/

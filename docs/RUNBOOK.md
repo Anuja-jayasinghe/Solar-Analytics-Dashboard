@@ -286,6 +286,9 @@ The release only changed which app is served; the database, collector and API ar
 2. Or revert: `git revert -m 1 <merge commit of the release PR>` on a branch, open a PR, merge it (the main rules apply).
 3. Last resort, previous dashboard as it was: tag `v2.1.0`. Note it expects `/` and `/dashboard`, not `/v1`.
 
+v1 itself was removed on 2026-10-29, so "serve /v1 again" is no longer an option; reverting that PR brings it back.
+**v1 cannot read anything once the anon revoke is applied** — revert the removal only together with the revoke's `_rollback.sql`.
+
 Nothing in the data needs undoing. If you applied `2026-10-04_v3_revoke_anon_read_at_v1_removal.sql`, run its `_rollback.sql` first.
 
 ### Backfilling a gap

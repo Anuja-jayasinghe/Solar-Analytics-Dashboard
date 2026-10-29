@@ -58,6 +58,15 @@ test('old v1 addresses redirect to their v3 home', async ({ page }) => {
   await expect(page).toHaveURL(/\/signin$/);
 });
 
+test('the removed v1 app\'s addresses land in v3', async ({ page }) => {
+  await page.goto('/v1');
+  await expect(page).toHaveURL(/\/$/);
+  await page.goto('/v1/settings');
+  await expect(page).toHaveURL(/\/settings$/);
+  await page.goto('/v1/admin/dashboard/users');
+  await expect(page).toHaveURL(/\/signin$/); // /admin, then the gate sends a visitor to sign-in
+});
+
 test('an unknown path is a real not-found page', async ({ page }) => {
   const seen = watch(page);
   await page.goto('/no-such-page');

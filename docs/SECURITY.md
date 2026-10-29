@@ -84,9 +84,10 @@ and everyone else sees a demo built from generated data.
 | `ceb_data`, `system_settings`, `inverter_data_*` | `anon` SELECT (as in the matrix) | `anon` SELECT revoked; read only through the API |
 | Access levels | `admin` only on the server | `admin`, `viewer` (read-only dashboards), none = demo; enforced in `api/_lib/verifyAdminToken.js` (`verifyAccess`) |
 
-Until cutover real generation and billing data stays publicly readable, exactly as the matrix says.
-That is a known, tracked exposure (deferred item V3-D1, issue #155). The `anon` SELECT revoke and the
-matching removal of v1's direct reads ship together, because revoking first would blank the live site.
+v1's direct browser reads were removed on 2026-10-29; nothing in the browser talks to Supabase any
+more (`tests/v3Cutover.test.js` enforces it). Until `2026-10-04_v3_revoke_anon_read_at_v1_removal.sql`
+is applied — after that removal is deployed to production — real generation and billing data is
+still readable with the anon key, exactly as the matrix says (deferred item V3-D1, issue #155).
 
 The new-endpoint checklist below was applied to `/api/data/[resource]`: authenticate (viewer), method
 gate, `blockOnConfigProblem`, allowlist validation, no dependency error text returned, tests, API.md.
