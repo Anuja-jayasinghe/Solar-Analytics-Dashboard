@@ -16,8 +16,14 @@ import { createHash, createHmac } from 'node:crypto';
 // to be dead code. Moving the file here removes the possibility rather than relying on that.
 // ============================================================================
 
-/** Ceiling on one SolisCloud request. The gateway answers in well under a second when healthy. */
-export const SOLIS_TIMEOUT_MS = 15000;
+/**
+ * Ceiling on one SolisCloud request: a guard against a HUNG gateway, not a latency target.
+ * Healthy answers take well under a second, but slow-and-successful ones happen: on a preview
+ * on 2026-10-29 an /api/data/live call ran past 15 s and the first version of this limit (15 s)
+ * turned it into a 502 that blanked the Pro page. 30 s still ends a hang long before the
+ * function's own limit.
+ */
+export const SOLIS_TIMEOUT_MS = 30000;
 
 function getEnv(key) {
   return typeof process !== 'undefined' ? process.env[key] : undefined;
@@ -110,7 +116,8 @@ export async function solisFetch(apiPath, body = {}, method = 'POST') {
 
   // A hung SolisCloud call used to wait out whatever outer limit applied — the collector's job
   // timeout, or the API function's — holding the invocation and then failing with nothing
-  // useful. (/api/data/live stops *waiting* after 2.5 s, but the request itself kept running.)
+  // useful. (/api/data/live stops waiting for the day's PEAK after 2.5 s, but the request itself
+  // kept running.) See SOLIS_TIMEOUT_MS for why the limit is generous.
   const options = { method, headers, signal: AbortSignal.timeout(SOLIS_TIMEOUT_MS) };
   if (method === 'POST') options.body = JSON.stringify(body);
 

@@ -20,7 +20,9 @@ describe('solisFetch()', () => {
 
     const [, options] = fetchMock.mock.calls[0];
     expect(options.signal).toBeInstanceOf(AbortSignal);
-    expect(SOLIS_TIMEOUT_MS).toBeGreaterThan(0);
-    expect(SOLIS_TIMEOUT_MS).toBeLessThanOrEqual(30_000);
+    // A hang guard, not a latency target: generous enough for slow-but-successful answers
+    // (one ran past 15 s on 2026-10-29), far below the function's own limit.
+    expect(SOLIS_TIMEOUT_MS).toBeGreaterThanOrEqual(30_000);
+    expect(SOLIS_TIMEOUT_MS).toBeLessThanOrEqual(60_000);
   });
 });
