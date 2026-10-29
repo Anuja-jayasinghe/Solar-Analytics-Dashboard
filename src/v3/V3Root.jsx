@@ -15,7 +15,7 @@ import OverviewPage from './pages/OverviewPage.jsx';
 import { legacyRedirect } from './routes.js';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
-import { installGlobalErrorHandlers } from '../lib/errorReporting.js';
+import { installGlobalErrorHandlers } from './ui/errorReporting.js';
 
 // Errors outside a render (event handlers, rejected promises) go to the same reporter as the
 // error boundary's. Installed when this module loads, before the app first renders.

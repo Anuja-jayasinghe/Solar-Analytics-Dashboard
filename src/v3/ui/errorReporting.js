@@ -1,4 +1,4 @@
-// src/lib/errorReporting.js
+// src/v3/ui/errorReporting.js
 //
 // The one place a browser error goes. Error boundaries and the window-level handlers call
 // reportError(); it logs to the console and forwards to the registered reporter.

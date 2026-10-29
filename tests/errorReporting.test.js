@@ -1,7 +1,7 @@
 // tests/errorReporting.test.js — every browser error funnels through reportError().
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { reportError, setErrorReporter } from '../src/lib/errorReporting.js';
+import { reportError, setErrorReporter } from '../src/v3/ui/errorReporting.js';
 
 afterEach(() => {
   setErrorReporter(null);

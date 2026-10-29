@@ -5,6 +5,7 @@
 // bundles carry no debug logging.
 
 import { describe, it, expect, vi } from 'vitest';
+import { setErrorReporter } from '../src/v3/ui/errorReporting.js';
 import { createElement as h } from 'react';
 import { renderToString } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
@@ -14,7 +15,6 @@ import { legacyRedirect } from '../src/v3/routes.js';
 import NotFoundPage from '../src/v3/pages/NotFoundPage.jsx';
 import { AppErrorBoundary } from '../src/v3/ui/AppErrorBoundary.jsx';
 import LegacyBanner from '../src/components/LegacyBanner.jsx';
-import { setErrorReporter } from '../src/lib/errorReporting.js';
 
 describe('old addresses', () => {
   it('sends the old dashboard, demo, login and admin paths to their new home', () => {

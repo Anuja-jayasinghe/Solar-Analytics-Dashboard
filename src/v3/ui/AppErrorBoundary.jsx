@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import { reportError } from '../../lib/errorReporting.js';
+import { reportError } from './errorReporting.js';
 
 /**
  * Last line of defence: a page that throws while rendering must not leave a blank screen. Shows a plain
