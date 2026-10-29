@@ -236,9 +236,6 @@ reintroduced from memory:
   surfacing as a 500 because one failed fetch threw straight to the catch block. It now
   retries three times with exponential backoff and full jitter, times out at 8s per attempt,
   and returns 502 (not 500) when SolisCloud is genuinely down.
-  **Since v1 was removed (2026-10-29) nothing calls it** — v3's live tile uses `/api/data/live`. It was still deployed
-  (v30, `verify_jwt: false`, so callable by anyone and spending SolisCloud quota); deleting it was approved on 2026-10-29
-  and is done by hand: `npx supabase functions delete solis-live-data --project-ref mqrlrkerjtfsjypaeppf`.
-
-The function's source now lives in `supabase/functions/solis-live-data/`. For its first 29
-versions it existed only in the Supabase dashboard — production code with no history.
+  **Deleted 2026-10-29.** Once v1 was removed nothing called it (v3's live tile uses `/api/data/live`), and it was
+  still deployed as v30 with `verify_jwt: false` — callable by anyone, spending SolisCloud quota. The project now has
+  no Edge Functions; its source (`supabase/functions/solis-live-data/`) is in git history before that date.

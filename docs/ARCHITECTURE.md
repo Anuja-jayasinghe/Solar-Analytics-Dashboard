@@ -151,21 +151,16 @@ SolisCloud authenticates with an HMAC-SHA1 signature over a canonical request st
 precisely because anything under `src/` can be imported into the browser bundle, and a signing
 secret in the bundle is a published secret.
 
-### The live-power widget takes a third path
+### The live reading
 
-**Superseded.** The v1 dashboard's current-power reading came from a Supabase **Edge Function**,
-`solis-live-data` (`supabase/functions/solis-live-data/`), called by v1's `DataContext.jsx`. v3's
-live tile reads `/api/data/live` instead, and since v1 was removed (2026-10-29) nothing calls the
-function. It is still deployed and answers anyone with the anon key; deleting it is deferred. The
-rest of this section describes it as it was. It signs its own SolisCloud request in Deno rather
-than reusing `solisAuth.js`, because it runs on a different platform entirely.
+v3's live tile reads `GET /api/data/live` (viewer or admin), which calls SolisCloud server-side
+through `solisFetch` (30 s ceiling per request) and caches the result briefly
+(`api/_lib/data/live.js`). Pages take "which day is it" from `live` or, when SolisCloud is slow or
+down, from `totals`, so only the live tiles depend on SolisCloud (`src/v3/data/today.js`).
 
-SolisCloud's gateway fails roughly 13% of the time with a 502 or 504. Originally a single
-failed fetch threw straight to the catch block, so every upstream blip became a 500 from us —
-which is why this function was recorded as "broken" when 48 of 55 calls were succeeding. It
-now retries three times with exponential backoff and full jitter, caps each attempt at 8s, and
-returns **502** when SolisCloud is genuinely unreachable, reserving **500** for a missing
-secret. The distinction is the point: one is upstream, the other is ours.
+The v1 dashboard used a Supabase Edge Function, `solis-live-data`, instead. It was deleted on
+2026-10-29 with v1; its source and the retry design it carried (SolisCloud's gateway fails about
+13% of the time with a 502/504) are in git history.
 
 ### The two guards on this pipeline
 
@@ -609,8 +604,6 @@ src/
 shared/                     Pure domain logic used by the browser, the API and the collectors
 
 functions/                  GitHub Actions collectors (devDeps available here)
-supabase/functions/         Supabase Edge Functions (Deno)
-└── solis-live-data/        Live-power widget; retries SolisCloud's flaky gateway
 .github/workflows/          7 workflows — see RUNBOOK.md
 scripts/sql/                Schema baseline + RLS migrations
 docs/logic-registry/        Specs for non-obvious domain rules

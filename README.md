@@ -274,7 +274,6 @@ src/
 shared/                   Pure domain logic (LR-001 alignment, uptime, ranges) for browser, API, collectors
 
 functions/                GitHub Actions collectors
-supabase/functions/       Supabase Edge Functions (Deno)
 scripts/sql/              Schema baseline and RLS migrations
 docs/                     Architecture, API, runbook, logic registry
 tests/                    Vitest suites — parser, alignment, API validation, security helpers

@@ -389,29 +389,13 @@ exit successfully having done nothing — a silent no-op indistinguishable from 
 > Run on 2026-09-13: 19 objects removed, 17.5 MB. The bucket now reconciles at 25 objects
 > against 25 ingestion rows, with nothing unreferenced.
 
-### Reading Edge Function failures
+### Reading live-data failures
 
-`solis-live-data` backs the live-power widget. When it misbehaves, the status code says whose
-fault it is:
-
-| Status | Meaning |
-|---|---|
-| `500` | **Ours** — a Supabase secret is missing. The body names which. |
-| `502` | **SolisCloud** — rejected us, declined, or was unreachable after 3 attempts |
-
-It retries transport failures and 5xx three times with exponential backoff and full jitter,
-8s timeout per attempt. It does **not** retry 4xx or a `success: false` body — a bad signature
-and a declined request do not improve on repetition.
-
-```sql
--- in Supabase → Logs, or via the MCP log query
-select timestamp, event_message from logs
-where source = 'function_logs' and event_message ilike '%Solis%'
-order by timestamp desc limit 20;
-```
-
-A run of `SolisCloud returned 502 (attempt 1/3)` warnings followed by a 200 is the retry
-working as designed, not an incident.
+The live tile reads `GET /api/data/live`. Filter the Vercel function log on `[REQUEST]` and
+`data/live`: a `502` with `latencyMs` near 30000 is the SolisCloud request ceiling
+(`SOLIS_TIMEOUT_MS`); a quick `502` is SolisCloud answering with an error. Either way only the
+live tiles are affected; every other figure reads the database. (The `solis-live-data` Edge
+Function that served v1 was deleted on 2026-10-29.)
 
 ### Rotating credentials
 

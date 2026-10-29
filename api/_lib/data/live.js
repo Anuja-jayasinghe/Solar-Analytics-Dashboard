@@ -1,7 +1,7 @@
 // api/_lib/data/live.js
 //
 // "Right now" status, fetched server-side from SolisCloud (replaces the browser calling the
-// `solis-live-data` Edge Function with the public anon key).
+// `solis-live-data` Edge Function with the public anon key; that function was deleted 2026-10-29).
 //
 // Cached in memory for a short TTL so many open dashboards cost one upstream call per minute.
 // If SolisCloud fails we serve the last good value marked `stale: true` rather than inventing
