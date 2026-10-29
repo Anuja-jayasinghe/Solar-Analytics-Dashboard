@@ -102,7 +102,7 @@ smoke suite (`e2e/smoke.spec.js`) against the production build as a signed-out v
 
 | Workflow | Purpose |
 |---|---|
-| Fetch Live Inverter Data | every 5 min, Solis → `inverter_data_live` |
+| Fetch Live Inverter Data | scheduled every 5 min, Solis → `inverter_data_live`. **GitHub actually runs it ~5×/day** (Oct 2026); daily totals stay correct, peaks come from telemetry |
 | Generate Daily Inverter Summary | 2×/day, aggregates into `inverter_data_daily_summary` |
 | Data Freshness Check | daily; opens a `data-outage` issue if rows stop arriving |
 | Collect Inverter Telemetry | nightly 00:15 Colombo; last 7 days of Solis `inverterDay` + `collector/day` + `alarmList` → telemetry, alarms, uptime tables (v3, ADR-001) |
@@ -180,7 +180,9 @@ UI**. The new UI waits for a design phase (issue #159). Plan, decisions and the 
 - **Private since 2026-10-29**: `anon` can no longer SELECT any table (V3-D1, #155 done). Write-class
   privileges were revoked from `anon` on 2026-10-03.
 - Array size is **41.76 kWp** (`capacity_kwp`, DC; use for kWh/kWp); the 40 kW is the AC rating.
-- Daily summaries are reconciled against the inverter's own counter (0 disagreeing days at 2026-10-03).
+- Daily summaries are reconciled against the inverter's own counter (0 disagreeing days at 2026-10-03; 21 of 21 again
+  on 2026-10-29). **Daily peak power comes from telemetry**, raise-only: GitHub runs the 5-minute live job only a
+  few times a day, so its sampled peak was far too low (`shared/domain/dailySummaryMerge.js`, nightly `--fill-peaks`).
 
 ## State as of v2.1.0 (2026-09-13)
 

@@ -8,6 +8,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { exitOnServiceKeyProblem } from '../../api/_lib/serviceKeyGuard.js';
+import { mergeDailySummary } from '../../shared/domain/dailySummaryMerge.js';
 import 'dotenv/config';
 
 // =============================================================
@@ -187,27 +188,20 @@ async function processSingleDay(dateParts) {
         continue;
       }
       
-      // Check if values differ (update needed)
-      const genChanged = Math.abs(existing.total_generation_kwh - newRow.total_generation_kwh) > 0.01;
-      const peakChanged = Math.abs((existing.peak_power_kw || 0) - newRow.peak_power_kw) > 0.01;
-      
-      // Additional safety check: don't update if new peak is significantly lower (likely incomplete data)
-      const peakDroppedSignificantly = (existing.peak_power_kw || 0) - newRow.peak_power_kw > 5.0;
-      
-      if (genChanged || peakChanged) {
-        if (peakDroppedSignificantly) {
-          console.log(`      ⚠️  ${newRow.inverter_sn}: UPDATE BLOCKED (peak dropped by ${((existing.peak_power_kw || 0) - newRow.peak_power_kw).toFixed(2)} kW - likely incomplete data)`);
-          console.log(`         Generation: ${existing.total_generation_kwh} → ${newRow.total_generation_kwh} kWh`);
-          console.log(`         Peak Power: ${existing.peak_power_kw || 0} kW (existing) vs ${newRow.peak_power_kw} kW (calculated)`);
-          actions.push({ inverter: newRow.inverter_sn, action: 'blocked_suspicious_drop' });
-        } else {
-          console.log(`      🔄 ${newRow.inverter_sn}: UPDATE NEEDED`);
-          console.log(`         Generation: ${existing.total_generation_kwh} → ${newRow.total_generation_kwh} kWh (Δ ${(newRow.total_generation_kwh - existing.total_generation_kwh).toFixed(2)})`);
-          console.log(`         Peak Power: ${existing.peak_power_kw || 0} → ${newRow.peak_power_kw} kW (Δ ${(newRow.peak_power_kw - (existing.peak_power_kw || 0)).toFixed(2)})`);
-          actions.push({ inverter: newRow.inverter_sn, action: 'update', data: newRow, oldData: existing });
-        }
+      // Merge rule (shared/domain/dailySummaryMerge.js): a peak is never lowered — the live
+      // samples are sparse and the nightly telemetry collector raises it from the full history —
+      // and a total that FELL is incomplete data, so it is blocked rather than written.
+      const merged = mergeDailySummary(existing, newRow);
+      if (merged.action === 'blocked_generation_drop') {
+        console.log(`      ⚠️  ${newRow.inverter_sn}: UPDATE BLOCKED (${merged.reason})`);
+        actions.push({ inverter: newRow.inverter_sn, action: 'blocked_suspicious_drop' });
+      } else if (merged.action === 'update') {
+        console.log(`      🔄 ${newRow.inverter_sn}: UPDATE NEEDED`);
+        console.log(`         Generation: ${existing.total_generation_kwh} → ${merged.row.total_generation_kwh} kWh`);
+        console.log(`         Peak Power: ${existing.peak_power_kw ?? '—'} → ${merged.row.peak_power_kw ?? '—'} kW (never lowered)`);
+        actions.push({ inverter: newRow.inverter_sn, action: 'update', data: merged.row, oldData: existing });
       } else {
-        console.log(`      ✓ ${newRow.inverter_sn}: UNCHANGED (gen=${newRow.total_generation_kwh} kWh, peak=${newRow.peak_power_kw} kW)`);
+        console.log(`      ✓ ${newRow.inverter_sn}: UNCHANGED (gen=${existing.total_generation_kwh} kWh, peak=${existing.peak_power_kw ?? '—'} kW)`);
         actions.push({ inverter: newRow.inverter_sn, action: 'unchanged' });
       }
     }

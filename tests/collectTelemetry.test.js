@@ -30,7 +30,7 @@ function makeFakes({ points = goodPoints, failDay = null, alarmsFail = false, co
     async upsert(table, rows, onConflict) { calls.upserts.push({ table, n: rows.length, onConflict }); },
     async replaceSegments(sn, d, rows) { calls.segments.push({ sn, d, n: rows.length }); },
     async getSummary() { return summary; },
-    async setPeakIfNull(d, kw) { calls.peaks.push({ d, kw }); return true; }
+    async raisePeak(d, kw) { calls.peaks.push({ d, kw }); return true; }
   };
   return { solis, db, calls };
 }
@@ -128,17 +128,32 @@ describe('failure handling', () => {
 describe('peak back-fill', () => {
   const summary = [{ summary_date: day, total_generation_kwh: 100, peak_power_kw: null }];
 
-  it('sets the measured max only where the summary peak is NULL', async () => {
+  it('sets the measured max where the summary peak is NULL', async () => {
     const { solis, db, calls } = makeFakes({ summary });
     const r = await runCollector({ solis, db, dates: [day], write: true, fillPeaks: true });
     expect(calls.peaks).toEqual([{ d: day, kw: 20 }]);
     expect(r.peaksFilled).toBe(1);
   });
 
-  it('never touches a summary row that already has a peak', async () => {
-    const { solis, db, calls } = makeFakes({ summary: [{ ...summary[0], peak_power_kw: 31.2 }] });
+  it('raises a stored peak that is lower than the telemetry peak (a sparse live sample)', async () => {
+    const { solis, db, calls } = makeFakes({ summary: [{ ...summary[0], peak_power_kw: 5.12 }] });
+    const r = await runCollector({ solis, db, dates: [day], write: true, fillPeaks: true });
+    expect(calls.peaks).toEqual([{ d: day, kw: 20 }]);
+    expect(r.peaksFilled).toBe(1);
+  });
+
+  it('compares at the column\'s 2 decimals, so a stored peak is not re-raised every night', async () => {
+    const { solis, db, calls } = makeFakes({ summary: [{ ...summary[0], peak_power_kw: 20.0 }], points: goodPoints.map((p, i) => (i === 0 ? { ...p, pac: 20004 } : p)) });
     await runCollector({ solis, db, dates: [day], write: true, fillPeaks: true });
     expect(calls.peaks).toEqual([]);
+  });
+
+  it('never lowers a stored peak that is already higher, or touches an equal one', async () => {
+    for (const peak of [31.2, 20]) {
+      const { solis, db, calls } = makeFakes({ summary: [{ ...summary[0], peak_power_kw: peak }] });
+      await runCollector({ solis, db, dates: [day], write: true, fillPeaks: true });
+      expect(calls.peaks).toEqual([]);
+    }
   });
 
   it('never creates a summary row that does not exist', async () => {

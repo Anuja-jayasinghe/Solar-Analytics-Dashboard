@@ -187,8 +187,9 @@ node functions/collect_telemetry/index.js --from 2024-08-02 --concurrency 4 --wr
 ```
 
 (or run the **Backfill Inverter Telemetry** workflow with `dry_run` unticked; note a workflow is
-only dispatchable once it exists on the default branch). `--fill-peaks` sets `peak_power_kw` on
-daily-summary rows where it is NULL; it never overwrites a value and never creates a row.
+only dispatchable once it exists on the default branch). `--fill-peaks` raises `peak_power_kw` on
+daily-summary rows where it is NULL or lower than the telemetry peak; it never lowers a value and
+never creates a row. The nightly collector runs with it since 2026-10-29.
 Expect about 25–30 minutes for the full history: each Solis call has ~5 s latency and the
 collector keeps request *starts* 700 ms apart (the API limit is 2 per second).
 

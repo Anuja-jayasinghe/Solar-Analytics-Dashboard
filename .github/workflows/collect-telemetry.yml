@@ -85,7 +85,9 @@ jobs:
           set -euo pipefail
           # Scheduled runs write; a manual run writes unless dry_run is ticked.
           if [ "$DRY_RUN" = "true" ]; then WRITE=""; else WRITE="--write"; fi
-          node functions/collect_telemetry/index.js --days "$DAYS" $WRITE
+          # --fill-peaks: raise each day's summary peak to the telemetry peak when it is NULL or lower.
+          # The 5-minute live job only runs a few times a day, so its sampled peak is too low.
+          node functions/collect_telemetry/index.js --days "$DAYS" $WRITE --fill-peaks
 
       - name: 🚨 Notify on Failure
         if: failure()
