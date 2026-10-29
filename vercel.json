@@ -58,10 +58,36 @@
         {
           "key": "Permissions-Policy",
           "value": "geolocation=(), microphone=(), camera=()"
-        },
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "solaredge.anujajay.com"
+        }
+      ],
+      "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; img-src 'self' data: https://*.clerk.com https://*.clerk.accounts.dev https://clerk.solaredge.anujajay.com https://vercel.live; style-src 'self' 'unsafe-inline' https://*.clerk.com https://clerk.solaredge.anujajay.com https://vercel.live; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://*.clerk.accounts.dev https://clerk.solaredge.anujajay.com https://vercel.live https://*.vercel.live; worker-src 'self' blob:; connect-src 'self' https://*.supabase.co https://*.supabase.in https://*.clerk.com https://*.clerk.accounts.dev https://api.clerk.com https://clerk.solaredge.anujajay.com wss://*.clerk.com https://vercel.live wss://vercel.live; frame-src https://*.clerk.com https://*.clerk.accounts.dev https://clerk.solaredge.anujajay.com https://vercel.live https://*.supabase.co https://*.supabase.in; frame-ancestors 'self'; base-uri 'self';"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://*.clerk.com https://*.clerk.accounts.dev https://clerk.solaredge.anujajay.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://*.clerk.com https://clerk.solaredge.anujajay.com; img-src 'self' data: blob: https://*.clerk.com https://*.clerk.accounts.dev https://clerk.solaredge.anujajay.com; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' https://*.supabase.co https://*.supabase.in https://*.clerk.com https://*.clerk.accounts.dev https://clerk.solaredge.anujajay.com https://api.clerk.com wss://*.clerk.com; frame-src https://*.clerk.com https://*.clerk.accounts.dev https://clerk.solaredge.anujajay.com https://challenges.cloudflare.com https://*.supabase.co https://*.supabase.in; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "missing": [
+        {
+          "type": "host",
+          "value": "solaredge.anujajay.com"
+        }
+      ],
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://*.clerk.com https://*.clerk.accounts.dev https://clerk.solaredge.anujajay.com https://challenges.cloudflare.com https://vercel.live https://*.vercel.live; style-src 'self' 'unsafe-inline' https://*.clerk.com https://clerk.solaredge.anujajay.com https://vercel.live; img-src 'self' data: blob: https://*.clerk.com https://*.clerk.accounts.dev https://clerk.solaredge.anujajay.com https://vercel.live; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' https://*.supabase.co https://*.supabase.in https://*.clerk.com https://*.clerk.accounts.dev https://clerk.solaredge.anujajay.com https://api.clerk.com wss://*.clerk.com https://vercel.live wss://vercel.live; frame-src https://*.clerk.com https://*.clerk.accounts.dev https://clerk.solaredge.anujajay.com https://challenges.cloudflare.com https://*.supabase.co https://*.supabase.in https://vercel.live; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';"
         }
       ]
     }
