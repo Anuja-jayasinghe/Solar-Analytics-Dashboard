@@ -16,6 +16,7 @@
 import { verifyAdminToken } from '../_lib/verifyAdminToken.js'
 import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
 import { supabase, blockOnConfigProblem } from '../_lib/supabaseServer.js';
+import { withRequestLog } from '../_lib/log.js';
 
 // Ingestions whose extraction never completed. They have no extraction row, so the queue
 // lists them separately for a retry or a delete.
@@ -47,7 +48,7 @@ async function loadQueue() {
   return { extractions: extractions || [], failedIngestions: failedIngestions || [] };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (handlePreflightAndMethod(req, res, ['GET'])) return;
 
   try {
@@ -98,3 +99,5 @@ export default async function handler(req, res) {
     res.status(500).json({ error: 'Failed to load CEB ingestion records' })
   }
 }
+
+export default withRequestLog('ceb-bills/ingestions', handler);

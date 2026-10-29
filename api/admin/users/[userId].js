@@ -11,6 +11,7 @@ import { verifyAdminToken, clerkClient } from '../../_lib/verifyAdminToken.js';
 import { handlePreflightAndMethod } from '../../_lib/httpSecurity.js';
 import { validateUserPatch } from '../../_lib/userMetadataRules.js';
 import { accessLevelFromMetadata } from '../../../shared/domain/access.js';
+import { audit, actorOf, withRequestLog } from '../../_lib/log.js';
 
 // Clerk returns at most 100 users per call. Page through them rather than silently dropping the rest.
 const PAGE_SIZE = 100;
@@ -31,7 +32,7 @@ function toUserSummary(user) {
   };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (handlePreflightAndMethod(req, res, ['GET', 'PATCH', 'DELETE'])) return;
 
   try {
@@ -87,6 +88,19 @@ export default async function handler(req, res) {
         publicMetadata: updatedMetadata
       });
 
+      // Role/access levels only; validateUserPatch allows nothing else through.
+      audit(req, {
+        action: 'user.update',
+        actor: actorOf(adminUser),
+        target: { userId },
+        changes: Object.fromEntries(
+          Object.keys(validation.updates).map((key) => [
+            key,
+            { from: user.publicMetadata?.[key] ?? null, to: validation.updates[key] }
+          ])
+        )
+      });
+
       return res.status(200).json({
         success: true,
         message: 'User updated successfully',
@@ -108,6 +122,8 @@ export default async function handler(req, res) {
       // Delete user from Clerk
       await clerkClient.users.deleteUser(userId);
 
+      audit(req, { action: 'user.delete', actor: actorOf(adminUser), target: { userId } });
+
       return res.status(200).json({
         success: true,
         message: 'User deleted successfully'
@@ -120,3 +136,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
+
+export default withRequestLog('admin/users', handler);

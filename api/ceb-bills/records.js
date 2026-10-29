@@ -28,6 +28,7 @@ import { verifyAdminToken } from '../_lib/verifyAdminToken.js';
 import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
 import { supabase, blockOnConfigProblem } from '../_lib/supabaseServer.js';
 import { sanitizeRecord } from '../_lib/cebRecordRules.js';
+import { audit, actorOf, withRequestLog } from '../_lib/log.js';
 
 // PostgREST answers PGRST202 when the RPC it was asked to call is not installed.
 const isMissingFunction = (error) =>
@@ -66,15 +67,13 @@ async function approveSequentially({ extractionId, ingestionId, record }) {
   }
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (handlePreflightAndMethod(req, res, ['GET', 'POST', 'PATCH', 'PUT'])) return;
 
   const adminUser = await verifyAdminToken(req, res);
   if (!adminUser) return; // verifyAdminToken has already sent 401/403
 
   if (blockOnConfigProblem(res)) return;
-
-  const actor = adminUser?.emailAddresses?.[0]?.emailAddress || adminUser?.id || 'unknown_admin';
 
   try {
     // ---------------------------------------------------------------- GET: list every row
@@ -104,7 +103,8 @@ export default async function handler(req, res) {
         .single();
 
       if (error) throw new Error(`Update failed: ${error.message}`);
-      console.log('ceb_data updated', { id, by: actor });
+      // Field names only: a bill record carries the account number and meter readings.
+      audit(req, { action: 'record.update', actor: actorOf(adminUser), target: { id }, changes: { fields: Object.keys(record) } });
       return res.status(200).json({ record: data });
     }
 
@@ -120,7 +120,12 @@ export default async function handler(req, res) {
         .select();
 
       if (error) throw new Error(`Upsert failed: ${error.message}`);
-      console.log('ceb_data upserted', { billingMonth: record.billing_month, by: actor });
+      audit(req, {
+        action: 'record.upsert',
+        actor: actorOf(adminUser),
+        target: { billingMonth: record.billing_month },
+        changes: { fields: Object.keys(record) }
+      });
       return res.status(200).json({ records: data });
     }
 
@@ -150,10 +155,16 @@ export default async function handler(req, res) {
       throw new Error(`Approve failed: ${rpcError.message}`);
     }
 
-    console.log('ceb bill approved', { extractionId, ingestionId, by: actor });
+    audit(req, {
+      action: 'bill.approve',
+      actor: actorOf(adminUser),
+      target: { extractionId, ingestionId: ingestionId || null }
+    });
     return res.status(200).json({ approved: true, extractionId, ingestionId });
   } catch (error) {
     console.error('CEB record write failed', { message: error?.message });
     return res.status(500).json({ error: 'Failed to write CEB record' });
   }
 }
+
+export default withRequestLog('ceb-bills/records', handler);

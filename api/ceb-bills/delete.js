@@ -24,10 +24,11 @@
 import { verifyAdminToken } from '../_lib/verifyAdminToken.js';
 import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
 import { supabase, blockOnConfigProblem } from '../_lib/supabaseServer.js';
+import { audit, actorOf, withRequestLog } from '../_lib/log.js';
 
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET_BILLS || 'ceb_bills';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (handlePreflightAndMethod(req, res, ['POST', 'DELETE'])) return;
 
   const adminUser = await verifyAdminToken(req, res);
@@ -113,10 +114,10 @@ export default async function handler(req, res) {
       }
     }
 
-    console.log('ceb bill deleted', {
-      ingestionId,
-      recordId: recordId || null,
-      by: adminUser?.emailAddresses?.[0]?.emailAddress || adminUser?.id
+    audit(req, {
+      action: 'bill.delete',
+      actor: actorOf(adminUser),
+      target: { ingestionId, recordId: recordId || null }
     });
 
     return res.status(200).json({ success: true, ...(warnings.length ? { warnings } : {}) });
@@ -125,3 +126,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to delete the bill' });
   }
 }
+
+export default withRequestLog('ceb-bills/delete', handler);

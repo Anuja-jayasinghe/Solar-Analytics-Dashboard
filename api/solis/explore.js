@@ -18,6 +18,7 @@ import { solisFetch } from '../_lib/solisAuth.js';
 import validator from '../_lib/solisExplorerValidator.js';
 import { verifyAdminToken } from '../_lib/verifyAdminToken.js';
 import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
+import { withRequestLog } from '../_lib/log.js';
 
 // Simple in-memory rate limiter (per Vercel function invocation)
 const requestLogs = {};
@@ -95,7 +96,7 @@ function auditLog(userId, endpointKey, success, statusCode, durationMs, errorMsg
 /**
  * Main handler
  */
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (handlePreflightAndMethod(req, res, ['POST'])) return;
 
   const startTime = Date.now();
@@ -175,3 +176,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
+
+export default withRequestLog('solis/explore', handler);
