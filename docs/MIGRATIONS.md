@@ -44,7 +44,7 @@ except the two `2026-04-23_…anon…` files, which are superseded (see the ledg
 | `2026-09-24_revoke_anon_bill_access.sql` | Closes the bill tables and the `ceb_bills` bucket to `anon`. **Deploy the code that adds `/signed-url` and `?view=queue` first** | **Yes — 2026-10-04** (DB Snapshot run 37193304087 taken first) |
 | `2026-09-24_approve_ceb_extraction.sql` | `approve_ceb_extraction()` — bill approval in one transaction. Safe before or after the code; the API falls back and warns until it is installed | **Yes — 2026-10-29** (DB Snapshot run 40849945507 first; `supabase db query --linked`; verified: installed, EXECUTE for `service_role` only, not `anon`) |
 | `2026-09-24_ceb_data_public_columns.sql` | Limits `anon` to four `ceb_data` columns (`id`, `bill_date`, `earnings`, `units_exported`). **Deploy the code that adds `GET /api/ceb-bills/records` first** — the old admin table did `select *` from the browser | **Yes — 2026-10-29** (same snapshot; verified: `anon` may read exactly `id`, `bill_date`, `earnings`, `units_exported`; anon REST for `account_number` or `*` → 42501; v1's four-column read still 200) |
-| `2026-09-24_drop_cascade_trigger.sql` | Drops the live-only `trg_cascade_delete_ceb_data` trigger, now redundant. Read its header first: snapshot, deploy the merged `/delete` endpoint, read the definition | **Not applied** |
+| `2026-09-24_drop_cascade_trigger.sql` | Drops the live-only `trg_cascade_delete_ceb_data` trigger, now redundant. Read its header first: snapshot, deploy the merged `/delete` endpoint, read the definition | **Yes — 2026-10-29** (owner-confirmed; snapshot run 40849945507; verified: no trigger left on `ceb_data`; definitions recorded below for rollback) |
 | `2026-10-03_v3_telemetry_schema.sql` | v3: six new **private** tables (`inverter_telemetry`, `collector_heartbeats`, `inverter_alarms`, `inverter_day_uptime`, `inverter_status_segments`, `collector_runs`) and the `capacity_kwp` setting. Purely additive; RLS on, no policies, no privileges for `anon`/`authenticated`. Rollback: `…_rollback.sql` | **Yes — 2026-10-03** (via Supabase `apply_migration` after DB Snapshot run 37134535084; verified: RLS on, 0 policies, `anon` denied) |
 | `2026-10-03_v3_harden_public_role_privileges.sql` | Revokes INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER from `anon` and `authenticated` on all public tables (they held them; only RLS blocked writes) and sets default privileges so new tables do not get them back. **SELECT is untouched** | **Yes — 2026-10-03** (verified: v1 reads still 200; an `anon` PATCH now fails at privilege level, 42501) |
 | `2026-09-24_ceb_schema_drift.sql` | Adds `confidence_score` and `meter_reading_previous`, which the code writes but no migration declared. No-op on the live project | **No-op — verified 2026-10-29**: both columns already exist on the live project; nothing to run |
@@ -85,6 +85,29 @@ Recorded here because they changed production rows and the ledger is where a fut
    reload the admin CEB table and the public dashboard, and run the column check in `SECURITY.md`.
 6. `2026-09-24_drop_cascade_trigger.sql` — once the merged `/delete` endpoint is live. Read its
    header first; it asks you to record the trigger's definition before dropping it.
+
+## Removed by `2026-09-24_drop_cascade_trigger.sql` (recorded for rollback)
+
+Captured on 2026-10-29 before the drop. The function was kept (nothing calls it); to restore the old
+behaviour, run the trigger statement alone.
+
+```sql
+CREATE TRIGGER trg_cascade_delete_ceb_data AFTER DELETE ON public.ceb_data
+  FOR EACH ROW EXECUTE FUNCTION cascade_delete_ceb_data();
+
+-- the function, still present:
+CREATE OR REPLACE FUNCTION public.cascade_delete_ceb_data()
+ RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO ''
+AS $function$
+BEGIN
+    IF OLD.ingestion_id IS NOT NULL THEN
+        DELETE FROM public.ceb_bill_extractions WHERE ingestion_id = OLD.ingestion_id;
+        DELETE FROM public.ceb_bill_ingestions WHERE id = OLD.ingestion_id;
+    END IF;
+    RETURN OLD;
+END;
+$function$;
+```
 
 ## Things deliberately not migrated yet
 
