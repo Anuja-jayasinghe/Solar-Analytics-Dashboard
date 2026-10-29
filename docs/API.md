@@ -129,11 +129,14 @@ so re-uploading the same bill is a no-op rather than a duplicate.
 | Status | Body |
 |---|---|
 | `201` | `{ ingestionId, filePath, fileSha256, status: "received", receivedAt }` |
-| `400` | Missing `file` field, empty file, not a PDF, or larger than 10 MB |
+| `400` | Missing `file` field, empty file, not a PDF, or larger than 4 MB |
 | `409` | `{ error, ingestionId, filePath, receivedAt, status, fileSha256 }` — this exact file is already ingested |
 
-The 10 MB limit is enforced by the handler. The hosting platform may impose a lower request
-body limit on serverless functions; bills are far smaller than either in practice.
+The limit is 4 MB, enforced by the handler and checked in the browser before upload
+(`src/v3/admin/billForm.js`). It sits under Vercel's 4.5 MB request-body limit on purpose: above
+that, Vercel answers `413` with its own HTML page before the handler runs, so the client never
+sees a JSON error. (It was 10 MB until 2026-10-29, which made bills between 4.5 and 10 MB fail
+exactly that way.)
 
 > Real bills contain the account holder's name, address and phone number. They are gitignored
 > (`resources/*`), and any test fixture derived from one must be redacted.

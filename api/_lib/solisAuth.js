@@ -16,6 +16,9 @@ import { createHash, createHmac } from 'node:crypto';
 // to be dead code. Moving the file here removes the possibility rather than relying on that.
 // ============================================================================
 
+/** Ceiling on one SolisCloud request. The gateway answers in well under a second when healthy. */
+export const SOLIS_TIMEOUT_MS = 15000;
+
 function getEnv(key) {
   return typeof process !== 'undefined' ? process.env[key] : undefined;
 }
@@ -105,7 +108,10 @@ export async function solisFetch(apiPath, body = {}, method = 'POST') {
   const endpoint = `${apiUrl.replace(/\/+$/, '')}/${apiPath.replace(/^\/+/, '')}`;
   if (DEBUG) console.log('🌍 Solis API Endpoint:', endpoint);
 
-  const options = { method, headers };
+  // A hung SolisCloud call used to wait out whatever outer limit applied — the collector's job
+  // timeout, or the API function's — holding the invocation and then failing with nothing
+  // useful. (/api/data/live stops *waiting* after 2.5 s, but the request itself kept running.)
+  const options = { method, headers, signal: AbortSignal.timeout(SOLIS_TIMEOUT_MS) };
   if (method === 'POST') options.body = JSON.stringify(body);
 
   const res = await fetch(endpoint, options);

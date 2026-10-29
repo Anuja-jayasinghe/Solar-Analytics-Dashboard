@@ -4,7 +4,7 @@ import { Pill } from '../ui/Pill.jsx';
 import { Note } from '../ui/Note.jsx';
 import { useResource } from '../data/context.js';
 import { fmtNum, longDate } from '../overview/format.js';
-import { BILL_FIELDS, buildRecord, impliedRate, queueItems, toBillDraft, uploadProblem, validateBillDraft } from './billForm.js';
+import { BILL_FIELDS, buildRecord, fileProblem, impliedRate, queueItems, toBillDraft, uploadProblem, validateBillDraft } from './billForm.js';
 import { ApprovedBills } from './ApprovedBills.jsx';
 import { PdfModal } from './PdfModal.jsx';
 import { useAdminApi, useAdminLoad } from './useAdmin.js';
@@ -16,6 +16,11 @@ function UploadCard({ onUploaded }) {
 
   const upload = async (file) => {
     if (!file) return;
+    const tooBig = fileProblem(file);
+    if (tooBig) {
+      setState({ status: 'error', message: tooBig });
+      return;
+    }
     setState({ status: 'working', message: `Uploading ${file.name}…` });
     let up = null;
     try {

@@ -5,7 +5,8 @@
 // exactly what the endpoints accept and never invents a value.
 
 import { describe, it, expect, vi } from 'vitest';
-import { BILL_FIELDS, toBillDraft, validateBillDraft, buildRecord, impliedRate, queueItems, uploadProblem, rowToDraft, buildRecordFromRow, describeChanges, recordProblem } from '../src/v3/admin/billForm.js';
+import { BILL_FIELDS, toBillDraft, validateBillDraft, buildRecord, impliedRate, queueItems, uploadProblem, fileProblem, MAX_UPLOAD_BYTES, rowToDraft, buildRecordFromRow, describeChanges, recordProblem } from '../src/v3/admin/billForm.js';
+import { MAX_UPLOAD_BYTES as SERVER_MAX_UPLOAD_BYTES, VERCEL_BODY_LIMIT_BYTES } from '../api/_lib/cebBillUploadUtils.js';
 import { ROLE_OPTIONS, roleOfLevel, levelLabel, displayName, sortUsers, canChangeRole, withRole, roleProblem, withoutUser, removeProblem } from '../src/v3/admin/users.js';
 import { freshnessItems, MAINTENANCE, workflowUrl, REPO_URL } from '../src/v3/admin/health.js';
 import { createAdminApi } from '../src/v3/data/adminApi.js';
@@ -65,6 +66,17 @@ describe('bill review draft', () => {
     expect(uploadProblem({ status: 400, message: 'Not a PDF' })).toBe('Not a PDF');
     expect(uploadProblem({ status: 403 })).toContain('admin');
     expect(uploadProblem({ code: 'network' })).toContain('network');
+    expect(uploadProblem({ status: 413 })).toContain('4 MB');
+  });
+  it('refuses a file over the upload limit before sending it', () => {
+    expect(fileProblem({ size: MAX_UPLOAD_BYTES + 1 })).toContain('4 MB or less');
+    expect(fileProblem({ size: MAX_UPLOAD_BYTES })).toBeNull();
+    expect(fileProblem(null)).toBeNull();
+  });
+  it('keeps the browser and server limits equal, and under Vercel\'s 4.5 MB body limit', () => {
+    // Above 4.5 MB Vercel answers 413 with its own HTML page before the handler runs.
+    expect(MAX_UPLOAD_BYTES).toBe(SERVER_MAX_UPLOAD_BYTES);
+    expect(VERCEL_BODY_LIMIT_BYTES - SERVER_MAX_UPLOAD_BYTES).toBeGreaterThanOrEqual(256 * 1024);
   });
 });
 
