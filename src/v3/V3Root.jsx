@@ -13,6 +13,13 @@ import { AppErrorBoundary } from './ui/AppErrorBoundary.jsx';
 // for one more round trip. Every other page is loaded when it is visited.
 import OverviewPage from './pages/OverviewPage.jsx';
 import { legacyRedirect } from './routes.js';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
+import { installGlobalErrorHandlers } from './ui/errorReporting.js';
+
+// Errors outside a render (event handlers, rejected promises) go to the same reporter as the
+// error boundary's. Installed when this module loads, before the app first renders.
+installGlobalErrorHandlers();
 
 const AdminPage = lazy(() => import('./pages/AdminPage.jsx'));
 const ProPage = lazy(() => import('./pages/ProPage.jsx'));
@@ -56,6 +63,10 @@ export default function V3Root() {
                 </Routes>
               </Suspense>
             </BrowserRouter>
+            {/* Page views (v1 had this; the v3 cutover dropped it) and field Web Vitals. Both
+                report to same-origin /_vercel/* endpoints, so the CSP needs nothing extra. */}
+            <Analytics />
+            <SpeedInsights />
           </DataProvider>
         </AccessProvider>
         </PrefsProvider>

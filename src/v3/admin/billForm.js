@@ -86,10 +86,27 @@ export function queueItems(queue) {
   return items;
 }
 
+/**
+ * Largest bill the upload accepts. Same value as MAX_UPLOAD_BYTES in api/_lib/cebBillUploadUtils.js
+ * (server-only, so not importable here): Vercel refuses request bodies over 4.5 MB with its own
+ * HTML 413 page before the API runs, so the limit sits below that and is checked here first.
+ */
+export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+
+/** Why a chosen file cannot be uploaded, or null when it can. Checked before anything is sent. */
+export function fileProblem(file) {
+  if (!file) return null;
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return `This file is ${(file.size / 1024 / 1024).toFixed(1)} MB. Bills must be PDFs of 4 MB or less.`;
+  }
+  return null;
+}
+
 /** A readable message for an upload failure. */
 export function uploadProblem(err) {
   if (err?.status === 409) return 'This exact file has already been uploaded.';
-  if (err?.status === 400) return err.message || 'That file was not accepted. Bills must be PDFs under 10 MB.';
+  if (err?.status === 413) return 'That file is too large. Bills must be PDFs of 4 MB or less.';
+  if (err?.status === 400) return err.message || 'That file was not accepted. Bills must be PDFs of 4 MB or less.';
   if (err?.status === 403 || err?.status === 401) return 'Only an admin can upload bills.';
   return `Upload failed (${err?.code ?? 'error'}).`;
 }

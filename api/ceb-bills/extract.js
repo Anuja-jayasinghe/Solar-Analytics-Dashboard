@@ -3,6 +3,7 @@ import { extractPdfText } from '../_lib/pdfText.js';
 import { parseCebBillText, validateExtraction } from '../_lib/cebBillParser.js';
 import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
 import { supabase, blockOnConfigProblem } from '../_lib/supabaseServer.js';
+import { withRequestLog } from '../_lib/log.js';
 
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET_BILLS || 'ceb_bills';
 
@@ -11,7 +12,7 @@ const BUCKET = process.env.SUPABASE_STORAGE_BUCKET_BILLS || 'ceb_bills';
 // on file, and flipping the label would make the review queue list the bill twice.
 const NEVER_EXTRACTED = 'received';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (handlePreflightAndMethod(req, res, ['POST'])) return;
 
   // Hoisted so the catch block can tell whether this ingestion was ever extracted.
@@ -163,3 +164,5 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Extraction failed internally.' });
   }
 }
+
+export default withRequestLog('ceb-bills/extract', handler);

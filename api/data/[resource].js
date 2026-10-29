@@ -26,6 +26,7 @@ import { createDataHandler } from '../_lib/data/handler.js';
 import { createRepo } from '../_lib/data/repo.js';
 import { createLiveProvider } from '../_lib/data/live.js';
 import { createRateLimiter } from '../_lib/data/rateLimit.js';
+import { withRequestLog } from '../_lib/log.js';
 
 const INVERTER_SN = process.env.INVERTER_SN || '1811040244070066';
 
@@ -44,10 +45,12 @@ const live = createLiveProvider({
   }
 });
 
-export default createDataHandler({
+const handler = createDataHandler({
   verify: (req, res) => verifyAccess(req, res, 'viewer'),
   repo: createRepo(supabase, INVERTER_SN),
   live,
   limiter: createRateLimiter({ limit: 120, windowMs: 60_000 }),
   ready: (res) => !blockOnConfigProblem(res)
 });
+
+export default withRequestLog((req) => `data/${req.query?.resource ?? 'unknown'}`, handler);

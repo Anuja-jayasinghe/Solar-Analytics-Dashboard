@@ -16,12 +16,13 @@
 import { verifyAdminToken } from '../_lib/verifyAdminToken.js';
 import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
 import { supabase, blockOnConfigProblem } from '../_lib/supabaseServer.js';
+import { withRequestLog } from '../_lib/log.js';
 
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET_BILLS || 'ceb_bills';
 const EXPIRES_IN_SECONDS = 300;
 const MAX_PATH_LENGTH = 512;
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (handlePreflightAndMethod(req, res, ['POST'])) return;
 
   const adminUser = await verifyAdminToken(req, res);
@@ -60,3 +61,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to create a preview link' });
   }
 }
+
+export default withRequestLog('ceb-bills/signed-url', handler);

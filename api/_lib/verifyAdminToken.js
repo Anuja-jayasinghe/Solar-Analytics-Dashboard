@@ -22,20 +22,29 @@ const clerkClient = createClerkClient({ secretKey: CLERK_SECRET_KEY });
 /**
  * Origins permitted to mint tokens accepted by this API. Without this, a token issued for a
  * different Clerk application origin could be replayed here.
+ *
+ * On a Vercel PREVIEW deployment the deployment's own URLs are added — `VERCEL_URL` (this
+ * deployment) and `VERCEL_BRANCH_URL` (the branch alias), both set by Vercel at runtime — so a
+ * preview signed in through the Clerk development instance can call its own API. Exact origins,
+ * never a pattern: a token minted for any other preview, or any other site, is still refused.
+ * Production and local development are unchanged.
  */
-function getAuthorizedParties() {
-  const fromEnv = (process.env.CLERK_AUTHORIZED_PARTIES || '')
+export function getAuthorizedParties(env = process.env) {
+  const fromEnv = (env.CLERK_AUTHORIZED_PARTIES || '')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean);
 
-  if (fromEnv.length > 0) return fromEnv;
+  const base = fromEnv.length > 0
+    ? fromEnv
+    : ['https://solaredge.anujajay.com', 'http://localhost:5173', 'http://localhost:4173'];
 
-  return [
-    'https://solaredge.anujajay.com',
-    'http://localhost:5173',
-    'http://localhost:4173'
-  ];
+  if (env.VERCEL_ENV !== 'preview') return base;
+
+  const own = [env.VERCEL_URL, env.VERCEL_BRANCH_URL]
+    .filter((host) => typeof host === 'string' && /^[a-z0-9.-]+$/i.test(host))
+    .map((host) => `https://${host}`);
+  return [...new Set([...base, ...own])];
 }
 
 /**
