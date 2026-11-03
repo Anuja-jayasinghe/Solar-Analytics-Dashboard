@@ -7,6 +7,7 @@
 // a variance is shown only when every day of the period has inverter data; unknown is null, never 0.
 
 import { computeEarningsDifference } from '../../../shared/domain/earningsDifference.js';
+import { monthDay } from '../overview/format.js';
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
@@ -151,42 +152,36 @@ export function gapSummary(windowRows, allBills) {
   };
 }
 
-const dm = (key) => (typeof key === 'string' ? `${Number(key.slice(8, 10))} ${MON[Number(key.slice(5, 7)) - 1]}` : '—');
-const kwh = (v) => (isNum(v) ? `${Math.round(v).toLocaleString('en-US')} kWh` : 'no total');
-
-/** The real span of a period, bill date to bill date: '4 Sep – 3 Oct', or '4 Oct – today' while it is open. */
+/** The real span of a period, bill date to bill date: 'Sep 4 → Oct 3', or 'Oct 4 → today' while it is open. */
 export function periodSpan(row) {
   if (!row.periodStart) return '';
-  return `${dm(row.periodStart)} – ${row.status === 'provisional' ? 'today' : dm(row.periodEnd)}`;
+  return `${monthDay(row.periodStart)} → ${row.status === 'provisional' ? 'today' : monthDay(row.periodEnd)}`;
 }
 
-/** The hover/tap text for one column: period, both totals, the variance or why there is none. */
-export function columnTip(row, threshold) {
-  const parts = [`${row.label} ${row.year ?? ''}`.trim(), `${dm(row.periodStart)} to ${dm(row.periodEnd)}`];
-  parts.push(`Inverter ${kwh(row.inverterKwh)}${isNum(row.inverterKwh) && isNum(threshold) && row.inverterKwh > threshold ? ' (above the line)' : ''}`);
-  if (row.status === 'provisional') {
-    parts.push(`CEB bill not issued yet · ${row.daysPresent ?? '—'} of ${row.daysInPeriod ?? '—'} days so far${row.includesToday ? ' · includes today so far' : ''}`);
-  } else {
-    parts.push(`CEB ${kwh(row.cebKwh)}`);
-    if (isPartial(row)) parts.push(`only ${row.daysPresent} of ${row.daysInPeriod} days recorded, so no variance is claimed`);
-    else if (row.variancePct !== null) parts.push(`variance ${varianceTag(row).text}`);
-  }
-  return parts.join(' · ');
+/**
+ * The hover/tap text for one column. Only the period: both totals are printed on the bars, and the partial-days
+ * or "awaiting bill" tag sits under the column already.
+ */
+export function columnTip(row) {
+  return periodSpan(row) || `${row.label} ${row.year ?? ''}`.trim();
 }
 
 const lkrK = (v) => `${v < 0 ? '−' : '+'} LKR ${Math.abs(v) >= 1e6 ? `${(Math.abs(v) / 1e6).toFixed(2)} M` : `${(Math.abs(v) / 1e3).toFixed(1)} K`}`;
 
-/** The hover/tap text for one money-gap column (LR-004). */
+/**
+ * The hover/tap text for one money-gap column (LR-004): the period, then what the bar means in plain words.
+ * The amount itself is printed under the bar.
+ */
 export function gapTip(row) {
-  const head = `${row.label} ${row.year ?? ''}`.trim();
-  if (row.status === 'provisional') return `${head}: bill not issued yet, nothing to compare`;
+  const span = columnTip(row);
+  if (row.status === 'provisional') return `${span}\nBill not issued yet`;
   if (row.gapLkr === null) {
-    return row.gapReason === 'incomplete_days'
-      ? `${head}: not compared. Only ${row.daysPresent ?? '—'} of ${row.daysInPeriod ?? '—'} days have inverter data, so no figure is guessed.`
-      : `${head}: not compared (${row.gapReason === 'no_rate' ? 'no usable rate on this bill' : 'no inverter total'}).`;
+    const why = row.gapReason === 'incomplete_days'
+      ? `only ${row.daysPresent ?? '—'} of ${row.daysInPeriod ?? '—'} days recorded`
+      : row.gapReason === 'no_rate' ? 'no usable rate on this bill' : 'no inverter total';
+    return `${span}\nNot compared: ${why}`;
   }
-  const worth = row.inverterKwh * row.ratePerKwh;
-  return `${head}: CEB paid LKR ${Math.round(row.earningsLkr).toLocaleString('en-US')} (${kwh(row.cebKwh)}) vs generation worth LKR ${Math.round(worth).toLocaleString('en-US')} (${kwh(row.inverterKwh)} at LKR ${row.ratePerKwh.toFixed(2)} per kWh) = ${lkrK(row.gapLkr)}${row.gapLkr < 0 ? ': CEB paid less than the inverter generated' : ': CEB paid more than the inverter recorded'}`;
+  return `${span}\nCEB paid ${lkrK(row.gapLkr).replace(/^[−+] /, '')} ${row.gapLkr < 0 ? 'less' : 'more'} than the generation was worth`;
 }
 
 /** Compact amount for under a money-gap bar: '−5.8 K'. */

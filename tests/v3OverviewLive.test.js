@@ -196,7 +196,7 @@ describe('rendered tiles', () => {
     expect(tile).toContain('1,562');
     expect(chart).toContain('>1,562</td>');
     expect(chart).not.toContain('>1,464</td>');
-    expect(chart).toContain('4 Sep – today'); // the table states the real span, not just the month
+    expect(chart).toContain('Sep 4 → today'); // the table states the real span, not just the month
   });
 
   it('does not add the live reading again when today is already stored', () => {

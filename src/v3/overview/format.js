@@ -65,6 +65,11 @@ export function gaugeFraction(kw, maxKw) {
   return Math.max(0, Math.min(1, kw / maxKw));
 }
 
+/** A date key as month and day, the short form chart details use: '2036-06-04' -> 'Jun 4'. */
+export function monthDay(key) {
+  return typeof key === 'string' && key.length >= 10 ? `${MON[Number(key.slice(5, 7)) - 1]} ${Number(key.slice(8, 10))}` : DASH;
+}
+
 /** Asia/Colombo clock time of an epoch-ms instant, '11:50'; null when unknown. */
 export function clockAt(epochMs) {
   if (!isNum(epochMs)) return null;

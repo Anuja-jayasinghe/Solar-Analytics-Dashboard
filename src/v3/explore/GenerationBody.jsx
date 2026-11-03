@@ -14,9 +14,10 @@ import { aboveCount, dayLabelYear } from './series.js';
 const KINDS = [{ value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }, { value: 'year', label: 'Year' }, { value: 'custom', label: 'Custom' }];
 const STYLES = [{ value: 'area', label: 'Area' }, { value: 'line', label: 'Line' }, { value: 'bars', label: 'Bars' }];
 
-function pointTip(p, line, grouped) {
-  if (p.kwh === null) return `${p.full}: no data recorded`;
-  return `${p.full}: ${fmtNum(p.kwh, grouped ? 0 : 1)} kWh${p.kwh > line ? ' · above the line' : ''}`;
+/** The date (and missing days for a month); the value only when the bars are too many to carry their own labels. */
+function pointTip(p, labelled, grouped) {
+  if (p.kwh === null) return `${p.full}\nNo data recorded`;
+  return labelled ? p.full : `${p.full}\n${fmtNum(p.kwh, grouped ? 0 : 1)} kWh`;
 }
 
 /** "Inverter generation": a range of days (or months), area by default, with the draggable "Mark above" line. */
@@ -100,7 +101,7 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
                   const partial = p.present > 0 && p.present < p.total; // a month with some days missing: drawn hatched/hollow, never as a full month
                   const pct = p.kwh === null ? 0 : (p.kwh / yMax) * 100;
                   return (
-                    <Tip key={p.key} text={pointTip(p, markAt, grouped)}>
+                    <Tip key={p.key} text={pointTip(p, n <= MAX_LABELLED_COLUMNS, grouped)}>
                       <div className="v3-col" style={dense ? { padding: '0 1%' } : undefined}>
                         {style === 'bars' ? (
                           p.kwh === null ? <div className="v3-bar single" style={{ height: 3, background: 'var(--nodata)' }} /> : <div className="v3-bar single" style={{ height: `${pct}%`, background: partial ? 'repeating-linear-gradient(135deg, var(--gen) 0 5px, var(--gen-a30) 5px 9px)' : hi ? 'var(--gen)' : 'var(--gen-a34)', border: partial ? '1px solid var(--gen)' : undefined }}><span className="v3-val">{n <= MAX_LABELLED_COLUMNS ? chartNum(p.kwh, { dense: n > 12 }) : ''}</span></div>

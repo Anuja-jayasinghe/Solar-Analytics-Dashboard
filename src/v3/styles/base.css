@@ -493,7 +493,8 @@ select.v3-field { padding-right: 8px; }
 .v3-pop[data-placement='top']::before { left: calc(var(--arrow-x, 50%) - 5px); bottom: -5.5px; border-right: 1px solid var(--pop-line); border-bottom: 1px solid var(--pop-line); }
 .v3-pop[data-placement='bottom']::before { left: calc(var(--arrow-x, 50%) - 5px); top: -5.5px; border-left: 1px solid var(--pop-line); border-top: 1px solid var(--pop-line); }
 .v3-pop[data-placement='right']::before { top: calc(var(--arrow-y, 50%) - 5px); left: -5.5px; border-left: 1px solid var(--pop-line); border-bottom: 1px solid var(--pop-line); }
-.v3-pop-data { max-width: min(260px, calc(100vw - 16px)); padding: 6px 10px; font-size: 12px; font-weight: 600; }
+.v3-pop-data { max-width: min(260px, calc(100vw - 16px)); padding: 6px 10px; font-size: 12px; font-weight: 600; white-space: pre-line; }
+.v3-pop-data::first-line { font-weight: 700; }
 .v3-pop-title { display: block; font-size: 13px; font-weight: 700; }
 .v3-pop-title + .v3-pop-text { margin-top: 3px; }
 .v3-pop-text { display: block; color: var(--pop-sub); }

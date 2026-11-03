@@ -78,13 +78,13 @@ export function stripCell(d) {
 }
 
 export function stripTip(cell) {
-  const date = `${Number(cell.key.slice(8, 10))} ${MON[Number(cell.key.slice(5, 7)) - 1]} ${cell.key.slice(0, 4)}`;
-  if (cell.pct === null) return `${date}: no uptime data`;
-  let t = `${date}: ${cell.pct.toFixed(1)}% uptime`;
-  if (cell.trip) t += ` · stopped ${minutesLabel(cell.trip)} (${cell.tripCount} trip${cell.tripCount === 1 ? '' : 's'})`;
-  if (cell.gap) t += ` · unexplained gap ${minutesLabel(cell.gap)}`;
-  if (cell.comms) t += ` · logger offline ${minutesLabel(cell.comms)}`;
-  return t;
+  const date = `${MON[Number(cell.key.slice(5, 7)) - 1]} ${Number(cell.key.slice(8, 10))}`;
+  if (cell.pct === null) return `${date}\nNo uptime data`;
+  const lines = [date];
+  if (cell.trip) lines.push(`Stopped ${minutesLabel(cell.trip)} (${cell.tripCount} trip${cell.tripCount === 1 ? '' : 's'})`);
+  if (cell.gap) lines.push(`Unexplained gap ${minutesLabel(cell.gap)}`);
+  if (cell.comms) lines.push(`Logger offline ${minutesLabel(cell.comms)}`);
+  return lines.join('\n');
 }
 
 const LEVELS = { 1: { label: 'Low', tone: 'neutral' }, 2: { label: 'Medium', tone: 'warn' }, 3: { label: 'High', tone: 'bad' } };

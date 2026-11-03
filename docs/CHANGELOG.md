@@ -15,6 +15,11 @@ All notable changes to the Solar Analytics Dashboard project.
 - **Chart details always show on hover** (a bar's period and figures), with an arrow to what they describe. On phones a
   tap shows one until the next tap. They close when the page scrolls, so one no longer stays stuck on a bar that has
   moved away. Tooltips use a slightly lighter surface than the cards and 12.5–13 px text.
+- **Chart tooltips say only what the bar does not.** CEB vs Inverter columns show just the period ("Jun 4 → Jul 4"),
+  since both totals are on the bars. Money-gap bars show the period and one plain line ("CEB paid LKR 5.8 K less than the
+  generation was worth"). Generation points show the date, and the value only when there are too many bars to label.
+  The uptime strip lists only what stopped the inverter; PV inputs add only the voltage; rate and year-on-year details
+  are trimmed. The CEB table uses the same "Jun 4 → Jul 4" spans.
 - **The live tile says why there is no live reading.** When SolisCloud does not answer, the status reads "SolisCloud not
   responding" (amber) instead of "Unknown", because the inverter may be fine. The tile shows the newest real reading with
   its time ("Last saved reading at 11:50", "Today · as of 11:50", "kW then"): the last value in memory, or, after a fresh
