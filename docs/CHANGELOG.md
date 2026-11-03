@@ -45,6 +45,11 @@ All notable changes to the Solar Analytics Dashboard project.
   circle shows a dash, not "No target", when a target is set but today's figure is unknown.
 
 ### Fixed
+- **A reading that is not current now looks it.** When SolisCloud is not answering, the Today and live power tiles turn
+  grey (the fill, the gauge arc and the numbers), the wave stops, and the Today tile shows an amber "Not live · as of
+  16:58" chip instead of the faint freshness ring.
+- **Reading times no longer print with decimals.** A reading taken at 16:58:08 showed as "16:58.135233…"; it now shows
+  16:58.
 - **"This billing period" runs bill date to bill date** (LR-001). Between the 1st of a month and the next bill, the open
   period was clipped to the 1st ("since 1 Nov" instead of "since 4 Oct"), filed under the wrong month, and the month
   before it showed "missing bill". It now starts the day after the latest bill, however late the next bill is, and stays

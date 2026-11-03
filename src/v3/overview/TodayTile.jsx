@@ -32,10 +32,15 @@ export function TodayTile({ live, peak = null, targetKwh, now, loading }) {
   const peakAt = peak ? peak.at : live?.peakTodayAt ?? null;
   const hasPeak = peakKw != null;
   const label = prog ? `${prog.pct}% of today's target` : "Today's generation";
+  // Not current (SolisCloud down): the tile greys out and says so, so an old figure is never read as live.
+  const stale = !!live?.stale;
+  const asOf = stale ? clockAt(live.dataTimestamp) : null;
 
   return (
-    <Glass className="v3-live-tile v3-today" aria-label="Today">
-      <div className="v3-fresh-wrap"><FreshnessRing live={live} now={now} /></div>
+    <Glass className="v3-live-tile v3-today" aria-label="Today" data-stale={stale || undefined}>
+      {stale
+        ? <span className="v3-stalechip">{asOf ? `Not live · as of ${asOf}` : 'Not live'}</span>
+        : <div className="v3-fresh-wrap"><FreshnessRing live={live} now={now} /></div>}
       <div className="v3-filler" role="img" aria-label={label}>
         {prog ? (
           <>
@@ -50,7 +55,7 @@ export function TodayTile({ live, peak = null, targetKwh, now, loading }) {
         )}
       </div>
       <div className="v3-today-text">
-        <div className="v3-kpi-label">Today{live?.stale && clockAt(live.dataTimestamp) ? ` · as of ${clockAt(live.dataTimestamp)}` : ''}</div>
+        <div className="v3-kpi-label">Today</div>
         {loading && !live ? (
           <div className="v3-skeleton" style={{ height: 30, width: 120 }} aria-busy="true" aria-label="Loading" />
         ) : (

@@ -26,7 +26,7 @@ export function LiveGauge({ live, error = null, maxKw, loading }) {
   const meter = frac === null ? {} : { 'aria-valuemin': 0, 'aria-valuemax': maxKw, 'aria-valuenow': kw, 'aria-valuetext': `${fmtNum(kw, 1)} kilowatts` };
 
   return (
-    <Glass className="v3-live-tile v3-gauge-tile" aria-label="Live power">
+    <Glass className="v3-live-tile v3-gauge-tile" aria-label="Live power" data-stale={live?.stale || undefined}>
       <span className="v3-status" data-tone={state.tone}>
         {info ? <Info {...info}>{pill}</Info> : pill}
       </span>

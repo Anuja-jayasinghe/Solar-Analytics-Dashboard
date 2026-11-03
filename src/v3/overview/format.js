@@ -73,7 +73,7 @@ export function monthDay(key) {
 /** Asia/Colombo clock time of an epoch-ms instant, '11:50'; null when unknown. */
 export function clockAt(epochMs) {
   if (!isNum(epochMs)) return null;
-  const m = localMinuteOfDay(epochMs);
+  const m = Math.floor(localMinuteOfDay(epochMs)); // readings carry seconds: 16:58:08 is 16:58, never "16:58.13"
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 }
 
