@@ -488,7 +488,7 @@ select.v3-field { padding-right: 8px; }
 
 /* ---- floating layer: hint bubbles and pickers are drawn above the cards and kept on screen ---- */
 /* Tooltips (chart details) and info popovers (explanations): see ui/Tip.jsx, ui/Info.jsx, ui/Bubble.jsx. */
-.v3-pop { position: fixed; z-index: 400; pointer-events: none; max-width: min(300px, calc(100vw - 16px)); padding: 9px 12px; border-radius: 10px; background: var(--pop-bg); border: 1px solid var(--pop-line); color: var(--pop-ink); font-size: 12.5px; font-weight: 500; line-height: 1.45; text-align: left; box-shadow: 0 14px 36px rgba(0, 0, 0, .42); animation: v3-pop .1s ease-out; }
+.v3-pop { position: fixed; z-index: 400; pointer-events: none; max-width: min(300px, calc(100vw - 16px)); padding: 9px 12px; border-radius: 10px; background: var(--pop-bg); border: 1px solid var(--pop-line); color: var(--pop-ink); font-size: 12.5px; font-weight: 500; line-height: 1.45; text-align: left; box-shadow: var(--pop-shadow); animation: v3-pop .1s ease-out; }
 .v3-pop::before { content: ''; position: absolute; width: 9px; height: 9px; background: var(--pop-bg); transform: rotate(45deg); }
 .v3-pop[data-placement='top']::before { left: calc(var(--arrow-x, 50%) - 5px); bottom: -5.5px; border-right: 1px solid var(--pop-line); border-bottom: 1px solid var(--pop-line); }
 .v3-pop[data-placement='bottom']::before { left: calc(var(--arrow-x, 50%) - 5px); top: -5.5px; border-left: 1px solid var(--pop-line); border-top: 1px solid var(--pop-line); }
