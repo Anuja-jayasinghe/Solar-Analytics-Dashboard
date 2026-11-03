@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  presetRange, customRange, stepRange, canStep, isGrouped, buildPoints, defaultLine, aboveCount, spreadGeometry,
+  customRange, isGrouped, weekStart, isoWeek, periodOf, periodRange, canStepPeriod, stepPeriod, periodLabel, dayPoints, buildPoints, defaultLine, aboveCount, spreadGeometry,
   dayLabel, dayLabelYear, GROUP_OVER_DAYS, MAX_CUSTOM_DAYS, dataYears, yearRange, yearPoints, yearSummary, clampYear
 } from '../src/v3/explore/series.js';
 import { hourlyFromTelemetry, colomboClock } from '../src/v3/explore/hourly.js';
@@ -17,25 +17,50 @@ import { StatsBody } from '../src/v3/explore/StatsBody.jsx';
 const B = { min: '2035-01-01', max: '2036-09-14' };
 
 describe('ranges', () => {
-  it('presets end on the chosen day and span their length', () => {
-    expect(presetRange('week', '2036-09-14', B)).toEqual({ from: '2036-09-08', to: '2036-09-14' });
-    expect(presetRange('month', '2036-09-14', B)).toEqual({ from: '2036-08-16', to: '2036-09-14' });
-    expect(presetRange('year', '2036-09-14', B)).toEqual({ from: '2035-09-16', to: '2036-09-14' });
+  it('weeks run Monday to Sunday and are numbered the ISO way', () => {
+    expect(weekStart('2026-11-01')).toBe('2026-10-26'); // a Sunday belongs to the week that began on Monday
+    expect(weekStart('2026-10-26')).toBe('2026-10-26');
+    expect(isoWeek('2026-10-27')).toEqual({ year: 2026, week: 44 });
+    expect(isoWeek('2026-01-01')).toEqual({ year: 2026, week: 1 }); // Thursday 1 Jan: week 1
+    expect(isoWeek('2027-01-01')).toEqual({ year: 2026, week: 53 }); // Friday 1 Jan 2027 is still 2026's last week
+    expect(isoWeek('2024-12-30')).toEqual({ year: 2025, week: 1 }); // Monday 30 Dec 2024 starts 2025's week 1
   });
-  it('stay inside the data: never past the last day, never before the first', () => {
-    expect(presetRange('week', '2036-12-31', B).to).toBe('2036-09-14');
-    expect(presetRange('week', '2035-01-03', B)).toEqual({ from: '2035-01-01', to: '2035-01-03' });
-    expect(() => presetRange('decade', '2036-09-14')).toThrow(RangeError);
+  it('a period is the whole calendar week or month; what is asked for is the part with data', () => {
+    expect(periodOf('week', '2026-10-29')).toEqual({ from: '2026-10-26', to: '2026-11-01' });
+    expect(periodOf('month', '2024-02-10')).toEqual({ from: '2024-02-01', to: '2024-02-29' });
+    expect(() => periodOf('decade', '2026-10-29')).toThrow(RangeError);
+    const now = periodRange('month', '2036-09-14', B);
+    expect(now).toEqual({ from: '2036-09-01', to: '2036-09-14', full: { from: '2036-09-01', to: '2036-09-30' } }); // so far
+    expect(periodRange('week', '2036-12-31', B).to).toBe('2036-09-14'); // never past the data
+    expect(periodRange('week', '2035-01-03', { min: '2035-01-02', max: B.max })).toMatchObject({ from: '2035-01-02', to: '2035-01-07', full: { from: '2035-01-01', to: '2035-01-07' } }); // records begin on a Tuesday
   });
-  it('steps back and forward by their own length and stops at the ends', () => {
-    const r = presetRange('week', '2036-09-14', B);
-    expect(stepRange('week', r, -1, B)).toEqual({ from: '2036-09-01', to: '2036-09-07' });
-    expect(stepRange('week', r, 1, B)).toEqual(r);
-    const first = presetRange('week', '2035-01-07', B);
-    expect(canStep('week', first, -1, B)).toBe(false);
-    expect(canStep('week', first, 1, B)).toBe(true);
-    expect(canStep('week', r, 1, B)).toBe(false);
-    expect(canStep('custom', r, -1, B)).toBe(false);
+  it('labels: "Week 44 · 2026", "November 2026"', () => {
+    expect(periodLabel('week', periodRange('week', '2026-10-29', { max: '2026-11-02' }))).toBe('Week 44 · 2026');
+    expect(periodLabel('month', periodRange('month', '2026-11-02', { max: '2026-11-02' }))).toBe('November 2026');
+    expect(periodLabel('week', null)).toBe('');
+  });
+  it('steps a whole week or month and stops at the ends of the data', () => {
+    const wk = periodRange('week', '2036-09-14', B); // Mon 8 to Sun 14 Sep
+    expect(stepPeriod('week', wk, -1)).toBe('2036-09-01');
+    expect(canStepPeriod(wk, 1, B)).toBe(false);
+    expect(canStepPeriod(wk, -1, B)).toBe(true);
+    const first = periodRange('week', '2035-01-03', B);
+    expect(canStepPeriod(first, -1, B)).toBe(false);
+    const jan = periodRange('month', '2036-01-20', B);
+    expect(stepPeriod('month', jan, -1)).toBe('2035-12-01');
+    expect(stepPeriod('month', jan, 1)).toBe('2036-02-01');
+    expect(canStepPeriod(periodRange('month', '2035-01-20', B), -1, B)).toBe(false);
+  });
+  it('a week always shows Monday to Sunday; days with no reading are null and say why', () => {
+    const wk = periodOf('week', '2036-09-10'); // Mon 8 to Sun 14
+    const pts = dayPoints([{ date: '2036-09-08', kwh: 120 }, { date: '2036-09-09', kwh: null }], wk, { min: '2035-01-01', max: '2036-09-10' });
+    expect(pts.map((p) => p.label)).toEqual(['Mon 8', 'Tue 9', 'Wed 10', 'Thu 11', 'Fri 12', 'Sat 13', 'Sun 14']);
+    expect(pts[0]).toMatchObject({ kwh: 120, present: 1, full: 'Mon 8 Sep 2036' });
+    expect(pts[1]).toMatchObject({ kwh: null, why: 'No data recorded' });
+    expect(pts[2]).toMatchObject({ kwh: null, why: 'No data recorded' });
+    expect(pts[3]).toMatchObject({ kwh: null, why: 'Not yet' });
+    expect(dayPoints([], periodOf('month', '2036-09-10'), B)).toHaveLength(30);
+    expect(dayPoints([], periodOf('week', '2034-12-31'), B)[0].why).toBe('Before records began');
   });
   it('custom ranges are ordered, clipped to the data and capped', () => {
     expect(customRange('2036-08-15', '2036-07-01', B)).toEqual({ from: '2036-07-01', to: '2036-08-15' });

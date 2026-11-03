@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { buildAlignedRows, openBillPeriod } from '../shared/domain/alignment.js';
+import { buildAlignedRows, openBillPeriod, lastBillPeriod } from '../shared/domain/alignment.js';
 import { eachDateKey } from '../shared/domain/time.js';
 import { buildAlignedEnergyComparisonRows } from './fixtures/v1Alignment.js';
 
@@ -249,5 +249,17 @@ describe('timezone independence (v1 is not)', () => {
       return r.stdout;
     });
     expect(new Set(outputs).size).toBe(1);
+  });
+});
+
+describe('lastBillPeriod', () => {
+  it('is the day after the previous bill to the latest bill (LR-001)', () => {
+    const bills = [{ bill_date: '2026-10-03' }, { bill_date: '2026-08-04' }, { bill_date: '2026-09-03' }];
+    expect(lastBillPeriod(bills)).toEqual({ periodStart: '2026-09-04', periodEnd: '2026-10-03', billDate: '2026-10-03' });
+  });
+  it('falls back to 30 days with one bill; null with none', () => {
+    expect(lastBillPeriod([{ bill_date: '2026-10-03' }])).toEqual({ periodStart: '2026-09-03', periodEnd: '2026-10-03', billDate: '2026-10-03' });
+    expect(lastBillPeriod([])).toBeNull();
+    expect(lastBillPeriod(null)).toBeNull();
   });
 });

@@ -21,7 +21,7 @@ function pointTip(p, labelled, grouped) {
 }
 
 /** "Inverter generation": a range of days (or months), a line by default, with the draggable "Mark above" line. */
-export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, bounds, years = [], year = null, onYear, canBack, canForward, onStep, onCustom, points, grouped, line, onLine, loading, error }) {
+export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, bounds, years = [], year = null, onYear, stepLabel = '', billPeriod = null, canBack, canForward, onStep, onCustom, points, grouped, line, onLine, loading, error }) {
   const { showMark } = usePrefs();
   const known = points.filter((p) => p.kwh !== null);
   const yMax = niceMax(Math.max(maxOf(points.map((p) => p.kwh), 1) * 1.1, showMark ? line * 1.04 : 0));
@@ -55,11 +55,28 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
                 <button type="button" className="v3-iconbtn sm" onClick={() => onYear(year + 1)} disabled={!years.includes(year + 1)} aria-label="Next year"><ChevronRight size={15} /></button>
               </div>
             )
+          ) : kind === 'custom' ? (
+            range && (
+              <DateRangePicker
+                from={range.from}
+                to={range.to}
+                min={bounds.min}
+                max={bounds.max}
+                onChange={onCustom}
+                presets={bounds.max ? [
+                  ...(billPeriod ? [{ label: 'Last bill period', range: () => ({ from: billPeriod.periodStart, to: billPeriod.periodEnd }) }] : []),
+                  { label: 'Last 7 days', range: () => ({ from: addDays(bounds.max, -6), to: bounds.max }) },
+                  { label: 'Last 30 days', range: () => ({ from: addDays(bounds.max, -29), to: bounds.max }) },
+                  { label: 'Last 90 days', range: () => ({ from: addDays(bounds.max, -89), to: bounds.max }) },
+                  { label: 'Last 12 months', range: () => ({ from: addDays(bounds.max, -364), to: bounds.max }) }
+                ] : []}
+              />
+            )
           ) : (
-            <div className="v3-stepper">
-              <button type="button" className="v3-iconbtn sm" onClick={() => onStep(-1)} disabled={!canBack} aria-label="Earlier"><ChevronLeft size={15} /></button>
-              <span className="v3-steplabel">{range ? `${dayLabelYear(range.from)} to ${dayLabelYear(range.to)}` : ''}</span>
-              <button type="button" className="v3-iconbtn sm" onClick={() => onStep(1)} disabled={!canForward} aria-label="Later"><ChevronRight size={15} /></button>
+            <div className="v3-stepper" role="group" aria-label={kind === 'week' ? 'Week' : 'Month'}>
+              <button type="button" className="v3-iconbtn sm" onClick={() => onStep(-1)} disabled={!canBack} aria-label={kind === 'week' ? 'Previous week' : 'Previous month'}><ChevronLeft size={15} /></button>
+              <span className="v3-steplabel" aria-live="polite" title={range?.full ? `${dayLabelYear(range.full.from)} to ${dayLabelYear(range.full.to)}` : undefined}>{stepLabel}</span>
+              <button type="button" className="v3-iconbtn sm" onClick={() => onStep(1)} disabled={!canForward} aria-label={kind === 'week' ? 'Next week' : 'Next month'}><ChevronRight size={15} /></button>
             </div>
           )}
         </div>
@@ -71,24 +88,6 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
             <span className="v3-pill" data-tone="gen">{sum.kwh === null ? `No data in ${year}` : `${fmtNum(sum.kwh)} kWh in ${year}${soFar ? ' so far' : ''}`}</span>
             <span className="v3-sub" style={{ margin: 0 }}>{dayLabelYear(range.from)} to {dayLabelYear(range.to)} · {sum.present} of {sum.days} days recorded</span>
           </>
-        )}
-        {kind === 'custom' && range && (
-          <div className="v3-daterow">
-            <DateRangePicker
-              from={range.from}
-              to={range.to}
-              min={bounds.min}
-              max={bounds.max}
-              onChange={onCustom}
-              presets={bounds.max ? [
-                { label: 'Last 7 days', range: () => ({ from: addDays(bounds.max, -6), to: bounds.max }) },
-                { label: 'Last 30 days', range: () => ({ from: addDays(bounds.max, -29), to: bounds.max }) },
-                { label: 'Last 90 days', range: () => ({ from: addDays(bounds.max, -89), to: bounds.max }) },
-                { label: 'This year', range: () => ({ from: `${bounds.max.slice(0, 4)}-01-01`, to: bounds.max }) },
-                { label: 'Last 12 months', range: () => ({ from: addDays(bounds.max, -364), to: bounds.max }) }
-              ] : []}
-            />
-          </div>
         )}
         {/* the eye stays put at the far right; showing the line adds the count and the field to its left */}
         <div className="v3-markgroup">

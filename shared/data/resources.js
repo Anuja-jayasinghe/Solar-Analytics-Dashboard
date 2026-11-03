@@ -11,7 +11,7 @@ import { aggregateUptime, lowestFullDay } from '../domain/uptime.js';
 import { summarizeElectricalRange } from '../domain/electricalRange.js';
 import { uptimeRowToDay } from '../domain/telemetryPipeline.js';
 import { addDays, diffDays } from '../domain/time.js';
-import { buildAlignedRows, openBillPeriod } from '../domain/alignment.js';
+import { buildAlignedRows, lastBillPeriod, openBillPeriod } from '../domain/alignment.js';
 import {
   buildBillRatePeriods, compareRanges, computeRangeStats, previousPeriod, sameRangeLastYear
 } from '../domain/rangeStats.js';
@@ -232,6 +232,8 @@ export const resources = {
         // The open bill period (LR-001): the day after the latest bill to today. Returned on its own, not as one
         // of a calendar year's rows, so on 2 January it still starts in December.
         openPeriod: openBillPeriod({ dailyRows: rows, bills, todayKey: ctx.todayKey }),
+        // The latest complete bill period (the default custom range on the dashboard).
+        lastBillPeriod: lastBillPeriod(bills),
         todayKey: ctx.todayKey
       }
     };

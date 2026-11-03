@@ -7,7 +7,7 @@ import { useIsPhone } from '../ui/useIsPhone.js';
 import { GenerationBody } from './GenerationBody.jsx';
 import { DayBody } from './DayBody.jsx';
 import { StatsBody } from './StatsBody.jsx';
-import { STATS_PERIODS, buildPoints, canStep, customRange, clampYear, dataYears, dayLabelYear, defaultLine, isGrouped, presetRange, statsRange, stepRange, yearPoints, yearRange } from './series.js';
+import { STATS_PERIODS, buildPoints, canStepPeriod, clampYear, customRange, dataYears, dayLabelYear, dayPoints, defaultLine, isGrouped, periodLabel, periodRange, statsRange, stepPeriod, yearPoints, yearRange } from './series.js';
 
 const TABS = [{ value: 'gen', label: 'Generation' }, { value: 'day', label: 'Day' }, { value: 'stats', label: 'Stats' }];
 const VIEWS = [{ value: 'gen', label: 'Over time' }, { value: 'day', label: 'Through the day' }];
@@ -24,8 +24,8 @@ export function ExploreSection({ totals, todayKey, live = null, today = null }) 
   const [tab, setTab] = useState('day');
   const [view, setView] = useState('day');
   const [kind, setKind] = useState('month');
-  const [endKey, setEndKey] = useState(null); // null = follow the newest day with data
-  const [custom, setCustom] = useState(null);
+  const [anchor, setAnchor] = useState(null); // a day in the week/month shown; null = the newest one with data
+  const [custom, setCustom] = useState(null); // null = the latest complete bill period
   const [year, setYear] = useState(null); // null = the newest year with data
   const [style, setStyle] = useState('line');
   const [lines, setLines] = useState({ day: null, month: null });
@@ -39,42 +39,52 @@ export function ExploreSection({ totals, todayKey, live = null, today = null }) 
   const ready = !!bounds.max;
   const years = useMemo(() => dataYears(bounds), [bounds]);
   const shownYear = useMemo(() => clampYear(year, bounds), [year, bounds]);
+  // Custom opens on the latest complete bill period (bill date to bill date); without bills, the last 30 days.
+  const billPeriod = totals?.lastBillPeriod ?? null;
+  const customDefault = useMemo(() => {
+    if (!bounds.max) return null;
+    if (billPeriod) return customRange(billPeriod.periodStart, billPeriod.periodEnd, bounds);
+    return customRange(addDays(bounds.max, -29), bounds.max, bounds);
+  }, [billPeriod, bounds]);
 
   const range = useMemo(() => {
     if (!ready) return null;
-    if (kind === 'custom') return customRange(custom?.from ?? bounds.max, custom?.to ?? bounds.max, bounds);
+    if (kind === 'custom') return custom ? customRange(custom.from, custom.to, bounds) : customDefault;
     if (kind === 'year') return shownYear === null ? null : yearRange(shownYear, bounds);
-    return presetRange(kind, endKey ?? bounds.max, bounds);
-  }, [ready, kind, endKey, custom, bounds, shownYear]);
+    return periodRange(kind, anchor ?? bounds.max, bounds);
+  }, [ready, kind, anchor, custom, customDefault, bounds, shownYear]);
 
   const res = useResource('range', { from: range?.from, to: range?.to }, { enabled: ready && !!range });
   const series = res.data?.stats?.series;
   const grouped = kind === 'year' || (range ? isGrouped(range) : false);
   const points = useMemo(
-    () => (kind === 'year' && shownYear ? yearPoints(series ?? [], shownYear, bounds) : buildPoints(series ?? [], grouped)),
-    [series, grouped, kind, shownYear, bounds]
+    () => (kind === 'year' && shownYear
+      ? yearPoints(series ?? [], shownYear, bounds)
+      : range?.full ? dayPoints(series ?? [], range.full, bounds) : buildPoints(series ?? [], grouped)),
+    [series, grouped, kind, shownYear, bounds, range]
   );
   const lineKey = grouped ? 'month' : 'day';
   const line = lines[lineKey] ?? defaultLine(points, grouped);
 
   const sRange = useMemo(() => statsRange(period, bounds), [period, bounds]);
   const stats = useResource('range', { from: sRange?.from, to: sRange?.to }, { enabled: !!sRange });
-  const periodLabel = STATS_PERIODS.find((p) => p.value === period)?.label ?? '';
-  const statsText = sRange ? `${periodLabel} · ${dayLabelYear(sRange.from)} to ${dayLabelYear(sRange.to)}${stats.data ? ` · ${stats.data.stats.presentDays} of ${stats.data.stats.daysInRange} days with data` : ''}` : '';
+  const statsLabel = STATS_PERIODS.find((p) => p.value === period)?.label ?? '';
+  const statsText = sRange ? `${statsLabel} · ${dayLabelYear(sRange.from)} to ${dayLabelYear(sRange.to)}${stats.data ? ` · ${stats.data.stats.presentDays} of ${stats.data.stats.daysInRange} days with data` : ''}` : '';
 
   // Load the likely next choices in the background so clicking them is instant.
   const neighbours = [];
   if (ready && bounds.max) {
     for (const k of ['week', 'month']) {
-      const r = presetRange(k, bounds.max, bounds);
+      const r = periodRange(k, bounds.max, bounds);
       neighbours.push(['range', { from: r.from, to: r.to }]);
     }
+    if (customDefault) neighbours.push(['range', { from: customDefault.from, to: customDefault.to }]);
     for (const y of years.slice(-2)) {
       const r = yearRange(y, bounds);
       neighbours.push(['range', { from: r.from, to: r.to }]);
     }
-    if (range && kind !== 'custom' && kind !== 'year' && canStep(kind, range, -1, bounds)) {
-      const back = stepRange(kind, range, -1, bounds);
+    if (range?.full && canStepPeriod(range, -1, bounds)) {
+      const back = periodRange(kind, stepPeriod(kind, range, -1), bounds);
       neighbours.push(['range', { from: back.from, to: back.to }]);
     }
     for (const p of STATS_PERIODS) {
@@ -85,11 +95,11 @@ export function ExploreSection({ totals, todayKey, live = null, today = null }) 
   usePrefetch(neighbours, !!res.data);
 
   const changeKind = (k) => {
-    if (k === 'custom') setCustom(range ? { from: range.from, to: range.to } : null);
-    else setEndKey(null);
+    if (k === 'custom') setCustom(null);
+    else setAnchor(null);
     setKind(k);
   };
-  const step = (dir) => { if (range) setEndKey(stepRange(kind, range, dir, bounds).to); };
+  const step = (dir) => { if (range?.full) setAnchor(stepPeriod(kind, range, dir)); };
 
   const genBody = (
     <GenerationBody
@@ -103,8 +113,10 @@ export function ExploreSection({ totals, todayKey, live = null, today = null }) 
       years={years}
       year={shownYear}
       onYear={(y) => setYear(clampYear(y, bounds))}
-      canBack={!!range && canStep(kind, range, -1, bounds)}
-      canForward={!!range && canStep(kind, range, 1, bounds)}
+      stepLabel={range?.full ? periodLabel(kind, range) : ''}
+      billPeriod={billPeriod}
+      canBack={!!range?.full && canStepPeriod(range, -1, bounds)}
+      canForward={!!range?.full && canStepPeriod(range, 1, bounds)}
       onStep={step}
       onCustom={(from, to) => setCustom({ from, to })}
       points={points}

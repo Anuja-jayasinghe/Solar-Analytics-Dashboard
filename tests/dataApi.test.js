@@ -380,6 +380,8 @@ describe('totals', () => {
       status: 'provisional', month: 'Sep', year: 2026, periodStart: '2026-09-04', periodEnd: '2026-10-03',
       lastBillDate: '2026-09-03', daysInPeriod: 30, daysPresent: 30, inverter: 3600
     });
+    // and the latest complete period, bill date to bill date (the dashboard's default custom range)
+    expect((await call(handler, req('totals'))).body.lastBillPeriod).toEqual({ periodStart: '2026-08-04', periodEnd: '2026-09-03', billDate: '2026-09-03' });
   });
 
   it('with no data at all every figure is null or zero-count, not a fabricated total', async () => {

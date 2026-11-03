@@ -51,6 +51,13 @@ All notable changes to the Solar Analytics Dashboard project.
   circle shows a dash, not "No target", when a target is set but today's figure is unknown.
 
 ### Changed
+- **Inverter generation: Week and Month are calendar periods.** Week is Monday to Sunday, labelled "Week 44 · 2026"
+  (ISO week numbers; hover for the dates), with weekday labels on the chart. Month is the calendar month, labelled
+  "November 2026", always drawing all its days. Days not reached yet stay empty, never zero. The arrows step a whole
+  week or month and stop at the data. Before, both were rolling 7 or 30 days ending on the newest day.
+- **Custom is just the range calendar**, opening on the latest complete bill period (bill date to bill date, from the
+  new `totals.lastBillPeriod`). The arrows and the date text beside it are gone, and the calendar's quick picks start
+  with "Last bill period".
 - **Statistics: "Lowest day" is now "Lowest full day".** The lowest recorded day was almost always a power cut or a
   part-recorded day (e.g. 11.5 kWh), not a poor-weather day. It now counts only days the uptime log shows the inverter
   running all day: at most 30 min stopped, since short grid trips are routine here. The card says how many days were
