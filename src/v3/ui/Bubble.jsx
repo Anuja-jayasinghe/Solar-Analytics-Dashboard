@@ -7,9 +7,9 @@ import { useFloating } from './useFloating.js';
  * (Portal), kept fully on screen, with a small arrow pointing back at what it belongs to.
  * Hidden from assistive tech: the anchor carries the same text through aria-describedby.
  */
-export function Bubble({ anchorRef, open, prefer = 'top', kind = 'data', children }) {
+export function Bubble({ anchorRef, open, prefer = 'top', kind = 'data', target = null, children }) {
   const ref = useRef(null);
-  const pos = useFloating(anchorRef, ref, open, prefer, 10);
+  const pos = useFloating(anchorRef, ref, open, prefer, 10, 'center', target);
   if (!open) return null;
   const style = pos
     ? { top: pos.top, left: pos.left, '--arrow-x': `${pos.arrowX}px`, '--arrow-y': `${pos.arrowY}px` }

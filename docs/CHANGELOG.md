@@ -20,6 +20,7 @@ All notable changes to the Solar Analytics Dashboard project.
   generation was worth"). Generation points show the date, and the value only when there are too many bars to label.
   The uptime strip lists only what stopped the inverter; PV inputs add only the voltage; rate and year-on-year details
   are trimmed. The CEB table uses the same "Jun 4 → Jul 4" spans.
+- **Chart tooltips sit on the bar they describe**, just above its value label, instead of all at the top of the chart.
 - **The live tile says why there is no live reading.** When SolisCloud does not answer, the status reads "SolisCloud not
   responding" (amber) instead of "Unknown", because the inverter may be fine. The tile shows the newest real reading with
   its time ("Last saved reading at 11:50", "Today · as of 11:50", "kW then"): the last value in memory, or, after a fresh
