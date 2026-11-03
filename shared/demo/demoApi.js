@@ -7,7 +7,7 @@
 // The demo never touches the network, Supabase, Clerk or SolisCloud.
 
 import { resolveResource } from '../data/resources.js';
-import { DEMO, createDemoDataset, createDemoRepo, demoLive } from './demoData.js';
+import { DEMO, createDemoDataset, createDemoRepo, demoLive, demoTodayPoints } from './demoData.js';
 
 let repo = null;
 let lifetimeKwh = null;
@@ -30,7 +30,9 @@ function getRepo() {
  */
 export function demoRequest(name, query = {}) {
   const run = resolveResource(name);
-  return run(getRepo(), query, { todayKey: DEMO.today, live: async () => ({ ...demoLive(), totalKwh: lifetimeKwh }) });
+  const live = async () => ({ ...demoLive(), totalKwh: lifetimeKwh });
+  live.today = async () => ({ date: DEMO.today, points: demoTodayPoints(), fetchedAt: null });
+  return run(getRepo(), query, { todayKey: DEMO.today, live });
 }
 
 export { DEMO };

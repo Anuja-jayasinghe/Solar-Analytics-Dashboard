@@ -250,6 +250,24 @@ html, body { margin: 0; padding: 0; }
   .v3-gauge-share { font-size: 10.5px; text-align: center; max-width: none; white-space: normal; min-width: 0; }
 }
 
+/* ---- charts: power through the day (explore/DayBody.jsx) ---- */
+.v3-power { touch-action: pan-y; cursor: crosshair; }
+.v3-power > .v3-peakmark, .v3-power > .v3-nowmark, .v3-power > .v3-hoverdot { position: absolute; width: 10px; height: 10px; margin: 0 0 -5px -5px; border-radius: 50%; pointer-events: none; }
+.v3-peakmark { background: var(--gen); box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--gen); }
+.v3-nowmark { background: var(--good); box-shadow: 0 0 0 3px var(--good-a20); animation: v3-breathe 2.6s ease-in-out infinite; }
+.v3-hoverdot { background: var(--bg); border: 2.5px solid var(--gen); box-sizing: border-box; }
+.v3-crosshair { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--ink2); opacity: .55; pointer-events: none; }
+.v3-peaklabel, .v3-hoverlabel { position: absolute; transform: translateX(-50%); white-space: nowrap; pointer-events: none; font-size: 11.5px; line-height: 1; font-variant-numeric: tabular-nums; }
+.v3-peaklabel { color: var(--ink2); font-weight: 600; }
+.v3-peaklabel b { color: var(--gen); font-weight: 800; }
+.v3-hoverlabel { z-index: 2; padding: 5px 8px; border-radius: 8px; background: var(--pop-bg); border: 1px solid var(--pop-line); color: var(--pop-ink); box-shadow: var(--pop-shadow); font-weight: 600; }
+.v3-peaklabel[data-edge='start'], .v3-hoverlabel[data-edge='start'] { transform: translateX(-8px); }
+.v3-peaklabel[data-edge='end'], .v3-hoverlabel[data-edge='end'] { transform: translateX(calc(-100% + 8px)); }
+.v3-hourticks { position: relative; height: 18px; margin-top: 6px; }
+.v3-hourticks > span { position: absolute; transform: translateX(-50%); font-size: 11px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+.v3-livedot { display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--good); vertical-align: 1px; animation: v3-breathe 2.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .v3-nowmark, .v3-livedot { animation: none; } }
+
 /* ---- charts: CEB vs Inverter ---- */
 .v3-ceb { --plot-h: 250px; --axis-w: 56px; min-height: 700px; } /* reserved so the page does not jump when the data arrives */
 .v3-tilehead { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }

@@ -134,10 +134,23 @@ export const resources = {
     return { body: { from, to, count: rows.length, truncated: rows.length >= limit, byCode, alarms: rows } };
   },
 
-  /** One day of 5-minute telemetry for the day chart. */
-  async telemetry(repo, query) {
+  /**
+   * One day of 5-minute telemetry for the day chart. Past days come from the stored telemetry (written nightly).
+   * Today is not stored yet, so it comes from SolisCloud's day read (cached by the live provider, at most every
+   * 5 minutes) and falls back to whatever is stored if that fails. `source` says which; `live` marks today.
+   */
+  async telemetry(repo, query, ctx) {
     const date = parseDate(query, 'date');
-    return { body: { date, points: await repo.telemetryDay(date) } };
+    const isToday = date === ctx?.todayKey;
+    if (isToday && typeof ctx.live?.today === 'function') {
+      try {
+        const t = await ctx.live.today();
+        if (t && t.date === date && t.points.length) return { body: { date, points: t.points, source: 'soliscloud', live: true, fetchedAt: t.fetchedAt } };
+      } catch {
+        // fall through to whatever is stored
+      }
+    }
+    return { body: { date, points: await repo.telemetryDay(date), source: 'database', live: isToday } };
   },
 
   /** Up to 31 completed local days of electrical telemetry, summarized before leaving the server. */

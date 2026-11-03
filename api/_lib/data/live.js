@@ -17,6 +17,7 @@
 import { HttpError } from '../../../shared/data/query.js';
 import { energyToKwh, powerToKw, toNum } from '../../../shared/domain/solisNormalize.js';
 import { peakOfDay } from '../../../shared/domain/dayPeak.js';
+import { normalizeDayPoints } from '../../../shared/domain/solisNormalize.js';
 import { localDateKey } from '../../../shared/domain/time.js';
 
 const STATUS = { 1: 'online', 2: 'offline', 3: 'alarm' };
@@ -56,15 +57,22 @@ export function mapLive(rec, fetchedAtMs, peak = null) {
  */
 export function createLiveProvider({ fetchInverter, fetchDay = null, fetchSaved = null, ttlMs = 60_000, peakTtlMs = 300_000, peakWaitMs = 2_500, now = () => Date.now() }) {
   let cached = null;
-  let peakCache = null; // { dateKey, at, peak }
+  let peakCache = null; // { dateKey, at, peak, points }: today's inverterDay, read at most every peakTtlMs
   let peakInFlight = null;
   let inFlight = null;
 
-  /** Today's peak, cached, never throwing: a failure keeps the last peak for the same day or reports unknown. */
+  /**
+   * Today's 5-minute points and peak, cached, never throwing: a failure keeps the last read for the same day or
+   * reports unknown. The same read feeds the live peak and the "through the day" power curve.
+   */
   async function refreshPeak(dateKey) {
     try {
-      const peak = peakOfDay(await fetchDay(dateKey));
-      peakCache = { dateKey, at: now(), peak };
+      const raw = await fetchDay(dateKey);
+      const peak = peakOfDay(raw);
+      const points = normalizeDayPoints(raw).points
+        .filter((p) => typeof p.pacKw === 'number' && Number.isFinite(p.pacKw) && p.pacKw >= 0)
+        .map((p) => ({ ts: new Date(p.ts).toISOString(), pac_kw: p.pacKw }));
+      peakCache = { dateKey, at: now(), peak, points };
       return peak;
     } catch (err) {
       console.error('live: peak unavailable', err?.message);
@@ -106,7 +114,7 @@ export function createLiveProvider({ fetchInverter, fetchDay = null, fetchSaved 
 
   const readingTime = (r) => r.dataTimestamp ?? r.fetchedAt ?? 0;
 
-  return async function live() {
+  async function live() {
     const t = now();
     if (cached && t - cached.fetchedAt < ttlMs) return cached;
     if (inFlight) return inFlight; // collapse concurrent callers into one upstream request
@@ -129,5 +137,25 @@ export function createLiveProvider({ fetchInverter, fetchDay = null, fetchSaved 
       }
     })();
     return inFlight;
+  }
+
+  /**
+   * Today's 5-minute power points from SolisCloud ({ ts, pac_kw }, the same shape as stored telemetry), read at
+   * most every peakTtlMs. Null when there is no day reader or nothing has been read for today yet.
+   * @returns {Promise<{date:string, points:{ts:string,pac_kw:number}[], fetchedAt:number}|null>}
+   */
+  live.today = async function today() {
+    if (!fetchDay) return null;
+    const dateKey = localDateKey(now());
+    const fresh = peakCache && peakCache.dateKey === dateKey && now() - peakCache.at < peakTtlMs;
+    if (!fresh) {
+      peakInFlight = peakInFlight ?? refreshPeak(dateKey).finally(() => { peakInFlight = null; });
+      await peakInFlight;
+    }
+    return peakCache && peakCache.dateKey === dateKey && peakCache.points
+      ? { date: dateKey, points: peakCache.points, fetchedAt: peakCache.at }
+      : null;
   };
+
+  return live;
 }

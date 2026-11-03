@@ -191,6 +191,18 @@ function demoTelemetryDay(date) {
   return out;
 }
 
+/**
+ * The demo's "today so far": its 5-minute points up to the demo's noon, scaled so the highest one matches the
+ * demo live reading's peak (26.3 kW), so the curve and the Today tile agree.
+ */
+export function demoTodayPoints() {
+  const noon = Date.parse(`${DEMO.today}T06:30:00Z`); // 12:00 in Colombo
+  const pts = demoTelemetryDay(DEMO.today).filter((p) => Date.parse(p.ts) <= noon).map((p) => ({ ts: p.ts, pac_kw: p.pac_kw }));
+  const max = Math.max(0, ...pts.map((p) => p.pac_kw));
+  const k = max > 0 ? demoLive().peakTodayKw / max : 1;
+  return pts.map((p) => ({ ts: p.ts, pac_kw: Math.round(p.pac_kw * k * 1000) / 1000 }));
+}
+
 /** Same interface as api/_lib/data/repo.js createRepo(), backed by memory. */
 export function createDemoRepo(dataset = createDemoDataset()) {
   const inRange = (key, from, to) => key >= from && key <= to;

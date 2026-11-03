@@ -50,7 +50,7 @@ export default function OverviewPage() {
       />
       <LiveRow live={live.data} liveError={live.error} targetKwh={s?.dailyTargetKwh ?? null} maxKw={s?.acRatedKw ?? null} now={now} loading={live.loading} />
       <CebCompare bills={bills.data} openPeriod={totals.data?.openPeriod} live={live.data} lastStoredDay={totals.data?.generation?.lastDay} todayKey={todayKey} loading={bills.loading || totals.loading} error={bills.error} />
-      <ExploreSection totals={totals.data} todayKey={todayKey} />
+      <ExploreSection totals={totals.data} todayKey={todayKey} live={live.data} />
     </>
   );
 }
