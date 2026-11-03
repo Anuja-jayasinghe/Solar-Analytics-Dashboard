@@ -12,7 +12,7 @@ const MARGIN = 8; // keep this far from the window edges
  * @param {{width:number,height:number}} viewport
  * @param {'top'|'bottom'|'right'} prefer
  * @param {number} gap  distance from the anchor
- * @param {'center'|'start'} align  centred on the anchor (hints) or lined up with its left edge (pickers)
+ * @param {'center'|'start'} align  centred on the anchor (tooltips, info popovers) or lined up with its left edge (pickers)
  * @returns {{top:number,left:number,placement:'top'|'bottom'|'right'}}
  */
 export function placeFloating(anchor, size, viewport, prefer = 'top', gap = 8, align = 'center') {

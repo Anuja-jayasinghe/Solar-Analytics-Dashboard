@@ -2,6 +2,7 @@
 // Floating placement (hints, pickers never cut off) and the calendar maths behind the date pickers.
 import { describe, it, expect } from 'vitest';
 import { placeFloating } from '../src/v3/ui/floating.js';
+import { anchorRect } from '../src/v3/ui/useFloating.js';
 import { addMonths, daysInMonth, weekdayOf, monthGrid, outOfBounds, clampKey, monthTitle, shortLabel, orderRange, moveFocus } from '../src/v3/ui/calendar.js';
 
 const vp = { width: 1000, height: 800 };
@@ -71,5 +72,27 @@ describe('calendar maths', () => {
     expect(moveFocus('2036-03-31', 'PageUp')).toBe('2036-02-29');
     expect(moveFocus('2036-01-31', 'PageDown')).toBe('2036-02-29');
     expect(moveFocus('2036-01-31', 'Tab')).toBeNull();
+  });
+});
+
+describe('chart tooltips sit on the bar, not on the column', () => {
+  const box = (top, left, width, height) => ({ top, left, width, height, right: left + width, bottom: top + height });
+  const el = (own, children = []) => ({ getBoundingClientRect: () => own, querySelectorAll: () => children.map((c) => ({ getBoundingClientRect: () => c })) });
+
+  it('uses the union of what is drawn: the taller bar and its value label', () => {
+    // a 250 px column; the bars are 150 and 140 px tall, the value label 12 px above the taller one
+    const column = box(100, 0, 60, 250);
+    const r = anchorRect(el(column, [box(200, 10, 18, 150), box(210, 32, 18, 140), box(186, 8, 22, 12)]), '.v3-bar, .v3-val');
+    expect(r).toMatchObject({ top: 186, left: 8, right: 50, bottom: 350 });
+    // so a tooltip placed above it sits at the bar, not at the top of the column
+    const pos = placeFloating(r, { width: 100, height: 30 }, { width: 1000, height: 800 }, 'top', 10);
+    expect(pos.top).toBe(186 - 10 - 30);
+  });
+
+  it('falls back to the column when nothing is drawn (or no selector), and ignores hidden parts', () => {
+    const column = box(100, 0, 60, 250);
+    expect(anchorRect(el(column, []), '.v3-bar')).toBe(column);
+    expect(anchorRect(el(column, [box(200, 10, 18, 150)]), null)).toBe(column);
+    expect(anchorRect(el(column, [box(0, 0, 0, 0), box(300, 10, 18, 50)]), '.v3-bar').top).toBe(300);
   });
 });

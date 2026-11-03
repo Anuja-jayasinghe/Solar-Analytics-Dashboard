@@ -70,7 +70,7 @@ describe('uptime strip', () => {
   it('a no-data day is a grey short cell, never a 0% day', () => {
     const c = stripCell({ day: '2036-09-01', status: 'no_data', uptime_pct: null });
     expect(c).toMatchObject({ pct: null, tone: 'none', height: 24 });
-    expect(stripTip(c)).toBe('1 Sep 2036: no uptime data');
+    expect(stripTip(c)).toBe('Sep 1\nNo uptime data');
   });
   it('maps 90..100% to the cell height and colours by threshold', () => {
     expect(stripCell({ day: 'd', status: 'ok', uptime_pct: 100 }).height).toBe(100);
@@ -80,9 +80,10 @@ describe('uptime strip', () => {
     expect(stripCell({ day: 'd', status: 'ok', uptime_pct: 96 }).tone).toBe('warn');
     expect(stripCell({ day: 'd', status: 'ok', uptime_pct: 91 }).tone).toBe('bad');
   });
-  it('the hint explains trips, gaps and logger time', () => {
+  it('the hint adds only what the cell does not show: trips, gaps and logger time', () => {
     const c = stripCell({ day: '2036-09-02', status: 'ok', uptime_pct: 96.5, trip_min: 25, trip_count: 2, gap_min: 5, comms_lost_min: 70 });
-    expect(stripTip(c)).toBe('2 Sep 2036: 96.5% uptime · stopped 25 m (2 trips) · unexplained gap 5 m · logger offline 1 h 10 m');
+    expect(stripTip(c)).toBe('Sep 2\nStopped 25 m (2 trips)\nUnexplained gap 5 m\nLogger offline 1 h 10 m');
+    expect(stripTip(stripCell({ day: '2036-09-04', status: 'ok', uptime_pct: 100 }))).toBe('Sep 4'); // nothing stopped it
     expect(stripTip(stripCell({ day: '2036-09-03', status: 'ok', uptime_pct: 99, trip_min: 5, trip_count: 1 }))).toContain('(1 trip)');
   });
 });

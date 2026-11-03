@@ -40,7 +40,7 @@ function Columns({ rows, yMax, threshold, style }) {
           const cebPct = r.cebKwh === null ? 0 : (r.cebKwh / yMax) * 100;
           const striped = r.status === 'provisional' || isPartial(r);
           return (
-            <Tip key={r.id} text={columnTip(r, threshold)}>
+            <Tip key={r.id} text={columnTip(r)}>
               <div className="v3-col">
                 {style === 'bars' ? (
                   <>

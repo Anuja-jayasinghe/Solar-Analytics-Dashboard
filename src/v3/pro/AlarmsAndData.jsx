@@ -1,5 +1,5 @@
 import { Glass } from '../ui/Glass.jsx';
-import { Tip } from '../ui/Tip.jsx';
+import { Info } from '../ui/Info.jsx';
 import { Pill } from '../ui/Pill.jsx';
 import { Note } from '../ui/Note.jsx';
 import { fmtNum } from '../overview/format.js';
@@ -40,7 +40,7 @@ export function AlarmTable({ alarms, loading, error }) {
                   <tr key={r.key}>
                     <td style={{ whiteSpace: 'nowrap' }}>{localWhen(r.beginTs)}</td>
                     <td className="v3-num" style={{ fontSize: 12 }}>{r.code}</td>
-                    <td><strong>{r.meaning}</strong>{r.message !== r.meaning && <div className="v3-sub">Solis: {r.message}</div>}{r.advice && <Tip text={r.advice}><span className="v3-sub">Advice from Solis ⓘ</span></Tip>}</td>
+                    <td><strong>{r.meaning}</strong>{r.message !== r.meaning && <div className="v3-sub">Solis: {r.message}</div>}{r.advice && <div><Info title="Advice from Solis" text={r.advice}><span className="v3-sub">Advice from Solis</span></Info></div>}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{r.length}</td>
                     <td><Pill tone={r.tone === 'neutral' ? undefined : r.tone}>{r.level}</Pill></td>
                   </tr>
@@ -63,14 +63,12 @@ export function AlarmTable({ alarms, loading, error }) {
   );
 }
 
-function Bar({ label, value, pct, color, tip }) {
+function Bar({ label, value, pct, color, info }) {
   return (
-    <Tip text={tip}>
-      <div className="v3-bartrack">
-        <div className="v3-barhead"><span>{label}</span><b>{value}</b></div>
-        <div className="v3-barbg"><div style={{ width: `${Math.max(0, Math.min(100, pct))}%`, background: color }} /></div>
-      </div>
-    </Tip>
+    <div className="v3-bartrack">
+      <div className="v3-barhead"><span>{label}{info && <Info label={`About ${label.toLowerCase()}`} {...info} />}</span><b>{value}</b></div>
+      <div className="v3-barbg"><div style={{ width: `${Math.max(0, Math.min(100, pct))}%`, background: color }} /></div>
+    </div>
   );
 }
 
@@ -89,10 +87,10 @@ export function DataAndLogger({ summary: s, uptime, loading }) {
       </div>
       {loading && !uptime ? <div className="v3-skeleton" style={{ height: 120 }} aria-busy="true" aria-label="Loading" /> : (
         <div className="v3-logger-grid">
-          <Bar label="Days with a collected reading · all-time" value={s.completenessPct === null ? '—' : `${fmtNum(s.completenessPct, 1)}%`} pct={s.completenessPct ?? 0} color="var(--good)" tip={s.dataDays === null ? 'Not known yet.' : `${fmtNum(s.dataDays)} of ${fmtNum(s.spanDays)} days since the first reading.`} />
-          <Bar label={`Logger connection · ${days.length} days`} value={days.length ? (commsMin ? `${minutesLabel(commsMin)} offline` : 'no gaps') : '—'} pct={windowMin ? 100 - (commsMin / windowMin) * 100 : 0} color={commsMin ? 'var(--warn)' : 'var(--good)'} tip="Minutes the data logger lost its internet link inside daylight windows. Counted as a data gap, not as inverter downtime." />
-          <Bar label="Days with alarms known" value={days.length ? `${alarmsKnown} of ${days.length}` : '—'} pct={days.length ? (alarmsKnown / days.length) * 100 : 0} color="var(--good)" tip="Uptime is only trusted when the alarm log for that day was readable." />
-          <Bar label="Days with logger status known" value={days.length ? `${loggerKnown} of ${days.length}` : '—'} pct={days.length ? (loggerKnown / days.length) * 100 : 0} color="var(--good)" tip="Distinguishes the logger being offline from the inverter being stopped." />
+          <Bar label="Days with a collected reading · all-time" value={s.completenessPct === null ? '—' : `${fmtNum(s.completenessPct, 1)}%`} pct={s.completenessPct ?? 0} color="var(--good)" />
+          <Bar label={`Logger connection · ${days.length} days`} value={days.length ? (commsMin ? `${minutesLabel(commsMin)} offline` : 'no gaps') : '—'} pct={windowMin ? 100 - (commsMin / windowMin) * 100 : 0} color={commsMin ? 'var(--warn)' : 'var(--good)'} info={{ title: 'A data gap, not downtime', text: 'Minutes the data logger lost its internet link inside daylight windows. The inverter may have kept generating.' }} />
+          <Bar label="Days with alarms known" value={days.length ? `${alarmsKnown} of ${days.length}` : '—'} pct={days.length ? (alarmsKnown / days.length) * 100 : 0} color="var(--good)" info={{ text: 'Uptime is only trusted for days whose alarm log could be read.' }} />
+          <Bar label="Days with logger status known" value={days.length ? `${loggerKnown} of ${days.length}` : '—'} pct={days.length ? (loggerKnown / days.length) * 100 : 0} color="var(--good)" info={{ text: 'Tells the logger being offline apart from the inverter being stopped.' }} />
         </div>
       )}
     </Glass>

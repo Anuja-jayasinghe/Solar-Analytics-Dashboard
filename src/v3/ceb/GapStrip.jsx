@@ -1,5 +1,6 @@
 import { Tip } from '../ui/Tip.jsx';
-import { DASH, lkrCompact, longDate } from '../overview/format.js';
+import { Info } from '../ui/Info.jsx';
+import { DASH, lkrCompact } from '../overview/format.js';
 import { gapLabel, gapTip } from './rows.js';
 
 const signed = (v) => (v === null ? DASH : `${v < 0 ? '−' : '+'} ${lkrCompact(Math.abs(v)).value}${lkrCompact(Math.abs(v)).unit ? ` ${lkrCompact(Math.abs(v)).unit}` : ''}`);
@@ -17,21 +18,17 @@ export function GapStrip({ rows, summary }) {
   return (
     <div className="v3-gap" aria-label="Money gap">
       <div className="v3-gap-head">
-        <Tip text="For each complete bill: (CEB kWh − inverter kWh) × that bill's own LKR per kWh, i.e. what CEB paid minus what the generation was worth. Minus means CEB paid less than the inverter generated. Bills with missing days or no rate are left out, never counted as zero.">
-          <div>
-            <h3 className="v3-gap-title">Money gap: CEB paid minus what the inverter generated was worth</h3>
-            <div className="v3-num v3-gap-value" style={{ color: summary.windowLkr === null ? 'var(--ink2)' : negative ? 'var(--warn)' : 'var(--good)' }}>{signed(summary.windowLkr)}</div>
-            <div className="v3-sub" style={{ marginTop: 2 }}>
-              {summary.windowCompared ? `in view · ${summary.windowCompared} of ${summary.windowTotal} compared · each bill at its own rate` : 'no comparable bill in view'}
-            </div>
+        <div>
+          <h3 className="v3-gap-title">Money gap: CEB paid minus what the inverter generated was worth<Info label="How the money gap is worked out" title="Each complete bill at its own rate" text="(CEB kWh − inverter kWh) × that bill's LKR per kWh. Minus means CEB paid for less than the inverter made. Bills with missing days or no rate are left out, never counted as zero." /></h3>
+          <div className="v3-num v3-gap-value" style={{ color: summary.windowLkr === null ? 'var(--ink2)' : negative ? 'var(--warn)' : 'var(--good)' }}>{signed(summary.windowLkr)}</div>
+          <div className="v3-sub" style={{ marginTop: 2 }}>
+            {summary.windowCompared ? `in view · ${summary.windowCompared} of ${summary.windowTotal} compared · each bill at its own rate` : 'no comparable bill in view'}
           </div>
-        </Tip>
+        </div>
         <div className="v3-gap-chips">
           <div className="v3-chip v3-gapchip"><div>Generation worth (all compared bills)</div><b className="v3-num">{a.valueLkr === null ? DASH : `${lkrCompact(a.valueLkr).value} ${lkrCompact(a.valueLkr).unit}`}</b></div>
           <div className="v3-chip v3-gapchip"><div>CEB actually paid</div><b className="v3-num">{a.paidLkr === null ? DASH : `${lkrCompact(a.paidLkr).value} ${lkrCompact(a.paidLkr).unit}`}</b></div>
-          <Tip text={a.periods ? `Over ${a.periods} complete bills (${longDate(a.from)} to ${longDate(a.to)}), ${a.differencePct === null ? '' : `${Math.abs(a.differencePct).toFixed(1)}% ${a.differencePct < 0 ? 'less' : 'more'} than the generation was worth. `}${a.excluded} bill${a.excluded === 1 ? '' : 's'} left out for missing days or no rate.` : 'No bill can be compared yet.'}>
-            <div className="v3-chip v3-gapchip"><div>All-time gap</div><b className="v3-num" style={{ color: a.differenceLkr === null ? undefined : a.differenceLkr < 0 ? 'var(--warn)' : 'var(--good)' }}>{signed(a.differenceLkr)}</b></div>
-          </Tip>
+          <div className="v3-chip v3-gapchip"><div>All-time gap</div><b className="v3-num" style={{ color: a.differenceLkr === null ? undefined : a.differenceLkr < 0 ? 'var(--warn)' : 'var(--good)' }}>{signed(a.differenceLkr)}</b></div>
         </div>
       </div>
 

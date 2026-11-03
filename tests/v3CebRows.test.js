@@ -175,30 +175,19 @@ import { columnTip, gapTip, gapLabel } from '../src/v3/ceb/rows.js';
 
 describe('column hints', () => {
   const [r] = buildCebRows([bill('2036-09-03')], null, null);
-  it('describes the period, both totals and the variance', () => {
-    const tip = columnTip(r, 4000);
-    expect(tip).toContain('Aug 2036');
-    expect(tip).toContain('6 Aug to 3 Sep');
-    expect(tip).toContain('Inverter 4,100 kWh (above the line)');
-    expect(tip).toContain('CEB 4,000 kWh');
-    expect(tip).toContain('variance −2.4%');
-  });
-  it('explains an open period and a partial one instead of inventing a variance', () => {
+  it('a column says only its period: the totals are on the bars, the tags under them', () => {
+    expect(columnTip(r)).toBe('Aug 6 → Sep 3');
     const [o] = buildCebRows([], { month: 'Sep', year: 2036, periodStart: '2036-09-04', inverter: 1464, daysPresent: 11, daysInPeriod: 12 }, '2036-09-15');
-    expect(columnTip(o, 4000)).toContain('CEB bill not issued yet · 11 of 12 days so far');
-    const [p] = buildCebRows([bill('2036-07-04', { complete: false, daysPresent: 25, daysInPeriod: 30 })], null, null);
-    expect(columnTip(p, 0)).toContain('only 25 of 30 days recorded');
-    expect(columnTip({ ...r, inverterKwh: null }, 4000)).toContain('Inverter no total');
+    expect(columnTip(o)).toBe('Sep 4 → today');
+    expect(columnTip({ ...r, periodStart: null })).toBe('Aug 2036'); // no known start: the month it reports
   });
-  it('money-gap hints show the working and the direction', () => {
-    expect(gapTip(r)).toContain('CEB paid LKR 176,000');
-    expect(gapTip(r)).toContain('generation worth LKR 180,400');
-    expect(gapTip(r)).toContain('− LKR 4.4 K');
-    expect(gapTip(r)).toContain('CEB paid less than the inverter generated');
+  it('money-gap hints: the period, then the bar in plain words', () => {
+    expect(gapTip(r)).toBe('Aug 6 → Sep 3\nCEB paid LKR 4.4 K less than the generation was worth');
+    expect(gapTip({ ...r, gapLkr: 1500 })).toBe('Aug 6 → Sep 3\nCEB paid LKR 1.5 K more than the generation was worth');
     const [p] = buildCebRows([bill('2036-07-04', { complete: false, daysPresent: 25, daysInPeriod: 30 })], null, null);
-    expect(gapTip(p)).toContain('not compared');
-    const [o] = buildCebRows([], { month: 'Sep', year: 2036, inverter: 1, daysPresent: 1, daysInPeriod: 1 }, '2036-09-15');
-    expect(gapTip(o)).toContain('bill not issued yet');
+    expect(gapTip(p)).toContain('Not compared: only 25 of 30 days recorded');
+    const [o] = buildCebRows([], { month: 'Sep', year: 2036, periodStart: '2036-09-04', inverter: 1, daysPresent: 1, daysInPeriod: 1 }, '2036-09-15');
+    expect(gapTip(o)).toBe('Sep 4 → today\nBill not issued yet');
   });
   it('labels a gap bar compactly and leaves unknown blank', () => {
     expect(gapLabel(-5800)).toBe('−5.8 K');

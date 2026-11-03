@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useAccess } from '../access/context.js';
-import { usePrefs } from '../prefs/context.js';
 import { navGroup } from './nav.js';
 import { readPref, writePref } from '../theme/storage.js';
 import { Icon } from './icons.jsx';
@@ -22,7 +21,6 @@ function Item({ item }) {
  */
 export function Sidebar() {
   const { level } = useAccess();
-  const { hints, setHints } = usePrefs();
   const [collapsed, setCollapsed] = useState(() => readPref('rail', 'collapsed') === 'collapsed');
   const toggle = () => {
     setCollapsed((c) => {
@@ -30,13 +28,6 @@ export function Sidebar() {
       return !c;
     });
   };
-  const hintsLabel = hints ? 'Hints on' : 'Hints off';
-  const hintsButton = (
-    <button type="button" className="v3-navitem v3-hide-phone" aria-pressed={hints} aria-label={hints ? 'Turn hints off' : 'Turn hints on'} onClick={() => setHints(!hints)}>
-      <Icon id={hints ? 'hintsOn' : 'hintsOff'} />
-      <span className="v3-label">{hintsLabel}</span>
-    </button>
-  );
 
   return (
     <nav className="v3-glass v3-rail" data-collapsed={collapsed} aria-label="Main">
@@ -50,7 +41,6 @@ export function Sidebar() {
         </div>
         <div className="v3-rail-group">
           {navGroup(level, 'foot').map((n) => <Item key={n.id} item={n} />)}
-          {hintsButton}
           <button type="button" className="v3-navitem v3-collapse v3-hide-phone" onClick={toggle} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-expanded={!collapsed}>
             <Icon id="collapse" />
             <span className="v3-label">Collapse</span>

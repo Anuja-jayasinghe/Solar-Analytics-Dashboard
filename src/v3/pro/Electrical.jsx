@@ -39,7 +39,7 @@ export function Electrical({ e, date, loading, error }) {
           <div className="v3-elec-col">
             <div className="v3-elec-title">PV inputs <span>· mean current</span></div>
             {e.pvInputs.map((s) => (
-              <Tip key={s.n} text={`PV input ${s.n}: ${s.amps === null ? 'no current reading' : `${fmtNum(s.amps, 1)} A`}${s.volts === null ? '' : ` · reported voltage about ${fmtNum(s.volts)} V`}`}>
+              <Tip key={s.n} text={s.volts === null ? '' : `PV${s.n} · reported voltage about ${fmtNum(s.volts)} V`}>
                 <div className="v3-strrow">
                   <span>PV{s.n}</span>
                   <div className="v3-barbg"><div style={{ width: `${s.amps === null ? 0 : (s.amps / maxA) * 100}%`, background: 'var(--gen)' }} /></div>

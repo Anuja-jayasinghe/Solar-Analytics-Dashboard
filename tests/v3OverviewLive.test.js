@@ -8,7 +8,7 @@ import { createElement as h } from 'react';
 import { renderToString } from 'react-dom/server';
 import {
   DASH, fmtNum, shortDate, longDate, monthsBetween, lkrCompact, energyCompact, targetProgress, gaugeFraction,
-  liveState, freshness, openPeriodView, FRESH_WINDOW_MIN, clockAt, readingNote, liveStatusTip, errorLabel
+  liveState, freshness, openPeriodView, FRESH_WINDOW_MIN, clockAt, readingNote, liveStatusInfo, errorLabel
 } from '../src/v3/overview/format.js';
 import { TotalsRow } from '../src/v3/overview/TotalsRow.jsx';
 import { CebCompare } from '../src/v3/ceb/CebCompare.jsx';
@@ -88,20 +88,24 @@ describe('live status', () => {
   it('an inverter alarm shows its SolisCloud state code', () => {
     expect(liveState({ status: 'alarm', faultCode: 1011 })).toMatchObject({ key: 'fault', label: 'Fault · code 1011', tone: 'bad' });
     expect(liveState({ status: 'alarm', faultCode: null }).label).toBe('Fault');
-    expect(liveStatusTip({ status: 'alarm', faultCode: 1011 }, null, liveState({ status: 'alarm', faultCode: 1011 }))).toContain('state code 1011');
+    expect(liveStatusInfo({ status: 'alarm', faultCode: 1011 }, null, liveState({ status: 'alarm', faultCode: 1011 })).title).toBe('Inverter fault, state code 1011');
+    // Online and Asleep say it all: no info icon
+    expect(liveStatusInfo({ status: 'online' }, null, liveState({ status: 'online' }))).toBeNull();
+    expect(liveStatusInfo({ status: 'offline' }, null, liveState({ status: 'offline' }))).toBeNull();
   });
 
   it('a SolisCloud failure is named as such, not as an inverter problem', () => {
     const none = liveState(null, { code: 'upstream_unavailable' });
     expect(none).toMatchObject({ key: 'upstream', label: 'SolisCloud not responding', tone: 'warn' });
-    expect(liveStatusTip(null, { code: 'upstream_unavailable' }, none)).toContain('No reading from today is saved yet');
+    expect(liveStatusInfo(null, { code: 'upstream_unavailable' }, none)).toMatchObject({ title: 'SolisCloud did not answer' });
+    expect(liveStatusInfo(null, { code: 'upstream_unavailable' }, none).text).toContain('No reading from today is saved yet');
     expect(liveState(null, { code: 'internal' }).key).toBe('unknown');
 
     const saved = { status: 'alarm', faultCode: 1011, stale: true, upstream: 'unavailable', source: 'saved', dataTimestamp: Date.parse('2026-11-03T06:20:00Z') };
     const s = liveState(saved);
     expect(s).toMatchObject({ key: 'upstream', label: 'SolisCloud not responding', tone: 'warn' });
     expect(s.inverter.label).toBe('Fault · code 1011'); // what the inverter last said is kept for the tip
-    const tip = liveStatusTip(saved, null, s);
+    const tip = liveStatusInfo(saved, null, s).text;
     expect(tip).toContain('last saved reading at 11:50');
     expect(tip).toContain('Fault · code 1011');
     expect(tip).toContain('not a live value');
@@ -158,6 +162,17 @@ describe('rendered tiles', () => {
     expect(html).toContain('awaiting bill');
   });
 
+  it('headline tiles: an info icon only where the tile does not already say it', () => {
+    const html = renderToString(h(TotalsRow, { totals: withOpen({ inverter: 1464, periodStart: '2036-09-04', daysPresent: 11, daysInPeriod: 12 }), todayKey: '2036-09-15', loading: false }));
+    expect(html).toContain('aria-label="About this billing period"');
+    expect(html).toContain('Bill date to bill date');
+    expect(html).toContain('Starts the day after the latest CEB bill');
+    expect(html).not.toContain('About all-time earnings'); // every bill has earnings: nothing to add
+    const leftOut = renderToString(h(TotalsRow, { totals: { ...totals, earnings: { ...totals.earnings, billsWithoutEarnings: 2 } }, todayKey: '2036-09-15', loading: false }));
+    expect(leftOut).toContain('About all-time earnings');
+    expect(leftOut).toContain('2 bills left out');
+  });
+
   it('the billing tile starts the day after the latest bill, not on the 1st of the month', () => {
     const todayKey = '2026-11-03';
     const html = renderToString(h(TotalsRow, {
@@ -181,7 +196,7 @@ describe('rendered tiles', () => {
     expect(tile).toContain('1,562');
     expect(chart).toContain('>1,562</td>');
     expect(chart).not.toContain('>1,464</td>');
-    expect(chart).toContain('4 Sep – today'); // the table states the real span, not just the month
+    expect(chart).toContain('Sep 4 → today'); // the table states the real span, not just the month
   });
 
   it('does not add the live reading again when today is already stored', () => {

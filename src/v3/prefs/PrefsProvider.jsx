@@ -8,10 +8,8 @@ const readBool = (key, fallback) => {
 };
 
 export function PrefsProvider({ children }) {
-  const [hints, setHintsState] = useState(() => readBool('hints', PREF_DEFAULTS.hints));
   const [showMark, setShowMarkState] = useState(() => readBool('mark', PREF_DEFAULTS.showMark));
-  const setHints = useCallback((v) => { setHintsState(v); writePref('hints', v ? 'on' : 'off'); }, []);
   const setShowMark = useCallback((v) => { setShowMarkState(v); writePref('mark', v ? 'on' : 'off'); }, []);
-  const value = useMemo(() => ({ hints, showMark, setHints, setShowMark }), [hints, showMark, setHints, setShowMark]);
+  const value = useMemo(() => ({ showMark, setShowMark }), [showMark, setShowMark]);
   return <PrefsContext.Provider value={value}>{children}</PrefsContext.Provider>;
 }

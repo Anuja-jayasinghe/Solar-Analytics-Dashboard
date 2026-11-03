@@ -1,11 +1,12 @@
 import { createContext, useContext } from 'react';
 
 // Per-viewer display preferences (saved in this browser).
-//   hints:    hover/tap explanations on figures. OFF by default: they distract; switch on from the sidebar.
 //   showMark: the "Mark above" line on the charts. ON by default; each chart can hide it.
-export const PREF_DEFAULTS = Object.freeze({ hints: false, showMark: true });
+// There is no hints switch any more: explanations sit behind info icons (ui/Info.jsx) and chart details always
+// show on hover (ui/Tip.jsx). A saved 'hints' value from before is simply ignored.
+export const PREF_DEFAULTS = Object.freeze({ showMark: true });
 
-export const PrefsContext = createContext({ ...PREF_DEFAULTS, setHints: () => {}, setShowMark: () => {} });
+export const PrefsContext = createContext({ ...PREF_DEFAULTS, setShowMark: () => {} });
 
 export function usePrefs() {
   return useContext(PrefsContext);
