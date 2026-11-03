@@ -110,19 +110,22 @@ export function readingNote(live) {
   return at ? `${what} at ${at}` : what;
 }
 
-/** The explanation behind the status bulb. */
-export function liveStatusTip(live, error, state) {
+/**
+ * The explanation behind the status bulb, only when the label alone is not enough: SolisCloud failing, a fault,
+ * offline in daylight, or a reading that is not current. Online and Asleep need none. Null when there is nothing to add.
+ * @returns {{title:string, text:string}|null}
+ */
+export function liveStatusInfo(live, error, state) {
   if (state.key === 'upstream') {
-    const head = 'SolisCloud, where the inverter reports its readings, did not answer. The inverter itself may be fine.';
-    if (!live) return `${head} No reading from today is saved yet, so the figures show a dash. It retries every minute.`;
+    const title = 'SolisCloud did not answer';
+    if (!live) return { title, text: 'The inverter may be fine. No reading from today is saved yet, so the figures show a dash. It retries every minute.' };
     const inv = state.inverter ? ` The inverter last reported: ${state.inverter.label}.` : '';
-    return `${head} Showing the ${readingNote(live)}, not a live value.${inv} It retries every minute.`;
+    return { title, text: `The inverter may be fine. Showing the ${readingNote(live)}, not a live value.${inv} It retries every minute.` };
   }
-  if (state.key === 'fault') return `The inverter reports a fault${live?.faultCode != null ? ` (SolisCloud state code ${live.faultCode})` : ''}. The alarm log is on the Pro page.`;
-  if (live?.abnormalOffline) return 'Offline during daylight: the inverter or its logger is not reporting.';
-  if (state.key === 'asleep') return 'The inverter sleeps at night; this is normal.';
-  if (state.key === 'online') return 'Online: the inverter is feeding the grid.';
-  return state.label;
+  if (state.key === 'fault') return { title: `Inverter fault${live?.faultCode != null ? `, state code ${live.faultCode}` : ''}`, text: 'The alarm log is on the Pro page.' };
+  if (live?.abnormalOffline) return { title: 'Offline in daylight', text: 'The inverter or its logger is not reporting.' };
+  if (live?.stale) return { title: 'Not refreshed', text: `Showing the ${readingNote(live)}. It retries every minute.` };
+  return null;
 }
 
 /** A failed read's code in words, for the "could not be loaded" note. */

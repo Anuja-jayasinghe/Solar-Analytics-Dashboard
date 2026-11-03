@@ -198,8 +198,7 @@ html, body { margin: 0; padding: 0; }
 .v3-fresh { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; color: var(--ink2); }
 
 .v3-status { position: absolute; top: 16px; right: 18px; display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 600; color: var(--ink2); white-space: nowrap; }
-/* The bulb's tooltip wrapper must not become its positioning box, or it sits beside the gauge and long labels wrap. */
-.v3-gauge-tile > .v3-tip:first-child { position: static; }
+.v3-status .v3-info-with { gap: 7px; }
 .v3-bulb { width: 10px; height: 10px; border-radius: 50%; background: var(--ink2); }
 .v3-status[data-tone='good'] .v3-bulb { background: var(--good); box-shadow: 0 0 0 3px var(--good-a20), 0 0 12px var(--good); animation: v3-breathe 2.6s ease-in-out infinite; }
 .v3-status[data-tone='bad'] .v3-bulb { background: var(--bad); box-shadow: 0 0 0 3px var(--bad-a20), 0 0 12px var(--bad); }
@@ -488,8 +487,24 @@ select.v3-field { padding-right: 8px; }
 .v3-pdfframe { flex: 1 1 auto; width: 100%; border: 0; border-radius: 12px; background: #fff; }
 
 /* ---- floating layer: hint bubbles and pickers are drawn above the cards and kept on screen ---- */
-.v3-float-tip { position: fixed; z-index: 400; pointer-events: none; max-width: min(280px, calc(100vw - 16px)); padding: 8px 11px; border-radius: 10px; background: var(--tip-bg); border: 1px solid var(--tip-line); color: var(--tip-ink); font-size: 11.5px; font-weight: 500; line-height: 1.4; box-shadow: 0 12px 34px rgba(0, 0, 0, .45); animation: v3-pop .09s ease-out; text-align: left; }
-.v3-float-tip.value { padding: 5px 9px; font-size: 11.5px; font-weight: 700; white-space: nowrap; max-width: calc(100vw - 16px); }
+/* Tooltips (chart details) and info popovers (explanations): see ui/Tip.jsx, ui/Info.jsx, ui/Bubble.jsx. */
+.v3-pop { position: fixed; z-index: 400; pointer-events: none; max-width: min(300px, calc(100vw - 16px)); padding: 9px 12px; border-radius: 10px; background: var(--pop-bg); border: 1px solid var(--pop-line); color: var(--pop-ink); font-size: 12.5px; font-weight: 500; line-height: 1.45; text-align: left; box-shadow: 0 14px 36px rgba(0, 0, 0, .42); animation: v3-pop .1s ease-out; }
+.v3-pop::before { content: ''; position: absolute; width: 9px; height: 9px; background: var(--pop-bg); transform: rotate(45deg); }
+.v3-pop[data-placement='top']::before { left: calc(var(--arrow-x, 50%) - 5px); bottom: -5.5px; border-right: 1px solid var(--pop-line); border-bottom: 1px solid var(--pop-line); }
+.v3-pop[data-placement='bottom']::before { left: calc(var(--arrow-x, 50%) - 5px); top: -5.5px; border-left: 1px solid var(--pop-line); border-top: 1px solid var(--pop-line); }
+.v3-pop[data-placement='right']::before { top: calc(var(--arrow-y, 50%) - 5px); left: -5.5px; border-left: 1px solid var(--pop-line); border-bottom: 1px solid var(--pop-line); }
+.v3-pop-data { max-width: min(260px, calc(100vw - 16px)); padding: 6px 10px; font-size: 12px; font-weight: 600; }
+.v3-pop-title { display: block; font-size: 13px; font-weight: 700; }
+.v3-pop-title + .v3-pop-text { margin-top: 3px; }
+.v3-pop-text { display: block; color: var(--pop-sub); }
+.v3-info { position: relative; display: inline-flex; align-items: center; gap: 5px; margin-left: 5px; padding: 1px; border: 0; border-radius: 999px; background: none; color: var(--ink2); font: inherit; line-height: 1; vertical-align: middle; cursor: help; opacity: .7; transition: opacity .12s, color .12s; }
+.v3-info::after { content: ''; position: absolute; inset: -8px; } /* a finger-sized target around a 14 px icon */
+.v3-info:hover, .v3-info[aria-expanded='true'], .v3-info:focus-visible { opacity: 1; color: var(--ink); }
+.v3-info:focus-visible { outline: 2px solid var(--gen); outline-offset: 2px; }
+.v3-info-with { margin-left: 0; padding: 0; color: inherit; opacity: 1; font-weight: inherit; }
+.v3-info-with > svg { opacity: .65; }
+.v3-info-with:hover > svg, .v3-info-with[aria-expanded='true'] > svg { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .v3-pop, .v3-info { animation: none; transition: none; } }
 @keyframes v3-pop { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
 .v3-tip-bubble { display: none; }
 

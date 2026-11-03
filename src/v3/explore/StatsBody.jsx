@@ -1,4 +1,5 @@
 import { Tip } from '../ui/Tip.jsx';
+import { Info } from '../ui/Info.jsx';
 import { Note } from '../ui/Note.jsx';
 import { Segmented } from '../ui/Segmented.jsx';
 import { areaPath, linePath } from '../charts/scale.js';
@@ -16,9 +17,9 @@ export function StatsBody({ showHead, stats, loading, error, rangeText, period, 
   const worst = stats?.worst ?? null;
   const geo = stats ? spreadGeometry(stats.series ?? [], best, worst, avg) : null;
   const items = [
-    { label: 'Average per day', short: 'Avg / day', color: 'var(--ceb)', value: avg, sub: stats ? `over ${stats.presentDays} recorded days` : '', tip: 'Total for the range divided by the days that have data. Days with no reading are left out, never counted as zero.' },
-    { label: 'Best day', short: 'Best day', color: 'var(--good)', value: best?.kwh ?? null, sub: best ? dayLabelYear(best.date) : '', tip: 'Highest single-day generation in the range.' },
-    { label: 'Lowest day', short: 'Lowest day', color: 'var(--warn)', value: worst?.kwh ?? null, sub: worst ? dayLabelYear(worst.date) : '', tip: 'Lowest single-day generation in the range. A measured zero would show as 0.' }
+    { label: 'Average per day', short: 'Avg / day', color: 'var(--ceb)', value: avg, sub: stats ? `over ${stats.presentDays} recorded days` : '', info: { title: 'Recorded days only', text: 'The total divided by the days that have data. Days with no reading are left out, never counted as zero.' } },
+    { label: 'Best day', short: 'Best day', color: 'var(--good)', value: best?.kwh ?? null, sub: best ? dayLabelYear(best.date) : '' },
+    { label: 'Lowest day', short: 'Lowest day', color: 'var(--warn)', value: worst?.kwh ?? null, sub: worst ? dayLabelYear(worst.date) : '' }
   ];
 
   return (
@@ -34,13 +35,11 @@ export function StatsBody({ showHead, stats, loading, error, rangeText, period, 
       {error && <Note tone="bad">Could not load the statistics ({error.code ?? 'error'}).</Note>}
       <div className="v3-statgrid">
         {items.map((s) => (
-          <Tip key={s.label} text={s.tip}>
-            <div className="v3-chip v3-stat" style={{ borderLeft: `3px solid ${s.color}` }}>
-              <div className="v3-stat-label"><i style={{ background: s.color }} /><span className="v3-long">{s.label}</span><span className="v3-short">{s.short}</span></div>
-              {loading && !stats ? <div className="v3-skeleton" style={{ height: 24, width: 90 }} aria-busy="true" aria-label="Loading" /> : <div className="v3-num v3-stat-value">{fmtNum(s.value, 1)}<span>kWh</span></div>}
-              <div className="v3-stat-sub">{s.sub || ' '}</div>
-            </div>
-          </Tip>
+          <div key={s.label} className="v3-chip v3-stat" style={{ borderLeft: `3px solid ${s.color}` }}>
+            <div className="v3-stat-label"><i style={{ background: s.color }} /><span className="v3-long">{s.label}</span><span className="v3-short">{s.short}</span>{s.info && <Info label={`About ${s.label.toLowerCase()}`} {...s.info} />}</div>
+            {loading && !stats ? <div className="v3-skeleton" style={{ height: 24, width: 90 }} aria-busy="true" aria-label="Loading" /> : <div className="v3-num v3-stat-value">{fmtNum(s.value, 1)}<span>kWh</span></div>}
+            <div className="v3-stat-sub">{s.sub || ' '}</div>
+          </div>
         ))}
       </div>
 

@@ -5,6 +5,16 @@ All notable changes to the Solar Analytics Dashboard project.
 ## [Unreleased]
 
 ### Added
+- **Explanations sit behind ⓘ icons instead of a Hints switch.** The sidebar's Hints switch (off by default, and
+  missing on phones) is gone. An ⓘ appears only where the screen does not already say it: bill date to bill date, the
+  lifetime counter, bills left out of earnings, how uptime and time stopped are counted, unresolved alarms, logger and
+  alarm-log coverage, the money-gap formula, the average per day, SolisCloud or fault states, Solis's alarm advice, and
+  admin health rows that need attention. Hover (short delay), tap or keyboard focus opens it; a click keeps it open;
+  a click elsewhere, Escape or a scroll closes it. Obvious ones (Today, peak, freshness, Online, best/lowest day, all-time
+  coverage) have none, and the texts are shorter.
+- **Chart details always show on hover** (a bar's period and figures), with an arrow to what they describe. On phones a
+  tap shows one until the next tap. They close when the page scrolls, so one no longer stays stuck on a bar that has
+  moved away. Tooltips use a slightly lighter surface than the cards and 12.5–13 px text.
 - **The live tile says why there is no live reading.** When SolisCloud does not answer, the status reads "SolisCloud not
   responding" (amber) instead of "Unknown", because the inverter may be fine. The tile shows the newest real reading with
   its time ("Last saved reading at 11:50", "Today · as of 11:50", "kW then"): the last value in memory, or, after a fresh

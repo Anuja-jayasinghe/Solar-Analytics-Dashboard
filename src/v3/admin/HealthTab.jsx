@@ -1,5 +1,5 @@
 import { Glass } from '../ui/Glass.jsx';
-import { Tip } from '../ui/Tip.jsx';
+import { Info } from '../ui/Info.jsx';
 import { Note } from '../ui/Note.jsx';
 import { useResource } from '../data/context.js';
 import { MAINTENANCE, freshnessItems, workflowUrl } from './health.js';
@@ -23,12 +23,10 @@ export function HealthTab() {
         {loading ? <div className="v3-skeleton" style={{ height: 100 }} aria-busy="true" aria-label="Loading" /> : (
           <div className="v3-healthlist">
             {items.map((i) => (
-              <Tip key={i.label} text={i.tip}>
-                <div className="v3-healthrow">
-                  <span className="v3-mut">{i.label}</span>
-                  <b style={{ color: TONE[i.tone] }}>{i.value}</b>
-                </div>
-              </Tip>
+              <div key={i.label} className="v3-healthrow">
+                <span className="v3-mut">{i.label}{(i.tone === 'warn' || i.tone === 'bad') && i.tip && <Info label={`About ${i.label.toLowerCase()}`} text={i.tip} />}</span>
+                <b style={{ color: TONE[i.tone] }}>{i.value}</b>
+              </div>
             ))}
           </div>
         )}

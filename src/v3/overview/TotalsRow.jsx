@@ -1,22 +1,20 @@
 import { Glass } from '../ui/Glass.jsx';
-import { Tip } from '../ui/Tip.jsx';
+import { Info } from '../ui/Info.jsx';
 import { DASH, energyCompact, fmtNum, lifetimeGeneration, longDate, lkrCompact, monthsBetween, openPeriodSoFar, openPeriodView, shortDate } from './format.js';
 
 const MONTH_NAMES = { Jan: 'January', Feb: 'February', Mar: 'March', Apr: 'April', May: 'May', Jun: 'June', Jul: 'July', Aug: 'August', Sep: 'September', Oct: 'October', Nov: 'November', Dec: 'December' };
 
-function Tile({ label, short, value, unit, sub, tip, loading }) {
+function Tile({ label, short, value, unit, sub, info, loading }) {
   return (
-    <Tip text={tip}>
-      <Glass className="v3-kpi" aria-label={label}>
-        <div className="v3-kpi-label"><span className="v3-long">{label}</span><span className="v3-short">{short ?? label}</span></div>
-        {loading ? (
-          <div className="v3-skeleton" style={{ height: 30, width: '70%' }} aria-busy="true" aria-label="Loading" />
-        ) : (
-          <div className="v3-num v3-kpi-value">{value}{unit ? <span className="v3-kpi-unit">{unit}</span> : null}</div>
-        )}
-        <div className="v3-kpi-sub">{loading ? ' ' : sub}</div>
-      </Glass>
-    </Tip>
+    <Glass className="v3-kpi" aria-label={label}>
+      <div className="v3-kpi-label"><span className="v3-long">{label}</span><span className="v3-short">{short ?? label}</span>{info && <Info label={`About ${label.toLowerCase()}`} {...info} />}</div>
+      {loading ? (
+        <div className="v3-skeleton" style={{ height: 30, width: '70%' }} aria-busy="true" aria-label="Loading" />
+      ) : (
+        <div className="v3-num v3-kpi-value">{value}{unit ? <span className="v3-kpi-unit">{unit}</span> : null}</div>
+      )}
+      <div className="v3-kpi-sub">{loading ? ' ' : sub}</div>
+    </Glass>
   );
 }
 
@@ -32,9 +30,14 @@ export function TotalsRow({ totals, live, todayKey, loading }) {
   const reports = view?.month ? `${MONTH_NAMES[view.month] ?? view.month}${view.year ? ` ${view.year}` : ''}` : null;
   const earn = totals?.earnings;
 
-  const periodTip = open
-    ? `Billing period ${shortDate(start)} to today, the day after the latest CEB bill${totals?.openPeriod?.lastBillDate ? ` (${shortDate(totals.openPeriod.lastBillDate)})` : ''}${open.includesToday ? ', including today so far from the live reading' : ''}.${reports ? ` The next bill reports it as ${reports}.` : ''} Generation is known for ${open.daysPresent ?? DASH} of ${open.daysInPeriod ?? DASH} days; the CEB bill for this period has not been issued yet.`
-    : 'There is no open billing period right now: the latest bill covers everything up to today.';
+  const lastBill = totals?.openPeriod?.lastBillDate;
+  // Only what the tile does not already say: why it starts where it does, and which bill will report it.
+  const periodInfo = open
+    ? {
+        title: 'Bill date to bill date',
+        text: `Starts the day after the latest CEB bill${lastBill ? ` (${shortDate(lastBill)})` : ''}.${reports ? ` The next bill reports it as ${reports}.` : ''} ${open.daysPresent ?? DASH} of ${open.daysInPeriod ?? DASH} days have a reading${open.includesToday ? ', today from the live reading' : ''}.`
+      }
+    : null;
   const period = {
     value: open ? fmtNum(open.kwh) : DASH,
     sub: open ? `since ${shortDate(start)}${open.includesToday ? ' · incl. today' : ''} · awaiting bill` : 'no open period'
@@ -43,28 +46,33 @@ export function TotalsRow({ totals, live, todayKey, loading }) {
   const life = lifetimeGeneration(live, totals);
   const energy = energyCompact(life.kwh);
   const months = gen?.firstDay ? monthsBetween(gen.firstDay, todayKey ?? gen.lastDay) : null;
-  const genTip = life.kwh == null
-    ? 'No generation has been recorded yet.'
+  const genInfo = life.kwh == null
+    ? null
     : life.source === 'counter'
-      ? `${fmtNum(life.kwh)} kWh on the inverter's own lifetime counter. The daily records hold ${fmtNum(gen?.totalKwh)} kWh over ${fmtNum(gen?.dayCount)} days since ${longDate(gen?.firstDay)}; the difference is generation before records began, days with no record${gen?.missingDays ? ` (${gen.missingDays})` : ''}, and today.`
-      : `${fmtNum(life.kwh)} kWh over ${fmtNum(gen.dayCount)} recorded days since ${longDate(gen.firstDay)}.${gen.missingDays ? ` ${gen.missingDays} day${gen.missingDays === 1 ? '' : 's'} in that span have no reading and are not counted as zero.` : ''}`;
+      ? {
+          title: "From the inverter's own counter",
+          text: `The daily records hold ${fmtNum(gen?.totalKwh)} kWh over ${fmtNum(gen?.dayCount)} days since ${longDate(gen?.firstDay)}. The rest is generation before records began, days with no record${gen?.missingDays ? ` (${gen.missingDays})` : ''}, and today.`
+        }
+      : gen.missingDays
+        ? { title: 'Recorded days only', text: `${gen.missingDays} day${gen.missingDays === 1 ? '' : 's'} since ${longDate(gen.firstDay)} have no reading and are not counted as zero.` }
+        : null;
 
   const money = lkrCompact(earn?.totalLkr ?? null);
   const avgBill = lkrCompact(earn?.billCount ? earn.totalLkr / earn.billCount : null);
-  const earnTip = earn?.totalLkr == null
-    ? 'No bill with an earnings figure yet.'
-    : `Sum of ${earn.billCount} CEB bills (${longDate(earn.firstBillDate)} to ${longDate(earn.lastBillDate)}), about ${avgBill.value}${avgBill.unit} per bill.${earn.billsWithoutEarnings ? ` ${earn.billsWithoutEarnings} bill(s) have no earnings figure and are left out.` : ''}`;
+  const earnInfo = earn?.billsWithoutEarnings
+    ? { title: `${earn.billsWithoutEarnings} bill${earn.billsWithoutEarnings === 1 ? '' : 's'} left out`, text: `No earnings figure yet. The total is the other ${earn.billCount} bills, about ${avgBill.value}${avgBill.unit} each.` }
+    : null;
 
   return (
     <section className="v3-kpis" aria-label="Totals">
-      <Tile label="This billing period" short="This period" value={period.value} unit="kWh" sub={period.sub} tip={periodTip} loading={loading} />
+      <Tile label="This billing period" short="This period" value={period.value} unit="kWh" sub={period.sub} info={periodInfo} loading={loading} />
       <Tile
         label="All-time generation"
         short="All-time gen"
         value={energy.value}
         unit={energy.unit}
         sub={life.source === 'counter' ? `inverter lifetime counter${months ? ` · ${months} months of records` : ''}` : gen?.firstDay ? `since ${longDate(gen.firstDay)}${months ? ` · ${months} months` : ''}` : 'no data yet'}
-        tip={genTip}
+        info={genInfo}
         loading={loading}
       />
       <Tile
@@ -73,7 +81,7 @@ export function TotalsRow({ totals, live, todayKey, loading }) {
         value={money.value}
         unit={money.unit}
         sub={earn?.billCount ? `from ${earn.billCount} CEB bills${months ? ` · ${monthsBetween(earn.firstBillDate, earn.lastBillDate) ?? months} months` : ''}` : 'no bills yet'}
-        tip={earnTip}
+        info={earnInfo}
         loading={loading}
       />
     </section>

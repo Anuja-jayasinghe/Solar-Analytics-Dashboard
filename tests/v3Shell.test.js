@@ -14,6 +14,7 @@ import { DataContext } from '../src/v3/data/context.js';
 import { AppShell } from '../src/v3/shell/AppShell.jsx';
 import { Segmented } from '../src/v3/ui/Segmented.jsx';
 import { Tip } from '../src/v3/ui/Tip.jsx';
+import { Info } from '../src/v3/ui/Info.jsx';
 import { PrefsContext } from '../src/v3/prefs/context.js';
 import { Pill } from '../src/v3/ui/Pill.jsx';
 import { Glass } from '../src/v3/ui/Glass.jsx';
@@ -203,15 +204,27 @@ import { blockCopy } from '../src/v3/shell/copy.js';
 import { PREF_DEFAULTS } from '../src/v3/prefs/context.js';
 
 describe('round 2 fixes', () => {
-  it('hints are off and the Mark above line on, by default', () => {
-    expect(PREF_DEFAULTS).toEqual({ hints: false, showMark: true });
-    // with the default (hints off) a Tip renders its wrapper but no bubble
-    const html = renderToString(h(Tip, { text: 'x' }, h('b', null, 'v')));
-    expect(html).toBe('<span class="v3-tip"><b>v</b></span>');
-    // a chart value shows on hover even with hints off; the explanation does not
-    const v = renderToString(h(Tip, { value: 'Aug 2036 · 4,100 kWh', text: 'long explanation' }, h('b', null, 'v')));
-    expect(v).toContain('Aug 2036 · 4,100 kWh');
-    expect(v).not.toContain('long explanation');
+  it('no hints switch: chart details always describe themselves; the Mark above line is on by default', () => {
+    expect(PREF_DEFAULTS).toEqual({ showMark: true });
+    const html = renderToString(h(Tip, { text: 'Aug 2036 · 4,100 kWh' }, h('b', null, 'v')));
+    expect(html).toContain('role="tooltip"');
+    expect(html).toContain('Aug 2036 · 4,100 kWh');
+    expect(html).not.toContain('v3-pop'); // the bubble itself only exists while hovered
+    expect(renderToString(h(Tip, { text: '' }, h('b', null, 'v')))).toBe('<b>v</b>');
+  });
+
+  it('info icon: a named button that explains, closed until asked', () => {
+    const icon = renderToString(h(Info, { label: 'About uptime', title: 'Daylight only', text: 'Night never counts.' }));
+    expect(icon).toMatch(/<button type="button" class="v3-info" aria-label="About uptime" aria-expanded="false" aria-describedby="[^"]+"/);
+    expect(icon).toContain('Daylight only Night never counts.'); // for screen readers, without opening
+    expect(icon).not.toContain('v3-pop');
+    // with children the children are the trigger, and they name it
+    const withText = renderToString(h(Info, { title: 'Advice from Solis', text: 'Check the AC breaker.' }, h('span', null, 'Advice from Solis')));
+    expect(withText).toContain('class="v3-info v3-info-with"');
+    expect(withText).not.toContain('aria-label=');
+    // nothing to explain: no button at all
+    expect(renderToString(h(Info, {}, h('b', null, 'x')))).toBe('<b>x</b>');
+    expect(renderToString(h(Info, {}))).toBe('');
   });
 
   it('the sidebar starts collapsed and no longer carries the account', () => {
@@ -219,7 +232,7 @@ describe('round 2 fixes', () => {
     expect(html).toContain('data-collapsed="true"');
     expect(html).toContain('src="/favicon.svg"');
     expect(html).not.toMatch(/v3-rail[\s\S]*Full access/);
-    expect(html).toContain('aria-label="Turn hints on"');
+    expect(html).not.toContain('hints'); // the hints switch is gone
     expect(html).not.toContain('role="tooltip"'); // no labels on the sidebar at all
   });
 
