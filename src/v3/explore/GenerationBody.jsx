@@ -51,7 +51,7 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
             years.length > 0 && (
               <div className="v3-stepper" role="group" aria-label="Year">
                 <button type="button" className="v3-iconbtn sm" onClick={() => onYear(year - 1)} disabled={!years.includes(year - 1)} aria-label="Previous year"><ChevronLeft size={15} /></button>
-                <span className="v3-steplabel v3-num" aria-live="polite">{year}</span>
+                <span className="v3-steplabel v3-yearlabel v3-num" aria-live="polite">{year}</span>
                 <button type="button" className="v3-iconbtn sm" onClick={() => onYear(year + 1)} disabled={!years.includes(year + 1)} aria-label="Next year"><ChevronRight size={15} /></button>
               </div>
             )
