@@ -128,8 +128,9 @@ export function DayBody({ showHead, bounds, todayKey = null, live = null, today 
       <div className="v3-markrow">
         <span className="v3-pill" data-tone="gen">{totalKwh === null ? DASH : `${fmtNum(totalKwh, 1)} kWh ${isToday ? 'so far today' : 'that day'}`}</span>
         <span className="v3-pill">{peak ? `${isToday ? 'Peak so far' : 'Peak'} ${fmtNum(peak.kw, 1)} kW at ${peak.at}` : 'Peak —'}</span>
-        {isToday && curve && <span className="v3-pill" data-tone="good"><span className="v3-livedot" aria-hidden="true" />Live · {curve.last.at}</span>}
         <span className="v3-sub" style={{ margin: 0 }}>{date ? `${isToday ? 'Today · ' : ''}${dayLabelYear(date)}` : ''}</span>
+        {/* last, so leaving today only drops this pill and nothing else moves */}
+        {isToday && curve && <span className="v3-pill" data-tone="good"><span className="v3-livedot" aria-hidden="true" />Live · {curve.last.at}</span>}
       </div>
 
       {res.error && <Note tone="bad">Could not load this day ({res.error.code ?? 'error'}). Nothing is drawn rather than a made-up zero.</Note>}
