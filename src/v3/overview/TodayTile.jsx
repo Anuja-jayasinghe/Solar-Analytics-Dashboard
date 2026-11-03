@@ -21,10 +21,16 @@ function FreshnessRing({ live, now }) {
  * Today: a circle that fills toward the daily target (the "game"), today's kWh, the peak so far, and the
  * freshness ring. Without a target there is no percentage to show, only the kWh.
  */
-export function TodayTile({ live, targetKwh, now, loading }) {
+/**
+ * `peak` is the day chart's peak ({ kw, at }) from today's readings; it is preferred so the tile and the chart always
+ * agree, and the live reading's own peak is the fallback.
+ */
+export function TodayTile({ live, peak = null, targetKwh, now, loading }) {
   const today = live?.todayKwh ?? null;
   const prog = targetProgress(today, targetKwh ?? null);
-  const hasPeak = live?.peakTodayKw != null;
+  const peakKw = peak?.kw ?? live?.peakTodayKw ?? null;
+  const peakAt = peak ? peak.at : live?.peakTodayAt ?? null;
+  const hasPeak = peakKw != null;
   const label = prog ? `${prog.pct}% of today's target` : "Today's generation";
 
   return (
@@ -54,7 +60,7 @@ export function TodayTile({ live, targetKwh, now, loading }) {
           {prog ? (prog.reached ? `target of ${fmtNum(targetKwh)} kWh reached` : `of ${fmtNum(targetKwh)} kWh target · ${fmtNum(prog.toGoKwh, 1)} to go`) : (targetKwh == null ? 'Set a daily target in Settings' : ' ')}
         </div>
         <div className="v3-kpi-sub" style={{ marginTop: 4 }}>
-          Peak <b style={{ color: 'var(--ink)' }}>{hasPeak ? `${fmtNum(live.peakTodayKw, 1)} kW` : DASH}</b>{hasPeak && live.peakTodayAt ? ` at ${live.peakTodayAt}` : ''}
+          Peak <b style={{ color: 'var(--ink)' }}>{hasPeak ? `${fmtNum(peakKw, 1)} kW` : DASH}</b>{hasPeak && peakAt ? ` at ${peakAt}` : ''}
         </div>
       </div>
     </Glass>

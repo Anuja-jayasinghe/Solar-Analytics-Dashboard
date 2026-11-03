@@ -225,3 +225,28 @@ describe('power through the day (5-minute kW, as SolisCloud draws it)', () => {
     expect(clockOf(719.6)).toBe('12:00');
   });
 });
+
+import { intervalLabel, dayCurve, liveNow } from '../src/v3/explore/power.js';
+
+describe('day curve: the real reading interval and the shared peak', () => {
+  const at = (hhmmZ, kw) => ({ ts: `2026-11-03T${hhmmZ}:00Z`, pac_kw: kw });
+
+  it('the caption states how often readings actually arrive', () => {
+    const minutely = powerCurve([at('04:30', 10), at('04:31', 11), at('04:32', 12), at('04:37', 13)]);
+    expect(minutely.stepMin).toBe(1);
+    expect(intervalLabel(minutely.stepMin)).toBe('power every minute');
+    const fiveMin = powerCurve([at('04:30', 10), at('04:35', 11), at('04:40', 12)]);
+    expect(intervalLabel(fiveMin.stepMin)).toBe('power every 5 minutes');
+    expect(intervalLabel(powerCurve([at('04:30', 10)]).stepMin)).toBe('power readings');
+  });
+
+  it("today's curve adds the current live reading; another day, a stale reading or no reading adds nothing", () => {
+    const live = { currentPowerKw: 35.9, dataTimestamp: Date.parse('2026-11-03T04:45:00Z') };
+    expect(liveNow(live, '2026-11-03', '2026-11-03')).toEqual({ kw: 35.9, tsMs: live.dataTimestamp });
+    expect(liveNow(live, '2026-11-02', '2026-11-03')).toBeNull();
+    expect(liveNow({ ...live, stale: true }, '2026-11-03', '2026-11-03')).toBeNull();
+    expect(liveNow({ ...live, currentPowerKw: null }, '2026-11-03', '2026-11-03')).toBeNull();
+    // the Today tile and the chart call the same function, so they report the same peak
+    expect(dayCurve([at('04:30', 30), at('04:31', 35.5)], live, '2026-11-03', '2026-11-03').peak).toEqual({ kw: 35.9, min: 615, at: '10:15' });
+  });
+});

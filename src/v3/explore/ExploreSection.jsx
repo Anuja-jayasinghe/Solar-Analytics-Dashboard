@@ -19,7 +19,7 @@ const VIEWS = [{ value: 'gen', label: 'Over time' }, { value: 'day', label: 'Thr
  * Statistics have their own period (last 30 days by default, last 365 days, lifetime).
  * Reads only the existing `range` and `telemetry` resources; nothing is computed from fabricated data.
  */
-export function ExploreSection({ totals, todayKey, live = null }) {
+export function ExploreSection({ totals, todayKey, live = null, today = null }) {
   const phone = useIsPhone();
   const [tab, setTab] = useState('day');
   const [view, setView] = useState('day');
@@ -101,7 +101,7 @@ export function ExploreSection({ totals, todayKey, live = null }) {
       error={res.error}
     />
   );
-  const dayBody = <DayBody showHead={false} bounds={bounds} todayKey={todayKey} live={live} />;
+  const dayBody = <DayBody showHead={false} bounds={bounds} todayKey={todayKey} live={live} today={today} />;
   const statsBody = (
     <StatsBody
       showHead={!phone}
@@ -131,7 +131,7 @@ export function ExploreSection({ totals, todayKey, live = null }) {
         <div className="v3-tilehead">
           <div>
             <h2 className="v3-h2">{view === 'gen' ? 'Inverter generation' : 'Generation through the day'}</h2>
-            <div className="v3-sub">{view === 'gen' ? `${grouped ? 'Monthly totals' : 'Daily'} · inverter only` : 'Pick a day · power every 5 minutes · Colombo time'}</div>
+            <div className="v3-sub">{view === 'gen' ? `${grouped ? 'Monthly totals' : 'Daily'} · inverter only` : 'Pick a day · power in kW · Colombo time'}</div>
           </div>
           <Segmented role="tablist" options={VIEWS} value={view} onChange={setView} label="Generation view" />
         </div>
