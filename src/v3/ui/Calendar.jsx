@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import { Portal } from './Portal.jsx';
 import { useFloating } from './useFloating.js';
-import { WEEKDAYS, addMonths, clampKey, monthGrid, monthOf, monthTitle, monthsOfYear, moveFocus, orderRange, outOfBounds, shortLabel, yearInBounds } from './calendar.js';
+import { WEEKDAYS, addMonths, clampKey, monthGrid, monthOf, monthTitle, monthsOfYear, moveFocus, orderRange, outOfBounds, shortLabel, weekOf, yearInBounds } from './calendar.js';
 
 /** Jump to any month: a year with arrows, then its twelve months. Picking one goes back to that month's days. */
 function MonthPicker({ ym, min, max, onPick }) {
@@ -177,6 +177,61 @@ export function DateRangePicker({ from, to, min, max, onChange, presets = [] }) 
                 inRange={(k) => k > preview.from && k < preview.to}
                 onHover={start ? setHover : undefined}
                 onPick={pick} />
+            </div>
+          </div>
+        </Portal>
+      )}
+    </>
+  );
+}
+
+/** A calendar month: the label opens the year-and-months grid; picking one calls onChange('YYYY-MM'). */
+export function MonthSelect({ value, min, max, onChange, children }) {
+  const p = usePopover();
+  return (
+    <>
+      <button ref={p.anchorRef} type="button" className="v3-datebtn" aria-haspopup="dialog" aria-expanded={p.open} aria-label={`Month: ${monthTitle(value)}, choose another`} onClick={() => p.setOpen((v) => !v)}>
+        <CalendarDays size={15} aria-hidden="true" />
+        <span>{children ?? monthTitle(value)}</span>
+      </button>
+      {p.open && (
+        <Portal>
+          <div ref={p.floatRef} className="v3-cal" role="dialog" aria-label="Choose a month" style={floatStyle(p.pos)}>
+            <MonthPicker ym={value} min={min} max={max} onPick={(ym) => { onChange(ym); p.setOpen(false); }} />
+          </div>
+        </Portal>
+      )}
+    </>
+  );
+}
+
+/**
+ * A calendar week (Monday to Sunday): the label opens a month of days; hovering shows which week a click picks, and the
+ * click calls onChange with that day. `value` is any day of the week shown.
+ */
+export function WeekSelect({ value, min, max, onChange, children }) {
+  const p = usePopover();
+  const [ym, setYm] = useState(monthOf(value ?? max ?? '2026-01-01'));
+  const [focusKey, setFocusKey] = useState(value);
+  const [hover, setHover] = useState(null);
+  useEffect(() => { if (p.open && value) { setYm(monthOf(value)); setFocusKey(value); setHover(null); } }, [p.open, value]);
+  const shown = weekOf(hover ?? value);
+  return (
+    <>
+      <button ref={p.anchorRef} type="button" className="v3-datebtn" aria-haspopup="dialog" aria-expanded={p.open} aria-label="Choose a week" onClick={() => p.setOpen((v) => !v)}>
+        <CalendarDays size={15} aria-hidden="true" />
+        <span>{children}</span>
+      </button>
+      {p.open && (
+        <Portal>
+          <div ref={p.floatRef} className="v3-cal" role="dialog" aria-label="Choose a week" style={floatStyle(p.pos)}>
+            <div>
+              <div className="v3-cal-hint" role="status">Pick any day of the week</div>
+              <Month ym={ym} onMonth={setYm} min={min} max={max} focusKey={focusKey} setFocusKey={setFocusKey}
+                isSelected={(k) => k === shown.from || k === shown.to}
+                inRange={(k) => k > shown.from && k < shown.to}
+                onHover={setHover}
+                onPick={(k) => { onChange(k); p.setOpen(false); }} />
             </div>
           </div>
         </Portal>

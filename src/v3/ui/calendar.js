@@ -80,6 +80,12 @@ export function yearInBounds(year, min, max) {
   return (!min || year >= Number(min.slice(0, 4))) && (!max || year <= Number(max.slice(0, 4)));
 }
 
+/** The Monday-to-Sunday week holding `key`, as { from, to }. */
+export function weekOf(key) {
+  const from = addDays(key, -weekdayOf(key));
+  return { from, to: addDays(from, 6) };
+}
+
 /** Ordered range from two picks, whichever was first. */
 export function orderRange(a, b) {
   return a <= b ? { from: a, to: b } : { from: b, to: a };

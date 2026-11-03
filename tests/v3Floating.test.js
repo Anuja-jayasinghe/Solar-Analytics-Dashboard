@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { placeFloating } from '../src/v3/ui/floating.js';
 import { anchorRect } from '../src/v3/ui/useFloating.js';
-import { addMonths, daysInMonth, weekdayOf, monthGrid, outOfBounds, clampKey, monthTitle, shortLabel, orderRange, moveFocus, monthsOfYear, yearInBounds } from '../src/v3/ui/calendar.js';
+import { addMonths, daysInMonth, weekdayOf, monthGrid, outOfBounds, clampKey, monthTitle, shortLabel, orderRange, moveFocus, monthsOfYear, yearInBounds, weekOf } from '../src/v3/ui/calendar.js';
 
 const vp = { width: 1000, height: 800 };
 const rect = (left, top, w = 40, h = 20) => ({ left, top, width: w, height: h, right: left + w, bottom: top + h });
@@ -72,6 +72,11 @@ describe('calendar maths', () => {
     expect(moveFocus('2036-03-31', 'PageUp')).toBe('2036-02-29');
     expect(moveFocus('2036-01-31', 'PageDown')).toBe('2036-02-29');
     expect(moveFocus('2036-01-31', 'Tab')).toBeNull();
+  });
+  it('week picker: any day picks its Monday-to-Sunday week, across month and year ends', () => {
+    expect(weekOf('2026-10-29')).toEqual({ from: '2026-10-26', to: '2026-11-01' });
+    expect(weekOf('2026-11-01')).toEqual({ from: '2026-10-26', to: '2026-11-01' }); // Sunday ends its week
+    expect(weekOf('2027-01-01')).toEqual({ from: '2026-12-28', to: '2027-01-03' });
   });
   it('month picker: twelve months a year, those outside the data greyed, years stepped only while in range', () => {
     const m = monthsOfYear(2024, '2024-08-02', '2026-11-03');

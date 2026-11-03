@@ -115,6 +115,7 @@ export function ExploreSection({ totals, todayKey, live = null, today = null }) 
       onYear={(y) => setYear(clampYear(y, bounds))}
       stepLabel={range?.full ? periodLabel(kind, range) : ''}
       billPeriod={billPeriod}
+      onPick={(key) => setAnchor(key)}
       canBack={!!range?.full && canStepPeriod(range, -1, bounds)}
       canForward={!!range?.full && canStepPeriod(range, 1, bounds)}
       onStep={step}

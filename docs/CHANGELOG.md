@@ -54,7 +54,8 @@ All notable changes to the Solar Analytics Dashboard project.
 - **Inverter generation: Week and Month are calendar periods.** Week is Monday to Sunday, labelled "Week 44 · 2026"
   (ISO week numbers; hover for the dates), with weekday labels on the chart. Month is the calendar month, labelled
   "November 2026", always drawing all its days. Days not reached yet stay empty, never zero. The arrows step a whole
-  week or month and stop at the data. Before, both were rolling 7 or 30 days ending on the newest day.
+  week or month and stop at the data, and the label opens a picker: a calendar where any day picks its week (hover
+  shows which), or the year-and-months grid. Before, both were rolling 7 or 30 days ending on the newest day.
 - **Custom is just the range calendar**, opening on the latest complete bill period (bill date to bill date, from the
   new `totals.lastBillPeriod`). The arrows and the date text beside it are gone, and the calendar's quick picks start
   with "Last bill period".

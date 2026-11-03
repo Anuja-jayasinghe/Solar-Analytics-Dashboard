@@ -4,7 +4,7 @@ import { Segmented } from '../ui/Segmented.jsx';
 import { Note } from '../ui/Note.jsx';
 import { ThresholdPlot } from '../charts/ThresholdPlot.jsx';
 import { MarkToggle } from '../charts/MarkToggle.jsx';
-import { DateRangePicker } from '../ui/Calendar.jsx';
+import { DateRangePicker, MonthSelect, WeekSelect } from '../ui/Calendar.jsx';
 import { addDays } from '../../../shared/domain/time.js';
 import { usePrefs } from '../prefs/context.js';
 import { MAX_LABELLED_COLUMNS, axisTicks, chartNum, linePath, maxOf, niceMax, xPct, yPct } from '../charts/scale.js';
@@ -21,7 +21,7 @@ function pointTip(p, labelled, grouped) {
 }
 
 /** "Inverter generation": a range of days (or months), a line by default, with the draggable "Mark above" line. */
-export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, bounds, years = [], year = null, onYear, stepLabel = '', billPeriod = null, canBack, canForward, onStep, onCustom, points, grouped, line, onLine, loading, error }) {
+export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, bounds, years = [], year = null, onYear, stepLabel = '', billPeriod = null, onPick, canBack, canForward, onStep, onCustom, points, grouped, line, onLine, loading, error }) {
   const { showMark } = usePrefs();
   const known = points.filter((p) => p.kwh !== null);
   const yMax = niceMax(Math.max(maxOf(points.map((p) => p.kwh), 1) * 1.1, showMark ? line * 1.04 : 0));
@@ -75,7 +75,9 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
           ) : (
             <div className="v3-stepper" role="group" aria-label={kind === 'week' ? 'Week' : 'Month'}>
               <button type="button" className="v3-iconbtn sm" onClick={() => onStep(-1)} disabled={!canBack} aria-label={kind === 'week' ? 'Previous week' : 'Previous month'}><ChevronLeft size={15} /></button>
-              <span className="v3-steplabel" aria-live="polite" title={range?.full ? `${dayLabelYear(range.full.from)} to ${dayLabelYear(range.full.to)}` : undefined}>{stepLabel}</span>
+              {range?.full && (kind === 'week'
+                ? <WeekSelect value={range.full.from} min={bounds.min} max={bounds.max} onChange={onPick}>{stepLabel}</WeekSelect>
+                : <MonthSelect value={range.full.from.slice(0, 7)} min={bounds.min} max={bounds.max} onChange={(ym) => onPick(`${ym}-01`)}>{stepLabel}</MonthSelect>)}
               <button type="button" className="v3-iconbtn sm" onClick={() => onStep(1)} disabled={!canForward} aria-label={kind === 'week' ? 'Next week' : 'Next month'}><ChevronRight size={15} /></button>
             </div>
           )}
