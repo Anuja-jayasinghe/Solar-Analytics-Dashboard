@@ -10,6 +10,7 @@ All notable changes to the Solar Analytics Dashboard project.
   opens on **today**, which comes from SolisCloud, refreshes every two minutes, and adds the live reading as a "now" dot.
   A hover line shows the exact time and kW anywhere on the curve. Holes in the readings break the line rather than
   being drawn through. Today's total uses the inverter's own counter. The hourly kWh bars remain as "Per hour".
+  The generation section now opens on this "Through the day" view (on phones, the Day tab).
 - **Explanations sit behind ⓘ icons instead of a Hints switch.** The sidebar's Hints switch (off by default, and
   missing on phones) is gone. An ⓘ appears only where the screen does not already say it: bill date to bill date, the
   lifetime counter, bills left out of earnings, how uptime and time stopped are counted, unresolved alarms, logger and

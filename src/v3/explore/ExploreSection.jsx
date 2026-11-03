@@ -21,8 +21,8 @@ const VIEWS = [{ value: 'gen', label: 'Over time' }, { value: 'day', label: 'Thr
  */
 export function ExploreSection({ totals, todayKey, live = null }) {
   const phone = useIsPhone();
-  const [tab, setTab] = useState('gen');
-  const [view, setView] = useState('gen');
+  const [tab, setTab] = useState('day');
+  const [view, setView] = useState('day');
   const [kind, setKind] = useState('month');
   const [endKey, setEndKey] = useState(null); // null = follow the newest day with data
   const [custom, setCustom] = useState(null);
