@@ -3,9 +3,9 @@
 Status: Implemented in the dashboard data path
 Owner: Dashboard data pipeline
 Primary files:
-- src/lib/dataService.js
-- src/contexts/DataContext.jsx
-- src/components/dashboard/EnergyCharts.jsx
+- shared/domain/alignment.js (`buildAlignedRows`, `openBillPeriod`)
+- shared/data/resources.js (`comparison`, `bills`, `totals.openPeriod`)
+- src/v3/overview/TotalsRow.jsx, src/v3/ceb/CebCompare.jsx
 
 ## Purpose
 Compare monthly inverter generation against CEB exported units using billing-cycle alignment.
@@ -14,8 +14,11 @@ The key assumption is simple: a bill received in month N represents generation f
 
 This logic must support three visible states:
 - finalized months, where both inverter and CEB values exist
-- the current month, where inverter data is partial but the bill is not yet available
-- future months, where neither side should be treated as finalized
+- the open period, from the day after the latest bill to today, whose bill is not yet available
+- later months, where neither side should be treated as finalized
+
+Periods always run **bill date to bill date**, never by calendar month. The open period is no
+exception: it starts the day after the latest bill, even when that is in an earlier month.
 
 ## Data sources
 
@@ -51,11 +54,17 @@ Each month row in the chart is a comparison record with these fields:
 - fallback periodStart (no previous bill): bill_date - 30 days
 - inverter = sum(daily_generation_kwh in [periodStart, periodEnd])
 
-3. Pending current month (bill not yet available):
+3. Open period (the next bill is not yet available):
+- month = the month of the latest bill (that bill reports the month before; the next bill reports this one)
 - ceb = null
-- periodStart = max(currentMonthStart, latestKnownBillDate + 1 day)
+- periodStart = latestBillDate + 1 day (no bill at all: the 1st of the current month)
 - periodEnd = today
 - inverter = sum(daily_generation_kwh in [periodStart, periodEnd])
+- It is **not** clipped to the 1st of the current month. Until 2026-11 it was, so between the 1st and
+  the next bill the dashboard showed "since 1 Nov" instead of "since 4 Oct", filed the period under
+  the wrong month, and called the month before it `missing_bill`.
+- The API returns it on its own as `totals.openPeriod`, so it is right across New Year (on 2 January
+  it still starts in December, which a calendar-year view of the new year does not contain).
 
 The v3 Overview presents this stored daily sum as a **provisional, up-to-now** total in both
 “This billing period” and the open column of “CEB vs Inverter.” It adds the live reading
@@ -68,10 +77,18 @@ daily summary is already stored, it is not added again. If neither a stored sum 
 live reading exists, the total remains `null`. Finalized bill periods, CEB values, variance,
 and money-gap calculations do not use this provisional addition.
 
-4. Future months:
+4. Months after the open period's month:
 - inverter = null
 - ceb = null
-- period = Pending
+- period = `Pending` (this month or later) or `Awaiting bill` (a past month: bills have not arrived for
+  more than one month, and the open period already holds its days)
+
+4b. A past month with no bill (before the open period's month):
+- ceb = null
+- the days it counts are only those no bill period covers (bill periods and the open period run
+  without a gap from the first bill's period start to today). In practice that is only months
+  before the first bill; any later month shows `Covered by a later bill` and inverter = null.
+- No day is ever counted in two rows.
 
 5. Semantic value policy:
 - null means unavailable/pending
@@ -94,10 +111,8 @@ If a bill exists:
 - start date is the previous bill date plus one day
 - if the previous bill is missing, fall back to 30 days before the bill date
 
-If the current month has no bill yet:
-- start date is the later of:
-	- the first day of the month
-	- the latest known bill date plus one day
+If the month is the open period's month (the month of the latest bill, with no bill after it yet):
+- start date is the latest bill date plus one day
 - end date is today
 
 ### Step 4: Sum inverter generation for that window
@@ -109,9 +124,9 @@ The inverter value is the sum of all daily inverter rows whose `summary_date` fa
 
 ### Step 6: Mark the row status
 - `finalized`: bill exists and the comparison is complete
-- `provisional`: current month has inverter data, but the bill is not here yet
-- `pending`: future month
-- `missing_bill`: a past month where no bill was found
+- `provisional`: the open period; its bill is not here yet
+- `pending`: a month after the open period's month
+- `missing_bill`: a month before the open period's month for which no bill was found
 
 ## Worked examples
 
@@ -131,18 +146,30 @@ Result:
 - `inverter` = sum of daily inverter generation within that exact window
 - `status` = `finalized`
 
-### Example B: April 2026 before the April bill arrives
+### Example B: April 2026 before the May bill arrives
 Given:
 - today = 2026-04-18
-- no April bill has been received yet
+- latest bill = 2026-04-03 (it reports March)
 
 Result:
-- `month` = `Apr`
+- `month` = `Apr` (the May bill will report it)
 - `ceb` = `null`
-- `periodStart` = later of April 1, 2026 or latest bill date + 1 day
+- `periodStart` = `2026-04-04` (latest bill date + 1 day)
 - `periodEnd` = today
 - `inverter` = sum of daily inverter generation for that partial period
 - `status` = `provisional`
+
+### Example B2: 3 November 2026, before the November bill is uploaded
+Given:
+- today = 2026-11-03
+- latest bill = 2026-10-03 (it reports September)
+
+Result:
+- `Oct`: `provisional`, `periodStart` = `2026-10-04`, `periodEnd` = `2026-11-03` (31 days).
+  The tile reads "since 4 Oct", not "since 1 Nov".
+- `Nov`: `pending`
+- Once the bill dated 2026-11-03 is uploaded, `Oct` becomes `finalized` (4 Oct to 3 Nov) and `Nov`
+  opens on 4 Nov.
 
 ### Example C: Future month, such as May 2026
 Result:
@@ -163,7 +190,7 @@ $$
 	ext{CEB}_{period} = \text{units\_exported from mapped bill}
 $$
 
-When the current bill is missing:
+For the open period:
 $$
 	ext{Inverter}_{current} = \sum_{day \in [periodStart, today]} \text{daily\_generation\_kWh}
 $$
@@ -189,24 +216,34 @@ January generation is matched to February bill data in the following year.
 ### Missing previous bill
 If the bill exists but the previous bill is missing, use a 30-day fallback window.
 
-### Current month without a bill
-The inverter total should still appear, even if the bill has not arrived yet.
+### Open period without a bill
+The inverter total should still appear, even if the bill has not arrived yet. It runs from the day
+after the latest bill, however late the next bill is, and across New Year.
+
+### Several months without a bill
+One open period from the latest bill to today; the months between show `Awaiting bill` with no
+figure of their own.
 
 ### True zero export
 Use `0` only when the bill explicitly reports zero exported units.
 
 ### No bill for a past month
-Mark the row as `missing_bill` rather than pretending the value is zero.
+Mark the row as `missing_bill` rather than pretending the value is zero. If a later bill's period
+already covers its days, it carries no figure (`Covered by a later bill`), so nothing is counted twice.
 
 ## Acceptance criteria
 
 1. March 2026 maps to the April 3 bill and shows a finalized comparison.
-2. April 2026 shows inverter-only progress until the bill arrives.
-3. Future months remain pending.
+2. April 2026 shows inverter-only progress from 4 April until the May bill arrives.
+3. Months after the open period remain pending.
+3b. On 3 November 2026 with the latest bill dated 3 October, the open period is October, 4 Oct to 3 Nov.
+3c. On 2 January the open period still starts the day after the December bill.
+3d. No day is counted in two rows.
 4. The chart does not break when `ceb` is `null`.
 5. The logic can be implemented from this file without reading source code first.
 
 ## Current implementation files
-- [src/lib/dataService.js](../../src/lib/dataService.js)
-- [src/contexts/DataContext.jsx](../../src/contexts/DataContext.jsx)
-- [src/components/dashboard/EnergyCharts.jsx](../../src/components/dashboard/EnergyCharts.jsx)
+- [shared/domain/alignment.js](../../shared/domain/alignment.js): `buildAlignedRows`, `openBillPeriod`
+- [shared/data/resources.js](../../shared/data/resources.js): `comparison`, `bills`, `totals.openPeriod`
+- [src/v3/overview/TotalsRow.jsx](../../src/v3/overview/TotalsRow.jsx), [src/v3/ceb/CebCompare.jsx](../../src/v3/ceb/CebCompare.jsx)
+- Tests: [tests/alignment.test.js](../../tests/alignment.test.js)

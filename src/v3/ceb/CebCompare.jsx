@@ -8,7 +8,7 @@ import { ThresholdPlot } from '../charts/ThresholdPlot.jsx';
 import { MarkToggle } from '../charts/MarkToggle.jsx';
 import { usePrefs } from '../prefs/context.js';
 import { MAX_LABELLED_COLUMNS, areaPath, axisTicks, chartNum, linePath, maxOf, niceMax, xPct, yPct } from '../charts/scale.js';
-import { fmtNum, openBillPeriod, openPeriodSoFar } from '../overview/format.js';
+import { fmtNum, openPeriodSoFar, openPeriodView } from '../overview/format.js';
 import { aboveSummary, buildCebRows, columnTip, defaultThreshold, gapSummary, isPartial, stepEnd, varianceTag, windowOf } from './rows.js';
 import { GapStrip } from './GapStrip.jsx';
 import { CebTable } from './CebTable.jsx';
@@ -74,12 +74,12 @@ function Columns({ rows, yMax, threshold, style }) {
  * CEB vs Inverter: one column per bill period (LR-001), the open period last and marked "awaiting bill",
  * a draggable "Mark above" line, and the money gap (LR-004) aligned underneath.
  */
-export function CebCompare({ bills, comparison, live, lastStoredDay, todayKey, loading, error }) {
+export function CebCompare({ bills, openPeriod, live, lastStoredDay, todayKey, loading, error }) {
   const open = useMemo(() => {
-    const r = (comparison?.rows ?? []).find((x) => x && x.status === 'provisional');
-    const soFar = openPeriodSoFar(openBillPeriod(comparison?.rows), live, lastStoredDay, todayKey);
-    return r && soFar ? { month: r.month, year: comparison.year, periodStart: r.periodStart, inverter: soFar.kwh, daysPresent: soFar.daysPresent, daysInPeriod: soFar.daysInPeriod, includesToday: soFar.includesToday } : null;
-  }, [comparison, live, lastStoredDay, todayKey]);
+    const view = openPeriodView(openPeriod);
+    const soFar = openPeriodSoFar(view, live, lastStoredDay, todayKey);
+    return view && soFar ? { month: view.month, year: view.year, periodStart: view.startKey, inverter: soFar.kwh, daysPresent: soFar.daysPresent, daysInPeriod: soFar.daysInPeriod, includesToday: soFar.includesToday } : null;
+  }, [openPeriod, live, lastStoredDay, todayKey]);
   const rows = useMemo(() => buildCebRows(bills?.bills, open, todayKey), [bills, open, todayKey]);
 
   const [style, setStyle] = useState('bars');

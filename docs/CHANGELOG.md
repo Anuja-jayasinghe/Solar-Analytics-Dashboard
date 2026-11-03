@@ -2,6 +2,15 @@
 
 All notable changes to the Solar Analytics Dashboard project.
 
+## [Unreleased]
+
+### Fixed
+- **"This billing period" runs bill date to bill date** (LR-001). Between the 1st of a month and the next bill, the open
+  period was clipped to the 1st ("since 1 Nov" instead of "since 4 Oct"), filed under the wrong month, and the month
+  before it showed "missing bill". It now starts the day after the latest bill, however late the next bill is, and stays
+  right across New Year (`totals.openPeriod`). Past months without a bill no longer count days a later bill already
+  covers, so no day is counted twice. The CEB table shows each period's real dates.
+
 ## [3.0.0] - 2026-10-04
 
 The new dashboard becomes the default. Full notes and the production-readiness analysis:

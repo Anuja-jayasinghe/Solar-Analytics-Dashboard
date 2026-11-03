@@ -19,6 +19,9 @@ periodStart = previous bill_date + 1 day      (fallback: bill_date − 30 days)
 inverter    = sum of daily generation within that window
 ```
 
+The open period (no bill yet) is `latest bill_date + 1 day → today`, filed under the month of the latest bill.
+It is **never** clipped to the 1st of the month, and it crosses New Year (`totals.openPeriod`).
+
 `null` means unavailable/pending. `0` means an actual measured zero. **Never conflate them** —
 fabricated zeros have caused real data corruption here twice.
 

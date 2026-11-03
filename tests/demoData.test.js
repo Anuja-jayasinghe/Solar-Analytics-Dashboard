@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest';
 import { DEMO, createDemoDataset, createDemoRepo } from '../shared/demo/demoData.js';
 import { demoRequest } from '../shared/demo/demoApi.js';
 import { HttpError } from '../shared/data/query.js';
+import { resources } from '../shared/data/resources.js';
 
 const ds = createDemoDataset();
 
@@ -92,6 +93,19 @@ describe('exercises every state the UI must render honestly', () => {
     expect(sep.status).toBe('provisional');
     expect(sep.ceb).toBeNull();
     expect(body.rows.filter((r) => r.status === 'pending')).toHaveLength(3); // Oct-Dec
+  });
+
+  it('totals carry the open period from the day after the latest bill (4 Sep), under September', async () => {
+    const { body } = await demoRequest('totals');
+    expect(body.openPeriod).toMatchObject({ status: 'provisional', month: 'Sep', year: 2036, periodStart: '2036-09-04', periodEnd: DEMO.today, lastBillDate: '2036-09-03' });
+    expect(body.openPeriod.inverter).toBeGreaterThan(0);
+  });
+
+  it('a late bill: with the September bill not yet uploaded, the open period runs from 6 Aug, not from 1 Sep', async () => {
+    const late = { ...ds, bills: ds.bills.filter((b) => b.bill_date < '2036-09-01') };
+    const { body } = await resources.totals(createDemoRepo(late), {}, { todayKey: DEMO.today });
+    expect(late.bills.at(-1).bill_date).toBe('2036-08-05');
+    expect(body.openPeriod).toMatchObject({ month: 'Aug', year: 2036, periodStart: '2036-08-06', periodEnd: DEMO.today, daysInPeriod: 41 });
   });
 });
 

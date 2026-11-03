@@ -11,7 +11,7 @@ import { aggregateUptime } from '../domain/uptime.js';
 import { summarizeElectricalRange } from '../domain/electricalRange.js';
 import { uptimeRowToDay } from '../domain/telemetryPipeline.js';
 import { addDays, diffDays } from '../domain/time.js';
-import { buildAlignedRows } from '../domain/alignment.js';
+import { buildAlignedRows, openBillPeriod } from '../domain/alignment.js';
 import {
   buildBillRatePeriods, compareRanges, computeRangeStats, previousPeriod, sameRangeLastYear
 } from '../domain/rangeStats.js';
@@ -65,10 +65,13 @@ export const resources = {
   /** CEB vs inverter, 12 bill-aligned rows for a year (LR-001). */
   async comparison(repo, query, ctx) {
     const year = parseYear(query);
-    const [dailyRows, bills] = await Promise.all([
-      repo.dailyRows(`${year - 1}-12-01`, `${year + 1}-01-31`),
-      repo.bills()
-    ]);
+    const bills = await repo.bills();
+    // A bill period can start well before December when bills are missing, and the open period
+    // can run past next January when none has arrived for a while: load what the windows need.
+    const priorBill = bills.map((b) => b.bill_date).filter((d) => typeof d === 'string' && d < `${year}-02-01`).sort().pop();
+    const from = priorBill && addDays(priorBill, 1) < `${year - 1}-12-01` ? addDays(priorBill, 1) : `${year - 1}-12-01`;
+    const to = ctx.todayKey > `${year + 1}-01-31` ? ctx.todayKey : `${year + 1}-01-31`;
+    const dailyRows = await repo.dailyRows(from, to);
     return { body: { year, rows: buildAlignedRows({ year, dailyRows, bills, todayKey: ctx.todayKey }) } };
   },
 
@@ -165,6 +168,7 @@ export const resources = {
    * `live` carries it too, but `live` waits on SolisCloud and fails when SolisCloud does; pages that
    * only need to know which day it is (Pro's periods, the CEB comparison year) fall back to this one,
    * which reads only the database (src/v3/data/today.js).
+   * `openPeriod` is the open bill period with its stored generation so far (LR-001).
    * Generation counts only days that HAVE a reading (unknown is never 0) and reports how many days
    * in between are missing. Earnings are the sum of bills that carry an earnings figure; bills
    * without one are counted, not treated as 0.
@@ -209,6 +213,9 @@ export const resources = {
           missingDays: firstDay ? diffDays(firstDay, lastDay) + 1 - dayCount : 0
         },
         earnings: { totalLkr: billCount ? earningsLkr : null, billCount, billsWithoutEarnings, firstBillDate, lastBillDate },
+        // The open bill period (LR-001): the day after the latest bill to today. Returned on its own, not as one
+        // of a calendar year's rows, so on 2 January it still starts in December.
+        openPeriod: openBillPeriod({ dailyRows: rows, bills, todayKey: ctx.todayKey }),
         todayKey: ctx.todayKey
       }
     };
