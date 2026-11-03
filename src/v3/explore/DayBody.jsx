@@ -9,20 +9,12 @@ import { axisTicks, chartNum, maxOf, niceMax } from '../charts/scale.js';
 import { DASH, fmtNum } from '../overview/format.js';
 import { dayLabelYear } from './series.js';
 import { FIRST_HOUR, LAST_HOUR, hourlyFromTelemetry } from './hourly.js';
-import { DAY_END_MIN, DAY_START_MIN, nearestPoint, powerCurve, xOfMinute } from './power.js';
+import { DAY_END_MIN, DAY_START_MIN, TODAY_POLL_MS, dayCurve, intervalLabel, nearestPoint, xOfMinute } from './power.js';
 
 const VIEWS = [{ value: 'power', label: 'Power' }, { value: 'hourly', label: 'Per hour' }];
-const TODAY_POLL_MS = 120_000; // the server re-reads SolisCloud at most every 5 minutes; this just picks it up
 const HOUR_TICKS = Array.from({ length: LAST_HOUR - FIRST_HOUR + 2 }, (_, i) => FIRST_HOUR + i);
 
-/** The live reading as a curve point, when it belongs to the day shown and is current. */
-function liveNow(live, date, todayKey) {
-  if (!live || date !== todayKey || live.stale) return null;
-  const tsMs = live.dataTimestamp ?? live.fetchedAt;
-  return typeof live.currentPowerKw === 'number' && Number.isFinite(tsMs) ? { kw: live.currentPowerKw, tsMs } : null;
-}
-
-/** The power curve: 5-minute kW, the peak marked, a "now" dot for today, and a hover line with time and kW. */
+/** The power curve: every reading in kW, the peak marked, a "now" dot for today, and a hover line with time and kW. */
 function PowerChart({ curve, isToday }) {
   const [hover, setHover] = useState(null);
   const yMax = niceMax(Math.max(maxOf(curve.pts.map((p) => p.kw), 1) * 1.15, 1));
@@ -81,7 +73,7 @@ function PowerChart({ curve, isToday }) {
           {HOUR_TICKS.map((h) => <span key={h} style={{ left: `${xOfMinute(h * 60)}%` }}>{h}</span>)}
         </div>
         <div className="v3-sub" style={{ textAlign: 'center', margin: '4px 0 0' }}>
-          Colombo time · power every 5 minutes{isToday ? ' · updates live' : ''}
+          Colombo time · {intervalLabel(curve.stepMin)}{isToday ? ' · updates live' : ''}
         </div>
       </div>
     </div>
@@ -114,22 +106,22 @@ function HourlyChart({ day }) {
 }
 
 /**
- * "Generation through the day": the inverter's power every 5 minutes (as SolisCloud shows it), or kWh per hour.
+ * "Generation through the day": every reading of the inverter's power (as SolisCloud shows it), or kWh per hour.
  * Opens on today, which follows the live reading; past days come from the stored telemetry.
  */
-export function DayBody({ showHead, bounds, todayKey = null, live = null }) {
+export function DayBody({ showHead, bounds, todayKey = null, live = null, today = null }) {
   const [picked, setPicked] = useState(null); // null = follow today (or the newest day with data)
   const [view, setView] = useState('power');
   const maxDay = todayKey ?? bounds.max;
   const date = picked ?? maxDay;
   const isToday = !!date && date === todayKey;
   const enabled = !!date;
-  const res = useResource('telemetry', { date }, { enabled, pollMs: isToday ? TODAY_POLL_MS : 0 });
+  // Today's readings are read once by the page (shared with the Today tile, one poll); other days here.
+  const shared = isToday && today ? today : null;
+  const own = useResource('telemetry', { date }, { enabled: enabled && !shared, pollMs: isToday ? TODAY_POLL_MS : 0 });
+  const res = shared ?? own;
   const points = res.data?.points;
-  const now = liveNow(live, date, todayKey);
-  const nowKw = now?.kw ?? null;
-  const nowTs = now?.tsMs ?? null;
-  const curve = useMemo(() => powerCurve(points, nowTs === null ? null : { kw: nowKw, tsMs: nowTs }), [points, nowKw, nowTs]);
+  const curve = useMemo(() => dayCurve(points, live, date, todayKey), [points, live, date, todayKey]);
   const day = useMemo(() => hourlyFromTelemetry(points), [points]);
   // the neighbouring days, so stepping with the arrows is instant
   usePrefetch(date ? [['telemetry', { date: addDays(date, -1) }], ...(maxDay && date < maxDay ? [['telemetry', { date: addDays(date, 1) }]] : [])] : [], !!res.data);

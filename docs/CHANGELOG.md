@@ -5,12 +5,14 @@ All notable changes to the Solar Analytics Dashboard project.
 ## [Unreleased]
 
 ### Added
-- **"Generation through the day" is a live power curve, as SolisCloud draws it.** Power in kW every 5 minutes
-  instead of kWh on the hour, with the day's peak marked on the line ("Peak so far 26.3 kW · 11:35" for today). It
+- **"Generation through the day" is a live power curve, as SolisCloud draws it.** Every power reading in kW (about one a
+  minute from SolisCloud; the caption states the real interval) instead of kWh on the hour, with the day's peak marked on the line ("Peak so far 26.3 kW · 11:35" for today). It
   opens on **today**, which comes from SolisCloud, refreshes every two minutes, and adds the live reading as a "now" dot.
   A hover line shows the exact time and kW anywhere on the curve. Holes in the readings break the line rather than
   being drawn through. Today's total uses the inverter's own counter. The hourly kWh bars remain as "Per hour".
   The generation section now opens on this "Through the day" view (on phones, the Day tab).
+  Today's readings are read once by the page and shared, so the Today tile's peak is the chart's peak (it no longer
+  shows a dash while SolisCloud's day read is slow).
 - **Explanations sit behind ⓘ icons instead of a Hints switch.** The sidebar's Hints switch (off by default, and
   missing on phones) is gone. An ⓘ appears only where the screen does not already say it: bill date to bill date, the
   lifetime counter, bills left out of earnings, how uptime and time stopped are counted, unresolved alarms, logger and

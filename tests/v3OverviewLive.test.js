@@ -265,6 +265,16 @@ describe('rendered tiles', () => {
     expect(gauge).toMatch(new RegExp(`v3-gauge-kw">${DASH}<`)); // the reading is a dash, never 0 kW
   });
 
+  it("the Today tile shows the day chart's peak, so the two agree, and falls back to the live peak", () => {
+    const live = { status: 'online', todayKwh: 95.6, peakTodayKw: null, peakTodayAt: null, fetchedAt: 1000 };
+    const fromChart = renderToString(h(TodayTile, { live, peak: { kw: 35.5, at: '11:51' }, targetKwh: 140, now: 1000 }));
+    expect(fromChart).toMatch(/35\.5 kW<\/b>(<!-- -->)? at (<!-- -->)?11:51/);
+    const fallback = renderToString(h(TodayTile, { live: { ...live, peakTodayKw: 26.3, peakTodayAt: '11:55' }, targetKwh: 140, now: 1000 }));
+    expect(fallback).toContain('26.3 kW');
+    const none = renderToString(h(TodayTile, { live, targetKwh: 140, now: 1000 }));
+    expect(none).toMatch(/Peak\s*(<!-- -->)?\s*<b[^>]*>—<\/b>/);
+  });
+
   it('live gauge: shows kW and share, or a dash when power is unknown', () => {
     const on = renderToString(h(LiveGauge, { live: { status: 'online', currentPowerKw: 21.4 }, maxKw: 40 }));
     expect(on).toContain('21.4');

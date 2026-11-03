@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useResource } from '../data/context.js';
 import { pageTodayKey } from '../data/today.js';
 import { Note } from '../ui/Note.jsx';
@@ -7,6 +7,7 @@ import { LiveRow } from '../overview/LiveRow.jsx';
 import { errorLabel } from '../overview/format.js';
 import { CebCompare } from '../ceb/CebCompare.jsx';
 import { ExploreSection } from '../explore/ExploreSection.jsx';
+import { TODAY_POLL_MS, dayCurve } from '../explore/power.js';
 
 /** Re-render about once a minute so "2 min ago" and the freshness ring keep moving between data polls. */
 function useNow(intervalMs = 30_000) {
@@ -31,6 +32,10 @@ export default function OverviewPage() {
   // billing period do not wait on the live tile. The open period itself comes from totals (LR-001).
   const todayKey = pageTodayKey(live, totals);
   const bills = useResource('bills');
+  // Today's readings, read once and shared: the day chart draws them and the Today tile takes its peak from them,
+  // so the two always agree (the live reading's own peak can lag while SolisCloud's day read is slow).
+  const today = useResource('telemetry', { date: todayKey }, { enabled: todayKey !== null, pollMs: TODAY_POLL_MS });
+  const curvePeak = useMemo(() => dayCurve(today.data?.points, live.data, todayKey, todayKey)?.peak ?? null, [today.data, live.data, todayKey]);
 
   const failed = [live, totals, bills].filter((r) => r.error);
   const s = settings.data?.settings ?? null;
@@ -48,9 +53,9 @@ export default function OverviewPage() {
         todayKey={todayKey}
         loading={totals.loading}
       />
-      <LiveRow live={live.data} liveError={live.error} targetKwh={s?.dailyTargetKwh ?? null} maxKw={s?.acRatedKw ?? null} now={now} loading={live.loading} />
+      <LiveRow live={live.data} liveError={live.error} peak={curvePeak} targetKwh={s?.dailyTargetKwh ?? null} maxKw={s?.acRatedKw ?? null} now={now} loading={live.loading} />
       <CebCompare bills={bills.data} openPeriod={totals.data?.openPeriod} live={live.data} lastStoredDay={totals.data?.generation?.lastDay} todayKey={todayKey} loading={bills.loading || totals.loading} error={bills.error} />
-      <ExploreSection totals={totals.data} todayKey={todayKey} live={live.data} />
+      <ExploreSection totals={totals.data} todayKey={todayKey} live={live.data} today={today} />
     </>
   );
 }
