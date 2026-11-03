@@ -52,8 +52,8 @@ importers:
         specifier: 5.0.5
         version: 5.0.5(vitest@5.0.5)
       dotenv:
-        specifier: ^17.2.3
-        version: 17.2.3
+        specifier: ^18.0.9
+        version: 18.0.9
       eslint:
         specifier: ^9.36.0
         version: 9.38.0(supports-color@7.2.0)
@@ -886,9 +886,10 @@ packages:
     resolution: {integrity: sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA==}
     engines: {node: '>=6'}
 
-  dotenv@17.2.3:
-    resolution: {integrity: sha512-JVUnt+DUIzu87TABbhPmNfVdBDt18BLOWjMUFJMSi/Qqg7NTYtabbvSNJGOJ7afbRuv9D/lngizHtP7QyLQ+9w==}
+  dotenv@18.0.9:
+    resolution: {integrity: sha512-3fVOW4cB02R066PUSwn8O4TJyz9NckQl7F81blIbaq9jKBm2tSmOKky7ZHIXzGvkVPXCSn6jkpziBPZdGFs8Tw==}
     engines: {node: '>=12'}
+    hasBin: true
 
   electron-to-chromium@1.5.237:
     resolution: {integrity: sha512-icUt1NvfhGLar5lSWH3tHNzablaA5js3HVHacQimfP8ViEBOQv+L7DKEuHdbTZ0SKCO1ogTJTIL1Gwk9S6Qvcg==}
@@ -2111,7 +2112,7 @@ snapshots:
 
   dequal@2.0.3: {}
 
-  dotenv@17.2.3: {}
+  dotenv@18.0.9: {}
 
   electron-to-chromium@1.5.237: {}
 
