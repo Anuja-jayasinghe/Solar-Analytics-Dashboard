@@ -234,6 +234,16 @@ describe('comparison and bills', () => {
     expect((await call(handler, req('comparison', {}))).statusCode).toBe(400);
   });
 
+  it('comparison loads daily rows from the start of a long bill period and up to today', async () => {
+    const repo = makeRepo({ bills: async () => [{ bill_date: '2025-06-04', units_exported: 3300 }, { bill_date: '2026-09-03', units_exported: 4007 }] });
+    const { handler } = build({ repo });
+    await call(handler, req('comparison', { year: '2026' }));
+    expect(repo.calls.find((c) => c[0] === 'dailyRows').slice(1)).toEqual(['2025-06-05', '2027-01-31']);
+    repo.calls.length = 0;
+    await call(handler, req('comparison', { year: '2024' }));
+    expect(repo.calls.find((c) => c[0] === 'dailyRows').slice(1)).toEqual(['2023-12-01', '2026-10-03']);
+  });
+
   it('bills carry period, effective rate, completeness and a variance only for complete periods', async () => {
     const repo = makeRepo({
       dailyRows: async () => range('2026-09-04', '2026-10-03', 126).filter((r) => r.date !== '2026-09-20') // one missing day
@@ -328,6 +338,17 @@ describe('totals', () => {
     const { handler } = build({ live: async () => { throw new HttpError(502, 'down', 'upstream_unavailable'); } });
     const body = (await call(handler, req('totals'))).body;
     expect(body.todayKey).toBe('2026-10-03');
+  });
+
+  it('carries the open bill period from the day after the latest bill, not from the 1st of the month', async () => {
+    // today 2026-10-03, latest bill 2026-09-03: the open period is 4 Sep to 3 Oct, reported as September
+    const bills = [{ bill_date: '2026-08-03', units_exported: 100, earnings: 3900 }, { bill_date: '2026-09-03', units_exported: 100, earnings: 4000 }];
+    const { handler } = build({ repo: makeRepo({ bills: async () => bills, dailyRows: async (from, to) => range(from, to, 120) }) });
+    const open = (await call(handler, req('totals'))).body.openPeriod;
+    expect(open).toMatchObject({
+      status: 'provisional', month: 'Sep', year: 2026, periodStart: '2026-09-04', periodEnd: '2026-10-03',
+      lastBillDate: '2026-09-03', daysInPeriod: 30, daysPresent: 30, inverter: 3600
+    });
   });
 
   it('with no data at all every figure is null or zero-count, not a fabricated total', async () => {

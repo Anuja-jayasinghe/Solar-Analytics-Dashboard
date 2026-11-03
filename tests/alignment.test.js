@@ -2,11 +2,13 @@
 //
 // shared/domain/alignment.js must give the SAME answers as the v1 implementation
 // (src/lib/dataService.js) wherever data is complete, and must differ only where v1 broke the
-// null ≠ 0 rule. It must also be independent of the machine's timezone, which v1 is not.
+// null ≠ 0 rule or clipped the open period to the 1st of the month (see the header of
+// shared/domain/alignment.js). It must also be independent of the machine's timezone, which v1 is not.
 
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { buildAlignedRows } from '../shared/domain/alignment.js';
+import { buildAlignedRows, openBillPeriod } from '../shared/domain/alignment.js';
+import { eachDateKey } from '../shared/domain/time.js';
 import { buildAlignedEnergyComparisonRows } from './fixtures/v1Alignment.js';
 
 function range(startIso, endIso, kwh) {
@@ -46,17 +48,22 @@ const scenarios = {
     daily: range('2026-12-01', '2026-12-31', 100),
     bills: [{ bill_date: '2027-01-04', units_exported: 4200 }]
   },
+  // E, F and G sit in the gap v1 got wrong (the latest bill is in an earlier month than today), so
+  // only their finalized rows are compared with v1; the open period is checked explicitly below.
   'E: a measured zero export': {
+    v1OpenPeriodWrong: true,
     year: 2026, todayKey: '2026-04-18', todayDate: new Date('2026-04-18T10:00:00Z'),
     daily: range('2026-01-01', '2026-03-31', 100),
     bills: [{ bill_date: '2026-03-05', units_exported: 0 }]
   },
   'F: first bill only → 30-day fallback': {
+    v1OpenPeriodWrong: true,
     year: 2026, todayKey: '2026-04-18', todayDate: new Date('2026-04-18T10:00:00Z'),
     daily: range('2026-01-01', '2026-04-18', 100),
     bills: [{ bill_date: '2026-03-05', units_exported: 3000 }]
   },
   'G: a different year entirely': {
+    v1OpenPeriodWrong: true,
     year: 2025, todayKey: '2026-04-18', todayDate: new Date('2026-04-18T10:00:00Z'),
     daily: range('2025-01-01', '2025-12-31', 90),
     bills: [{ bill_date: '2025-06-04', units_exported: 3300 }, { bill_date: '2025-07-05', units_exported: 4000 }]
@@ -75,7 +82,9 @@ describe('matches the v1 implementation wherever data is complete', () => {
         return p;
       });
       const a = normalise(v3, false).map((r, i) => (r.inverter === null && normalise(v1, true)[i].inverter === '__zero_or_null__' ? { ...r, inverter: '__zero_or_null__' } : r));
-      expect(a).toEqual(normalise(v1, true));
+      const keep = (_, i) => !s.v1OpenPeriodWrong || v3[i].status === 'finalized';
+      expect(a.filter(keep)).toEqual(normalise(v1, true).filter(keep));
+      if (s.v1OpenPeriodWrong) expect(v3.filter((r) => r.status === 'finalized').length).toBeGreaterThan(0);
     });
   }
 });
@@ -144,6 +153,86 @@ describe('real shape: October 2026 awaiting nothing, September finalised by the 
     expect(oct.periodEnd).toBe('2026-10-03'); // today: window not started yet…
     expect(oct.inverter).toBeNull(); // …so no data and no invented zero
     expect(oct.daysInPeriod).toBe(0);
+  });
+});
+
+describe('the open period runs bill date to bill date, never from the 1st', () => {
+  const sepOct = [
+    { bill_date: '2026-09-03', units_exported: 4007 },
+    { bill_date: '2026-10-03', units_exported: 3783 }
+  ];
+  const daily = range('2026-09-04', '2027-01-31', 100);
+  const find = (rows, month) => rows.find((r) => r.month === month);
+
+  it('3 Nov with the November bill not in yet: October is open from 4 Oct, not November from 1 Nov', () => {
+    const r = buildAlignedRows({ year: 2026, dailyRows: daily, bills: sepOct, todayKey: '2026-11-03' });
+    expect(find(r, 'Sep')).toMatchObject({ status: 'finalized', periodStart: '2026-09-04', periodEnd: '2026-10-03' });
+    expect(find(r, 'Oct')).toMatchObject({ status: 'provisional', periodStart: '2026-10-04', periodEnd: '2026-11-03', ceb: null, inverter: 3100, daysInPeriod: 31, daysPresent: 31 });
+    expect(find(r, 'Nov')).toMatchObject({ status: 'pending', period: 'Pending', inverter: null, daysInPeriod: 0 });
+    expect(r.filter((x) => x.status === 'provisional')).toHaveLength(1);
+    expect(openBillPeriod({ dailyRows: daily, bills: sepOct, todayKey: '2026-11-03' })).toMatchObject({
+      month: 'Oct', year: 2026, status: 'provisional', periodStart: '2026-10-04', periodEnd: '2026-11-03',
+      lastBillDate: '2026-10-03', inverter: 3100, daysPresent: 31, daysInPeriod: 31
+    });
+  });
+
+  it('the day after the November bill: October closes on the bill date and November opens', () => {
+    const bills = [...sepOct, { bill_date: '2026-11-03', units_exported: 3500 }];
+    const r = buildAlignedRows({ year: 2026, dailyRows: daily, bills, todayKey: '2026-11-04' });
+    expect(find(r, 'Oct')).toMatchObject({ status: 'finalized', periodStart: '2026-10-04', periodEnd: '2026-11-03', ceb: 3500 });
+    expect(find(r, 'Nov')).toMatchObject({ status: 'provisional', periodStart: '2026-11-04', periodEnd: '2026-11-04', inverter: 100, daysInPeriod: 1 });
+  });
+
+  it('a bill uploaded late keeps the period open and growing until it arrives', () => {
+    const open = openBillPeriod({ dailyRows: daily, bills: sepOct, todayKey: '2026-11-20' });
+    expect(open).toMatchObject({ month: 'Oct', periodStart: '2026-10-04', periodEnd: '2026-11-20', daysInPeriod: 48, inverter: 4800 });
+  });
+
+  it('New Year: on 2 Jan the open period still starts the day after the December bill', () => {
+    const bills = [...sepOct, { bill_date: '2026-11-03', units_exported: 3500 }, { bill_date: '2026-12-03', units_exported: 3400 }];
+    const open = openBillPeriod({ dailyRows: daily, bills, todayKey: '2027-01-02' });
+    expect(open).toMatchObject({ month: 'Dec', year: 2026, periodStart: '2026-12-04', periodEnd: '2027-01-02', daysInPeriod: 30, inverter: 3000 });
+    // The calendar-year view of 2027 has no open row; that is why the API returns the open period on its own.
+    const y2027 = buildAlignedRows({ year: 2027, dailyRows: daily, bills, todayKey: '2027-01-02' });
+    expect(y2027.find((x) => x.status === 'provisional')).toBeUndefined();
+    expect(find(y2027, 'Jan')).toMatchObject({ status: 'pending', inverter: null });
+    const y2026 = buildAlignedRows({ year: 2026, dailyRows: daily, bills, todayKey: '2027-01-02' });
+    expect(find(y2026, 'Dec')).toMatchObject({ status: 'provisional', periodStart: '2026-12-04', periodEnd: '2027-01-02' });
+  });
+
+  it('several months without a bill: one open period from the latest bill; the months between await it', () => {
+    const bills = [{ bill_date: '2026-07-04', units_exported: 3900 }];
+    const r = buildAlignedRows({ year: 2026, dailyRows: range('2026-06-01', '2026-11-03', 100), bills, todayKey: '2026-11-03' });
+    expect(find(r, 'Jul')).toMatchObject({ status: 'provisional', periodStart: '2026-07-05', periodEnd: '2026-11-03', daysInPeriod: 122 });
+    for (const m of ['Aug', 'Sep', 'Oct']) expect(find(r, m)).toMatchObject({ status: 'pending', period: 'Awaiting bill', inverter: null, daysInPeriod: 0 });
+    expect(find(r, 'Nov')).toMatchObject({ status: 'pending', period: 'Pending' });
+  });
+
+  it('no day is counted twice, and every day from the first bill period to today is counted once', () => {
+    // The real 2026 shape: bills missing from May to August, plus a 2025 bill long before.
+    const bills = [
+      { bill_date: '2025-06-04', units_exported: 3300 },
+      { bill_date: '2026-04-03', units_exported: 4813 },
+      { bill_date: '2026-09-03', units_exported: 4007 },
+      { bill_date: '2026-10-03', units_exported: 3783 }
+    ];
+    const todayKey = '2026-11-03';
+    const dailyRows = range('2025-01-01', todayKey, 100);
+    const seen = new Map();
+    for (const year of [2025, 2026]) {
+      for (const row of buildAlignedRows({ year, dailyRows, bills, todayKey })) {
+        if (!row.periodStart) continue;
+        for (const d of eachDateKey(row.periodStart, row.periodEnd)) seen.set(d, (seen.get(d) ?? 0) + 1);
+      }
+    }
+    expect([...seen.values()].every((n) => n === 1)).toBe(true);
+    for (const d of eachDateKey('2025-05-05', todayKey)) expect(seen.get(d), d).toBe(1);
+    // A past month with no bill whose days sit inside a later bill's period carries no figure of its own.
+    const y2026 = buildAlignedRows({ year: 2026, dailyRows, bills, todayKey });
+    expect(find(y2026, 'Apr')).toMatchObject({ status: 'missing_bill', period: 'Covered by a later bill', inverter: null, periodStart: null });
+    // Before the first bill period nothing covers the days, so the calendar month still counts them.
+    const y2025 = buildAlignedRows({ year: 2025, dailyRows, bills, todayKey });
+    expect(find(y2025, 'Jan')).toMatchObject({ status: 'missing_bill', periodStart: '2025-01-01', periodEnd: '2025-01-31', inverter: 3100 });
   });
 });
 

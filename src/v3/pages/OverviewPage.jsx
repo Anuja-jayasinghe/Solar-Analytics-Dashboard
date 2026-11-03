@@ -27,12 +27,11 @@ export default function OverviewPage() {
   const totals = useResource('totals');
   const settings = useResource('settings');
   // From live, or from totals when SolisCloud is slow or down, so the CEB comparison and the open
-  // billing period do not wait on the live tile.
+  // billing period do not wait on the live tile. The open period itself comes from totals (LR-001).
   const todayKey = pageTodayKey(live, totals);
   const bills = useResource('bills');
-  const comparison = useResource('comparison', { year: todayKey ? Number(todayKey.slice(0, 4)) : undefined }, { enabled: todayKey !== null });
 
-  const failed = [live, totals, comparison, bills].filter((r) => r.error);
+  const failed = [live, totals, bills].filter((r) => r.error);
   const s = settings.data?.settings ?? null;
 
   return (
@@ -44,13 +43,12 @@ export default function OverviewPage() {
       )}
       <TotalsRow
         totals={totals.data}
-        comparison={comparison.data}
         live={live.data}
         todayKey={todayKey}
-        loading={totals.loading || (comparison.loading && !comparison.data)}
+        loading={totals.loading}
       />
       <LiveRow live={live.data} targetKwh={s?.dailyTargetKwh ?? null} maxKw={s?.acRatedKw ?? null} now={now} loading={live.loading} />
-      <CebCompare bills={bills.data} comparison={comparison.data} live={live.data} lastStoredDay={totals.data?.generation?.lastDay} todayKey={todayKey} loading={bills.loading || comparison.loading} error={bills.error} />
+      <CebCompare bills={bills.data} openPeriod={totals.data?.openPeriod} live={live.data} lastStoredDay={totals.data?.generation?.lastDay} todayKey={todayKey} loading={bills.loading || totals.loading} error={bills.error} />
       <ExploreSection totals={totals.data} todayKey={todayKey} />
     </>
   );

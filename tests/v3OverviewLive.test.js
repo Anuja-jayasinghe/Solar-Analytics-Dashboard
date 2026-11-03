@@ -8,7 +8,7 @@ import { createElement as h } from 'react';
 import { renderToString } from 'react-dom/server';
 import {
   DASH, fmtNum, shortDate, longDate, monthsBetween, lkrCompact, energyCompact, targetProgress, gaugeFraction,
-  liveState, freshness, openBillPeriod, FRESH_WINDOW_MIN
+  liveState, freshness, openPeriodView, FRESH_WINDOW_MIN
 } from '../src/v3/overview/format.js';
 import { TotalsRow } from '../src/v3/overview/TotalsRow.jsx';
 import { CebCompare } from '../src/v3/ceb/CebCompare.jsx';
@@ -98,11 +98,11 @@ describe('live status', () => {
 });
 
 describe('open bill period', () => {
-  it('picks the provisional row and keeps null as null', () => {
-    const rows = [{ status: 'finalized', inverter: 4100 }, { status: 'provisional', inverter: null, periodStart: '2036-09-04', daysPresent: 0, daysInPeriod: 11 }];
-    expect(openBillPeriod(rows)).toEqual({ startKey: '2036-09-04', endKey: null, kwh: null, daysPresent: 0, daysInPeriod: 11 });
-    expect(openBillPeriod([{ status: 'finalized' }])).toBeNull();
-    expect(openBillPeriod(undefined)).toBeNull();
+  it('reads totals.openPeriod and keeps null as null', () => {
+    const openPeriod = { status: 'provisional', month: 'Aug', year: 2036, inverter: null, periodStart: '2036-09-04', daysPresent: 0, daysInPeriod: 11 };
+    expect(openPeriodView(openPeriod)).toEqual({ startKey: '2036-09-04', endKey: null, kwh: null, daysPresent: 0, daysInPeriod: 11, month: 'Aug', year: 2036 });
+    expect(openPeriodView({ status: 'finalized' })).toBeNull();
+    expect(openPeriodView(undefined)).toBeNull();
   });
 });
 
@@ -111,10 +111,10 @@ describe('rendered tiles', () => {
     generation: { totalKwh: 78471, dayCount: 618, firstDay: '2035-01-01', lastDay: '2036-09-14', missingDays: 5 },
     earnings: { totalLkr: 3067844, billCount: 20, billsWithoutEarnings: 0, firstBillDate: '2035-02-03', lastBillDate: '2036-09-03' }
   };
-  const comparison = { rows: [{ status: 'provisional', inverter: 1464, periodStart: '2036-09-04', daysPresent: 11, daysInPeriod: 12 }] };
+  const withOpen = (openPeriod) => ({ ...totals, openPeriod: { status: 'provisional', month: 'Sep', year: 2036, lastBillDate: '2036-09-03', ...openPeriod } });
 
   it('headline tiles show the three figures with their context', () => {
-    const html = renderToString(h(TotalsRow, { totals, comparison, todayKey: '2036-09-15', loading: false }));
+    const html = renderToString(h(TotalsRow, { totals: withOpen({ inverter: 1464, periodStart: '2036-09-04', daysPresent: 11, daysInPeriod: 12 }), todayKey: '2036-09-15', loading: false }));
     expect(html).toContain('This billing period');
     expect(html).toContain('1,464');
     expect(html).toContain('78.5');
@@ -124,34 +124,40 @@ describe('rendered tiles', () => {
     expect(html).toContain('awaiting bill');
   });
 
+  it('the billing tile starts the day after the latest bill, not on the 1st of the month', () => {
+    const todayKey = '2026-11-03';
+    const html = renderToString(h(TotalsRow, {
+      totals: { ...totals, openPeriod: { status: 'provisional', month: 'Oct', year: 2026, lastBillDate: '2026-10-03', periodStart: '2026-10-04', periodEnd: todayKey, inverter: 3100, daysPresent: 31, daysInPeriod: 31 } },
+      todayKey, loading: false
+    }));
+    expect(html).toContain(`since ${shortDate('2026-10-04')}`);
+    expect(html).not.toContain(`since ${shortDate('2026-11-01')}`);
+    expect(html).toContain('3,100');
+  });
+
   it('the open chart column matches the billing tile when today is still live-only', () => {
     const todayKey = '2036-09-15';
     const live = { todayKwh: 98.2 };
-    const openComparison = { year: 2036, rows: [{
-      status: 'provisional', month: 'Sep', periodStart: '2036-09-04', periodEnd: todayKey,
-      inverter: 1464.1, daysPresent: 11, daysInPeriod: 12
-    }] };
-    const tile = renderToString(h(TotalsRow, { totals, comparison: openComparison, live, todayKey, loading: false }));
+    const t = withOpen({ periodStart: '2036-09-04', periodEnd: todayKey, inverter: 1464.1, daysPresent: 11, daysInPeriod: 12 });
+    const tile = renderToString(h(TotalsRow, { totals: t, live, todayKey, loading: false }));
     const chart = renderToString(h(CebCompare, {
-      bills: { bills: [] }, comparison: openComparison, live, lastStoredDay: totals.generation.lastDay,
+      bills: { bills: [] }, openPeriod: t.openPeriod, live, lastStoredDay: totals.generation.lastDay,
       todayKey, loading: false, error: null
     }));
     expect(tile).toContain('1,562');
     expect(chart).toContain('>1,562</td>');
     expect(chart).not.toContain('>1,464</td>');
+    expect(chart).toContain('4 Sep – today'); // the table states the real span, not just the month
   });
 
   it('does not add the live reading again when today is already stored', () => {
     const todayKey = '2036-09-15';
-    const storedToday = { ...totals, generation: { ...totals.generation, lastDay: todayKey } };
-    const openComparison = { year: 2036, rows: [{
-      status: 'provisional', month: 'Sep', periodStart: '2036-09-04', periodEnd: todayKey,
-      inverter: 1562.3, daysPresent: 12, daysInPeriod: 12
-    }] };
+    const t = withOpen({ periodStart: '2036-09-04', periodEnd: todayKey, inverter: 1562.3, daysPresent: 12, daysInPeriod: 12 });
+    const storedToday = { ...t, generation: { ...totals.generation, lastDay: todayKey } };
     const live = { todayKwh: 98.2 };
-    const tile = renderToString(h(TotalsRow, { totals: storedToday, comparison: openComparison, live, todayKey, loading: false }));
+    const tile = renderToString(h(TotalsRow, { totals: storedToday, live, todayKey, loading: false }));
     const chart = renderToString(h(CebCompare, {
-      bills: { bills: [] }, comparison: openComparison, live, lastStoredDay: todayKey,
+      bills: { bills: [] }, openPeriod: t.openPeriod, live, lastStoredDay: todayKey,
       todayKey, loading: false, error: null
     }));
     expect(tile).toContain('1,562');
@@ -161,12 +167,9 @@ describe('rendered tiles', () => {
 
   it('shows a live-only first day in the open chart without inventing a CEB value', () => {
     const todayKey = '2036-09-15';
-    const openComparison = { year: 2036, rows: [{
-      status: 'provisional', month: 'Sep', periodStart: todayKey, periodEnd: todayKey,
-      inverter: null, daysPresent: 0, daysInPeriod: 1
-    }] };
+    const t = withOpen({ periodStart: todayKey, periodEnd: todayKey, inverter: null, daysPresent: 0, daysInPeriod: 1 });
     const chart = renderToString(h(CebCompare, {
-      bills: { bills: [] }, comparison: openComparison, live: { todayKwh: 98.2 }, lastStoredDay: null,
+      bills: { bills: [] }, openPeriod: t.openPeriod, live: { todayKwh: 98.2 }, lastStoredDay: null,
       todayKey, loading: false, error: null
     }));
     expect(chart).toContain('>98</td><td>awaiting bill</td>');
@@ -174,7 +177,7 @@ describe('rendered tiles', () => {
   });
 
   it('missing data renders dashes, never zeros', () => {
-    const html = renderToString(h(TotalsRow, { totals: null, comparison: null, todayKey: null, loading: false }));
+    const html = renderToString(h(TotalsRow, { totals: null, todayKey: null, loading: false }));
     expect(html).toContain(DASH);
     expect(html).not.toMatch(/>0</);
   });
