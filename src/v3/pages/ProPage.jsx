@@ -14,6 +14,7 @@ import { Electrical } from '../pro/Electrical.jsx';
 import { ElectricalRange } from '../pro/ElectricalRange.jsx';
 import { RateHistory, YearOverYear } from '../pro/Money.jsx';
 import { PRO_RANGES, electricalFromTelemetry, healthSummary, proRange, rateSeries, yoyPairs } from '../pro/metrics.js';
+import { errorLabel } from '../overview/format.js';
 
 const OPTIONS = PRO_RANGES.map((n) => ({ value: n, label: `${n} days` }));
 const ELECTRICAL_OPTIONS = [{ value: 'day', label: 'Last day' }, { value: 'week', label: '7 days' }, { value: 'month', label: '30 days' }, { value: 'custom', label: 'Custom' }];
@@ -72,7 +73,7 @@ export default function ProPage() {
         <div className="v3-sub" style={{ margin: 0, maxWidth: 560 }}><strong>Uptime and alarm period.</strong> Changes uptime, time stopped, unresolved alarms, the daily strip, alarm history, logger connection and days with known alarm/logger status. All-time coverage, electrical readings and bill comparisons have their own periods.</div>
         <Segmented small options={OPTIONS} value={days} onChange={setDays} label="Uptime and alarm period" />
       </div>
-      {failed.length > 0 && <Note tone="bad">Some figures could not be loaded ({[...new Set(failed.map((r) => r.error.code ?? 'error'))].join(', ')}). They are shown as a dash or left empty, never as zero.</Note>}
+      {failed.length > 0 && <Note tone="bad">Some figures could not be loaded ({[...new Set(failed.map((r) => errorLabel(r.error.code)))].join(', ')}). They are shown as a dash or left empty, never as zero.</Note>}
       <div className="v3-stack" data-busy={busy ? 'true' : undefined} aria-busy={busy}>
         <HealthRow summary={summary} loading={waiting && !uptime.data} />
         <UptimeStrip days={periodUptime?.days} loading={waiting} error={uptime.error} />

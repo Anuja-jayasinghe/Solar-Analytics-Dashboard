@@ -3,7 +3,7 @@
 // The v3 read API end to end, with a fake repository and a fake auth: access control, validation,
 // rate limiting, caching headers, error hygiene, and the correctness of each resource's output.
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createDataHandler } from '../api/_lib/data/handler.js';
 import { createRateLimiter } from '../api/_lib/data/rateLimit.js';
 import { createLiveProvider, mapLive } from '../api/_lib/data/live.js';
@@ -424,6 +424,67 @@ describe('live provider', () => {
     const cold = createLiveProvider({ fetchInverter: async () => { throw new Error('down'); } });
     await expect(cold()).rejects.toMatchObject({ status: 502 });
     spy.mockRestore();
+  });
+
+  it('marks where a reading came from: SolisCloud now, or memory when SolisCloud fails', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    let t = 0; let fail = false;
+    const live = createLiveProvider({ fetchInverter: async () => { if (fail) throw new Error('503'); return rec; }, ttlMs: 1000, now: () => t });
+    expect(await live()).toMatchObject({ stale: false, upstream: 'ok', source: 'soliscloud' });
+    fail = true; t = 5000;
+    expect(await live()).toMatchObject({ stale: true, upstream: 'unavailable', source: 'memory' });
+    spy.mockRestore();
+  });
+});
+
+describe('live: the last saved reading when SolisCloud fails', () => {
+  // 2026-11-03 06:30Z = 12:00 Colombo; the job saved a reading at 06:20Z = 11:50
+  const noon = Date.parse('2026-11-03T06:30:00Z');
+  const savedAt = Date.parse('2026-11-03T06:20:00Z');
+  const raw = { state: 1, stateExceptionFlag: 0, pac: 30.1, pacStr: 'kW', etoday: 75.4, etodayStr: 'kWh', etotal1: 104400, dataTimestamp: savedAt };
+  const down = async () => { throw new Error('gateway timeout'); };
+  let spy;
+  beforeEach(() => { spy = vi.spyOn(console, 'error').mockImplementation(() => {}); });
+  afterEach(() => spy.mockRestore());
+
+  it('a fresh deployment with nothing in memory serves today\'s saved reading, clearly marked', async () => {
+    const live = createLiveProvider({ fetchInverter: down, fetchSaved: async () => ({ raw, savedAtMs: savedAt }), now: () => noon });
+    expect(await live()).toMatchObject({
+      status: 'online', currentPowerKw: 30.1, todayKwh: 75.4, totalKwh: 104400, dataTimestamp: savedAt,
+      stale: true, upstream: 'unavailable', source: 'saved'
+    });
+  });
+
+  it('never shows an earlier day\'s reading as today: 502 instead', async () => {
+    const yesterday = Date.parse('2026-11-02T12:00:00Z');
+    const live = createLiveProvider({ fetchInverter: down, fetchSaved: async () => ({ raw: { ...raw, dataTimestamp: yesterday }, savedAtMs: yesterday }), now: () => noon });
+    await expect(live()).rejects.toMatchObject({ status: 502, code: 'upstream_unavailable' });
+  });
+
+  it('a failing or empty saved-reading lookup still ends in a clean 502', async () => {
+    const broken = createLiveProvider({ fetchInverter: down, fetchSaved: async () => { throw new Error('db down'); }, now: () => noon });
+    await expect(broken()).rejects.toMatchObject({ status: 502 });
+    const empty = createLiveProvider({ fetchInverter: down, fetchSaved: async () => null, now: () => noon });
+    await expect(empty()).rejects.toMatchObject({ status: 502 });
+  });
+
+  it('when both exist, the newer of memory and saved wins', async () => {
+    let t = Date.parse('2026-11-03T04:00:00Z'); let fail = false;
+    const early = { ...raw, pac: 12, dataTimestamp: Date.parse('2026-11-03T03:55:00Z') };
+    const live = createLiveProvider({
+      fetchInverter: async () => { if (fail) throw new Error('down'); return early; },
+      fetchSaved: async () => ({ raw, savedAtMs: savedAt }), ttlMs: 1000, now: () => t
+    });
+    expect((await live()).currentPowerKw).toBe(12);
+    fail = true; t = noon;
+    expect(await live()).toMatchObject({ source: 'saved', currentPowerKw: 30.1, stale: true });
+  });
+
+  it('does not touch the database while SolisCloud answers', async () => {
+    const fetchSaved = vi.fn(async () => ({ raw, savedAtMs: savedAt }));
+    const live = createLiveProvider({ fetchInverter: async () => raw, fetchSaved, now: () => noon });
+    await live();
+    expect(fetchSaved).not.toHaveBeenCalled();
   });
 });
 

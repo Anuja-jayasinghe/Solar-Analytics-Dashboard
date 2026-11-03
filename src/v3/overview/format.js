@@ -4,6 +4,7 @@
 // 'YYYY-MM-DD' strings in Asia/Colombo; they are formatted from their parts, never through Date, so a
 // timezone can never shift the day. Unknown is null and renders as an em dash, never as 0.
 
+import { localMinuteOfDay } from '../../../shared/domain/time.js';
 
 export const DASH = '—';
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -64,19 +65,70 @@ export function gaugeFraction(kw, maxKw) {
   return Math.max(0, Math.min(1, kw / maxKw));
 }
 
+/** Asia/Colombo clock time of an epoch-ms instant, '11:50'; null when unknown. */
+export function clockAt(epochMs) {
+  if (!isNum(epochMs)) return null;
+  const m = localMinuteOfDay(epochMs);
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+}
+
+/** The inverter's own state from a reading, ignoring where the reading came from. */
+function inverterState(live) {
+  if (live.status === 'online') return { key: 'online', label: 'Online', tone: 'good' };
+  if (live.status === 'alarm') return { key: 'fault', label: live.faultCode != null ? `Fault · code ${live.faultCode}` : 'Fault', tone: 'bad' };
+  if (live.status === 'offline') return live.abnormalOffline ? { key: 'offline', label: 'Offline', tone: 'bad' } : { key: 'asleep', label: 'Asleep', tone: 'neutral' };
+  return { key: 'unknown', label: 'Unknown', tone: 'neutral' };
+}
+
+const SOLIS_DOWN = 'SolisCloud not responding';
+
 /**
  * The status bulb. state 2 ("offline") is NORMAL every night, so plain offline is "Asleep"; only
- * abnormalOffline is a fault. A stale reading is flagged and never shown as current.
- * @returns {{key:string,label:string,tone:'good'|'bad'|'warn'|'neutral'}}
+ * abnormalOffline is a fault, and an inverter alarm shows its SolisCloud state code. When SolisCloud
+ * itself fails the bulb names that, not the inverter: the inverter may be fine. A stale reading is
+ * flagged and never shown as current.
+ * @param {object|null} live  GET /api/data/live
+ * @param {{code?:string}|null} [error]  the failed live read, if any
+ * @returns {{key:string,label:string,tone:'good'|'bad'|'warn'|'neutral', inverter?:object}}
  */
-export function liveState(live) {
-  if (!live) return { key: 'unknown', label: 'Unknown', tone: 'neutral' };
-  let s;
-  if (live.status === 'online') s = { key: 'online', label: 'Online', tone: 'good' };
-  else if (live.status === 'alarm') s = { key: 'fault', label: 'Fault', tone: 'bad' };
-  else if (live.status === 'offline') s = live.abnormalOffline ? { key: 'offline', label: 'Offline', tone: 'bad' } : { key: 'asleep', label: 'Asleep', tone: 'neutral' };
-  else s = { key: 'unknown', label: 'Unknown', tone: 'neutral' };
+export function liveState(live, error = null) {
+  if (!live) {
+    return error?.code === 'upstream_unavailable'
+      ? { key: 'upstream', label: SOLIS_DOWN, tone: 'warn' }
+      : { key: 'unknown', label: 'Unknown', tone: 'neutral' };
+  }
+  const s = inverterState(live);
+  if (live.stale && live.upstream === 'unavailable') return { key: 'upstream', label: SOLIS_DOWN, tone: 'warn', inverter: s };
   return live.stale ? { ...s, label: `${s.label} · last known`, tone: 'warn' } : s;
+}
+
+/** Which reading is on screen when it is not current: 'last saved reading at 11:50'. Null when it is current. */
+export function readingNote(live) {
+  if (!live?.stale) return null;
+  const at = clockAt(live.dataTimestamp);
+  const what = live.source === 'saved' ? 'last saved reading' : 'last reading';
+  return at ? `${what} at ${at}` : what;
+}
+
+/** The explanation behind the status bulb. */
+export function liveStatusTip(live, error, state) {
+  if (state.key === 'upstream') {
+    const head = 'SolisCloud, where the inverter reports its readings, did not answer. The inverter itself may be fine.';
+    if (!live) return `${head} No reading from today is saved yet, so the figures show a dash. It retries every minute.`;
+    const inv = state.inverter ? ` The inverter last reported: ${state.inverter.label}.` : '';
+    return `${head} Showing the ${readingNote(live)}, not a live value.${inv} It retries every minute.`;
+  }
+  if (state.key === 'fault') return `The inverter reports a fault${live?.faultCode != null ? ` (SolisCloud state code ${live.faultCode})` : ''}. The alarm log is on the Pro page.`;
+  if (live?.abnormalOffline) return 'Offline during daylight: the inverter or its logger is not reporting.';
+  if (state.key === 'asleep') return 'The inverter sleeps at night; this is normal.';
+  if (state.key === 'online') return 'Online: the inverter is feeding the grid.';
+  return state.label;
+}
+
+/** A failed read's code in words, for the "could not be loaded" note. */
+export function errorLabel(code) {
+  if (code === 'upstream_unavailable') return `live reading: ${SOLIS_DOWN}`;
+  return code ?? 'error';
 }
 
 export const FRESH_WINDOW_MIN = 15;
