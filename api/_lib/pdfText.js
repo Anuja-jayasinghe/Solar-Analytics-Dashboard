@@ -14,7 +14,7 @@
 // never sees it and Vercel returns its own HTML error page. That is why the admin UI showed
 // "Parser returned HTTP 500" instead of our JSON error — the response was not our JSON at all.
 //
-// pdfjs-dist is already a production dependency (react-pdf uses it for the preview), is pure
+// pdfjs-dist is pure
 // JavaScript, and produces text the CEB parser reads identically. Verified against a real
 // bill: raw strings differ cosmetically in whitespace handling, but parseCebBillText() returns
 // an identical object for both engines.
@@ -137,12 +137,13 @@ export async function extractPdfText(data) {
     ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
     : new Uint8Array(data);
 
-  const doc = await pdfjs.getDocument({
+  const loadingTask = pdfjs.getDocument({
     data: bytes,
     // Nothing here renders or evaluates scripts; both off for safety and speed.
     isEvalSupported: false,
     useSystemFonts: false
-  }).promise;
+  });
+  const doc = await loadingTask.promise;
 
   try {
     let out = '';
@@ -168,7 +169,9 @@ export async function extractPdfText(data) {
 
     return out;
   } finally {
-    // Release the worker; a leaked one keeps the serverless invocation alive.
-    await doc.destroy();
+    // Release the document and its worker; a leaked one keeps the serverless invocation alive.
+    // Through the loading task: pdfjs 6 removed destroy() from the document itself, and an
+    // error thrown here would discard the text extracted above.
+    await loadingTask.destroy();
   }
 }

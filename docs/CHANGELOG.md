@@ -10,6 +10,9 @@ All notable changes to the Solar Analytics Dashboard project.
   before it showed "missing bill". It now starts the day after the latest bill, however late the next bill is, and stays
   right across New Year (`totals.openPeriod`). Past months without a bill no longer count days a later bill already
   covers, so no day is counted twice. The CEB table shows each period's real dates.
+- **Bill PDF extraction closes the document through its loading task**, so it works with pdfjs-dist 6 as well as 5
+  (pdfjs 6 removed `destroy()` from the document; the old call threw after reading the text and failed every upload).
+  `tests/pdfText.test.js` now reads a real PDF built in the test, so a pdfjs upgrade that breaks extraction fails CI.
 
 ## [3.0.0] - 2026-10-04
 
