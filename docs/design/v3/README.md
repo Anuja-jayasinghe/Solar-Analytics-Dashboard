@@ -45,8 +45,9 @@ in Settings > Appearance; no screen changes. Components may only read tokens, ne
    means CEB paid less).
 4. Inverter generation over time: week/month/year/custom, area (default)/line/bars, step through time,
    draggable "Mark above" line, year view groups by month.
-5. Generation through the day: pick a day, kWh per hour.
-6. Statistics: average per day, best day, lowest day, drawn on one range chart. Nothing else; total,
+5. Generation through the day: pick a day, the power curve in kW (2026-11: the per-hour view was removed).
+6. Statistics: average per day, best day, lowest *full* day (2026-11: outage days and days without an uptime
+   record are left out, so the lowest is the weather), drawn on one range chart. Nothing else; total,
    specific yield, capacity factor, estimated earnings and days-above were removed on purpose.
 No new analytics beyond what v1 showed, only better presented. Environmental impact is gone.
 

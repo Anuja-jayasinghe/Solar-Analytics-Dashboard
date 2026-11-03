@@ -51,6 +51,10 @@ All notable changes to the Solar Analytics Dashboard project.
   circle shows a dash, not "No target", when a target is set but today's figure is unknown.
 
 ### Changed
+- **Statistics: "Lowest day" is now "Lowest full day".** The lowest recorded day was almost always a power cut or a
+  part-recorded day (e.g. 11.5 kWh), not a poor-weather day. It now counts only days the uptime log shows the inverter
+  running all day: at most 30 min stopped, since short grid trips are routine here. The card says how many days were
+  left out, its ⓘ says why and gives the lowest recorded day too, and the chart marks the same day.
 - **The Area chart type is gone.** It was the line with the space under it shaded, nothing more. Inverter generation
   now offers Line (the default) and Bars; CEB vs Inverter offers Bars and Lines.
 

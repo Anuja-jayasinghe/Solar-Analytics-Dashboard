@@ -185,6 +185,20 @@ describe('range', () => {
     expect(res.body.stats.revenue.unratedDays).toBe(2);
   });
 
+  it('reports the lowest FULL day: outage days and days without an uptime record never win', async () => {
+    const kwh = { '2026-10-01': 120, '2026-10-02': 11.5, '2026-10-03': 95, '2026-10-04': 80 };
+    const up = (day, trip = 0, gap = 0) => ({ day, status: trip + gap > 0 ? 'down' : 'ok', uptime_pct: 100, window_minutes: 660, trip_min: trip, gap_min: gap, comms_lost_min: 0, edge_gap_min: 0, trip_count: trip ? 1 : 0, gap_count: gap ? 1 : 0 });
+    const repo = makeRepo({
+      dailyRows: async (from, to) => range(from, to).map((r) => ({ ...r, kwh: kwh[r.date] })),
+      // 10-02: a 3-hour power cut. 10-03: two short trips (12 min), still a full day. 10-04: no uptime record yet.
+      uptimeDays: async () => [up('2026-10-01'), up('2026-10-02', 180), up('2026-10-03', 12)]
+    });
+    const { handler } = build({ repo });
+    const res = await call(handler, req('range', { from: '2026-10-01', to: '2026-10-04' }));
+    expect(res.body.stats.worst).toEqual({ date: '2026-10-02', kwh: 11.5 }); // still there for the chart scale
+    expect(res.body.stats.lowestFull).toEqual({ day: { date: '2026-10-03', kwh: 95 }, fullDays: 2, stoppedDays: 1, unknownDays: 1 });
+  });
+
   it('adds comparisons only when asked, and compares by average per day', async () => {
     const repo = makeRepo({
       dailyRows: async (from, to) => range(from, to, from >= '2026-10-01' ? 150 : 100)

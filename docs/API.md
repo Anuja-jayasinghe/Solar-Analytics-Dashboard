@@ -282,7 +282,7 @@ is never read as a full one.
 
 | Resource | Query | Returns |
 |---|---|---|
-| `range` | `from`, `to` (≤ 3660 days), `rate=effective\|fixed` (default `effective`), `compare=prev,yoy` | Explore figures (LR-003): total, average/day, best/worst day, peak, specific yield (kWh/kWp, **DC** size), capacity factor (**AC** rating), LKR with its `basis`, daily series with cumulative; optional baselines with average-per-day deltas; uptime aggregate for the same range |
+| `range` | `from`, `to` (≤ 3660 days), `rate=effective\|fixed` (default `effective`), `compare=prev,yoy` | Explore figures (LR-003): total, average/day, best/worst day, `lowestFull` (lowest day the inverter ran all day: at most 30 min down per the uptime log, with counts of days left out), peak, specific yield (kWh/kWp, **DC** size), capacity factor (**AC** rating), LKR with its `basis`, daily series with cumulative; optional baselines with average-per-day deltas; uptime aggregate for the same range |
 | `comparison` | `year` | 12 bill-aligned CEB-vs-inverter rows (LR-001) with `daysPresent / daysInPeriod / completeness`. The open period is the month of the latest bill, from the day after it to today; later months are `pending` |
 | `bills` | – | Every bill: period, CEB kWh, earnings, **effective LKR/kWh**, inverter kWh, completeness, variance (flagged `complete: false` when days are missing) |
 | `uptime` | `from`, `to` | Per-day uptime rows, weighted aggregate, and timeline `segments` (ranges ≤ 62 days; otherwise `null`) (LR-002) |

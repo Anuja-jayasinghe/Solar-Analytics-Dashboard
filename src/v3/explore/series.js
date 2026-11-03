@@ -195,7 +195,11 @@ export function aboveCount(points, line) {
 }
 
 /** Geometry for the statistics range chart: positions (0..100) of the line, the average and the best/lowest dots. */
-export function spreadGeometry(series, best, worst, avg) {
+/**
+ * `worst` (the lowest recorded day) sets the bottom of the scale so every day fits; `low` is the day marked as lowest
+ * (the lowest full day), which may sit above it. Without `low` the lowest recorded day is marked.
+ */
+export function spreadGeometry(series, best, worst, avg, low = worst) {
   const known = series.filter((d) => isNum(d.kwh));
   if (known.length === 0 || !best || !worst) return null;
   const lo = worst.kwh * 0.8;
@@ -209,7 +213,8 @@ export function spreadGeometry(series, best, worst, avg) {
     points: series.map((d, i) => (isNum(d.kwh) ? [x(i), y(d.kwh)] : null)),
     avgY: isNum(avg) ? y(avg) : null,
     best: { x: x(index.get(best.date) ?? 0), y: y(best.kwh) },
-    worst: { x: x(index.get(worst.date) ?? 0), y: y(worst.kwh) }
+    worst: { x: x(index.get(worst.date) ?? 0), y: y(worst.kwh) },
+    low: low ? { x: x(index.get(low.date) ?? 0), y: y(low.kwh) } : null
   };
 }
 

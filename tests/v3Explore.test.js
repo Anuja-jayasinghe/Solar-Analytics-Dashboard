@@ -10,6 +10,9 @@ import {
   dayLabel, dayLabelYear, GROUP_OVER_DAYS, MAX_CUSTOM_DAYS, dataYears, yearRange, yearPoints, yearSummary, clampYear
 } from '../src/v3/explore/series.js';
 import { hourlyFromTelemetry, colomboClock } from '../src/v3/explore/hourly.js';
+import { createElement as h } from 'react';
+import { renderToString } from 'react-dom/server';
+import { StatsBody } from '../src/v3/explore/StatsBody.jsx';
 
 const B = { min: '2035-01-01', max: '2036-09-14' };
 
@@ -107,6 +110,13 @@ describe('statistics chart geometry', () => {
     expect(g.best.y).toBeLessThan(g.worst.y);
     expect(g.avgY).toBeGreaterThan(g.best.y);
     expect(g.avgY).toBeLessThan(g.worst.y);
+  });
+  it('marks the lowest full day while the lowest recorded day still sets the scale', () => {
+    const g = spreadGeometry(series, { date: 'c', kwh: 200 }, { date: 'a', kwh: 100 }, 150, { date: 'd', kwh: 150 });
+    expect(g.low.x).toBe(100);
+    expect(g.low.y).toBeLessThan(g.worst.y);
+    expect(g.worst.y).toBeLessThanOrEqual(100); // the outage day stays on the chart
+    expect(spreadGeometry(series, { date: 'c', kwh: 200 }, { date: 'a', kwh: 100 }, 150, null).low).toBeNull();
   });
   it('is null when there is nothing to draw', () => {
     expect(spreadGeometry([{ date: 'a', kwh: null }], null, null, null)).toBeNull();
@@ -298,5 +308,21 @@ describe('calendar year view', () => {
     const s = yearSummary(yearPoints(days(r.from, r.to), 2026, R), r);
     expect(s).toEqual({ kwh: 30600, present: 306, days: 306 });
     expect(yearSummary(yearPoints([], 2026, R), r)).toEqual({ kwh: null, present: 0, days: 306 });
+  });
+});
+
+describe('statistics card', () => {
+  const series = [{ date: '2026-10-19', kwh: 120 }, { date: '2026-10-20', kwh: 11.5 }, { date: '2026-10-21', kwh: 95 }];
+  const base = { avgPerDayKwh: 75.5, presentDays: 3, series, best: { date: '2026-10-19', kwh: 120 }, worst: { date: '2026-10-20', kwh: 11.5 } };
+  it('shows the lowest full day and how many days were left out, not the outage day', () => {
+    const html = renderToString(h(StatsBody, { showHead: true, stats: { ...base, lowestFull: { day: { date: '2026-10-21', kwh: 95 }, fullDays: 2, stoppedDays: 1, unknownDays: 0 } }, loading: false, rangeText: '' }));
+    expect(html).toContain('Lowest full day');
+    expect(html).toContain('95.0');
+    expect(html).toContain('21 Oct 2026 · 1 day left out');
+    expect(html).not.toContain('>11.5<');
+  });
+  it('says so when no day in the range was full', () => {
+    const html = renderToString(h(StatsBody, { showHead: true, stats: { ...base, lowestFull: { day: null, fullDays: 0, stoppedDays: 3, unknownDays: 0 } }, loading: false, rangeText: '' }));
+    expect(html).toContain('no full day in this range');
   });
 });
