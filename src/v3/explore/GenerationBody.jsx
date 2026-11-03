@@ -7,12 +7,12 @@ import { MarkToggle } from '../charts/MarkToggle.jsx';
 import { DateRangePicker } from '../ui/Calendar.jsx';
 import { addDays } from '../../../shared/domain/time.js';
 import { usePrefs } from '../prefs/context.js';
-import { MAX_LABELLED_COLUMNS, areaPath, axisTicks, chartNum, linePath, maxOf, niceMax, xPct, yPct } from '../charts/scale.js';
+import { MAX_LABELLED_COLUMNS, axisTicks, chartNum, linePath, maxOf, niceMax, xPct, yPct } from '../charts/scale.js';
 import { fmtNum } from '../overview/format.js';
 import { aboveCount, dayLabelYear, yearSummary } from './series.js';
 
 const KINDS = [{ value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }, { value: 'year', label: 'Year' }, { value: 'custom', label: 'Custom' }];
-const STYLES = [{ value: 'area', label: 'Area' }, { value: 'line', label: 'Line' }, { value: 'bars', label: 'Bars' }];
+const STYLES = [{ value: 'line', label: 'Line' }, { value: 'bars', label: 'Bars' }];
 
 /** The date (and missing days for a month); the value only when the bars are too many to carry their own labels. */
 function pointTip(p, labelled, grouped) {
@@ -20,7 +20,7 @@ function pointTip(p, labelled, grouped) {
   return labelled ? p.full : `${p.full}\n${fmtNum(p.kwh, grouped ? 0 : 1)} kWh`;
 }
 
-/** "Inverter generation": a range of days (or months), area by default, with the draggable "Mark above" line. */
+/** "Inverter generation": a range of days (or months), a line by default, with the draggable "Mark above" line. */
 export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, bounds, years = [], year = null, onYear, canBack, canForward, onStep, onCustom, points, grouped, line, onLine, loading, error }) {
   const { showMark } = usePrefs();
   const known = points.filter((p) => p.kwh !== null);
@@ -110,7 +110,6 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
               {axisTicks(yMax).map((t) => <div key={t.pct} className="v3-gridline" style={{ bottom: `${t.pct}%` }} />)}
               {style !== 'bars' && (
                 <svg className="v3-plot-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                  {style === 'area' && <path d={areaPath(linePts)} fill="url(#areaFill)" />}
                   <path d={linePath(linePts)} fill="none" style={{ stroke: 'var(--gen)' }} strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
                 </svg>
               )}

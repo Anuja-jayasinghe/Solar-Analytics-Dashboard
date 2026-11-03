@@ -27,7 +27,7 @@ export function ExploreSection({ totals, todayKey, live = null, today = null }) 
   const [endKey, setEndKey] = useState(null); // null = follow the newest day with data
   const [custom, setCustom] = useState(null);
   const [year, setYear] = useState(null); // null = the newest year with data
-  const [style, setStyle] = useState('area');
+  const [style, setStyle] = useState('line');
   const [lines, setLines] = useState({ day: null, month: null });
   const [period, setPeriod] = useState('30');
 

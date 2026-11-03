@@ -50,6 +50,10 @@ All notable changes to the Solar Analytics Dashboard project.
   gauge, where longer labels wrapped), and the gauge's caption wraps on phones instead of widening the tile. The Today
   circle shows a dash, not "No target", when a target is set but today's figure is unknown.
 
+### Changed
+- **The Area chart type is gone.** It was the line with the space under it shaded, nothing more. Inverter generation
+  now offers Line (the default) and Bars; CEB vs Inverter offers Bars and Lines.
+
 ### Fixed
 - **A reading that is not current now looks it.** When SolisCloud is not answering, the Today and live power tiles turn
   grey (the fill, the gauge arc and the numbers), the wave stops, and the Today tile shows an amber "Not live · as of

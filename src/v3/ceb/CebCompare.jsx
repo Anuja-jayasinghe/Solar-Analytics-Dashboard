@@ -7,13 +7,13 @@ import { Note } from '../ui/Note.jsx';
 import { ThresholdPlot } from '../charts/ThresholdPlot.jsx';
 import { MarkToggle } from '../charts/MarkToggle.jsx';
 import { usePrefs } from '../prefs/context.js';
-import { MAX_LABELLED_COLUMNS, areaPath, axisTicks, chartNum, linePath, maxOf, niceMax, xPct, yPct } from '../charts/scale.js';
+import { MAX_LABELLED_COLUMNS, axisTicks, chartNum, linePath, maxOf, niceMax, xPct, yPct } from '../charts/scale.js';
 import { fmtNum, openPeriodSoFar, openPeriodView } from '../overview/format.js';
 import { aboveSummary, buildCebRows, columnTip, defaultThreshold, gapSummary, isPartial, stepEnd, varianceTag, windowOf } from './rows.js';
 import { GapStrip } from './GapStrip.jsx';
 import { CebTable } from './CebTable.jsx';
 
-const STYLES = [{ value: 'bars', label: 'Bars' }, { value: 'line', label: 'Lines' }, { value: 'area', label: 'Area' }];
+const STYLES = [{ value: 'bars', label: 'Bars' }, { value: 'line', label: 'Lines' }];
 const COUNTS = [{ value: 8, label: '8' }, { value: 12, label: '12' }, { value: 'all', label: 'All' }];
 const STRIPE = 'repeating-linear-gradient(135deg, var(--gen) 0 5px, var(--gen-a30) 5px 9px)';
 
@@ -28,7 +28,6 @@ function Columns({ rows, yMax, threshold, style }) {
     <>
       {style !== 'bars' && (
         <svg className="v3-plot-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          {style === 'area' && <path d={areaPath(invPts)} style={{ fill: 'var(--gen-a16)' }} />}
           <path d={linePath(invPts)} fill="none" style={{ stroke: 'var(--gen)' }} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
           <path d={linePath(cebPts)} fill="none" style={{ stroke: 'var(--ceb)' }} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         </svg>
