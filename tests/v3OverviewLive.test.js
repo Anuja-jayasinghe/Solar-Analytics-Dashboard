@@ -8,7 +8,7 @@ import { createElement as h } from 'react';
 import { renderToString } from 'react-dom/server';
 import {
   DASH, fmtNum, shortDate, longDate, monthsBetween, lkrCompact, energyCompact, targetProgress, gaugeFraction,
-  liveState, freshness, openPeriodView, FRESH_WINDOW_MIN
+  liveState, freshness, openPeriodView, FRESH_WINDOW_MIN, clockAt, readingNote, liveStatusTip, errorLabel
 } from '../src/v3/overview/format.js';
 import { TotalsRow } from '../src/v3/overview/TotalsRow.jsx';
 import { CebCompare } from '../src/v3/ceb/CebCompare.jsx';
@@ -83,6 +83,40 @@ describe('live status', () => {
     const s = liveState({ status: 'online', stale: true });
     expect(s.label).toBe('Online · last known');
     expect(s.tone).toBe('warn');
+  });
+
+  it('an inverter alarm shows its SolisCloud state code', () => {
+    expect(liveState({ status: 'alarm', faultCode: 1011 })).toMatchObject({ key: 'fault', label: 'Fault · code 1011', tone: 'bad' });
+    expect(liveState({ status: 'alarm', faultCode: null }).label).toBe('Fault');
+    expect(liveStatusTip({ status: 'alarm', faultCode: 1011 }, null, liveState({ status: 'alarm', faultCode: 1011 }))).toContain('state code 1011');
+  });
+
+  it('a SolisCloud failure is named as such, not as an inverter problem', () => {
+    const none = liveState(null, { code: 'upstream_unavailable' });
+    expect(none).toMatchObject({ key: 'upstream', label: 'SolisCloud not responding', tone: 'warn' });
+    expect(liveStatusTip(null, { code: 'upstream_unavailable' }, none)).toContain('No reading from today is saved yet');
+    expect(liveState(null, { code: 'internal' }).key).toBe('unknown');
+
+    const saved = { status: 'alarm', faultCode: 1011, stale: true, upstream: 'unavailable', source: 'saved', dataTimestamp: Date.parse('2026-11-03T06:20:00Z') };
+    const s = liveState(saved);
+    expect(s).toMatchObject({ key: 'upstream', label: 'SolisCloud not responding', tone: 'warn' });
+    expect(s.inverter.label).toBe('Fault · code 1011'); // what the inverter last said is kept for the tip
+    const tip = liveStatusTip(saved, null, s);
+    expect(tip).toContain('last saved reading at 11:50');
+    expect(tip).toContain('Fault · code 1011');
+    expect(tip).toContain('not a live value');
+  });
+
+  it('says which reading is on screen when it is not current', () => {
+    const at = Date.parse('2026-11-03T06:20:00Z'); // 11:50 in Colombo
+    expect(clockAt(at)).toBe('11:50');
+    expect(clockAt(null)).toBeNull();
+    expect(readingNote({ stale: true, source: 'saved', dataTimestamp: at })).toBe('last saved reading at 11:50');
+    expect(readingNote({ stale: true, source: 'memory', dataTimestamp: at })).toBe('last reading at 11:50');
+    expect(readingNote({ stale: true, source: 'saved', dataTimestamp: null })).toBe('last saved reading');
+    expect(readingNote({ stale: false, dataTimestamp: at })).toBeNull();
+    expect(errorLabel('upstream_unavailable')).toBe('live reading: SolisCloud not responding');
+    expect(errorLabel('rate_limited')).toBe('rate_limited');
   });
   it('freshness drains over the window and prefers the inverter timestamp', () => {
     const now = 10_000_000;
@@ -194,6 +228,26 @@ describe('rendered tiles', () => {
     expect(noTarget).toContain('Set a daily target in Settings');
     const noPeak = renderToString(h(TodayTile, { live: { ...live, peakTodayKw: undefined, peakTodayAt: undefined }, targetKwh: 150, now: 1000 }));
     expect(noPeak).toMatch(/Peak\s*(<!-- -->)?\s*<b[^>]*>—<\/b>/);
+  });
+
+  it('live row when SolisCloud fails: the saved reading is labelled with its time, never shown as current', () => {
+    const at = Date.parse('2026-11-03T06:20:00Z');
+    const saved = { status: 'online', currentPowerKw: 30.1, todayKwh: 75.4, stale: true, upstream: 'unavailable', source: 'saved', dataTimestamp: at };
+    const gauge = renderToString(h(LiveGauge, { live: saved, maxKw: 40 }));
+    expect(gauge).toContain('SolisCloud not responding');
+    expect(gauge).toContain('Last saved reading at 11:50');
+    expect(gauge).toContain('kW then');
+    expect(gauge).toContain('30.1');
+    const today = renderToString(h(TodayTile, { live: saved, targetKwh: 150, now: at + 40 * 60000 }));
+    expect(today).toContain('as of 11:50');
+    expect(today).toContain('75.4');
+  });
+
+  it('live row when SolisCloud fails and nothing is saved today: dashes, and the cause named', () => {
+    const gauge = renderToString(h(LiveGauge, { live: null, error: { code: 'upstream_unavailable' }, maxKw: 40, loading: false }));
+    expect(gauge).toContain('SolisCloud not responding');
+    expect(gauge).toContain('No reading saved today yet');
+    expect(gauge).toMatch(new RegExp(`v3-gauge-kw">${DASH}<`)); // the reading is a dash, never 0 kW
   });
 
   it('live gauge: shows kW and share, or a dash when power is unknown', () => {

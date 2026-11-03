@@ -30,7 +30,11 @@ import { withRequestLog } from '../_lib/log.js';
 
 const INVERTER_SN = process.env.INVERTER_SN || '1811040244070066';
 
+const repo = createRepo(supabase, INVERTER_SN);
+
 const live = createLiveProvider({
+  // Only when SolisCloud fails: the newest reading the scheduled job saved today, clearly marked as such.
+  fetchSaved: () => repo.latestLiveReading(),
   // Today's readings, only to find the day's peak (cached 5 minutes by the provider).
   fetchDay: async (dateKey) => {
     const res = await solisFetch('/v1/api/inverterDay', { sn: INVERTER_SN, money: 'LKR', time: dateKey, timeZone: 8 });
@@ -47,7 +51,7 @@ const live = createLiveProvider({
 
 const handler = createDataHandler({
   verify: (req, res) => verifyAccess(req, res, 'viewer'),
-  repo: createRepo(supabase, INVERTER_SN),
+  repo,
   live,
   limiter: createRateLimiter({ limit: 120, windowMs: 60_000 }),
   ready: (res) => !blockOnConfigProblem(res)

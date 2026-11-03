@@ -4,6 +4,7 @@ import { pageTodayKey } from '../data/today.js';
 import { Note } from '../ui/Note.jsx';
 import { TotalsRow } from '../overview/TotalsRow.jsx';
 import { LiveRow } from '../overview/LiveRow.jsx';
+import { errorLabel } from '../overview/format.js';
 import { CebCompare } from '../ceb/CebCompare.jsx';
 import { ExploreSection } from '../explore/ExploreSection.jsx';
 
@@ -38,7 +39,7 @@ export default function OverviewPage() {
     <>
       {failed.length > 0 && (
         <Note tone="bad">
-          Some figures could not be loaded ({[...new Set(failed.map((r) => r.error.code ?? 'error'))].join(', ')}). They are shown as a dash, never as zero.
+          Some figures could not be loaded ({[...new Set(failed.map((r) => errorLabel(r.error.code)))].join(', ')}). They are shown as a dash, never as zero.
         </Note>
       )}
       <TotalsRow
@@ -47,7 +48,7 @@ export default function OverviewPage() {
         todayKey={todayKey}
         loading={totals.loading}
       />
-      <LiveRow live={live.data} targetKwh={s?.dailyTargetKwh ?? null} maxKw={s?.acRatedKw ?? null} now={now} loading={live.loading} />
+      <LiveRow live={live.data} liveError={live.error} targetKwh={s?.dailyTargetKwh ?? null} maxKw={s?.acRatedKw ?? null} now={now} loading={live.loading} />
       <CebCompare bills={bills.data} openPeriod={totals.data?.openPeriod} live={live.data} lastStoredDay={totals.data?.generation?.lastDay} todayKey={todayKey} loading={bills.loading || totals.loading} error={bills.error} />
       <ExploreSection totals={totals.data} todayKey={todayKey} />
     </>

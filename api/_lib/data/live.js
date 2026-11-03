@@ -4,8 +4,12 @@
 // `solis-live-data` Edge Function with the public anon key; that function was deleted 2026-10-29).
 //
 // Cached in memory for a short TTL so many open dashboards cost one upstream call per minute.
-// If SolisCloud fails we serve the last good value marked `stale: true` rather than inventing
-// zeros; with nothing cached the caller gets a 502, never a fabricated reading.
+// If SolisCloud fails we never invent a reading. We serve the newest REAL one we have, marked
+// `stale: true, upstream: 'unavailable'`: the last good value in memory, or the newest reading the
+// scheduled job saved in `inverter_data_live` today (`source: 'saved'`; a fresh deployment has
+// nothing in memory). With neither, the caller gets a 502 `upstream_unavailable`.
+//
+// `source` says where the reading came from: 'soliscloud' (just now), 'memory', or 'saved'.
 //
 // State mapping (Solis docs): 1 online, 2 offline, 3 alarm. NOTE state 2 is NORMAL every night,
 // so `abnormalOffline` (stateExceptionFlag === 1) is what signals a real problem.
@@ -31,7 +35,9 @@ export function mapLive(rec, fetchedAtMs, peak = null) {
     peakTodayAt: peak ? peak.at : null,
     dataTimestamp: toNum(rec.dataTimestamp),
     fetchedAt: fetchedAtMs,
-    stale: false
+    stale: false,
+    upstream: 'ok',
+    source: 'soliscloud'
   };
 }
 
@@ -44,9 +50,11 @@ export function mapLive(rec, fetchedAtMs, peak = null) {
  * @param {number} [a.peakWaitMs]  the live reading never waits longer than this for the peak: the right-now numbers matter
  *   more than the day's maximum, so a slow day-read is reported as unknown this time and used on the next call
  * @param {number} [a.peakTtlMs]  how long a computed peak is reused (default 5 min: it is a whole day of points)
+ * @param {() => Promise<{raw: object, savedAtMs: number}|null>} [a.fetchSaved]  the newest reading the scheduled job saved
+ *   (the same SolisCloud record shape), used only when SolisCloud fails; one from an earlier day is ignored
  * @param {() => number} [a.now]
  */
-export function createLiveProvider({ fetchInverter, fetchDay = null, ttlMs = 60_000, peakTtlMs = 300_000, peakWaitMs = 2_500, now = () => Date.now() }) {
+export function createLiveProvider({ fetchInverter, fetchDay = null, fetchSaved = null, ttlMs = 60_000, peakTtlMs = 300_000, peakWaitMs = 2_500, now = () => Date.now() }) {
   let cached = null;
   let peakCache = null; // { dateKey, at, peak }
   let peakInFlight = null;
@@ -78,6 +86,26 @@ export function createLiveProvider({ fetchInverter, fetchDay = null, ttlMs = 60_
     return peakCache && peakCache.dateKey === dateKey ? peakCache.peak : null;
   }
 
+  /** Today's newest saved reading, mapped like a live one, or null. Never throws. */
+  async function savedReading() {
+    if (!fetchSaved) return null;
+    try {
+      const saved = await fetchSaved();
+      if (!saved || !saved.raw || !Number.isFinite(saved.savedAtMs)) return null;
+      const todayKey = localDateKey(now());
+      // An earlier day's reading would show yesterday's "today" total as today's.
+      if (localDateKey(saved.savedAtMs) !== todayKey) return null;
+      const peak = peakCache && peakCache.dateKey === todayKey ? peakCache.peak : null;
+      const reading = mapLive(saved.raw, now(), peak);
+      return { ...reading, dataTimestamp: reading.dataTimestamp ?? saved.savedAtMs, source: 'saved' };
+    } catch (err) {
+      console.error('live: saved reading unavailable', err?.message);
+      return null;
+    }
+  }
+
+  const readingTime = (r) => r.dataTimestamp ?? r.fetchedAt ?? 0;
+
   return async function live() {
     const t = now();
     if (cached && t - cached.fetchedAt < ttlMs) return cached;
@@ -91,7 +119,10 @@ export function createLiveProvider({ fetchInverter, fetchDay = null, ttlMs = 60_
         return cached;
       } catch (err) {
         console.error('live: upstream failure', err?.message);
-        if (cached) return { ...cached, stale: true };
+        const saved = await savedReading();
+        const memory = cached ? { ...cached, source: 'memory' } : null;
+        const newest = [memory, saved].filter(Boolean).sort((a, b) => readingTime(b) - readingTime(a))[0];
+        if (newest) return { ...newest, stale: true, upstream: 'unavailable' };
         throw new HttpError(502, 'Live data is temporarily unavailable', 'upstream_unavailable');
       } finally {
         inFlight = null;

@@ -1,6 +1,6 @@
 import { Glass } from '../ui/Glass.jsx';
 import { Tip } from '../ui/Tip.jsx';
-import { DASH, fmtNum, freshness, targetProgress } from './format.js';
+import { DASH, clockAt, fmtNum, freshness, targetProgress } from './format.js';
 
 /** The data-freshness ring: full when fresh, draining as the reading ages. Deliberately faint. */
 function FreshnessRing({ live, now }) {
@@ -44,12 +44,12 @@ export function TodayTile({ live, targetKwh, now, loading }) {
               <span className="v3-num v3-filler-pct">{prog.pct}%</span>
             </>
           ) : (
-            <span className="v3-filler-none">{loading ? '' : 'No target'}</span>
+            <span className="v3-filler-none">{loading ? '' : targetKwh == null ? 'No target' : DASH}</span>
           )}
         </div>
       </Tip>
       <div className="v3-today-text">
-        <div className="v3-kpi-label">Today</div>
+        <div className="v3-kpi-label">Today{live?.stale && clockAt(live.dataTimestamp) ? ` · as of ${clockAt(live.dataTimestamp)}` : ''}</div>
         {loading && !live ? (
           <div className="v3-skeleton" style={{ height: 30, width: 120 }} aria-busy="true" aria-label="Loading" />
         ) : (

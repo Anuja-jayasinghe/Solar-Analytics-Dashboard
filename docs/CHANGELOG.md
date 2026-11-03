@@ -4,6 +4,18 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+### Added
+- **The live tile says why there is no live reading.** When SolisCloud does not answer, the status reads "SolisCloud not
+  responding" (amber) instead of "Unknown", because the inverter may be fine. The tile shows the newest real reading with
+  its time ("Last saved reading at 11:50", "Today · as of 11:50", "kW then"): the last value in memory, or, after a fresh
+  deployment, the newest reading the scheduled job saved today in `inverter_data_live`. With nothing saved today the
+  figures stay a dash. Nothing is estimated.
+- An inverter alarm shows its SolisCloud state code ("Fault · code 1011"). The "could not be loaded" note names
+  SolisCloud instead of `upstream_unavailable`.
+- The live status sits in the gauge tile's top-right corner as designed (its tooltip wrapper had pulled it beside the
+  gauge, where longer labels wrapped), and the gauge's caption wraps on phones instead of widening the tile. The Today
+  circle shows a dash, not "No target", when a target is set but today's figure is unknown.
+
 ### Fixed
 - **"This billing period" runs bill date to bill date** (LR-001). Between the 1st of a month and the next bill, the open
   period was clipped to the 1st ("since 1 Nov" instead of "since 4 Oct"), filed under the wrong month, and the month

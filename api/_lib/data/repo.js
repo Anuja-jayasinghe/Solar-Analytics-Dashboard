@@ -76,6 +76,17 @@ export function createRepo(supabase, inverterSn) {
         .lt('ts', dayStart(addDays(to, 1))).order('ts', { ascending: true }));
     },
 
+    /** The newest reading the scheduled live job saved: its full SolisCloud record and when it was taken. */
+    async latestLiveReading() {
+      const { data, error } = await supabase.from('inverter_data_live').select('data_timestamp,raw_data')
+        .eq('inverter_sn', inverterSn).order('data_timestamp', { ascending: false }).limit(1);
+      if (error) throw new Error(error.message);
+      const row = data?.[0];
+      if (!row || !row.raw_data) return null;
+      const savedAtMs = Date.parse(row.data_timestamp);
+      return Number.isFinite(savedAtMs) ? { raw: row.raw_data, savedAtMs } : null;
+    },
+
     async settings() {
       const { data, error } = await supabase.from('system_settings').select('setting_name,setting_value');
       if (error) throw new Error(error.message);
