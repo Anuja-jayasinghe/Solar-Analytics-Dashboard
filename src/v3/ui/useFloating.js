@@ -40,7 +40,10 @@ export function useFloating(anchorRef, floatRef, open, prefer = 'top', gap = 8, 
     place();
     window.addEventListener('scroll', place, true);
     window.addEventListener('resize', place);
-    return () => { window.removeEventListener('scroll', place, true); window.removeEventListener('resize', place); };
+    // Re-place when either box changes size: a picker switching to its month grid, or the page reflowing under it.
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(place) : null;
+    if (ro) { for (const el of [anchorRef.current, floatRef.current, document.body]) if (el) ro.observe(el); }
+    return () => { window.removeEventListener('scroll', place, true); window.removeEventListener('resize', place); ro?.disconnect(); };
   }, [open, anchorRef, floatRef, prefer, gap, align, selector]);
   return pos;
 }

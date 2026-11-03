@@ -273,6 +273,7 @@ html, body { margin: 0; padding: 0; }
 .v3-peaklabel[data-edge='end'], .v3-hoverlabel[data-edge='end'] { transform: translateX(calc(-100% + 8px)); }
 .v3-hourticks { position: relative; height: 18px; margin-top: 6px; }
 .v3-hourticks > span { position: absolute; transform: translateX(-50%); font-size: 11px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+@media (max-width: 420px) { .v3-hourticks > span[data-odd] { display: none; } } /* 16 hour labels do not fit a phone: every other one */
 .v3-livedot { display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--good); vertical-align: 1px; animation: v3-breathe 2.6s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .v3-nowmark, .v3-livedot { animation: none; } }
 
@@ -574,7 +575,7 @@ select.v3-field { padding-right: 8px; }
 .v3-cal-day[data-selected='true'] { background: var(--gen); color: var(--gen-ink); }
 .v3-cal-day:disabled { opacity: .25; cursor: default; }
 @media (max-width: 700px) {
-  .v3-cal { flex-direction: column; }
+  .v3-cal { flex-direction: column; max-width: calc(100vw - 16px); box-sizing: border-box; }
   .v3-cal-presets { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--grid); padding: 0 0 8px; }
 }
 

@@ -68,7 +68,7 @@ function PowerChart({ curve, isToday }) {
           )}
         </div>
         <div className="v3-hourticks" aria-hidden="true">
-          {HOUR_TICKS.map((h) => <span key={h} style={{ left: `${xOfMinute(h * 60)}%` }}>{h}</span>)}
+          {HOUR_TICKS.map((h) => <span key={h} data-odd={h % 2 === 1 || undefined} style={{ left: `${xOfMinute(h * 60)}%` }}>{h}</span>)}
         </div>
         <div className="v3-sub" style={{ textAlign: 'center', margin: '4px 0 0' }}>
           Colombo time · {intervalLabel(curve.stepMin)}{isToday ? ' · updates live' : ''}
