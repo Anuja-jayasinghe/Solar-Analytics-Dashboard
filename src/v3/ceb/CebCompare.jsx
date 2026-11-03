@@ -129,13 +129,13 @@ export function CebCompare({ bills, openPeriod, live, lastStoredDay, todayKey, l
               <span><i className="v3-hatch" />open period or missing days</span>
               <span><i className="v3-ghost" />bill not issued yet</span>
             </div>
-            <div className="v3-markrow">
-              <MarkToggle />
-              {showMark && <><label className="v3-field-label"><span className="v3-sr">Mark above</span>
+            <div className="v3-markrow v3-markgroup">
+              {showMark && <><span className="v3-pill" data-tone="gen">{above.known ? `Inverter above: ${above.above} of ${above.known} periods` : 'no data in view'}</span>
+              <label className="v3-field-label"><span className="v3-sr">Mark above</span>
                 <input className="v3-field" type="number" min="0" step="50" value={threshold} aria-label="Threshold in kWh" onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v)) setThr(Math.max(0, Math.round(v))); }} style={{ width: 90 }} />
                 <span>kWh</span>
-              </label>
-              <span className="v3-pill" data-tone="gen">{above.known ? `Inverter above: ${above.above} of ${above.known} periods` : 'no data in view'}</span></>}
+              </label></>}
+              <MarkToggle />
             </div>
           </div>
 

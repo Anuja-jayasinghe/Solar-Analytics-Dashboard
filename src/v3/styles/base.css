@@ -290,6 +290,10 @@ html, body { margin: 0; padding: 0; }
 .v3-legend i.v3-hatch { width: 16px; height: 10px; border-radius: 2px; border: 1px solid var(--gen); background: repeating-linear-gradient(135deg, var(--gen) 0 4px, var(--gen-a30) 4px 7px); }
 .v3-legend i.v3-ghost { width: 16px; height: 10px; border-radius: 2px; border: 1.5px dashed var(--ceb); opacity: .75; }
 .v3-markrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.v3-markgroup { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-left: auto; min-height: 34px; } /* the field's height, so hiding it moves nothing */
+.v3-markgroup { flex-wrap: nowrap; min-width: 0; }
+.v3-markgroup .v3-pill { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v3-legendrow > .v3-markgroup { flex: 1 0 100%; } /* its own line, so hiding the field never re-wraps the row and moves the eye */
 .v3-marktoggle { width: 32px; height: 32px; }
 .v3-marktoggle[aria-pressed='false'] { opacity: .75; }
 .v3-field-label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink2); }
@@ -350,6 +354,8 @@ html, body { margin: 0; padding: 0; }
   .v3-legend { gap: 8px; font-size: 10px; }
   .v3-legend span:nth-child(n+3) { display: none; }
   .v3-markrow { width: 100%; justify-content: space-between; gap: 6px; font-size: 11px; }
+  .v3-markgroup { gap: 6px; min-height: 28px; justify-content: flex-end; }
+  .v3-markgroup .v3-field { width: 64px !important; }
   .v3-markrow .v3-field { height: 28px; font-size: 12px; padding: 0 6px; }
   .v3-markrow .v3-pill { font-size: 10.5px; padding: 3px 8px; }
   .v3-yaxis, .v3-gap-axis { font-size: 9.5px; }

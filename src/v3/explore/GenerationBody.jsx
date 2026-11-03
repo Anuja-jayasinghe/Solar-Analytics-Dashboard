@@ -90,12 +90,15 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
             />
           </div>
         )}
-        <span style={{ marginLeft: 'auto' }}><MarkToggle /></span>
-        {showMark && <><label className="v3-field-label"><span className="v3-sr">Mark above</span>
-          <input className="v3-field" type="number" min="0" step="1" value={line} aria-label={`Threshold in ${unit}`} onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v)) onLine(Math.max(0, Math.round(v))); }} style={{ width: 90 }} />
-          <span>{unit}</span>
-        </label>
-        <span className="v3-pill" data-tone="gen">{above.known ? `${above.above} of ${above.known} ${grouped ? 'months' : 'days'} above` : 'no data in range'}</span></>}
+        {/* the eye stays put at the far right; showing the line adds the count and the field to its left */}
+        <div className="v3-markgroup">
+          {showMark && <><span className="v3-pill" data-tone="gen">{above.known ? `${above.above} of ${above.known} ${grouped ? 'months' : 'days'} above` : 'no data in range'}</span>
+          <label className="v3-field-label"><span className="v3-sr">Mark above</span>
+            <input className="v3-field" type="number" min="0" step="1" value={line} aria-label={`Threshold in ${unit}`} onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v)) onLine(Math.max(0, Math.round(v))); }} style={{ width: 90 }} />
+            <span>{unit}</span>
+          </label></>}
+          <MarkToggle />
+        </div>
       </div>
 
       {error && <Note tone="bad">Could not load this range ({error.code ?? 'error'}). Nothing is drawn rather than a made-up zero.</Note>}
