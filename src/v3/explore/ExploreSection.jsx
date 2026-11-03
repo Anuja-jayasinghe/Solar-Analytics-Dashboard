@@ -7,7 +7,7 @@ import { useIsPhone } from '../ui/useIsPhone.js';
 import { GenerationBody } from './GenerationBody.jsx';
 import { DayBody } from './DayBody.jsx';
 import { StatsBody } from './StatsBody.jsx';
-import { STATS_PERIODS, buildPoints, canStep, customRange, dayLabelYear, defaultLine, isGrouped, presetRange, statsRange, stepRange } from './series.js';
+import { STATS_PERIODS, buildPoints, canStep, customRange, dataYears, dayLabelYear, defaultLine, isGrouped, presetRange, statsRange, stepRange, yearPoints, yearRange } from './series.js';
 
 const TABS = [{ value: 'gen', label: 'Generation' }, { value: 'day', label: 'Day' }, { value: 'stats', label: 'Stats' }];
 const VIEWS = [{ value: 'gen', label: 'Over time' }, { value: 'day', label: 'Through the day' }];
@@ -26,6 +26,7 @@ export function ExploreSection({ totals, todayKey, live = null, today = null }) 
   const [kind, setKind] = useState('month');
   const [endKey, setEndKey] = useState(null); // null = follow the newest day with data
   const [custom, setCustom] = useState(null);
+  const [year, setYear] = useState(null); // null = the newest year with data
   const [style, setStyle] = useState('area');
   const [lines, setLines] = useState({ day: null, month: null });
   const [period, setPeriod] = useState('30');
@@ -36,17 +37,23 @@ export function ExploreSection({ totals, todayKey, live = null, today = null }) 
     return { min: gen?.firstDay ?? null, max };
   }, [gen, todayKey]);
   const ready = !!bounds.max;
+  const years = useMemo(() => dataYears(bounds), [bounds]);
+  const shownYear = year ?? years[years.length - 1] ?? null;
 
   const range = useMemo(() => {
     if (!ready) return null;
     if (kind === 'custom') return customRange(custom?.from ?? bounds.max, custom?.to ?? bounds.max, bounds);
+    if (kind === 'year') return yearRange(shownYear, bounds);
     return presetRange(kind, endKey ?? bounds.max, bounds);
-  }, [ready, kind, endKey, custom, bounds]);
+  }, [ready, kind, endKey, custom, bounds, shownYear]);
 
   const res = useResource('range', { from: range?.from, to: range?.to }, { enabled: ready && !!range });
   const series = res.data?.stats?.series;
-  const grouped = range ? isGrouped(range) : false;
-  const points = useMemo(() => buildPoints(series ?? [], grouped), [series, grouped]);
+  const grouped = kind === 'year' || (range ? isGrouped(range) : false);
+  const points = useMemo(
+    () => (kind === 'year' && shownYear ? yearPoints(series ?? [], shownYear, bounds) : buildPoints(series ?? [], grouped)),
+    [series, grouped, kind, shownYear, bounds]
+  );
   const lineKey = grouped ? 'month' : 'day';
   const line = lines[lineKey] ?? defaultLine(points, grouped);
 
@@ -58,11 +65,15 @@ export function ExploreSection({ totals, todayKey, live = null, today = null }) 
   // Load the likely next choices in the background so clicking them is instant.
   const neighbours = [];
   if (ready && bounds.max) {
-    for (const k of ['week', 'month', 'year']) {
+    for (const k of ['week', 'month']) {
       const r = presetRange(k, bounds.max, bounds);
       neighbours.push(['range', { from: r.from, to: r.to }]);
     }
-    if (range && kind !== 'custom' && canStep(kind, range, -1, bounds)) {
+    for (const y of years.slice(-2)) {
+      const r = yearRange(y, bounds);
+      neighbours.push(['range', { from: r.from, to: r.to }]);
+    }
+    if (range && kind !== 'custom' && kind !== 'year' && canStep(kind, range, -1, bounds)) {
       const back = stepRange(kind, range, -1, bounds);
       neighbours.push(['range', { from: back.from, to: back.to }]);
     }
@@ -89,6 +100,9 @@ export function ExploreSection({ totals, todayKey, live = null, today = null }) 
       onStyle={setStyle}
       range={range}
       bounds={bounds}
+      years={years}
+      year={shownYear}
+      onYear={setYear}
       canBack={!!range && canStep(kind, range, -1, bounds)}
       canForward={!!range && canStep(kind, range, 1, bounds)}
       onStep={step}

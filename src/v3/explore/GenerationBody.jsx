@@ -9,19 +9,19 @@ import { addDays } from '../../../shared/domain/time.js';
 import { usePrefs } from '../prefs/context.js';
 import { MAX_LABELLED_COLUMNS, areaPath, axisTicks, chartNum, linePath, maxOf, niceMax, xPct, yPct } from '../charts/scale.js';
 import { fmtNum } from '../overview/format.js';
-import { aboveCount, dayLabelYear } from './series.js';
+import { aboveCount, dayLabelYear, yearSummary } from './series.js';
 
 const KINDS = [{ value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }, { value: 'year', label: 'Year' }, { value: 'custom', label: 'Custom' }];
 const STYLES = [{ value: 'area', label: 'Area' }, { value: 'line', label: 'Line' }, { value: 'bars', label: 'Bars' }];
 
 /** The date (and missing days for a month); the value only when the bars are too many to carry their own labels. */
 function pointTip(p, labelled, grouped) {
-  if (p.kwh === null) return `${p.full}\nNo data recorded`;
+  if (p.kwh === null) return `${p.full}\n${p.why ?? 'No data recorded'}`;
   return labelled ? p.full : `${p.full}\n${fmtNum(p.kwh, grouped ? 0 : 1)} kWh`;
 }
 
 /** "Inverter generation": a range of days (or months), area by default, with the draggable "Mark above" line. */
-export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, bounds, canBack, canForward, onStep, onCustom, points, grouped, line, onLine, loading, error }) {
+export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, bounds, years = [], year = null, onYear, canBack, canForward, onStep, onCustom, points, grouped, line, onLine, loading, error }) {
   const { showMark } = usePrefs();
   const known = points.filter((p) => p.kwh !== null);
   const yMax = niceMax(Math.max(maxOf(points.map((p) => p.kwh), 1) * 1.1, showMark ? line * 1.04 : 0));
@@ -31,6 +31,9 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
   const unit = grouped ? 'kWh/month' : 'kWh/day';
   const linePts = points.map((p, i) => (p.kwh === null ? null : [xPct(i, n), yPct(p.kwh, yMax)]));
   const dense = n > 30;
+  const isYear = kind === 'year';
+  const sum = isYear ? yearSummary(points, range) : null;
+  const soFar = isYear && range && bounds.max && range.to === bounds.max;
 
   return (
     <>
@@ -44,15 +47,25 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
         <div className="v3-controls">
           <Segmented small options={KINDS} value={kind} onChange={onKind} label="Range" />
           <Segmented small options={STYLES} value={style} onChange={onStyle} label="Chart style" />
-          <div className="v3-stepper">
-            <button type="button" className="v3-iconbtn sm" onClick={() => onStep(-1)} disabled={!canBack} aria-label="Earlier"><ChevronLeft size={15} /></button>
-            <span className="v3-steplabel">{range ? `${dayLabelYear(range.from)} to ${dayLabelYear(range.to)}` : ''}</span>
-            <button type="button" className="v3-iconbtn sm" onClick={() => onStep(1)} disabled={!canForward} aria-label="Later"><ChevronRight size={15} /></button>
-          </div>
+          {isYear ? (
+            years.length > 0 && <Segmented small options={years.map((y) => ({ value: y, label: String(y) }))} value={year} onChange={onYear} label="Year" />
+          ) : (
+            <div className="v3-stepper">
+              <button type="button" className="v3-iconbtn sm" onClick={() => onStep(-1)} disabled={!canBack} aria-label="Earlier"><ChevronLeft size={15} /></button>
+              <span className="v3-steplabel">{range ? `${dayLabelYear(range.from)} to ${dayLabelYear(range.to)}` : ''}</span>
+              <button type="button" className="v3-iconbtn sm" onClick={() => onStep(1)} disabled={!canForward} aria-label="Later"><ChevronRight size={15} /></button>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="v3-markrow v3-markrow-wide">
+        {isYear && range && (
+          <>
+            <span className="v3-pill" data-tone="gen">{sum.kwh === null ? `No data in ${year}` : `${fmtNum(sum.kwh)} kWh in ${year}${soFar ? ' so far' : ''}`}</span>
+            <span className="v3-sub" style={{ margin: 0 }}>{dayLabelYear(range.from)} to {dayLabelYear(range.to)} · {sum.present} of {sum.days} days recorded</span>
+          </>
+        )}
         {kind === 'custom' && range && (
           <div className="v3-daterow">
             <DateRangePicker

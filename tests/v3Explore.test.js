@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   presetRange, customRange, stepRange, canStep, isGrouped, buildPoints, defaultLine, aboveCount, spreadGeometry,
-  dayLabel, dayLabelYear, GROUP_OVER_DAYS, MAX_CUSTOM_DAYS
+  dayLabel, dayLabelYear, GROUP_OVER_DAYS, MAX_CUSTOM_DAYS, dataYears, yearRange, yearPoints, yearSummary
 } from '../src/v3/explore/series.js';
 import { hourlyFromTelemetry, colomboClock } from '../src/v3/explore/hourly.js';
 
@@ -248,5 +248,44 @@ describe('day curve: the real reading interval and the shared peak', () => {
     expect(liveNow({ ...live, currentPowerKw: null }, '2026-11-03', '2026-11-03')).toBeNull();
     // the Today tile and the chart call the same function, so they report the same peak
     expect(dayCurve([at('04:30', 30), at('04:31', 35.5)], live, '2026-11-03', '2026-11-03').peak).toEqual({ kw: 35.9, min: 615, at: '10:15' });
+  });
+});
+
+describe('calendar year view', () => {
+  const R = { min: '2024-08-02', max: '2026-11-02' };
+  const days = (from, to, kwh = 100) => {
+    const out = [];
+    for (let d = new Date(`${from}T00:00:00Z`); d.toISOString().slice(0, 10) <= to; d.setUTCDate(d.getUTCDate() + 1)) out.push({ date: d.toISOString().slice(0, 10), kwh });
+    return out;
+  };
+
+  it('offers every year that has data, and a year runs 1 Jan to 31 Dec cut to the data', () => {
+    expect(dataYears(R)).toEqual([2024, 2025, 2026]);
+    expect(dataYears({ min: null, max: null })).toEqual([]);
+    expect(yearRange(2025, R)).toEqual({ from: '2025-01-01', to: '2025-12-31' });
+    expect(yearRange(2024, R)).toEqual({ from: '2024-08-02', to: '2024-12-31' }); // records began in August
+    expect(yearRange(2026, R)).toEqual({ from: '2026-01-01', to: '2026-11-02' }); // so far
+  });
+
+  it('always draws twelve months; months without readings are null and say why, partial months say how many days', () => {
+    const pts = yearPoints(days('2026-01-01', '2026-11-02'), 2026, R);
+    expect(pts.map((p) => p.label)).toEqual(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']);
+    expect(pts[0]).toMatchObject({ key: '2026-01', kwh: 3100, present: 31, total: 31, full: 'Jan 2026' });
+    expect(pts[10]).toMatchObject({ key: '2026-11', kwh: 200, present: 2, total: 30, full: 'Nov 2026 (2/30 days)' });
+    expect(pts[11]).toMatchObject({ key: '2026-12', kwh: null, present: 0, why: 'Not yet' });
+
+    const first = yearPoints(days('2024-08-02', '2024-12-31'), 2024, R);
+    expect(first[0]).toMatchObject({ kwh: null, why: 'Before records began' });
+    expect(first[7]).toMatchObject({ key: '2024-08', present: 30, total: 31 });
+
+    const gap = yearPoints(days('2025-01-01', '2025-12-31').map((d) => (d.date.startsWith('2025-03') ? { ...d, kwh: null } : d)), 2025, R);
+    expect(gap[2]).toMatchObject({ kwh: null, why: 'No data recorded' }); // a missing month is never 0
+  });
+
+  it('totals the year over recorded days only', () => {
+    const r = yearRange(2026, R);
+    const s = yearSummary(yearPoints(days(r.from, r.to), 2026, R), r);
+    expect(s).toEqual({ kwh: 30600, present: 306, days: 306 });
+    expect(yearSummary(yearPoints([], 2026, R), r)).toEqual({ kwh: null, present: 0, days: 306 });
   });
 });

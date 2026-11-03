@@ -14,6 +14,10 @@ All notable changes to the Solar Analytics Dashboard project.
   The generation section now opens on this "Through the day" view (on phones, the Day tab).
   Today's readings are read once by the page and shared, so the Today tile's peak is the chart's peak (it no longer
   shows a dash while SolisCloud's day read is slow).
+- **Inverter generation → Year is a calendar year you pick** (2024, 2025, 2026 …) instead of a rolling 365 days. It
+  always shows January to December. A month only partly recorded (the first one, or this one so far) is drawn as
+  partial with its day count. A month with no readings stays empty and says why (not yet, before records began, or
+  not recorded), never a zero. The year's total and "N of M days recorded" sit above the chart.
 - **Date pickers jump by month and year.** Clicking the month title opens a month picker with year arrows, so a date a
   year back takes three clicks instead of twelve presses of the month arrow. Months outside the data are greyed out.
 - **Explanations sit behind ⓘ icons instead of a Hints switch.** The sidebar's Hints switch (off by default, and

@@ -105,6 +105,59 @@ export function buildPoints(series, grouped) {
   });
 }
 
+/** The years that hold any data, oldest first: [2024, 2025, 2026]. */
+export function dataYears({ min = null, max = null } = {}) {
+  if (!max) return [];
+  const last = Number(max.slice(0, 4));
+  const first = min ? Number(min.slice(0, 4)) : last;
+  return Array.from({ length: last - first + 1 }, (_, i) => first + i);
+}
+
+/** A calendar year, 1 Jan to 31 Dec, cut to the days that have data (the first year starts late, this year is so far). */
+export function yearRange(year, { min = null, max = null } = {}) {
+  return { from: clampKey(`${year}-01-01`, min, max), to: clampKey(`${year}-12-31`, min, max) };
+}
+
+const monthDays = (ym) => {
+  const y = Number(ym.slice(0, 4));
+  const m = Number(ym.slice(5, 7));
+  return [31, (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+};
+
+/**
+ * Twelve monthly points for a calendar year, January to December, from the year's daily series. A month counts its
+ * days against the whole month, so one only partly recorded (the first, or this one so far) shows as partial. A month
+ * with no readings is null, never 0, and says why: not reached yet, before records began, or simply not recorded.
+ */
+export function yearPoints(series, year, { min = null, max = null } = {}) {
+  const byMonth = new Map(buildPoints(series, true).map((p) => [p.key, p]));
+  const lo = min ? min.slice(0, 7) : null;
+  const hi = max ? max.slice(0, 7) : null;
+  return MON.map((name, i) => {
+    const ym = `${year}-${String(i + 1).padStart(2, '0')}`;
+    const total = monthDays(ym);
+    const got = byMonth.get(ym);
+    const present = got?.present ?? 0;
+    const why = hi && ym > hi ? 'Not yet' : lo && ym < lo ? 'Before records began' : 'No data recorded';
+    return {
+      key: ym,
+      label: name,
+      full: `${name} ${year}${present && present < total ? ` (${present}/${total} days)` : ''}`,
+      kwh: present ? got.kwh : null,
+      present,
+      total,
+      ...(present ? {} : { why })
+    };
+  });
+}
+
+/** A year's total over the days that have data, and how many days that is out of the days in reach. */
+export function yearSummary(points, range) {
+  const kwh = points.reduce((s, p) => s + (isNum(p.kwh) ? p.kwh : 0), 0);
+  const present = points.reduce((s, p) => s + p.present, 0);
+  return { kwh: present ? kwh : null, present, days: range ? diffDays(range.from, range.to) + 1 : 0 };
+}
+
 /** Default "Mark above" line: the median of the known values, rounded (nearest 10 for days, 100 for months). */
 export function defaultLine(points, grouped) {
   const v = points.map((p) => p.kwh).filter(isNum).sort((a, b) => a - b);
