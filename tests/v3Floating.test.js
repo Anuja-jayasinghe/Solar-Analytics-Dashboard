@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { placeFloating } from '../src/v3/ui/floating.js';
 import { anchorRect } from '../src/v3/ui/useFloating.js';
-import { addMonths, daysInMonth, weekdayOf, monthGrid, outOfBounds, clampKey, monthTitle, shortLabel, orderRange, moveFocus } from '../src/v3/ui/calendar.js';
+import { addMonths, daysInMonth, weekdayOf, monthGrid, outOfBounds, clampKey, monthTitle, shortLabel, orderRange, moveFocus, monthsOfYear, yearInBounds } from '../src/v3/ui/calendar.js';
 
 const vp = { width: 1000, height: 800 };
 const rect = (left, top, w = 40, h = 20) => ({ left, top, width: w, height: h, right: left + w, bottom: top + h });
@@ -72,6 +72,17 @@ describe('calendar maths', () => {
     expect(moveFocus('2036-03-31', 'PageUp')).toBe('2036-02-29');
     expect(moveFocus('2036-01-31', 'PageDown')).toBe('2036-02-29');
     expect(moveFocus('2036-01-31', 'Tab')).toBeNull();
+  });
+  it('month picker: twelve months a year, those outside the data greyed, years stepped only while in range', () => {
+    const m = monthsOfYear(2024, '2024-08-02', '2026-11-03');
+    expect(m.map((x) => x.label)).toEqual(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']);
+    expect(m.filter((x) => !x.disabled).map((x) => x.ym)).toEqual(['2024-08', '2024-09', '2024-10', '2024-11', '2024-12']);
+    expect(monthsOfYear(2026, '2024-08-02', '2026-11-03').filter((x) => !x.disabled).at(-1).ym).toBe('2026-11');
+    expect(monthsOfYear(2030, null, null).every((x) => !x.disabled)).toBe(true);
+    expect(yearInBounds(2023, '2024-08-02', '2026-11-03')).toBe(false);
+    expect(yearInBounds(2024, '2024-08-02', '2026-11-03')).toBe(true);
+    expect(yearInBounds(2027, '2024-08-02', '2026-11-03')).toBe(false);
+    expect(yearInBounds(1999, null, null)).toBe(true);
   });
 });
 

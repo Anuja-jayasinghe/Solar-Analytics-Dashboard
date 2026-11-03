@@ -2,16 +2,14 @@ import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { addDays } from '../../../shared/domain/time.js';
 import { usePrefetch, useResource } from '../data/context.js';
-import { Segmented } from '../ui/Segmented.jsx';
 import { Note } from '../ui/Note.jsx';
 import { DatePicker } from '../ui/Calendar.jsx';
-import { axisTicks, chartNum, maxOf, niceMax } from '../charts/scale.js';
+import { axisTicks, maxOf, niceMax } from '../charts/scale.js';
 import { DASH, fmtNum } from '../overview/format.js';
 import { dayLabelYear } from './series.js';
 import { FIRST_HOUR, LAST_HOUR, hourlyFromTelemetry } from './hourly.js';
 import { DAY_END_MIN, DAY_START_MIN, TODAY_POLL_MS, dayCurve, intervalLabel, nearestPoint, xOfMinute } from './power.js';
 
-const VIEWS = [{ value: 'power', label: 'Power' }, { value: 'hourly', label: 'Per hour' }];
 const HOUR_TICKS = Array.from({ length: LAST_HOUR - FIRST_HOUR + 2 }, (_, i) => FIRST_HOUR + i);
 
 /** The power curve: every reading in kW, the peak marked, a "now" dot for today, and a hover line with time and kW. */
@@ -80,38 +78,12 @@ function PowerChart({ curve, isToday }) {
   );
 }
 
-/** The day hour by hour: kWh generated in each hour (09 = 09:00 to 10:00). */
-function HourlyChart({ day }) {
-  const hours = day.hours;
-  const yMax = niceMax(Math.max(maxOf(hours.map((h) => h.kwh), 1) * 1.12, 1));
-  return (
-    <div className="v3-chartgrid">
-      <div className="v3-yaxis" aria-hidden="true">{axisTicks(yMax, (v) => fmtNum(v, v < 10 && v % 1 ? 1 : 0)).map((t) => <span key={t.pct}>{t.label}</span>)}</div>
-      <div className="v3-plotwrap">
-        <div className="v3-plot" style={{ height: 'var(--plot-h)' }}>
-          {axisTicks(yMax).map((t) => <div key={t.pct} className="v3-gridline" style={{ bottom: `${t.pct}%` }} />)}
-          <div className="v3-cols" style={{ gap: 0 }}>
-            {hours.map((h) => (
-              <div key={h.hour} className="v3-col" style={{ padding: 0 }}>
-                <div className="v3-bar single" style={{ height: `${(h.kwh / yMax) * 100}%`, background: 'var(--gen)', maxWidth: 30, width: '60%', flex: '0 0 auto' }}><span className="v3-val">{h.kwh > 0 ? chartNum(h.kwh) : ''}</span></div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="v3-xlabels" style={{ gap: 0 }}>{hours.map((h) => <div key={h.hour} className="v3-xlabel v3-xplain">{h.hour}</div>)}</div>
-        <div className="v3-sub" style={{ textAlign: 'center', margin: '4px 0 0' }}>kWh in each hour (9 = 09:00 to 10:00)</div>
-      </div>
-    </div>
-  );
-}
-
 /**
- * "Generation through the day": every reading of the inverter's power (as SolisCloud shows it), or kWh per hour.
- * Opens on today, which follows the live reading; past days come from the stored telemetry.
+ * "Generation through the day": every reading of the inverter's power across the day, as SolisCloud shows it.
+ * Opens on today, which follows the live reading; past days come from the stored telemetry. "Today" jumps back.
  */
 export function DayBody({ showHead, bounds, todayKey = null, live = null, today = null }) {
   const [picked, setPicked] = useState(null); // null = follow today (or the newest day with data)
-  const [view, setView] = useState('power');
   const maxDay = todayKey ?? bounds.max;
   const date = picked ?? maxDay;
   const isToday = !!date && date === todayKey;
@@ -122,12 +94,13 @@ export function DayBody({ showHead, bounds, todayKey = null, live = null, today 
   const res = shared ?? own;
   const points = res.data?.points;
   const curve = useMemo(() => dayCurve(points, live, date, todayKey), [points, live, date, todayKey]);
+  // only for the day's kWh when the live counter does not cover it
   const day = useMemo(() => hourlyFromTelemetry(points), [points]);
   // the neighbouring days, so stepping with the arrows is instant
   usePrefetch(date ? [['telemetry', { date: addDays(date, -1) }], ...(maxDay && date < maxDay ? [['telemetry', { date: addDays(date, 1) }]] : [])] : [], !!res.data);
 
   const move = (n) => { if (date) setPicked(addDays(date, n)); };
-  const hasData = view === 'power' ? !!curve : !!day;
+  const hasData = !!curve;
   const noData = enabled && !res.loading && !res.error && !hasData;
   // Today's total from the inverter's own counter when the live reading has it; otherwise the readings, integrated.
   const totalKwh = isToday && typeof live?.todayKwh === 'number' ? live.todayKwh : day?.totalKwh ?? null;
@@ -143,7 +116,7 @@ export function DayBody({ showHead, bounds, todayKey = null, live = null, today 
           </div>
         ) : null}
         <div className="v3-controls">
-          <Segmented small options={VIEWS} value={view} onChange={setView} label="Chart view" />
+          <button type="button" className="v3-todaybtn" onClick={() => setPicked(null)} disabled={date === maxDay}>Today</button>
           <div className="v3-stepper">
             <button type="button" className="v3-iconbtn sm" onClick={() => move(-1)} disabled={!date || (bounds.min && date <= bounds.min)} aria-label="Previous day"><ChevronLeft size={15} /></button>
             <DatePicker value={date} min={bounds.min} max={maxDay} onChange={setPicked} />
@@ -163,8 +136,7 @@ export function DayBody({ showHead, bounds, todayKey = null, live = null, today 
       {noData && <Note>{isToday ? 'No readings yet today, so nothing is drawn (not a zero).' : 'No readings were recorded for this day, so nothing is drawn (not a zero).'}</Note>}
       {enabled && res.loading && !hasData && <div className="v3-skeleton" style={{ height: 200 }} aria-busy="true" aria-label="Loading" />}
 
-      {view === 'power' && curve && <PowerChart curve={curve} isToday={isToday} />}
-      {view === 'hourly' && day && <HourlyChart day={day} />}
+      {curve && <PowerChart curve={curve} isToday={isToday} />}
     </>
   );
 }

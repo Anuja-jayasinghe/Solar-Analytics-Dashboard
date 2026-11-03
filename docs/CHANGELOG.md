@@ -9,10 +9,13 @@ All notable changes to the Solar Analytics Dashboard project.
   minute from SolisCloud; the caption states the real interval) instead of kWh on the hour, with the day's peak marked on the line ("Peak so far 26.3 kW · 11:35" for today). It
   opens on **today**, which comes from SolisCloud, refreshes every two minutes, and adds the live reading as a "now" dot.
   A hover line shows the exact time and kW anywhere on the curve. Holes in the readings break the line rather than
-  being drawn through. Today's total uses the inverter's own counter. The hourly kWh bars remain as "Per hour".
+  being drawn through. Today's total uses the inverter's own counter. The "Per hour" bars were removed: the curve shows the whole day.
+  A **Today** button jumps back from any past day.
   The generation section now opens on this "Through the day" view (on phones, the Day tab).
   Today's readings are read once by the page and shared, so the Today tile's peak is the chart's peak (it no longer
   shows a dash while SolisCloud's day read is slow).
+- **Date pickers jump by month and year.** Clicking the month title opens a month picker with year arrows, so a date a
+  year back takes three clicks instead of twelve presses of the month arrow. Months outside the data are greyed out.
 - **Explanations sit behind ⓘ icons instead of a Hints switch.** The sidebar's Hints switch (off by default, and
   missing on phones) is gone. An ⓘ appears only where the screen does not already say it: bill date to bill date, the
   lifetime counter, bills left out of earnings, how uptime and time stopped are counted, unresolved alarms, logger and

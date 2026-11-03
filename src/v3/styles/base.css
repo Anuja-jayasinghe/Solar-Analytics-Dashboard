@@ -530,7 +530,7 @@ select.v3-field { padding-right: 8px; }
 /* ---- date pickers ---- */
 .v3-datebtn { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--field-line); background: var(--field-bg); color: var(--ink); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .v3-datebtn:hover { border-color: var(--gen); }
-.v3-datebtn:focus-visible, .v3-cal-day:focus-visible, .v3-cal-preset:focus-visible { outline: 2px solid var(--gen); outline-offset: 2px; }
+.v3-datebtn:focus-visible, .v3-cal-day:focus-visible, .v3-cal-preset:focus-visible, .v3-cal-title:focus-visible, .v3-cal-mon:focus-visible, .v3-todaybtn:focus-visible { outline: 2px solid var(--gen); outline-offset: 2px; }
 .v3-cal { position: fixed; z-index: 400; display: flex; gap: 14px; padding: 14px; border-radius: 16px; background: var(--tip-bg); border: 1px solid var(--tip-line); box-shadow: 0 18px 44px rgba(0, 0, 0, .5); color: var(--ink); animation: v3-pop .12s ease-out; }
 .v3-cal-presets { display: flex; flex-direction: column; gap: 4px; padding-right: 12px; border-right: 1px solid var(--grid); min-width: 120px; }
 .v3-cal-preset { text-align: left; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 12.5px; font-weight: 600; padding: 7px 10px; border-radius: 8px; cursor: pointer; }
@@ -538,6 +538,17 @@ select.v3-field { padding-right: 8px; }
 .v3-cal-hint { font-size: 11.5px; color: var(--ink2); margin-bottom: 8px; }
 .v3-cal-month { width: 252px; }
 .v3-cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13.5px; }
+.v3-cal-title { display: inline-flex; align-items: center; gap: 4px; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 13.5px; padding: 4px 8px; border-radius: 8px; cursor: pointer; }
+.v3-cal-title:hover { background: var(--hover); }
+.v3-cal-title > svg { opacity: .6; }
+.v3-cal-months { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding-top: 4px; }
+.v3-cal-mon { height: 44px; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; border-radius: 10px; cursor: pointer; }
+.v3-cal-mon:hover:not(:disabled) { background: var(--hover); }
+.v3-cal-mon[data-selected='true'] { background: var(--gen); color: var(--gen-ink); }
+.v3-cal-mon:disabled { opacity: .25; cursor: default; }
+.v3-todaybtn { height: 28px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--glass-line); background: var(--chip-bg); color: var(--ink); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.v3-todaybtn:hover:not(:disabled) { border-color: var(--gen); color: var(--gen); }
+.v3-todaybtn:disabled { opacity: .4; cursor: default; }
 .v3-cal-row { display: grid; grid-template-columns: repeat(7, 1fr); }
 .v3-cal-wd { text-align: center; font-size: 10.5px; font-weight: 700; color: var(--ink2); padding: 4px 0; }
 .v3-cal-day { height: 34px; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 9px; cursor: pointer; }

@@ -1,12 +1,35 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import { Portal } from './Portal.jsx';
 import { useFloating } from './useFloating.js';
-import { WEEKDAYS, addMonths, clampKey, monthGrid, monthOf, monthTitle, moveFocus, orderRange, outOfBounds, shortLabel } from './calendar.js';
+import { WEEKDAYS, addMonths, clampKey, monthGrid, monthOf, monthTitle, monthsOfYear, moveFocus, orderRange, outOfBounds, shortLabel, yearInBounds } from './calendar.js';
 
-/** One month of days. `isSelected`/`inRange` decide the look; picking calls onPick(key). Arrow keys move, Enter picks. */
+/** Jump to any month: a year with arrows, then its twelve months. Picking one goes back to that month's days. */
+function MonthPicker({ ym, min, max, onPick }) {
+  const [year, setYear] = useState(Number(ym.slice(0, 4)));
+  return (
+    <div className="v3-cal-month">
+      <div className="v3-cal-head">
+        <button type="button" className="v3-iconbtn sm" disabled={!yearInBounds(year - 1, min, max)} onClick={() => setYear(year - 1)} aria-label="Previous year"><ChevronLeft size={15} /></button>
+        <b aria-live="polite">{year}</b>
+        <button type="button" className="v3-iconbtn sm" disabled={!yearInBounds(year + 1, min, max)} onClick={() => setYear(year + 1)} aria-label="Next year"><ChevronRight size={15} /></button>
+      </div>
+      <div className="v3-cal-months" role="group" aria-label={`Months of ${year}`}>
+        {monthsOfYear(year, min, max).map((m) => (
+          <button key={m.ym} type="button" className="v3-cal-mon" data-selected={m.ym === ym} disabled={m.disabled} aria-pressed={m.ym === ym} onClick={() => onPick(m.ym)}>{m.label}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One month of days. `isSelected`/`inRange` decide the look; picking calls onPick(key). Arrow keys move, Enter picks.
+ * The month title opens the month picker, for jumping months or years at once.
+ */
 function Month({ ym, onMonth, min, max, focusKey, setFocusKey, onPick, isSelected, inRange, onHover }) {
   const gridRef = useRef(null);
+  const [picking, setPicking] = useState(false);
   useEffect(() => {
     const el = gridRef.current?.querySelector(`[data-key="${focusKey}"]`);
     if (el && gridRef.current.contains(document.activeElement)) el.focus();
@@ -19,13 +42,16 @@ function Month({ ym, onMonth, min, max, focusKey, setFocusKey, onPick, isSelecte
     setFocusKey(k);
     if (monthOf(k) !== ym) onMonth(monthOf(k));
   };
+  if (picking) return <MonthPicker ym={ym} min={min} max={max} onPick={(m) => { onMonth(m); setPicking(false); }} />;
   const canBack = !min || addMonths(ym, -1) >= monthOf(min);
   const canFwd = !max || addMonths(ym, 1) <= monthOf(max);
   return (
     <div className="v3-cal-month">
       <div className="v3-cal-head">
         <button type="button" className="v3-iconbtn sm" disabled={!canBack} onClick={() => onMonth(addMonths(ym, -1))} aria-label="Previous month"><ChevronLeft size={15} /></button>
-        <b aria-live="polite">{monthTitle(ym)}</b>
+        <button type="button" className="v3-cal-title" onClick={() => setPicking(true)} aria-label={`${monthTitle(ym)}: choose month and year`}>
+          <b aria-live="polite">{monthTitle(ym)}</b><ChevronDown size={14} aria-hidden="true" />
+        </button>
         <button type="button" className="v3-iconbtn sm" disabled={!canFwd} onClick={() => onMonth(addMonths(ym, 1))} aria-label="Next month"><ChevronRight size={15} /></button>
       </div>
       <div className="v3-cal-grid" role="grid" aria-label={monthTitle(ym)} ref={gridRef} onKeyDown={onKeyDown} onPointerLeave={() => onHover?.(null)}>
