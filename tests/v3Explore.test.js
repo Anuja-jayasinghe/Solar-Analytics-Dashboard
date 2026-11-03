@@ -183,3 +183,45 @@ describe('statistics periods', () => {
     expect(statsRange('life', { min: null, max: '2026-10-03' })).toEqual({ from: '2026-10-03', to: '2026-10-03' });
   });
 });
+
+import { powerCurve, nearestPoint, xOfMinute, clockOf, DAY_START_MIN, DAY_END_MIN, GAP_MIN } from '../src/v3/explore/power.js';
+
+describe('power through the day (5-minute kW, as SolisCloud draws it)', () => {
+  // 2026-11-02 in Colombo; 04:30Z = 10:00 local
+  const at = (hhmmZ, kw) => ({ ts: `2026-11-02T${hhmmZ}:00Z`, pac_kw: kw });
+
+  it('keeps every reading, in Colombo time, marks the peak, and drops night and unknown values', () => {
+    const c = powerCurve([at('04:35', 18), at('04:30', 12), at('04:40', 29.04), at('04:45', null), at('20:00', 0)]);
+    expect(c.pts.map((p) => p.at)).toEqual(['10:00', '10:05', '10:10']); // sorted; null and 01:30 local dropped
+    expect(c.peak).toEqual({ kw: 29, min: 610, at: '10:10' });
+    expect(c.last).toMatchObject({ at: '10:10', live: false });
+  });
+
+  it('a hole in the readings breaks the line instead of drawing through it', () => {
+    const c = powerCurve([at('04:30', 10), at('04:35', 11), at('05:30', 15), at('05:35', 16)]);
+    expect(c.segments).toEqual([[0, 1], [2, 3]]);
+    expect(GAP_MIN).toBe(15);
+  });
+
+  it("adds today's live reading as the newest point, and only when it is newer", () => {
+    const pts = [at('04:30', 10), at('04:35', 11)];
+    const now = { kw: 14.2, tsMs: Date.parse('2026-11-02T04:41:00Z') };
+    const c = powerCurve(pts, now);
+    expect(c.last).toMatchObject({ kw: 14.2, at: '10:11', live: true });
+    expect(c.peak.kw).toBe(14.2); // "peak so far" includes the live reading
+    expect(powerCurve(pts, { kw: 99, tsMs: Date.parse('2026-11-02T04:31:00Z') }).pts).toHaveLength(2);
+    expect(powerCurve([], now).pts).toHaveLength(1);
+    expect(powerCurve([])).toBeNull();
+    expect(powerCurve(null)).toBeNull();
+  });
+
+  it('hover snaps to the closest reading; the axis runs 05:00 to 20:00', () => {
+    const c = powerCurve([at('04:30', 10), at('04:35', 11), at('04:40', 12)]);
+    expect(nearestPoint(c.pts, 602).at).toBe('10:00');
+    expect(nearestPoint(c.pts, 603).at).toBe('10:05');
+    expect(nearestPoint(c.pts, 2000).at).toBe('10:10');
+    expect(nearestPoint([], 600)).toBeNull();
+    expect([xOfMinute(DAY_START_MIN), xOfMinute(DAY_END_MIN)]).toEqual([0, 100]);
+    expect(clockOf(719.6)).toBe('12:00');
+  });
+});

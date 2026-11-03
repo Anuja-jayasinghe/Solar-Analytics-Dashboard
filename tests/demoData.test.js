@@ -95,6 +95,16 @@ describe('exercises every state the UI must render honestly', () => {
     expect(body.rows.filter((r) => r.status === 'pending')).toHaveLength(3); // Oct-Dec
   });
 
+  it("today's day chart is live and agrees with the demo live peak; yesterday comes from stored telemetry", async () => {
+    const today = (await demoRequest('telemetry', { date: DEMO.today })).body;
+    expect(today).toMatchObject({ source: 'soliscloud', live: true });
+    expect(Math.max(...today.points.map((p) => p.pac_kw))).toBeCloseTo(26.3, 6);
+    expect(today.points.every((p) => p.ts <= `${DEMO.today}T06:30:00Z`)).toBe(true); // nothing after the demo's noon
+    const yesterday = (await demoRequest('telemetry', { date: '2036-09-14' })).body;
+    expect(yesterday).toMatchObject({ source: 'database', live: false });
+    expect(yesterday.points.length).toBeGreaterThan(100);
+  });
+
   it('totals carry the open period from the day after the latest bill (4 Sep), under September', async () => {
     const { body } = await demoRequest('totals');
     expect(body.openPeriod).toMatchObject({ status: 'provisional', month: 'Sep', year: 2036, periodStart: '2036-09-04', periodEnd: DEMO.today, lastBillDate: '2036-09-03' });

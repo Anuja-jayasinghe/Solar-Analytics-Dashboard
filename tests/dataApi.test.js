@@ -284,6 +284,23 @@ describe('uptime, alarms, telemetry, settings, live', () => {
     expect((await call(handler, req('alarms', { from: '2026-10-01', to: '2026-10-03', limit: '9999' }))).statusCode).toBe(400);
   });
 
+  it('telemetry for today comes live from SolisCloud; past days, or a SolisCloud failure, from the database', async () => {
+    // now = 2026-10-03 (Colombo)
+    const today = [{ ts: '2026-10-03T05:00:00Z', pac_kw: 21.5 }];
+    const stored = [{ ts: '2026-10-02T05:00:00Z', pac_kw: 20 }];
+    const live = Object.assign(async () => ({ status: 'online' }), { today: async () => ({ date: '2026-10-03', points: today, fetchedAt: 123 }) });
+    const repo = makeRepo({ telemetryDay: async () => stored });
+    const { handler } = build({ repo, live });
+    expect((await call(handler, req('telemetry', { date: '2026-10-03' }))).body).toMatchObject({ date: '2026-10-03', points: today, source: 'soliscloud', live: true });
+    expect((await call(handler, req('telemetry', { date: '2026-10-02' }))).body).toMatchObject({ points: stored, source: 'database', live: false });
+
+    const down = Object.assign(async () => ({ status: 'online' }), { today: async () => { throw new Error('solis down'); } });
+    const fallback = build({ repo, live: down });
+    expect((await call(fallback.handler, req('telemetry', { date: '2026-10-03' }))).body).toMatchObject({ points: stored, source: 'database', live: true });
+    const empty = Object.assign(async () => ({ status: 'online' }), { today: async () => ({ date: '2026-10-03', points: [], fetchedAt: 1 }) });
+    expect((await call(build({ repo, live: empty }).handler, req('telemetry', { date: '2026-10-03' }))).body.source).toBe('database');
+  });
+
   it('telemetry needs a valid date', async () => {
     const { handler } = build();
     expect((await call(handler, req('telemetry', { date: '2026-10-02' }))).statusCode).toBe(200);
@@ -433,6 +450,34 @@ describe('live provider', () => {
     expect(await live()).toMatchObject({ stale: false, upstream: 'ok', source: 'soliscloud' });
     fail = true; t = 5000;
     expect(await live()).toMatchObject({ stale: true, upstream: 'unavailable', source: 'memory' });
+    spy.mockRestore();
+  });
+});
+
+describe("live: today's 5-minute points for the day chart", () => {
+  const noon = Date.parse('2036-09-10T06:30:00Z');
+  const raw = [
+    { dataTimestamp: Date.parse('2036-09-10T05:30:00Z'), pac: 20, pacStr: 'kW', state: 1 },
+    { dataTimestamp: Date.parse('2036-09-10T05:35:00Z'), pac: 26.34, pacStr: 'kW', state: 1 },
+    { dataTimestamp: Date.parse('2036-09-10T05:40:00Z'), pac: undefined, state: 1 }
+  ];
+  const rec = { state: 1, pac: 12.5, pacStr: 'kW', etoday: 80.5, etodayStr: 'kWh', etotal1: 100970, dataTimestamp: noon };
+
+  it('returns the points as stored telemetry rows, and one SolisCloud read serves both the curve and the peak', async () => {
+    const fetchDay = vi.fn(async () => raw);
+    const live = createLiveProvider({ fetchInverter: async () => rec, fetchDay, now: () => noon });
+    const t = await live.today();
+    expect(t.date).toBe('2036-09-10');
+    expect(t.points).toEqual([{ ts: '2036-09-10T05:30:00.000Z', pac_kw: 20 }, { ts: '2036-09-10T05:35:00.000Z', pac_kw: 26.34 }]); // unknown power dropped, not 0
+    expect((await live()).peakTodayKw).toBe(26.3);
+    await live.today();
+    expect(fetchDay).toHaveBeenCalledTimes(1); // cached for 5 minutes
+  });
+
+  it('null without a day reader or when nothing could be read today', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(await createLiveProvider({ fetchInverter: async () => rec, now: () => noon }).today()).toBeNull();
+    expect(await createLiveProvider({ fetchInverter: async () => rec, fetchDay: async () => { throw new Error('down'); }, now: () => noon }).today()).toBeNull();
     spy.mockRestore();
   });
 });
