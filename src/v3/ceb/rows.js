@@ -154,6 +154,12 @@ export function gapSummary(windowRows, allBills) {
 const dm = (key) => (typeof key === 'string' ? `${Number(key.slice(8, 10))} ${MON[Number(key.slice(5, 7)) - 1]}` : '—');
 const kwh = (v) => (isNum(v) ? `${Math.round(v).toLocaleString('en-US')} kWh` : 'no total');
 
+/** The real span of a period, bill date to bill date: '4 Sep – 3 Oct', or '4 Oct – today' while it is open. */
+export function periodSpan(row) {
+  if (!row.periodStart) return '';
+  return `${dm(row.periodStart)} – ${row.status === 'provisional' ? 'today' : dm(row.periodEnd)}`;
+}
+
 /** The hover/tap text for one column: period, both totals, the variance or why there is none. */
 export function columnTip(row, threshold) {
   const parts = [`${row.label} ${row.year ?? ''}`.trim(), `${dm(row.periodStart)} to ${dm(row.periodEnd)}`];

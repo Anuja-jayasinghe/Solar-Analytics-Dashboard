@@ -1,6 +1,8 @@
 import { Glass } from '../ui/Glass.jsx';
 import { Tip } from '../ui/Tip.jsx';
-import { DASH, energyCompact, fmtNum, lifetimeGeneration, longDate, lkrCompact, monthsBetween, openBillPeriod, openPeriodSoFar, shortDate } from './format.js';
+import { DASH, energyCompact, fmtNum, lifetimeGeneration, longDate, lkrCompact, monthsBetween, openPeriodSoFar, openPeriodView, shortDate } from './format.js';
+
+const MONTH_NAMES = { Jan: 'January', Feb: 'February', Mar: 'March', Apr: 'April', May: 'May', Jun: 'June', Jul: 'July', Aug: 'August', Sep: 'September', Oct: 'October', Nov: 'November', Dec: 'December' };
 
 function Tile({ label, short, value, unit, sub, tip, loading }) {
   return (
@@ -22,14 +24,16 @@ function Tile({ label, short, value, unit, sub, tip, loading }) {
  * The three headline tiles: the open billing period, all-time generation, all-time earnings.
  * Every figure is null-safe: while loading a skeleton, when unknown a dash, never a made-up 0.
  */
-export function TotalsRow({ totals, comparison, live, todayKey, loading }) {
+export function TotalsRow({ totals, live, todayKey, loading }) {
   const gen = totals?.generation;
-  const open = openPeriodSoFar(openBillPeriod(comparison?.rows), live, gen ? gen.lastDay : undefined, todayKey);
-  const start = openBillPeriod(comparison?.rows)?.startKey ?? null;
+  const view = openPeriodView(totals?.openPeriod);
+  const open = openPeriodSoFar(view, live, gen ? gen.lastDay : undefined, todayKey);
+  const start = view?.startKey ?? null;
+  const reports = view?.month ? `${MONTH_NAMES[view.month] ?? view.month}${view.year ? ` ${view.year}` : ''}` : null;
   const earn = totals?.earnings;
 
   const periodTip = open
-    ? `Billing period ${shortDate(start)} to today${open.includesToday ? ', including today so far from the live reading' : ''}. Generation is known for ${open.daysPresent ?? DASH} of ${open.daysInPeriod ?? DASH} days; the CEB bill for this period has not been issued yet.`
+    ? `Billing period ${shortDate(start)} to today, the day after the latest CEB bill${totals?.openPeriod?.lastBillDate ? ` (${shortDate(totals.openPeriod.lastBillDate)})` : ''}${open.includesToday ? ', including today so far from the live reading' : ''}.${reports ? ` The next bill reports it as ${reports}.` : ''} Generation is known for ${open.daysPresent ?? DASH} of ${open.daysInPeriod ?? DASH} days; the CEB bill for this period has not been issued yet.`
     : 'There is no open billing period right now: the latest bill covers everything up to today.';
   const period = {
     value: open ? fmtNum(open.kwh) : DASH,

@@ -93,16 +93,20 @@ export function freshness({ dataTimestamp, fetchedAt }, nowMs) {
   return { ageMin, fraction: Math.max(0, Math.min(1, 1 - ageMin / FRESH_WINDOW_MIN)), label };
 }
 
-/** The open (provisional) bill period from the LR-001 rows, or null when there is none. */
-export function openBillPeriod(rows) {
-  const row = (rows ?? []).find((r) => r && r.status === 'provisional');
-  if (!row) return null;
+/**
+ * The open bill period from `totals.openPeriod` (LR-001: the day after the latest bill to today), or null
+ * when it is not known. `month`/`year` name the month the next bill will report.
+ */
+export function openPeriodView(openPeriod) {
+  if (!openPeriod || openPeriod.status !== 'provisional') return null;
   return {
-    startKey: row.periodStart ?? null,
-    endKey: row.periodEnd ?? null,
-    kwh: isNum(row.inverter) ? row.inverter : null,
-    daysPresent: row.daysPresent ?? null,
-    daysInPeriod: row.daysInPeriod ?? null
+    startKey: openPeriod.periodStart ?? null,
+    endKey: openPeriod.periodEnd ?? null,
+    kwh: isNum(openPeriod.inverter) ? openPeriod.inverter : null,
+    daysPresent: openPeriod.daysPresent ?? null,
+    daysInPeriod: openPeriod.daysInPeriod ?? null,
+    month: openPeriod.month ?? null,
+    year: openPeriod.year ?? null
   };
 }
 

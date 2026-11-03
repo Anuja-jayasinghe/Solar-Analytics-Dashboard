@@ -283,14 +283,14 @@ is never read as a full one.
 | Resource | Query | Returns |
 |---|---|---|
 | `range` | `from`, `to` (≤ 3660 days), `rate=effective\|fixed` (default `effective`), `compare=prev,yoy` | Explore figures (LR-003): total, average/day, best/worst day, peak, specific yield (kWh/kWp, **DC** size), capacity factor (**AC** rating), LKR with its `basis`, daily series with cumulative; optional baselines with average-per-day deltas; uptime aggregate for the same range |
-| `comparison` | `year` | 12 bill-aligned CEB-vs-inverter rows (LR-001) with `daysPresent / daysInPeriod / completeness` |
+| `comparison` | `year` | 12 bill-aligned CEB-vs-inverter rows (LR-001) with `daysPresent / daysInPeriod / completeness`. The open period is the month of the latest bill, from the day after it to today; later months are `pending` |
 | `bills` | – | Every bill: period, CEB kWh, earnings, **effective LKR/kWh**, inverter kWh, completeness, variance (flagged `complete: false` when days are missing) |
 | `uptime` | `from`, `to` | Per-day uptime rows, weighted aggregate, and timeline `segments` (ranges ≤ 62 days; otherwise `null`) (LR-002) |
 | `alarms` | `from`, `to` (≤ 400 days), `limit` (1–500, default 200) | Alarm log, counts by code, `truncated` flag |
 | `telemetry` | `date` | One day of 5-minute points (power, string V/I, AC V/I, frequency, PF, temperature) |
 | `electrical` | `from`, `to` (≤ 31 completed Colombo days) | Per-day and whole-range summaries of producing telemetry: PV input current/voltage, separate AC phase voltages and spread, temperature, frequency, power factor, and sample/day coverage. Missing days remain unknown. |
 | `live` | – | Right-now status from SolisCloud: `status` (`online`/`offline`/`alarm`), `abnormalOffline`, `currentPowerKw`, `todayKwh`, `totalKwh`, **`todayKey`** (the server's Asia/Colombo date; clients never use their own clock for date keys); `peakTodayKw` / `peakTodayAt` (the day's highest power and its Asia/Colombo time, from today's `inverterDay`, cached 5 min; `null` when unavailable, never 0); cached 60 s; `stale: true` when serving the last good value during an upstream outage |
-| `totals` | – | Overview headline figures without shipping every day: `generation` (`totalKwh` over days that have a reading, `dayCount`, `firstDay`, `lastDay`, `missingDays`; `null` when there is no data) and `earnings` (`totalLkr` summed over bills that carry an earnings figure, `billCount`, `billsWithoutEarnings`, first/last bill date) |
+| `totals` | – | Overview headline figures without shipping every day: `generation` (`totalKwh` over days that have a reading, `dayCount`, `firstDay`, `lastDay`, `missingDays`; `null` when there is no data) and `earnings` (`totalLkr` summed over bills that carry an earnings figure, `billCount`, `billsWithoutEarnings`, first/last bill date), and `openPeriod`: the open bill period (LR-001), from the day after the latest bill to today, with `month`/`year` it will be reported as, `lastBillDate`, `inverter`, `daysPresent`/`daysInPeriod` |
 | `settings` | – | `ratePerKwh`, `capacityKwp`, `acRatedKw`, `dailyTargetKwh` (null when unset; never a guessed default) |
 | `export` | `kind=daily\|uptime\|alarms`, `from`, `to` | `text/csv` attachment; RFC 4180 quoting; spreadsheet-formula injection neutralised |
 
