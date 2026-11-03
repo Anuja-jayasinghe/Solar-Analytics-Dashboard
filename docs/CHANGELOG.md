@@ -9,10 +9,19 @@ All notable changes to the Solar Analytics Dashboard project.
   minute from SolisCloud; the caption states the real interval) instead of kWh on the hour, with the day's peak marked on the line ("Peak so far 26.3 kW · 11:35" for today). It
   opens on **today**, which comes from SolisCloud, refreshes every two minutes, and adds the live reading as a "now" dot.
   A hover line shows the exact time and kW anywhere on the curve. Holes in the readings break the line rather than
-  being drawn through. Today's total uses the inverter's own counter. The hourly kWh bars remain as "Per hour".
+  being drawn through. Today's total uses the inverter's own counter. The "Per hour" bars were removed: the curve shows the whole day.
+  A **Today** button jumps back from any past day.
   The generation section now opens on this "Through the day" view (on phones, the Day tab).
   Today's readings are read once by the page and shared, so the Today tile's peak is the chart's peak (it no longer
   shows a dash while SolisCloud's day read is slow).
+- **Inverter generation → Year is a calendar year you pick** with ‹ 2026 › arrows (one year shown, so the control never
+  grows) instead of a rolling 365 days. It never goes past the data: the arrows stop at the first and last year with
+  readings, and any other year is pulled back inside them. It
+  always shows January to December. A month only partly recorded (the first one, or this one so far) is drawn as
+  partial with its day count. A month with no readings stays empty and says why (not yet, before records began, or
+  not recorded), never a zero. The year's total and "N of M days recorded" sit above the chart.
+- **Date pickers jump by month and year.** Clicking the month title opens a month picker with year arrows, so a date a
+  year back takes three clicks instead of twelve presses of the month arrow. Months outside the data are greyed out.
 - **Explanations sit behind ⓘ icons instead of a Hints switch.** The sidebar's Hints switch (off by default, and
   missing on phones) is gone. An ⓘ appears only where the screen does not already say it: bill date to bill date, the
   lifetime counter, bills left out of earnings, how uptime and time stopped are counted, unresolved alarms, logger and
@@ -41,7 +50,30 @@ All notable changes to the Solar Analytics Dashboard project.
   gauge, where longer labels wrapped), and the gauge's caption wraps on phones instead of widening the tile. The Today
   circle shows a dash, not "No target", when a target is set but today's figure is unknown.
 
+### Changed
+- **Inverter generation: Week and Month are calendar periods.** Week is Monday to Sunday, labelled "Week 44 · 2026"
+  (ISO week numbers; hover for the dates), with weekday labels on the chart. Month is the calendar month, labelled
+  "November 2026", always drawing all its days. Days not reached yet stay empty, never zero. The arrows step a whole
+  week or month and stop at the data, and the label opens a picker: a calendar where any day picks its week (hover
+  shows which), or the year-and-months grid. Before, both were rolling 7 or 30 days ending on the newest day.
+- **Custom is just the range calendar**, opening on the latest complete bill period (bill date to bill date, from the
+  new `totals.lastBillPeriod`). The arrows and the date text beside it are gone, and the calendar's quick picks start
+  with "Last bill period".
+- **Statistics: "Lowest day" is now "Lowest full day".** The lowest recorded day was almost always a power cut or a
+  part-recorded day (e.g. 11.5 kWh), not a poor-weather day. It now counts only days the uptime log shows the inverter
+  running all day: at most 30 min stopped, since short grid trips are routine here. The card says how many days were
+  left out, its ⓘ says why and gives the lowest recorded day too, and the chart marks the same day.
+- **The Area chart type is gone.** It was the line with the space under it shaded, nothing more. Inverter generation
+  now offers Line (the default) and Bars; CEB vs Inverter offers Bars and Lines.
+
 ### Fixed
+- **Date pickers and the bill viewer follow the theme.** In light mode they were a dark panel with dark text (they used
+  the tooltip colours that are dark in both themes); they are now white with dark text, and unchanged in dark mode.
+- **A reading that is not current now looks it.** When SolisCloud is not answering, the Today and live power tiles turn
+  grey (the fill, the gauge arc and the numbers), the wave stops, and the Today tile shows an amber "Not live · as of
+  16:58" chip instead of the faint freshness ring.
+- **Reading times no longer print with decimals.** A reading taken at 16:58:08 showed as "16:58.135233…"; it now shows
+  16:58.
 - **"This billing period" runs bill date to bill date** (LR-001). Between the 1st of a month and the next bill, the open
   period was clipped to the 1st ("since 1 Nov" instead of "since 4 Oct"), filed under the wrong month, and the month
   before it showed "missing bill". It now starts the day after the latest bill, however late the next bill is, and stays

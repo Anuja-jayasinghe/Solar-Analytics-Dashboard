@@ -6,33 +6,61 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  presetRange, customRange, stepRange, canStep, isGrouped, buildPoints, defaultLine, aboveCount, spreadGeometry,
-  dayLabel, dayLabelYear, GROUP_OVER_DAYS, MAX_CUSTOM_DAYS
+  customRange, isGrouped, weekStart, isoWeek, periodOf, periodRange, canStepPeriod, stepPeriod, periodLabel, dayPoints, buildPoints, defaultLine, aboveCount, spreadGeometry,
+  dayLabel, dayLabelYear, GROUP_OVER_DAYS, MAX_CUSTOM_DAYS, dataYears, yearRange, yearPoints, yearSummary, clampYear
 } from '../src/v3/explore/series.js';
 import { hourlyFromTelemetry, colomboClock } from '../src/v3/explore/hourly.js';
+import { createElement as h } from 'react';
+import { renderToString } from 'react-dom/server';
+import { StatsBody } from '../src/v3/explore/StatsBody.jsx';
 
 const B = { min: '2035-01-01', max: '2036-09-14' };
 
 describe('ranges', () => {
-  it('presets end on the chosen day and span their length', () => {
-    expect(presetRange('week', '2036-09-14', B)).toEqual({ from: '2036-09-08', to: '2036-09-14' });
-    expect(presetRange('month', '2036-09-14', B)).toEqual({ from: '2036-08-16', to: '2036-09-14' });
-    expect(presetRange('year', '2036-09-14', B)).toEqual({ from: '2035-09-16', to: '2036-09-14' });
+  it('weeks run Monday to Sunday and are numbered the ISO way', () => {
+    expect(weekStart('2026-11-01')).toBe('2026-10-26'); // a Sunday belongs to the week that began on Monday
+    expect(weekStart('2026-10-26')).toBe('2026-10-26');
+    expect(isoWeek('2026-10-27')).toEqual({ year: 2026, week: 44 });
+    expect(isoWeek('2026-01-01')).toEqual({ year: 2026, week: 1 }); // Thursday 1 Jan: week 1
+    expect(isoWeek('2027-01-01')).toEqual({ year: 2026, week: 53 }); // Friday 1 Jan 2027 is still 2026's last week
+    expect(isoWeek('2024-12-30')).toEqual({ year: 2025, week: 1 }); // Monday 30 Dec 2024 starts 2025's week 1
   });
-  it('stay inside the data: never past the last day, never before the first', () => {
-    expect(presetRange('week', '2036-12-31', B).to).toBe('2036-09-14');
-    expect(presetRange('week', '2035-01-03', B)).toEqual({ from: '2035-01-01', to: '2035-01-03' });
-    expect(() => presetRange('decade', '2036-09-14')).toThrow(RangeError);
+  it('a period is the whole calendar week or month; what is asked for is the part with data', () => {
+    expect(periodOf('week', '2026-10-29')).toEqual({ from: '2026-10-26', to: '2026-11-01' });
+    expect(periodOf('month', '2024-02-10')).toEqual({ from: '2024-02-01', to: '2024-02-29' });
+    expect(() => periodOf('decade', '2026-10-29')).toThrow(RangeError);
+    const now = periodRange('month', '2036-09-14', B);
+    expect(now).toEqual({ from: '2036-09-01', to: '2036-09-14', full: { from: '2036-09-01', to: '2036-09-30' } }); // so far
+    expect(periodRange('week', '2036-12-31', B).to).toBe('2036-09-14'); // never past the data
+    expect(periodRange('week', '2035-01-03', { min: '2035-01-02', max: B.max })).toMatchObject({ from: '2035-01-02', to: '2035-01-07', full: { from: '2035-01-01', to: '2035-01-07' } }); // records begin on a Tuesday
   });
-  it('steps back and forward by their own length and stops at the ends', () => {
-    const r = presetRange('week', '2036-09-14', B);
-    expect(stepRange('week', r, -1, B)).toEqual({ from: '2036-09-01', to: '2036-09-07' });
-    expect(stepRange('week', r, 1, B)).toEqual(r);
-    const first = presetRange('week', '2035-01-07', B);
-    expect(canStep('week', first, -1, B)).toBe(false);
-    expect(canStep('week', first, 1, B)).toBe(true);
-    expect(canStep('week', r, 1, B)).toBe(false);
-    expect(canStep('custom', r, -1, B)).toBe(false);
+  it('labels: "Week 44 · 2026", "November 2026"', () => {
+    expect(periodLabel('week', periodRange('week', '2026-10-29', { max: '2026-11-02' }))).toBe('Week 44 · 2026');
+    expect(periodLabel('month', periodRange('month', '2026-11-02', { max: '2026-11-02' }))).toBe('November 2026');
+    expect(periodLabel('week', null)).toBe('');
+  });
+  it('steps a whole week or month and stops at the ends of the data', () => {
+    const wk = periodRange('week', '2036-09-14', B); // Mon 8 to Sun 14 Sep
+    expect(stepPeriod('week', wk, -1)).toBe('2036-09-01');
+    expect(canStepPeriod(wk, 1, B)).toBe(false);
+    expect(canStepPeriod(wk, -1, B)).toBe(true);
+    const first = periodRange('week', '2035-01-03', B);
+    expect(canStepPeriod(first, -1, B)).toBe(false);
+    const jan = periodRange('month', '2036-01-20', B);
+    expect(stepPeriod('month', jan, -1)).toBe('2035-12-01');
+    expect(stepPeriod('month', jan, 1)).toBe('2036-02-01');
+    expect(canStepPeriod(periodRange('month', '2035-01-20', B), -1, B)).toBe(false);
+  });
+  it('a week always shows Monday to Sunday; days with no reading are null and say why', () => {
+    const wk = periodOf('week', '2036-09-10'); // Mon 8 to Sun 14
+    const pts = dayPoints([{ date: '2036-09-08', kwh: 120 }, { date: '2036-09-09', kwh: null }], wk, { min: '2035-01-01', max: '2036-09-10' });
+    expect(pts.map((p) => p.label)).toEqual(['Mon 8', 'Tue 9', 'Wed 10', 'Thu 11', 'Fri 12', 'Sat 13', 'Sun 14']);
+    expect(pts[0]).toMatchObject({ kwh: 120, present: 1, full: 'Mon 8 Sep 2036' });
+    expect(pts[1]).toMatchObject({ kwh: null, why: 'No data recorded' });
+    expect(pts[2]).toMatchObject({ kwh: null, why: 'No data recorded' });
+    expect(pts[3]).toMatchObject({ kwh: null, why: 'Not yet' });
+    expect(dayPoints([], periodOf('month', '2036-09-10'), B)).toHaveLength(30);
+    expect(dayPoints([], periodOf('week', '2034-12-31'), B)[0].why).toBe('Before records began');
   });
   it('custom ranges are ordered, clipped to the data and capped', () => {
     expect(customRange('2036-08-15', '2036-07-01', B)).toEqual({ from: '2036-07-01', to: '2036-08-15' });
@@ -107,6 +135,13 @@ describe('statistics chart geometry', () => {
     expect(g.best.y).toBeLessThan(g.worst.y);
     expect(g.avgY).toBeGreaterThan(g.best.y);
     expect(g.avgY).toBeLessThan(g.worst.y);
+  });
+  it('marks the lowest full day while the lowest recorded day still sets the scale', () => {
+    const g = spreadGeometry(series, { date: 'c', kwh: 200 }, { date: 'a', kwh: 100 }, 150, { date: 'd', kwh: 150 });
+    expect(g.low.x).toBe(100);
+    expect(g.low.y).toBeLessThan(g.worst.y);
+    expect(g.worst.y).toBeLessThanOrEqual(100); // the outage day stays on the chart
+    expect(spreadGeometry(series, { date: 'c', kwh: 200 }, { date: 'a', kwh: 100 }, 150, null).low).toBeNull();
   });
   it('is null when there is nothing to draw', () => {
     expect(spreadGeometry([{ date: 'a', kwh: null }], null, null, null)).toBeNull();
@@ -248,5 +283,71 @@ describe('day curve: the real reading interval and the shared peak', () => {
     expect(liveNow({ ...live, currentPowerKw: null }, '2026-11-03', '2026-11-03')).toBeNull();
     // the Today tile and the chart call the same function, so they report the same peak
     expect(dayCurve([at('04:30', 30), at('04:31', 35.5)], live, '2026-11-03', '2026-11-03').peak).toEqual({ kw: 35.9, min: 615, at: '10:15' });
+  });
+});
+
+describe('calendar year view', () => {
+  const R = { min: '2024-08-02', max: '2026-11-02' };
+  const days = (from, to, kwh = 100) => {
+    const out = [];
+    for (let d = new Date(`${from}T00:00:00Z`); d.toISOString().slice(0, 10) <= to; d.setUTCDate(d.getUTCDate() + 1)) out.push({ date: d.toISOString().slice(0, 10), kwh });
+    return out;
+  };
+
+  it('offers every year that has data, and a year runs 1 Jan to 31 Dec cut to the data', () => {
+    expect(dataYears(R)).toEqual([2024, 2025, 2026]);
+    expect(dataYears({ min: null, max: null })).toEqual([]);
+    expect(yearRange(2025, R)).toEqual({ from: '2025-01-01', to: '2025-12-31' });
+    expect(yearRange(2024, R)).toEqual({ from: '2024-08-02', to: '2024-12-31' }); // records began in August
+    expect(yearRange(2026, R)).toEqual({ from: '2026-01-01', to: '2026-11-02' }); // so far
+  });
+
+  it('never goes past the data: a year before the first or after the last is not offered or drawn', () => {
+    expect(clampYear(2023, R)).toBe(2024);
+    expect(clampYear(2027, R)).toBe(2026);
+    expect(clampYear(2025, R)).toBe(2025);
+    expect(clampYear(null, R)).toBe(2026); // not chosen: the newest year
+    expect(clampYear(2025.5, R)).toBe(2026);
+    expect(clampYear(2025, { min: null, max: null })).toBeNull(); // no data, no year
+    expect(() => yearRange(2023, R)).toThrow(RangeError); // would otherwise show 2 Aug 2024 labelled 2023
+    expect(() => yearRange(2027, R)).toThrow(RangeError);
+  });
+
+  it('always draws twelve months; months without readings are null and say why, partial months say how many days', () => {
+    const pts = yearPoints(days('2026-01-01', '2026-11-02'), 2026, R);
+    expect(pts.map((p) => p.label)).toEqual(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']);
+    expect(pts[0]).toMatchObject({ key: '2026-01', kwh: 3100, present: 31, total: 31, full: 'Jan 2026' });
+    expect(pts[10]).toMatchObject({ key: '2026-11', kwh: 200, present: 2, total: 30, full: 'Nov 2026 (2/30 days)' });
+    expect(pts[11]).toMatchObject({ key: '2026-12', kwh: null, present: 0, why: 'Not yet' });
+
+    const first = yearPoints(days('2024-08-02', '2024-12-31'), 2024, R);
+    expect(first[0]).toMatchObject({ kwh: null, why: 'Before records began' });
+    expect(first[7]).toMatchObject({ key: '2024-08', present: 30, total: 31 });
+
+    const gap = yearPoints(days('2025-01-01', '2025-12-31').map((d) => (d.date.startsWith('2025-03') ? { ...d, kwh: null } : d)), 2025, R);
+    expect(gap[2]).toMatchObject({ kwh: null, why: 'No data recorded' }); // a missing month is never 0
+  });
+
+  it('totals the year over recorded days only', () => {
+    const r = yearRange(2026, R);
+    const s = yearSummary(yearPoints(days(r.from, r.to), 2026, R), r);
+    expect(s).toEqual({ kwh: 30600, present: 306, days: 306 });
+    expect(yearSummary(yearPoints([], 2026, R), r)).toEqual({ kwh: null, present: 0, days: 306 });
+  });
+});
+
+describe('statistics card', () => {
+  const series = [{ date: '2026-10-19', kwh: 120 }, { date: '2026-10-20', kwh: 11.5 }, { date: '2026-10-21', kwh: 95 }];
+  const base = { avgPerDayKwh: 75.5, presentDays: 3, series, best: { date: '2026-10-19', kwh: 120 }, worst: { date: '2026-10-20', kwh: 11.5 } };
+  it('shows the lowest full day and how many days were left out, not the outage day', () => {
+    const html = renderToString(h(StatsBody, { showHead: true, stats: { ...base, lowestFull: { day: { date: '2026-10-21', kwh: 95 }, fullDays: 2, stoppedDays: 1, unknownDays: 0 } }, loading: false, rangeText: '' }));
+    expect(html).toContain('Lowest full day');
+    expect(html).toContain('95.0');
+    expect(html).toContain('21 Oct 2026 · 1 day left out');
+    expect(html).not.toContain('>11.5<');
+  });
+  it('says so when no day in the range was full', () => {
+    const html = renderToString(h(StatsBody, { showHead: true, stats: { ...base, lowestFull: { day: null, fullDays: 0, stoppedDays: 3, unknownDays: 0 } }, loading: false, rangeText: '' }));
+    expect(html).toContain('no full day in this range');
   });
 });

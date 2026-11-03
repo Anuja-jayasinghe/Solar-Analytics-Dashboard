@@ -99,6 +99,19 @@ const cebUnits = (bill) => {
 };
 
 /**
+ * The latest complete bill period (LR-001): the day after the previous bill to the latest bill's date; with only one
+ * bill, the 30 days up to it. Null when there is no bill.
+ * @returns {{periodStart:string, periodEnd:string, billDate:string}|null}
+ */
+export function lastBillPeriod(bills) {
+  const sorted = sortBills(bills);
+  if (sorted.length === 0) return null;
+  const last = sorted[sorted.length - 1];
+  const periodStart = sorted.length > 1 ? addDays(sorted[sorted.length - 2].bill_date, 1) : addDays(last.bill_date, -30);
+  return { periodStart, periodEnd: last.bill_date, billDate: last.bill_date };
+}
+
+/**
  * The open (provisional) bill period, independent of any calendar year, so it is right across New Year.
  * @param {object} a
  * @param {{date:string, kwh:number|null}[]} a.dailyRows   must cover [periodStart, todayKey]

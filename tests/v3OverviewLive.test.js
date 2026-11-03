@@ -114,6 +114,8 @@ describe('live status', () => {
   it('says which reading is on screen when it is not current', () => {
     const at = Date.parse('2026-11-03T06:20:00Z'); // 11:50 in Colombo
     expect(clockAt(at)).toBe('11:50');
+    expect(clockAt(at + 8_114)).toBe('11:50'); // seconds are dropped, never printed as '11:50.135…'
+    expect(clockAt(at + 59_999)).toBe('11:50');
     expect(clockAt(null)).toBeNull();
     expect(readingNote({ stale: true, source: 'saved', dataTimestamp: at })).toBe('last saved reading at 11:50');
     expect(readingNote({ stale: true, source: 'memory', dataTimestamp: at })).toBe('last reading at 11:50');
@@ -253,9 +255,16 @@ describe('rendered tiles', () => {
     expect(gauge).toContain('Last saved reading at 11:50');
     expect(gauge).toContain('kW then');
     expect(gauge).toContain('30.1');
+    expect(gauge).toContain('data-stale="true"'); // greyed out
+    const withSeconds = renderToString(h(LiveGauge, { live: { ...saved, dataTimestamp: at + 8_114 }, maxKw: 40 }));
+    expect(withSeconds).toContain('Last saved reading at 11:50 ');
     const today = renderToString(h(TodayTile, { live: saved, targetKwh: 150, now: at + 40 * 60000 }));
-    expect(today).toContain('as of 11:50');
+    expect(today).toContain('Not live · as of 11:50');
+    expect(today).toContain('data-stale="true"');
     expect(today).toContain('75.4');
+    const current = renderToString(h(TodayTile, { live: { ...saved, stale: false, upstream: 'ok' }, targetKwh: 150, now: at + 60000 }));
+    expect(current).not.toContain('data-stale');
+    expect(current).not.toContain('Not live');
   });
 
   it('live row when SolisCloud fails and nothing is saved today: dashes, and the cause named', () => {

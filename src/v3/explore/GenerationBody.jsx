@@ -4,24 +4,24 @@ import { Segmented } from '../ui/Segmented.jsx';
 import { Note } from '../ui/Note.jsx';
 import { ThresholdPlot } from '../charts/ThresholdPlot.jsx';
 import { MarkToggle } from '../charts/MarkToggle.jsx';
-import { DateRangePicker } from '../ui/Calendar.jsx';
+import { DateRangePicker, MonthSelect, WeekSelect } from '../ui/Calendar.jsx';
 import { addDays } from '../../../shared/domain/time.js';
 import { usePrefs } from '../prefs/context.js';
-import { MAX_LABELLED_COLUMNS, areaPath, axisTicks, chartNum, linePath, maxOf, niceMax, xPct, yPct } from '../charts/scale.js';
+import { MAX_LABELLED_COLUMNS, axisTicks, chartNum, linePath, maxOf, niceMax, xPct, yPct } from '../charts/scale.js';
 import { fmtNum } from '../overview/format.js';
-import { aboveCount, dayLabelYear } from './series.js';
+import { aboveCount, dayLabelYear, yearSummary } from './series.js';
 
 const KINDS = [{ value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }, { value: 'year', label: 'Year' }, { value: 'custom', label: 'Custom' }];
-const STYLES = [{ value: 'area', label: 'Area' }, { value: 'line', label: 'Line' }, { value: 'bars', label: 'Bars' }];
+const STYLES = [{ value: 'line', label: 'Line' }, { value: 'bars', label: 'Bars' }];
 
 /** The date (and missing days for a month); the value only when the bars are too many to carry their own labels. */
 function pointTip(p, labelled, grouped) {
-  if (p.kwh === null) return `${p.full}\nNo data recorded`;
+  if (p.kwh === null) return `${p.full}\n${p.why ?? 'No data recorded'}`;
   return labelled ? p.full : `${p.full}\n${fmtNum(p.kwh, grouped ? 0 : 1)} kWh`;
 }
 
-/** "Inverter generation": a range of days (or months), area by default, with the draggable "Mark above" line. */
-export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, bounds, canBack, canForward, onStep, onCustom, points, grouped, line, onLine, loading, error }) {
+/** "Inverter generation": a range of days (or months), a line by default, with the draggable "Mark above" line. */
+export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, bounds, years = [], year = null, onYear, stepLabel = '', billPeriod = null, onPick, canBack, canForward, onStep, onCustom, points, grouped, line, onLine, loading, error }) {
   const { showMark } = usePrefs();
   const known = points.filter((p) => p.kwh !== null);
   const yMax = niceMax(Math.max(maxOf(points.map((p) => p.kwh), 1) * 1.1, showMark ? line * 1.04 : 0));
@@ -31,6 +31,9 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
   const unit = grouped ? 'kWh/month' : 'kWh/day';
   const linePts = points.map((p, i) => (p.kwh === null ? null : [xPct(i, n), yPct(p.kwh, yMax)]));
   const dense = n > 30;
+  const isYear = kind === 'year';
+  const sum = isYear ? yearSummary(points, range) : null;
+  const soFar = isYear && range && bounds.max && range.to === bounds.max;
 
   return (
     <>
@@ -44,39 +47,59 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
         <div className="v3-controls">
           <Segmented small options={KINDS} value={kind} onChange={onKind} label="Range" />
           <Segmented small options={STYLES} value={style} onChange={onStyle} label="Chart style" />
-          <div className="v3-stepper">
-            <button type="button" className="v3-iconbtn sm" onClick={() => onStep(-1)} disabled={!canBack} aria-label="Earlier"><ChevronLeft size={15} /></button>
-            <span className="v3-steplabel">{range ? `${dayLabelYear(range.from)} to ${dayLabelYear(range.to)}` : ''}</span>
-            <button type="button" className="v3-iconbtn sm" onClick={() => onStep(1)} disabled={!canForward} aria-label="Later"><ChevronRight size={15} /></button>
-          </div>
+          {isYear ? (
+            years.length > 0 && (
+              <div className="v3-stepper" role="group" aria-label="Year">
+                <button type="button" className="v3-iconbtn sm" onClick={() => onYear(year - 1)} disabled={!years.includes(year - 1)} aria-label="Previous year"><ChevronLeft size={15} /></button>
+                <span className="v3-steplabel v3-yearlabel v3-num" aria-live="polite">{year}</span>
+                <button type="button" className="v3-iconbtn sm" onClick={() => onYear(year + 1)} disabled={!years.includes(year + 1)} aria-label="Next year"><ChevronRight size={15} /></button>
+              </div>
+            )
+          ) : kind === 'custom' ? (
+            range && (
+              <DateRangePicker
+                from={range.from}
+                to={range.to}
+                min={bounds.min}
+                max={bounds.max}
+                onChange={onCustom}
+                presets={bounds.max ? [
+                  ...(billPeriod ? [{ label: 'Last bill period', range: () => ({ from: billPeriod.periodStart, to: billPeriod.periodEnd }) }] : []),
+                  { label: 'Last 7 days', range: () => ({ from: addDays(bounds.max, -6), to: bounds.max }) },
+                  { label: 'Last 30 days', range: () => ({ from: addDays(bounds.max, -29), to: bounds.max }) },
+                  { label: 'Last 90 days', range: () => ({ from: addDays(bounds.max, -89), to: bounds.max }) },
+                  { label: 'Last 12 months', range: () => ({ from: addDays(bounds.max, -364), to: bounds.max }) }
+                ] : []}
+              />
+            )
+          ) : (
+            <div className="v3-stepper" role="group" aria-label={kind === 'week' ? 'Week' : 'Month'}>
+              <button type="button" className="v3-iconbtn sm" onClick={() => onStep(-1)} disabled={!canBack} aria-label={kind === 'week' ? 'Previous week' : 'Previous month'}><ChevronLeft size={15} /></button>
+              {range?.full && (kind === 'week'
+                ? <WeekSelect value={range.full.from} min={bounds.min} max={bounds.max} onChange={onPick}>{stepLabel}</WeekSelect>
+                : <MonthSelect value={range.full.from.slice(0, 7)} min={bounds.min} max={bounds.max} onChange={(ym) => onPick(`${ym}-01`)}>{stepLabel}</MonthSelect>)}
+              <button type="button" className="v3-iconbtn sm" onClick={() => onStep(1)} disabled={!canForward} aria-label={kind === 'week' ? 'Next week' : 'Next month'}><ChevronRight size={15} /></button>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="v3-markrow v3-markrow-wide">
-        {kind === 'custom' && range && (
-          <div className="v3-daterow">
-            <DateRangePicker
-              from={range.from}
-              to={range.to}
-              min={bounds.min}
-              max={bounds.max}
-              onChange={onCustom}
-              presets={bounds.max ? [
-                { label: 'Last 7 days', range: () => ({ from: addDays(bounds.max, -6), to: bounds.max }) },
-                { label: 'Last 30 days', range: () => ({ from: addDays(bounds.max, -29), to: bounds.max }) },
-                { label: 'Last 90 days', range: () => ({ from: addDays(bounds.max, -89), to: bounds.max }) },
-                { label: 'This year', range: () => ({ from: `${bounds.max.slice(0, 4)}-01-01`, to: bounds.max }) },
-                { label: 'Last 12 months', range: () => ({ from: addDays(bounds.max, -364), to: bounds.max }) }
-              ] : []}
-            />
-          </div>
+        {isYear && range && (
+          <>
+            <span className="v3-pill" data-tone="gen">{sum.kwh === null ? `No data in ${year}` : `${fmtNum(sum.kwh)} kWh in ${year}${soFar ? ' so far' : ''}`}</span>
+            <span className="v3-sub" style={{ margin: 0 }}>{dayLabelYear(range.from)} to {dayLabelYear(range.to)} · {sum.present} of {sum.days} days recorded</span>
+          </>
         )}
-        <span style={{ marginLeft: 'auto' }}><MarkToggle /></span>
-        {showMark && <><label className="v3-field-label"><span className="v3-sr">Mark above</span>
-          <input className="v3-field" type="number" min="0" step="1" value={line} aria-label={`Threshold in ${unit}`} onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v)) onLine(Math.max(0, Math.round(v))); }} style={{ width: 90 }} />
-          <span>{unit}</span>
-        </label>
-        <span className="v3-pill" data-tone="gen">{above.known ? `${above.above} of ${above.known} ${grouped ? 'months' : 'days'} above` : 'no data in range'}</span></>}
+        {/* the eye stays put at the far right; showing the line adds the count and the field to its left */}
+        <div className="v3-markgroup">
+          {showMark && <><span className="v3-pill" data-tone="gen">{above.known ? `${above.above} of ${above.known} ${grouped ? 'months' : 'days'} above` : 'no data in range'}</span>
+          <label className="v3-field-label"><span className="v3-sr">Mark above</span>
+            <input className="v3-field" type="number" min="0" step="1" value={line} aria-label={`Threshold in ${unit}`} onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v)) onLine(Math.max(0, Math.round(v))); }} style={{ width: 90 }} />
+            <span>{unit}</span>
+          </label></>}
+          <MarkToggle />
+        </div>
       </div>
 
       {error && <Note tone="bad">Could not load this range ({error.code ?? 'error'}). Nothing is drawn rather than a made-up zero.</Note>}
@@ -91,7 +114,6 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
               {axisTicks(yMax).map((t) => <div key={t.pct} className="v3-gridline" style={{ bottom: `${t.pct}%` }} />)}
               {style !== 'bars' && (
                 <svg className="v3-plot-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                  {style === 'area' && <path d={areaPath(linePts)} fill="url(#areaFill)" />}
                   <path d={linePath(linePts)} fill="none" style={{ stroke: 'var(--gen)' }} strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
                 </svg>
               )}

@@ -11,7 +11,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { deriveDayUptime, aggregateUptime, causeForAlarmCode, isCommsAlarmCode } from '../shared/domain/uptime.js';
+import { deriveDayUptime, aggregateUptime, causeForAlarmCode, isCommsAlarmCode, lowestFullDay, FULL_DAY_MAX_DOWN_MIN } from '../shared/domain/uptime.js';
 import { operatingWindow } from '../shared/domain/time.js';
 import { normalizeDayPoints, normalizeAlarms, normalizeCollectorPoints } from '../shared/domain/solisNormalize.js';
 
@@ -286,5 +286,26 @@ describe('comms alarms are not trips', () => {
     expect(isCommsAlarmCode('1D4C2')).toBe(true);
     expect(isCommsAlarmCode(' 1d4c2 ')).toBe(true);
     for (const c of ['1011', '1015', '101A', '1010', '', null, undefined]) expect(isCommsAlarmCode(c)).toBe(false);
+  });
+});
+
+describe('lowest full day', () => {
+  const u = (dateKey, trip = 0, gap = 0, extra = {}) => ({ dateKey, status: 'ok', uptimePct: 100, windowMinutes: 660, minutes: { trip, gap, comms_lost: 0, edge_gap: 0 }, tripCount: 0, gapCount: 0, ...extra });
+  it('skips outages, unknown days and missing kWh; keeps days with routine short trips', () => {
+    const series = [
+      { date: 'd1', kwh: 0 },       // a full outage: 0 kWh with the day recorded as down
+      { date: 'd2', kwh: 40 },      // stopped 45 min
+      { date: 'd3', kwh: 60 },      // trips adding up to exactly the limit: still full
+      { date: 'd4', kwh: 55 },      // no uptime record
+      { date: 'd5', kwh: 70 },
+      { date: 'd6', kwh: null },    // no reading: not counted at all
+      { date: 'd7', kwh: 50 }       // uptime unknown (no_data)
+    ];
+    const days = [u('d1', 600, 0, { status: 'down', uptimePct: 0 }), u('d2', 30, 15), u('d3', FULL_DAY_MAX_DOWN_MIN), u('d5'), u('d7', 0, 0, { status: 'no_data', uptimePct: null })];
+    expect(lowestFullDay(series, days)).toEqual({ day: { date: 'd3', kwh: 60 }, fullDays: 2, stoppedDays: 2, unknownDays: 2 });
+  });
+  it('is null, with counts, when no day was full; empty input is empty', () => {
+    expect(lowestFullDay([{ date: 'd1', kwh: 5 }], [u('d1', 200)])).toEqual({ day: null, fullDays: 0, stoppedDays: 1, unknownDays: 0 });
+    expect(lowestFullDay([], [])).toEqual({ day: null, fullDays: 0, stoppedDays: 0, unknownDays: 0 });
   });
 });

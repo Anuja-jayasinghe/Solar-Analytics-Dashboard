@@ -213,6 +213,13 @@ html, body { margin: 0; padding: 0; }
 .v3-gauge-max { right: 18px; }
 .v3-gauge-share { font-size: 12.5px; max-width: 150px; line-height: 1.5; }
 
+/* A reading that is not current: colour drains out of the tile so it cannot pass for live. */
+.v3-stalechip { position: absolute; top: 14px; right: 16px; display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; color: var(--warn); background: var(--warn-a20); border: 1px solid var(--warn-a20); }
+.v3-live-tile[data-stale] .v3-liquid, .v3-live-tile[data-stale] .v3-gauge svg { filter: grayscale(1); opacity: .45; transition: filter .3s, opacity .3s; }
+.v3-live-tile[data-stale] .v3-wave { animation-play-state: paused; }
+.v3-live-tile[data-stale] .v3-num, .v3-live-tile[data-stale] .v3-today-text b { color: var(--ink2) !important; }
+.v3-live-tile[data-stale] .v3-filler-pct { color: var(--ink) !important; opacity: .75; }
+
 @keyframes v3-drift { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 @keyframes v3-fillup { from { transform: translateY(105%); } to { transform: translateY(0); } }
 @keyframes v3-breathe { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
@@ -237,6 +244,7 @@ html, body { margin: 0; padding: 0; }
   .v3-today .v3-kpi-value { font-size: 18px; }
   .v3-today .v3-kpi-sub { white-space: normal; font-size: 10.5px; }
   .v3-fresh-wrap { top: 8px; right: 10px; }
+  .v3-stalechip { position: static; align-self: center; height: 20px; padding: 0 8px; font-size: 10px; }
   .v3-fresh span:first-child { display: none; }
   .v3-status { top: 8px; right: 10px; font-size: 10px; gap: 5px; }
   .v3-bulb { width: 8px; height: 8px; }
@@ -265,6 +273,7 @@ html, body { margin: 0; padding: 0; }
 .v3-peaklabel[data-edge='end'], .v3-hoverlabel[data-edge='end'] { transform: translateX(calc(-100% + 8px)); }
 .v3-hourticks { position: relative; height: 18px; margin-top: 6px; }
 .v3-hourticks > span { position: absolute; transform: translateX(-50%); font-size: 11px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+@media (max-width: 420px) { .v3-hourticks > span[data-odd] { display: none; } } /* 16 hour labels do not fit a phone: every other one */
 .v3-livedot { display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--good); vertical-align: 1px; animation: v3-breathe 2.6s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .v3-nowmark, .v3-livedot { animation: none; } }
 
@@ -274,6 +283,7 @@ html, body { margin: 0; padding: 0; }
 .v3-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .v3-stepper { display: flex; align-items: center; gap: 8px; }
 .v3-steplabel { font-size: 12.5px; font-weight: 600; min-width: 128px; text-align: center; }
+.v3-steplabel.v3-yearlabel { min-width: 0; padding: 0 2px; font-size: 13px; }
 .v3-legendrow { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
 .v3-legend { display: flex; gap: 18px; font-size: 12px; color: var(--ink2); flex-wrap: wrap; }
 .v3-legend span { display: flex; align-items: center; gap: 7px; }
@@ -281,7 +291,11 @@ html, body { margin: 0; padding: 0; }
 .v3-legend i.v3-hatch { width: 16px; height: 10px; border-radius: 2px; border: 1px solid var(--gen); background: repeating-linear-gradient(135deg, var(--gen) 0 4px, var(--gen-a30) 4px 7px); }
 .v3-legend i.v3-ghost { width: 16px; height: 10px; border-radius: 2px; border: 1.5px dashed var(--ceb); opacity: .75; }
 .v3-markrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.v3-marktoggle { height: 32px; padding: 0 12px; gap: 6px; font-size: 12px; }
+.v3-markgroup { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-left: auto; min-height: 34px; } /* the field's height, so hiding it moves nothing */
+.v3-markgroup { flex-wrap: nowrap; min-width: 0; }
+.v3-markgroup .v3-pill { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v3-legendrow > .v3-markgroup { flex: 1 0 100%; } /* its own line, so hiding the field never re-wraps the row and moves the eye */
+.v3-marktoggle { width: 32px; height: 32px; }
 .v3-marktoggle[aria-pressed='false'] { opacity: .75; }
 .v3-field-label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink2); }
 
@@ -336,10 +350,13 @@ html, body { margin: 0; padding: 0; }
   .v3-tilehead { gap: 8px; }
   .v3-controls { gap: 6px; justify-content: space-between; width: 100%; }
   .v3-steplabel { font-size: 11px; min-width: 100px; }
+  .v3-steplabel.v3-yearlabel { min-width: 0; font-size: 12px; }
   .v3-legendrow { gap: 6px; }
   .v3-legend { gap: 8px; font-size: 10px; }
   .v3-legend span:nth-child(n+3) { display: none; }
   .v3-markrow { width: 100%; justify-content: space-between; gap: 6px; font-size: 11px; }
+  .v3-markgroup { gap: 6px; min-height: 28px; justify-content: flex-end; }
+  .v3-markgroup .v3-field { width: 64px !important; }
   .v3-markrow .v3-field { height: 28px; font-size: 12px; padding: 0 6px; }
   .v3-markrow .v3-pill { font-size: 10.5px; padding: 3px 8px; }
   .v3-yaxis, .v3-gap-axis { font-size: 9.5px; }
@@ -500,7 +517,7 @@ html, body { margin: 0; padding: 0; }
 .v3-maintrow .v3-btn { height: 32px; font-size: 12px; }
 select.v3-field { padding-right: 8px; }
 .v3-modal-backdrop { position: fixed; inset: 0; z-index: 200; background: rgba(4, 7, 16, .72); display: flex; align-items: center; justify-content: center; padding: 20px; }
-.v3-modal { width: min(1000px, 100%); height: min(90vh, 1200px); display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: 20px; background: var(--tip-bg); }
+.v3-modal { width: min(1000px, 100%); height: min(90vh, 1200px); display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: 20px; background: var(--pop-bg); color: var(--pop-ink); border: 1px solid var(--pop-line); box-shadow: var(--pop-shadow); }
 .v3-modal-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; }
 .v3-pdfframe { flex: 1 1 auto; width: 100%; border: 0; border-radius: 12px; background: #fff; }
 
@@ -530,14 +547,25 @@ select.v3-field { padding-right: 8px; }
 /* ---- date pickers ---- */
 .v3-datebtn { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--field-line); background: var(--field-bg); color: var(--ink); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .v3-datebtn:hover { border-color: var(--gen); }
-.v3-datebtn:focus-visible, .v3-cal-day:focus-visible, .v3-cal-preset:focus-visible { outline: 2px solid var(--gen); outline-offset: 2px; }
-.v3-cal { position: fixed; z-index: 400; display: flex; gap: 14px; padding: 14px; border-radius: 16px; background: var(--tip-bg); border: 1px solid var(--tip-line); box-shadow: 0 18px 44px rgba(0, 0, 0, .5); color: var(--ink); animation: v3-pop .12s ease-out; }
+.v3-datebtn:focus-visible, .v3-cal-day:focus-visible, .v3-cal-preset:focus-visible, .v3-cal-title:focus-visible, .v3-cal-mon:focus-visible, .v3-todaybtn:focus-visible { outline: 2px solid var(--gen); outline-offset: 2px; }
+.v3-cal { position: fixed; z-index: 400; display: flex; gap: 14px; padding: 14px; border-radius: 16px; background: var(--pop-bg); border: 1px solid var(--pop-line); box-shadow: var(--pop-shadow); color: var(--pop-ink); animation: v3-pop .12s ease-out; } /* theme-aware, like the tooltips */
 .v3-cal-presets { display: flex; flex-direction: column; gap: 4px; padding-right: 12px; border-right: 1px solid var(--grid); min-width: 120px; }
 .v3-cal-preset { text-align: left; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 12.5px; font-weight: 600; padding: 7px 10px; border-radius: 8px; cursor: pointer; }
 .v3-cal-preset:hover { background: var(--hover); color: var(--gen); }
 .v3-cal-hint { font-size: 11.5px; color: var(--ink2); margin-bottom: 8px; }
 .v3-cal-month { width: 252px; }
 .v3-cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13.5px; }
+.v3-cal-title { display: inline-flex; align-items: center; gap: 4px; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 13.5px; padding: 4px 8px; border-radius: 8px; cursor: pointer; }
+.v3-cal-title:hover { background: var(--hover); }
+.v3-cal-title > svg { opacity: .6; }
+.v3-cal-months { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding-top: 4px; }
+.v3-cal-mon { height: 44px; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; border-radius: 10px; cursor: pointer; }
+.v3-cal-mon:hover:not(:disabled) { background: var(--hover); }
+.v3-cal-mon[data-selected='true'] { background: var(--gen); color: var(--gen-ink); }
+.v3-cal-mon:disabled { opacity: .25; cursor: default; }
+.v3-todaybtn { height: 28px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--glass-line); background: var(--chip-bg); color: var(--ink); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.v3-todaybtn:hover:not(:disabled) { border-color: var(--gen); color: var(--gen); }
+.v3-todaybtn:disabled { opacity: .4; cursor: default; }
 .v3-cal-row { display: grid; grid-template-columns: repeat(7, 1fr); }
 .v3-cal-wd { text-align: center; font-size: 10.5px; font-weight: 700; color: var(--ink2); padding: 4px 0; }
 .v3-cal-day { height: 34px; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 9px; cursor: pointer; }
@@ -547,7 +575,7 @@ select.v3-field { padding-right: 8px; }
 .v3-cal-day[data-selected='true'] { background: var(--gen); color: var(--gen-ink); }
 .v3-cal-day:disabled { opacity: .25; cursor: default; }
 @media (max-width: 700px) {
-  .v3-cal { flex-direction: column; }
+  .v3-cal { flex-direction: column; max-width: calc(100vw - 16px); box-sizing: border-box; }
   .v3-cal-presets { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--grid); padding: 0 0 8px; }
 }
 

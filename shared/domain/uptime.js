@@ -277,3 +277,34 @@ export function aggregateUptime(days) {
     knownMinutes, downMinutes, tripCount, gapCount, daysCounted, daysNoData
   };
 }
+
+/**
+ * A "full day": the inverter ran all day, so the day's kWh reflects the weather, not an outage. It needs an uptime record
+ * with a known uptime and at most this many minutes down (trips + gaps). Short grid trips are routine at this site
+ * (a few minutes, little energy), so "no stop at all" would leave out most days; a longer stop or no record leaves it out.
+ */
+export const FULL_DAY_MAX_DOWN_MIN = 30;
+
+/**
+ * The lowest day among full days, so a power cut or a missing reading never wins "lowest day".
+ * @param {{date:string, kwh:number|null}[]} series  the range's days (unknown kWh = null, skipped)
+ * @param {ReturnType<typeof import('./telemetryPipeline.js').uptimeRowToDay>[]} uptimeDays
+ * @returns {{ day: {date:string,kwh:number}|null, fullDays:number, stoppedDays:number, unknownDays:number }}
+ *   stoppedDays: down longer than FULL_DAY_MAX_DOWN_MIN; unknownDays: no uptime record (or no data) for a day with kWh
+ */
+export function lowestFullDay(series, uptimeDays) {
+  const byDate = new Map((uptimeDays ?? []).map((u) => [u.dateKey, u]));
+  let day = null;
+  let fullDays = 0;
+  let stoppedDays = 0;
+  let unknownDays = 0;
+  for (const d of series ?? []) {
+    if (typeof d?.kwh !== 'number' || !Number.isFinite(d.kwh)) continue;
+    const u = byDate.get(d.date);
+    if (!u || u.status === 'no_data' || u.uptimePct === null || u.uptimePct === undefined) { unknownDays++; continue; }
+    if ((u.minutes?.trip ?? 0) + (u.minutes?.gap ?? 0) > FULL_DAY_MAX_DOWN_MIN || d.kwh <= 0) { stoppedDays++; continue; }
+    fullDays++;
+    if (!day || d.kwh < day.kwh) day = { date: d.date, kwh: d.kwh };
+  }
+  return { day, fullDays, stoppedDays, unknownDays };
+}

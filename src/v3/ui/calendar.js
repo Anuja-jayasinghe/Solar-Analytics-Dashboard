@@ -62,6 +62,30 @@ export function shortLabel(key) {
   return `${Number(key.slice(8, 10))} ${MONTHS[Number(key.slice(5, 7)) - 1].slice(0, 3)} ${key.slice(0, 4)}`;
 }
 
+/**
+ * The twelve months of a year for the month picker: { ym, label: 'Jan', disabled } (outside [min, max]).
+ * Jumping to a month this way is how you reach a far-off date without stepping month by month.
+ */
+export function monthsOfYear(year, min, max) {
+  const lo = min ? monthOf(min) : null;
+  const hi = max ? monthOf(max) : null;
+  return MONTHS.map((name, i) => {
+    const ym = `${year}-${pad(i + 1)}`;
+    return { ym, label: name.slice(0, 3), disabled: (lo && ym < lo) || (hi && ym > hi) || false };
+  });
+}
+
+/** Whether the month picker can step to `year` at all (any month of it inside [min, max]). */
+export function yearInBounds(year, min, max) {
+  return (!min || year >= Number(min.slice(0, 4))) && (!max || year <= Number(max.slice(0, 4)));
+}
+
+/** The Monday-to-Sunday week holding `key`, as { from, to }. */
+export function weekOf(key) {
+  const from = addDays(key, -weekdayOf(key));
+  return { from, to: addDays(from, 6) };
+}
+
 /** Ordered range from two picks, whichever was first. */
 export function orderRange(a, b) {
   return a <= b ? { from: a, to: b } : { from: b, to: a };

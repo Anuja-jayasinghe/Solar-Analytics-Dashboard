@@ -7,13 +7,13 @@ import { Note } from '../ui/Note.jsx';
 import { ThresholdPlot } from '../charts/ThresholdPlot.jsx';
 import { MarkToggle } from '../charts/MarkToggle.jsx';
 import { usePrefs } from '../prefs/context.js';
-import { MAX_LABELLED_COLUMNS, areaPath, axisTicks, chartNum, linePath, maxOf, niceMax, xPct, yPct } from '../charts/scale.js';
+import { MAX_LABELLED_COLUMNS, axisTicks, chartNum, linePath, maxOf, niceMax, xPct, yPct } from '../charts/scale.js';
 import { fmtNum, openPeriodSoFar, openPeriodView } from '../overview/format.js';
 import { aboveSummary, buildCebRows, columnTip, defaultThreshold, gapSummary, isPartial, stepEnd, varianceTag, windowOf } from './rows.js';
 import { GapStrip } from './GapStrip.jsx';
 import { CebTable } from './CebTable.jsx';
 
-const STYLES = [{ value: 'bars', label: 'Bars' }, { value: 'line', label: 'Lines' }, { value: 'area', label: 'Area' }];
+const STYLES = [{ value: 'bars', label: 'Bars' }, { value: 'line', label: 'Lines' }];
 const COUNTS = [{ value: 8, label: '8' }, { value: 12, label: '12' }, { value: 'all', label: 'All' }];
 const STRIPE = 'repeating-linear-gradient(135deg, var(--gen) 0 5px, var(--gen-a30) 5px 9px)';
 
@@ -28,7 +28,6 @@ function Columns({ rows, yMax, threshold, style }) {
     <>
       {style !== 'bars' && (
         <svg className="v3-plot-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          {style === 'area' && <path d={areaPath(invPts)} style={{ fill: 'var(--gen-a16)' }} />}
           <path d={linePath(invPts)} fill="none" style={{ stroke: 'var(--gen)' }} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
           <path d={linePath(cebPts)} fill="none" style={{ stroke: 'var(--ceb)' }} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         </svg>
@@ -130,13 +129,13 @@ export function CebCompare({ bills, openPeriod, live, lastStoredDay, todayKey, l
               <span><i className="v3-hatch" />open period or missing days</span>
               <span><i className="v3-ghost" />bill not issued yet</span>
             </div>
-            <div className="v3-markrow">
-              <MarkToggle />
-              {showMark && <><label className="v3-field-label"><span className="v3-sr">Mark above</span>
+            <div className="v3-markrow v3-markgroup">
+              {showMark && <><span className="v3-pill" data-tone="gen">{above.known ? `Inverter above: ${above.above} of ${above.known} periods` : 'no data in view'}</span>
+              <label className="v3-field-label"><span className="v3-sr">Mark above</span>
                 <input className="v3-field" type="number" min="0" step="50" value={threshold} aria-label="Threshold in kWh" onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v)) setThr(Math.max(0, Math.round(v))); }} style={{ width: 90 }} />
                 <span>kWh</span>
-              </label>
-              <span className="v3-pill" data-tone="gen">{above.known ? `Inverter above: ${above.above} of ${above.known} periods` : 'no data in view'}</span></>}
+              </label></>}
+              <MarkToggle />
             </div>
           </div>
 

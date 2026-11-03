@@ -7,11 +7,11 @@
 // Conventions: unknown is null (never 0); every figure that depends on a choice (which tariff,
 // how complete the data is) carries that choice in the response.
 
-import { aggregateUptime } from '../domain/uptime.js';
+import { aggregateUptime, lowestFullDay } from '../domain/uptime.js';
 import { summarizeElectricalRange } from '../domain/electricalRange.js';
 import { uptimeRowToDay } from '../domain/telemetryPipeline.js';
 import { addDays, diffDays } from '../domain/time.js';
-import { buildAlignedRows, openBillPeriod } from '../domain/alignment.js';
+import { buildAlignedRows, lastBillPeriod, openBillPeriod } from '../domain/alignment.js';
 import {
   buildBillRatePeriods, compareRanges, computeRangeStats, previousPeriod, sameRangeLastYear
 } from '../domain/rangeStats.js';
@@ -43,6 +43,9 @@ export const resources = {
     const [settings, bills, uptimeRows] = await Promise.all([repo.settings(), repo.bills(), repo.uptimeDays(from, to)]);
     const rate = rateFor(rateMode, settings, bills);
     const stats = await statsFor(repo, settings, rate, from, to);
+    const uptimeDays = uptimeRows.map(uptimeRowToDay);
+    // "Lowest day" leaves out outages and days without an uptime record (shared/domain/uptime.js)
+    stats.lowestFull = lowestFullDay(stats.series, uptimeDays);
 
     const comparisons = {};
     for (const kind of compare) {
@@ -57,7 +60,7 @@ export const resources = {
         settings: { capacityKwp: settings.capacityKwp, acRatedKw: settings.acRatedKw, ratePerKwh: settings.ratePerKwh },
         stats,
         comparisons,
-        uptime: { daysTracked: uptimeRows.length, ...aggregateUptime(uptimeRows.map(uptimeRowToDay)) }
+        uptime: { daysTracked: uptimeRows.length, ...aggregateUptime(uptimeDays) }
       }
     };
   },
@@ -229,6 +232,8 @@ export const resources = {
         // The open bill period (LR-001): the day after the latest bill to today. Returned on its own, not as one
         // of a calendar year's rows, so on 2 January it still starts in December.
         openPeriod: openBillPeriod({ dailyRows: rows, bills, todayKey: ctx.todayKey }),
+        // The latest complete bill period (the default custom range on the dashboard).
+        lastBillPeriod: lastBillPeriod(bills),
         todayKey: ctx.todayKey
       }
     };
