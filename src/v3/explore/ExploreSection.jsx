@@ -7,7 +7,7 @@ import { useIsPhone } from '../ui/useIsPhone.js';
 import { GenerationBody } from './GenerationBody.jsx';
 import { DayBody } from './DayBody.jsx';
 import { StatsBody } from './StatsBody.jsx';
-import { STATS_PERIODS, buildPoints, canStep, customRange, dataYears, dayLabelYear, defaultLine, isGrouped, presetRange, statsRange, stepRange, yearPoints, yearRange } from './series.js';
+import { STATS_PERIODS, buildPoints, canStep, customRange, clampYear, dataYears, dayLabelYear, defaultLine, isGrouped, presetRange, statsRange, stepRange, yearPoints, yearRange } from './series.js';
 
 const TABS = [{ value: 'gen', label: 'Generation' }, { value: 'day', label: 'Day' }, { value: 'stats', label: 'Stats' }];
 const VIEWS = [{ value: 'gen', label: 'Over time' }, { value: 'day', label: 'Through the day' }];
@@ -38,12 +38,12 @@ export function ExploreSection({ totals, todayKey, live = null, today = null }) 
   }, [gen, todayKey]);
   const ready = !!bounds.max;
   const years = useMemo(() => dataYears(bounds), [bounds]);
-  const shownYear = year ?? years[years.length - 1] ?? null;
+  const shownYear = useMemo(() => clampYear(year, bounds), [year, bounds]);
 
   const range = useMemo(() => {
     if (!ready) return null;
     if (kind === 'custom') return customRange(custom?.from ?? bounds.max, custom?.to ?? bounds.max, bounds);
-    if (kind === 'year') return yearRange(shownYear, bounds);
+    if (kind === 'year') return shownYear === null ? null : yearRange(shownYear, bounds);
     return presetRange(kind, endKey ?? bounds.max, bounds);
   }, [ready, kind, endKey, custom, bounds, shownYear]);
 
@@ -102,7 +102,7 @@ export function ExploreSection({ totals, todayKey, live = null, today = null }) 
       bounds={bounds}
       years={years}
       year={shownYear}
-      onYear={setYear}
+      onYear={(y) => setYear(clampYear(y, bounds))}
       canBack={!!range && canStep(kind, range, -1, bounds)}
       canForward={!!range && canStep(kind, range, 1, bounds)}
       onStep={step}

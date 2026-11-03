@@ -113,8 +113,24 @@ export function dataYears({ min = null, max = null } = {}) {
   return Array.from({ length: last - first + 1 }, (_, i) => first + i);
 }
 
+/**
+ * The year to show: `year` kept inside the years that have data, or the newest one when not chosen (null when there is
+ * no data at all). A year outside the data is never shown: before the first year it is the first, after the last the last.
+ */
+export function clampYear(year, bounds) {
+  const years = dataYears(bounds);
+  if (years.length === 0) return null;
+  const first = years[0];
+  const last = years[years.length - 1];
+  if (!Number.isInteger(year)) return last;
+  return Math.min(last, Math.max(first, year));
+}
+
 /** A calendar year, 1 Jan to 31 Dec, cut to the days that have data (the first year starts late, this year is so far). */
 export function yearRange(year, { min = null, max = null } = {}) {
+  if (!Number.isInteger(year) || (min && year < Number(min.slice(0, 4))) || (max && year > Number(max.slice(0, 4)))) {
+    throw new RangeError(`no data in year ${year}`); // clipping would quietly show another year's days under this one
+  }
   return { from: clampKey(`${year}-01-01`, min, max), to: clampKey(`${year}-12-31`, min, max) };
 }
 

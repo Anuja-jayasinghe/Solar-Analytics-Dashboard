@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   presetRange, customRange, stepRange, canStep, isGrouped, buildPoints, defaultLine, aboveCount, spreadGeometry,
-  dayLabel, dayLabelYear, GROUP_OVER_DAYS, MAX_CUSTOM_DAYS, dataYears, yearRange, yearPoints, yearSummary
+  dayLabel, dayLabelYear, GROUP_OVER_DAYS, MAX_CUSTOM_DAYS, dataYears, yearRange, yearPoints, yearSummary, clampYear
 } from '../src/v3/explore/series.js';
 import { hourlyFromTelemetry, colomboClock } from '../src/v3/explore/hourly.js';
 
@@ -265,6 +265,17 @@ describe('calendar year view', () => {
     expect(yearRange(2025, R)).toEqual({ from: '2025-01-01', to: '2025-12-31' });
     expect(yearRange(2024, R)).toEqual({ from: '2024-08-02', to: '2024-12-31' }); // records began in August
     expect(yearRange(2026, R)).toEqual({ from: '2026-01-01', to: '2026-11-02' }); // so far
+  });
+
+  it('never goes past the data: a year before the first or after the last is not offered or drawn', () => {
+    expect(clampYear(2023, R)).toBe(2024);
+    expect(clampYear(2027, R)).toBe(2026);
+    expect(clampYear(2025, R)).toBe(2025);
+    expect(clampYear(null, R)).toBe(2026); // not chosen: the newest year
+    expect(clampYear(2025.5, R)).toBe(2026);
+    expect(clampYear(2025, { min: null, max: null })).toBeNull(); // no data, no year
+    expect(() => yearRange(2023, R)).toThrow(RangeError); // would otherwise show 2 Aug 2024 labelled 2023
+    expect(() => yearRange(2027, R)).toThrow(RangeError);
   });
 
   it('always draws twelve months; months without readings are null and say why, partial months say how many days', () => {
