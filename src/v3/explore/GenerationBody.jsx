@@ -48,7 +48,13 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
           <Segmented small options={KINDS} value={kind} onChange={onKind} label="Range" />
           <Segmented small options={STYLES} value={style} onChange={onStyle} label="Chart style" />
           {isYear ? (
-            years.length > 0 && <Segmented small options={years.map((y) => ({ value: y, label: String(y) }))} value={year} onChange={onYear} label="Year" />
+            years.length > 0 && (
+              <div className="v3-stepper" role="group" aria-label="Year">
+                <button type="button" className="v3-iconbtn sm" onClick={() => onYear(year - 1)} disabled={!years.includes(year - 1)} aria-label="Previous year"><ChevronLeft size={15} /></button>
+                <span className="v3-steplabel v3-num" aria-live="polite">{year}</span>
+                <button type="button" className="v3-iconbtn sm" onClick={() => onYear(year + 1)} disabled={!years.includes(year + 1)} aria-label="Next year"><ChevronRight size={15} /></button>
+              </div>
+            )
           ) : (
             <div className="v3-stepper">
               <button type="button" className="v3-iconbtn sm" onClick={() => onStep(-1)} disabled={!canBack} aria-label="Earlier"><ChevronLeft size={15} /></button>
