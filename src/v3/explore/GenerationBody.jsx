@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useDrawRef } from '../ui/useMotion.js';
 import { Tip } from '../ui/Tip.jsx';
 import { Segmented } from '../ui/Segmented.jsx';
 import { Note } from '../ui/Note.jsx';
@@ -22,6 +23,7 @@ function pointTip(p, labelled, grouped) {
 
 /** "Inverter generation": a range of days (or months), a line by default, with the draggable "Mark above" line. */
 export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, bounds, years = [], year = null, onYear, stepLabel = '', billPeriod = null, onPick, canBack, canForward, onStep, onCustom, points, grouped, line, onLine, loading, error }) {
+  const drawRef = useDrawRef(); // draws when scrolled into view (useMotion.js)
   const { showMark } = usePrefs();
   const known = points.filter((p) => p.kwh !== null);
   const yMax = niceMax(Math.max(maxOf(points.map((p) => p.kwh), 1) * 1.1, showMark ? line * 1.04 : 0));
@@ -107,7 +109,7 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
       {!error && !loading && n > 0 && known.length === 0 && <Note>No generation was recorded in this range.</Note>}
 
       {n > 0 && known.length > 0 && (
-        <div className="v3-chartgrid">
+        <div className="v3-chartgrid" ref={drawRef}>
           <div className="v3-yaxis" aria-hidden="true">{axisTicks(yMax, (v) => fmtNum(v)).map((t) => <span key={t.pct}>{t.label}</span>)}</div>
           <div className="v3-plotwrap">
             <ThresholdPlot show={showMark} max={yMax} value={line} step={grouped ? 50 : 1} unit={unit} height="var(--plot-h)" onChange={onLine}>

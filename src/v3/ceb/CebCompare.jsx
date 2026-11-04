@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useDrawRef } from '../ui/useMotion.js';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Glass } from '../ui/Glass.jsx';
 import { Tip } from '../ui/Tip.jsx';
@@ -74,6 +75,7 @@ function Columns({ rows, yMax, threshold, style }) {
  * a draggable "Mark above" line, and the money gap (LR-004) aligned underneath.
  */
 export function CebCompare({ bills, openPeriod, live, lastStoredDay, todayKey, loading, error }) {
+  const drawRef = useDrawRef(); // draws when scrolled into view (useMotion.js)
   const open = useMemo(() => {
     const view = openPeriodView(openPeriod);
     const soFar = openPeriodSoFar(view, live, lastStoredDay, todayKey);
@@ -139,7 +141,7 @@ export function CebCompare({ bills, openPeriod, live, lastStoredDay, todayKey, l
             </div>
           </div>
 
-          <div className="v3-chartgrid">
+          <div className="v3-chartgrid" ref={drawRef}>
             <div className="v3-yaxis" aria-hidden="true">{axisTicks(yMax, (v) => fmtNum(v)).map((t) => <span key={t.pct}>{t.label}</span>)}</div>
             <div className="v3-plotwrap">
               <ThresholdPlot show={showMark} max={yMax} value={threshold} step={10} unit="kWh" height="var(--plot-h, 250px)" onChange={(v) => setThr(v)}>

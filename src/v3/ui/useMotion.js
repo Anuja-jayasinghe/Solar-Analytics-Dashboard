@@ -8,7 +8,7 @@
 // The server render and the first paint carry the real final value; nothing waits on the animation.
 // With prefers-reduced-motion, values are shown at once and nothing moves.
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 const useIso = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 export const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
@@ -89,6 +89,18 @@ export function useCount(target, { duration = 700, glide = 450, delay = 0 } = {}
  * at a time: the headline figures, then the live row, then the CEB chart. (A section revealed by scrolling starts at once.)
  */
 export const STAGE_MS = 550;
+/** After this long the load sequence is over: a chart drawn later (scrolled to, or a new range) starts at once. */
+export const LOAD_WINDOW_MS = 3000;
+/** A chart draws when this share of it is on screen, not when its first pixel scrolls in. */
+export const DRAW_AT = 0.4;
+
+let pageStart = -Infinity; // when the current page's sections were staged
+const lateNow = () => (typeof performance === 'undefined' ? true : performance.now() - pageStart > LOAD_WINDOW_MS);
+/** Draw now, without waiting for a load-sequence turn (and without the "after the bars" offsets). */
+function startNow(el) {
+  el.style.setProperty('--reveal-delay', '0ms');
+  el.style.setProperty('--after', '0s');
+}
 
 /**
  * Scroll reveal for the direct children of `ref` (the page's sections): one already on screen is marked "in" at once
@@ -107,6 +119,7 @@ export function useRevealChildren(ref) {
     const io = new IntersectionObserver((entries) => {
       for (const e of entries) if (e.isIntersecting) { e.target.dataset.reveal = 'in'; io.unobserve(e.target); }
     }, { threshold: 0.1 });
+    pageStart = performance.now();
     let stage = 0;
     for (const k of kids) {
       if (k.getBoundingClientRect().top < window.innerHeight) {
@@ -115,6 +128,39 @@ export function useRevealChildren(ref) {
         k.dataset.reveal = 'in';
       } else { k.dataset.reveal = 'pending'; io.observe(k); }
     }
-    return () => io.disconnect();
+    // Once the load sequence has played, nothing waits for its turn any more (a range change redraws at once).
+    const done = setTimeout(() => { for (const k of kids) k.style.setProperty('--reveal-delay', '0ms'); }, LOAD_WINDOW_MS);
+    return () => { io.disconnect(); clearTimeout(done); };
+  }, []);
+}
+
+/**
+ * A ref for a chart: it draws (data-draw="in") when DRAW_AT of it is on screen, so a chart below the first screen draws
+ * as it is scrolled to, not while it is out of sight. Until then its animations are held at their start (base.css).
+ * A chart on screen at load draws in its section's turn; one that appears later, or is scrolled to, starts at once.
+ */
+export function useDrawRef() {
+  const cleanup = useRef(null);
+  return useCallback((el) => {
+    cleanup.current?.();
+    cleanup.current = null;
+    if (!el) return;
+    if (typeof IntersectionObserver !== 'function' || reducedMotion()) { el.dataset.draw = 'in'; return; }
+    const r = el.getBoundingClientRect();
+    const seen = r.height > 0 ? (Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0)) / r.height : 0;
+    if (seen >= DRAW_AT) {
+      if (lateNow()) startNow(el);
+      el.dataset.draw = 'in';
+      return;
+    }
+    el.dataset.draw = 'pending';
+    const io = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return;
+      startNow(el);
+      el.dataset.draw = 'in';
+      io.disconnect();
+    }, { threshold: DRAW_AT });
+    io.observe(el);
+    cleanup.current = () => io.disconnect();
   }, []);
 }

@@ -1,4 +1,5 @@
 import { Tip } from '../ui/Tip.jsx';
+import { useDrawRef } from '../ui/useMotion.js';
 import { Info } from '../ui/Info.jsx';
 import { Note } from '../ui/Note.jsx';
 import { Segmented } from '../ui/Segmented.jsx';
@@ -14,6 +15,7 @@ import { dayLabelYear, spreadGeometry } from './series.js';
  * days-above were removed on purpose (docs/design/v3/README.md).
  */
 export function StatsBody({ showHead, stats, loading, error, rangeText, period, onPeriod, periods = [] }) {
+  const drawRef = useDrawRef(); // draws when scrolled into view (useMotion.js)
   const avg = stats?.avgPerDayKwh ?? null;
   const best = stats?.best ?? null;
   const worst = stats?.worst ?? null; // the lowest recorded day: only sets the chart's scale
@@ -56,7 +58,7 @@ export function StatsBody({ showHead, stats, loading, error, rangeText, period, 
       </div>
 
       {geo ? (
-        <div className="v3-spread" role="img" aria-label={`Daily generation over the range. Best day ${best ? fmtNum(best.kwh, 1) : DASH} kWh, lowest full day ${low ? fmtNum(low.kwh, 1) : DASH} kWh, average ${fmtNum(avg, 1)} kWh.`}>
+        <div className="v3-spread" ref={drawRef} role="img" aria-label={`Daily generation over the range. Best day ${best ? fmtNum(best.kwh, 1) : DASH} kWh, lowest full day ${low ? fmtNum(low.kwh, 1) : DASH} kWh, average ${fmtNum(avg, 1)} kWh.`}>
           <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
             <path d={areaPath(geo.points)} fill="url(#areaFillCeb)" />
             <path d={linePath(geo.points)} fill="none" style={{ stroke: 'var(--ceb)' }} strokeWidth="1.8" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />

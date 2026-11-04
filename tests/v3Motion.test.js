@@ -32,9 +32,10 @@ describe('counting numbers', () => {
 
 describe('reveal styles', () => {
   const css = readFileSync(new URL('../src/v3/styles/base.css', import.meta.url), 'utf8');
-  it('charts only animate inside a revealed section, and reduced motion turns every reveal off', () => {
-    expect(css).toMatch(/\[data-reveal='in'\] \.v3-bar \{[^}]*animation: v3-grow/);
-    expect(css).toMatch(/\[data-reveal='in'\] \.v3-plot-svg, \[data-reveal='in'\] \.v3-spread svg \{ animation: v3-wipe/);
+  it('charts animate only once drawn (held at the start until on screen), and reduced motion turns every reveal off', () => {
+    expect(css).toMatch(/\[data-draw\] \.v3-bar \{[^}]*animation: v3-grow/);
+    expect(css).toMatch(/\[data-draw\] \.v3-plot-svg, \.v3-spread\[data-draw\] svg \{ animation: v3-wipe/);
+    expect(css).toMatch(/\[data-draw='pending'\] \* \{ animation-play-state: paused !important; \}/); // never seen half drawn
     const reduced = css.slice(css.lastIndexOf('@media (prefers-reduced-motion: reduce)'));
     for (const sel of ['.v3-bar', '.v3-gapbar', '.v3-plot-svg', '.v3-dot', '.v3-sdot']) expect(reduced).toContain(sel);
     expect(reduced).toMatch(/\.v3-page > \[data-reveal\] \{ opacity: 1 !important/);

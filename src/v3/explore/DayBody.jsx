@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useDrawRef } from '../ui/useMotion.js';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { addDays } from '../../../shared/domain/time.js';
 import { usePrefetch, useResource } from '../data/context.js';
@@ -14,6 +15,7 @@ const HOUR_TICKS = Array.from({ length: LAST_HOUR - FIRST_HOUR + 2 }, (_, i) => 
 
 /** The power curve: every reading in kW, the peak marked, a "now" dot for today, and a hover line with time and kW. */
 function PowerChart({ curve, isToday }) {
+  const drawRef = useDrawRef(); // draws when scrolled into view (useMotion.js)
   const [hover, setHover] = useState(null);
   const yMax = niceMax(Math.max(maxOf(curve.pts.map((p) => p.kw), 1) * 1.15, 1));
   const y = (kw) => 100 - (kw / yMax) * 100;
@@ -30,7 +32,7 @@ function PowerChart({ curve, isToday }) {
   const edge = (x) => (x < 12 ? 'start' : x > 88 ? 'end' : 'mid'); // keep labels inside the plot near its edges
 
   return (
-    <div className="v3-chartgrid">
+    <div className="v3-chartgrid" ref={drawRef}>
       <div className="v3-yaxis" aria-hidden="true">{axisTicks(yMax, (v) => fmtNum(v, v < 10 && v % 1 ? 1 : 0)).map((t) => <span key={t.pct}>{t.label}</span>)}</div>
       <div className="v3-plotwrap">
         <div
