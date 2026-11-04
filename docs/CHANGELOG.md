@@ -74,6 +74,9 @@ All notable changes to the Solar Analytics Dashboard project.
   now offers Line (the default) and Bars; CEB vs Inverter offers Bars and Lines.
 
 ### Fixed
+- **The page no longer re-reads everything once a minute.** Each time the sign-in session refreshed its token
+  (about once a minute) the dashboard rebuilt its data source and re-read every figure on the page, and the admin and
+  Settings screens rebuilt theirs. Only the live figures re-read now, on their own schedule.
 - **Date pickers and the bill viewer follow the theme.** In light mode they were a dark panel with dark text (they used
   the tooltip colours that are dark in both themes); they are now white with dark text, and unchanged in dark mode.
 - **A reading that is not current now looks it.** When SolisCloud is not answering, the Today and live power tiles turn

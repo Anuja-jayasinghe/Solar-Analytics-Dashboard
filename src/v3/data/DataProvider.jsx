@@ -22,7 +22,11 @@ export function DataProvider({ children }) {
   const cacheRef = useRef(null);
   if (!cacheRef.current) cacheRef.current = createResourceCache();
 
-  const source = useMemo(() => (mode === 'live' ? createLiveSource({ getToken }) : createDemoSource(demoRequest)), [mode, getToken]);
+  // The source depends on the mode only: the token is read at request time, so a new getToken function (a session
+  // refresh) never rebuilds it, which would re-run every resource's read.
+  const tokenRef = useRef(getToken);
+  tokenRef.current = getToken;
+  const source = useMemo(() => (mode === 'live' ? createLiveSource({ getToken: () => tokenRef.current() }) : createDemoSource(demoRequest)), [mode]);
 
   // A different mode or user must never be served the previous one's cached data.
   const epoch = `${mode}:${userId ?? 'anon'}`;
