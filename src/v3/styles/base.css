@@ -401,6 +401,13 @@ html, body { margin: 0; padding: 0; }
 .v3-spread { position: relative; height: 130px; border-radius: 14px; background: var(--chip-bg); border: 1px solid var(--chip-line); }
 .v3-spread svg { position: absolute; inset: 10px 14px; width: calc(100% - 28px); height: calc(100% - 20px); overflow: visible; }
 .v3-spread-dots { position: absolute; inset: 10px 14px; }
+/* date marks: a faint line up through the chart and a label under it, at the same x as the line's points */
+.v3-spread-grid { position: absolute; inset: 10px 14px; pointer-events: none; }
+.v3-spread-grid i { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--grid); }
+.v3-spread-x { position: relative; height: 16px; margin: 6px 15px 0; font-size: 11px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+.v3-spread-x span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+.v3-spread-x span[data-edge='start'] { transform: none; }
+.v3-spread-x span[data-edge='end'] { transform: translateX(-100%); }
 .v3-sdot-wrap { position: absolute; transform: translate(-50%, -50%); }
 .v3-sdot { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--bg); box-sizing: border-box; display: block; }
 
@@ -418,7 +425,11 @@ html, body { margin: 0; padding: 0; }
   .v3-stat-value span { font-size: 9.5px; margin-left: 2px; }
   .v3-stat-sub { font-size: 9.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .v3-spread { height: 110px; }
+  .v3-spread-x { font-size: 9.5px; height: 14px; margin-top: 4px; }
   .v3-daterow .v3-field { height: 30px; font-size: 12px; }
+}
+@media (max-width: 420px) {
+  .v3-spread-x span[data-minor] { display: none; } /* every other month on a narrow phone; its line still shows */
 }
 
 /* ---- Pro metrics ---- */

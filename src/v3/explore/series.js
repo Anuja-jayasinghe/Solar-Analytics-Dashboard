@@ -274,6 +274,31 @@ export function spreadGeometry(series, best, worst, avg, low = worst) {
   };
 }
 
+/**
+ * Date marks along the statistics chart, so a reader can place a dip or a peak in time instead of taking the line on
+ * trust. Last 30 days: every 5th day ('25 Aug'). Last 365 days: the 1st of each month ('Oct'; January shows the year).
+ * Lifetime: each 1 January ('2026'), or the months when it covers less than a year. `x` matches spreadGeometry (0..100).
+ * @returns {{key:string, x:number, label:string, edge:'start'|'mid'|'end', minor:boolean}[]}
+ */
+export function spreadTicks(series, period) {
+  const n = series?.length ?? 0;
+  if (n < 2) return [];
+  const x = (i) => (i / (n - 1)) * 100;
+  const pick = (test) => series.flatMap((d, i) => { const label = test(d.date); return label ? [{ key: d.date, x: x(i), label }] : []; });
+  const day = (k) => Number(k.slice(8, 10));
+  const mon = (k) => Number(k.slice(5, 7));
+  const monthly = (k) => (day(k) === 1 ? (mon(k) === 1 ? k.slice(0, 4) : MON[mon(k) - 1]) : null);
+  let ticks;
+  if (period === '30') ticks = pick((k) => (day(k) % 5 === 0 ? dayLabel(k) : null));
+  else if (period === '365') ticks = pick(monthly);
+  else {
+    ticks = pick((k) => (day(k) === 1 && mon(k) === 1 ? k.slice(0, 4) : null));
+    if (ticks.length < 2) ticks = pick(monthly); // less than a year of records: months
+  }
+  // labels stay inside at the ends; `minor` months (Feb, Apr, ...) lose their label on a narrow phone (the line stays)
+  return ticks.map((t) => ({ ...t, edge: t.x < 6 ? 'start' : t.x > 94 ? 'end' : 'mid', minor: /^\d{4}-\d{2}-01$/.test(t.key) && mon(t.key) % 2 === 0 }));
+}
+
 export const STATS_PERIODS = Object.freeze([
   { value: '30', label: 'Last 30 days' },
   { value: '365', label: 'Last 365 days' },

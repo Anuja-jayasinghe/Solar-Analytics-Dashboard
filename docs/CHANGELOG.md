@@ -5,6 +5,10 @@ All notable changes to the Solar Analytics Dashboard project.
 ## [Unreleased]
 
 ### Added
+- **Date marks on the statistics chart**, so a dip or a peak can be placed in time. The last 30 days are marked every
+  5th day, the last 365 days on the 1st of each month (January shows the year), and lifetime at each new year (months
+  when there is less than a year of records). Each mark has a faint line up through the chart. Narrow phones label
+  every other month.
 - **Full sequence on a visit, a quick fade on a refresh.** The full sequence below plays on the first visit, or after
   30 minutes or more away from the Overview. A refresh or a return within that time fades the page in together in
   0.3 s, with the headline figures already in place. Only the live parts still animate: the Today circle and kWh, the
