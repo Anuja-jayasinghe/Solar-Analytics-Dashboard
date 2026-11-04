@@ -87,6 +87,9 @@ All notable changes to the Solar Analytics Dashboard project.
   now offers Line (the default) and Bars; CEB vs Inverter offers Bars and Lines.
 
 ### Fixed
+- **The background colour flows across the cards.** Behind the glass cards the page glows each faded in one straight
+  step, so the CEB vs Inverter card was near-black at the top and turned blue partway down, with a visible edge. The
+  glows are now larger, overlap, and fade gradually, over a faint warm-to-cool wash, so the colour blends smoothly.
 - **The Mark above line no longer climbs forever.** Dragging it to the top (or holding it there) kept raising the
   value, because the chart grew to fit the line and the top moved up with it. The scale now comes from the data alone,
   and the line stays inside the chart, whether dragged, moved with the keys or typed.

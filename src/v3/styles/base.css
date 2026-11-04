@@ -23,11 +23,16 @@ html, body { margin: 0; padding: 0; }
 
 .v3-skip { position: absolute; left: 12px; top: -48px; z-index: 100; background: var(--gen); color: var(--gen-ink); padding: 8px 14px; border-radius: 999px; font-weight: 700; font-size: 13px; text-decoration: none; }
 .v3-skip:focus { top: 12px; }
-.v3-glows { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
-.v3-glows i { position: absolute; border-radius: 50%; }
-.v3-glows i:nth-child(1) { left: -160px; top: -200px; width: 760px; height: 760px; background: radial-gradient(circle, var(--glow1), transparent 66%); }
-.v3-glows i:nth-child(2) { right: -220px; top: 38%; width: 820px; height: 820px; background: radial-gradient(circle, var(--glow2), transparent 66%); }
-.v3-glows i:nth-child(3) { left: 10%; bottom: -320px; width: 800px; height: 800px; background: radial-gradient(circle, var(--glow3), transparent 66%); }
+.v3-glows { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0;
+  /* a faint warm-to-cool wash underneath, so the colour flows from one glow into the next instead of dark gaps */
+  background: linear-gradient(160deg, color-mix(in oklab, var(--glow1) 30%, transparent) 0%, transparent 38%, transparent 52%, color-mix(in oklab, var(--glow2) 32%, transparent) 100%); }
+.v3-glows i { position: absolute; border-radius: 50%;
+  /* an eased falloff (not one straight fade to transparent), so the edge of a glow never shows as a line behind the glass */
+  background: radial-gradient(circle closest-side, var(--c) 0%, color-mix(in oklab, var(--c) 82%, transparent) 18%, color-mix(in oklab, var(--c) 55%, transparent) 38%,
+    color-mix(in oklab, var(--c) 28%, transparent) 58%, color-mix(in oklab, var(--c) 10%, transparent) 78%, transparent 100%); }
+.v3-glows i:nth-child(1) { --c: var(--glow1); left: -320px; top: -360px; width: 1150px; height: 1150px; }
+.v3-glows i:nth-child(2) { --c: var(--glow2); right: -420px; top: 4%; width: 1400px; height: 1400px; }
+.v3-glows i:nth-child(3) { --c: var(--glow3); left: 0; bottom: -520px; width: 1200px; height: 1100px; }
 
 .v3-glass {
   background: linear-gradient(180deg, var(--glass-a), var(--glass-b));
