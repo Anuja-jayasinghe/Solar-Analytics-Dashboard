@@ -617,17 +617,19 @@ select.v3-field { padding-right: 8px; }
 .v3-page > [data-reveal='pending'] { opacity: 0; transform: translateY(12px); }
 .v3-page > [data-reveal='in'] { opacity: 1; transform: none; transition: opacity .45s ease-out, transform .5s cubic-bezier(.2, .8, .2, 1); }
 
-[data-reveal='in'] .v3-bar { transform-origin: 50% 100%; animation: v3-grow .55s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(min(var(--i, 0), 30) * 22ms); }
-[data-reveal='in'] .v3-bar .v3-val { animation: v3-fadein .3s ease-out both; animation-delay: calc(min(var(--i, 0), 30) * 22ms + .4s); }
-[data-reveal='in'] .v3-gapbar { animation: v3-grow .5s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(min(var(--i, 0), 30) * 22ms + .25s); }
+[data-reveal='in'] .v3-bar { transform-origin: 50% 100%; animation: v3-grow .5s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--reveal-delay, 0ms) + min(var(--i, 0), 30) * 18ms); }
+[data-reveal='in'] .v3-bar .v3-val { animation: v3-fadein .35s ease-out both; animation-delay: calc(var(--reveal-delay, 0ms) + .65s); }
+[data-reveal='in'] .v3-gapbar { animation: v3-grow .45s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--reveal-delay, 0ms) + .8s + min(var(--i, 0), 30) * 18ms); }
 [data-reveal='in'] .v3-gapbar[data-dir='up'] { transform-origin: 50% 100%; }
 [data-reveal='in'] .v3-gapbar[data-dir='down'] { transform-origin: 50% 0; }
-[data-reveal='in'] .v3-plot-svg, [data-reveal='in'] .v3-spread svg { animation: v3-wipe .8s cubic-bezier(.4, 0, .2, 1) both; }
-[data-reveal='in'] .v3-col > .v3-dot { animation: v3-dotin .3s ease-out both; animation-delay: calc(var(--t, 0) * .7s); }
-[data-reveal='in'] .v3-col > .v3-val-pt { animation: v3-fadein .3s ease-out both; animation-delay: calc(var(--t, 0) * .7s + .1s); }
-[data-reveal='in'] .v3-power > .v3-peakmark, [data-reveal='in'] .v3-power > .v3-peaklabel { animation: v3-fadein .35s ease-out .75s both; }
-[data-reveal='in'] .v3-sdot { animation: v3-sdotin .35s cubic-bezier(.2, .8, .2, 1.4) .75s both; }
-[data-reveal='in'] .v3-sval { animation: v3-fadein .3s ease-out .85s both; }
+[data-reveal='in'] .v3-plot-svg, [data-reveal='in'] .v3-spread svg { animation: v3-wipe .8s cubic-bezier(.4, 0, .2, 1) both; animation-delay: var(--reveal-delay, 0ms); }
+[data-reveal='in'] .v3-col > .v3-dot { animation: v3-dotin .3s ease-out both; animation-delay: calc(var(--reveal-delay, 0ms) + var(--t, 0) * .7s); }
+[data-reveal='in'] .v3-col > .v3-val-pt { animation: v3-fadein .3s ease-out both; animation-delay: calc(var(--reveal-delay, 0ms) + .85s); }
+[data-reveal='in'] .v3-power > .v3-peakmark, [data-reveal='in'] .v3-power > .v3-peaklabel { animation: v3-fadein .35s ease-out both; animation-delay: calc(var(--reveal-delay, 0ms) + .8s); }
+[data-reveal='in'] .v3-sdot { animation: v3-sdotin .35s cubic-bezier(.2, .8, .2, 1.4) both; animation-delay: calc(var(--reveal-delay, 0ms) + .8s); }
+[data-reveal='in'] .v3-sval { animation: v3-fadein .3s ease-out both; animation-delay: calc(var(--reveal-delay, 0ms) + .9s); }
+[data-reveal] .v3-liquid { animation-duration: 1s; animation-delay: var(--reveal-delay, 0ms); } /* the Today circle fills in its section's turn */
+span.v3-countwait { visibility: hidden; } /* a count waiting for its turn: nothing, rather than a 0 that reads as real */
 .v3-liquid { transition: top .6s cubic-bezier(.2, .8, .2, 1); } /* the Today fill glides to each new reading */
 
 @media print { .v3-page > [data-reveal] { opacity: 1 !important; transform: none !important; } } /* print everything, scrolled to or not */

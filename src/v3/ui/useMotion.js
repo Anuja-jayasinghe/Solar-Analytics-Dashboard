@@ -42,26 +42,37 @@ export function countAt(from, to, t) {
  * The value to draw for `target`: counts up from 0 over `duration` when a number first arrives (after `delay`), and
  * glides from what is on screen over `glide` when it changes later. Unknown (null) shows as is, never as 0.
  */
-export function useCountUp(target, { duration = 700, glide = 450, delay = 0 } = {}) {
+export function useCountUp(target, opts) {
+  return useCount(target, opts).shown;
+}
+
+/**
+ * useCountUp plus `waiting`: true while a first count waits for its turn (`delay`). A number shown during that wait would
+ * read as a real 0, so CountUp keeps it hidden until it starts.
+ */
+export function useCount(target, { duration = 700, glide = 450, delay = 0 } = {}) {
   const [shown, setShown] = useState(target);
+  const [waiting, setWaiting] = useState(false);
   const shownRef = useRef(null); // what is on screen now (null = no number shown yet)
   const raf = useRef(0);
 
   useIso(() => {
     cancelAnimationFrame(raf.current);
-    if (!isNum(target)) { shownRef.current = null; setShown(target); return undefined; }
+    if (!isNum(target)) { shownRef.current = null; setShown(target); setWaiting(false); return undefined; }
     const first = shownRef.current === null;
     const from = first ? 0 : shownRef.current;
     // A tab opened in the background shows the real value: there is nothing to watch, and frames do not run there.
     const hidden = typeof document !== 'undefined' && document.visibilityState === 'hidden';
-    if (reducedMotion() || hidden || from === target) { shownRef.current = target; setShown(target); return undefined; }
+    if (reducedMotion() || hidden || from === target) { shownRef.current = target; setShown(target); setWaiting(false); return undefined; }
     const dur = first ? duration : glide;
     // Timed from now, not from the first frame: if frames are held back (a busy page), the count picks up where it
     // should be instead of sitting on its starting value.
     const start = performance.now() + (first ? delay : 0);
     const paint = (v) => { shownRef.current = v; setShown(v); };
     paint(from);
+    setWaiting(first && delay > 0);
     const step = (ts) => {
+      if (ts >= start) setWaiting(false);
       const t = Math.min(1, Math.max(0, (ts - start) / dur));
       paint(countAt(from, target, t));
       if (t < 1) raf.current = requestAnimationFrame(step);
@@ -70,12 +81,19 @@ export function useCountUp(target, { duration = 700, glide = 450, delay = 0 } = 
     return () => cancelAnimationFrame(raf.current);
   }, [target]); // durations are fixed per call site
 
-  return shown;
+  return { shown, waiting };
 }
 
 /**
+ * Sections on screen at load start one after another, top to bottom, this far apart, so the eye can follow one thing
+ * at a time: the headline figures, then the live row, then the CEB chart. (A section revealed by scrolling starts at once.)
+ */
+export const STAGE_MS = 550;
+
+/**
  * Scroll reveal for the direct children of `ref` (the page's sections): one already on screen is marked "in" at once
- * (its charts draw), one further down is "pending" (hidden) until about a tenth of it scrolls into view. Once per mount.
+ * with a staged start (its charts draw in turn), one further down is "pending" (hidden) until about a tenth of it
+ * scrolls into view. Once per mount.
  */
 export function useRevealChildren(ref) {
   useIso(() => {
@@ -89,9 +107,13 @@ export function useRevealChildren(ref) {
     const io = new IntersectionObserver((entries) => {
       for (const e of entries) if (e.isIntersecting) { e.target.dataset.reveal = 'in'; io.unobserve(e.target); }
     }, { threshold: 0.1 });
+    let stage = 0;
     for (const k of kids) {
-      if (k.getBoundingClientRect().top < window.innerHeight) k.dataset.reveal = 'in';
-      else { k.dataset.reveal = 'pending'; io.observe(k); }
+      if (k.getBoundingClientRect().top < window.innerHeight) {
+        k.style.setProperty('--reveal-delay', `${stage * STAGE_MS}ms`); // CSS adds it to every animation inside
+        stage += 1;
+        k.dataset.reveal = 'in';
+      } else { k.dataset.reveal = 'pending'; io.observe(k); }
     }
     return () => io.disconnect();
   }, []);

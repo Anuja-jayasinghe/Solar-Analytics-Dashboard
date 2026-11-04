@@ -12,7 +12,7 @@ function Tile({ label, short, value, unit, sub, info, loading, order = 0 }) {
       {loading ? (
         <div className="v3-skeleton" style={{ height: 30, width: '70%' }} aria-busy="true" aria-label="Loading" />
       ) : (
-        <div className="v3-num v3-kpi-value"><CountText text={value} delay={order * 80} />{unit ? <span className="v3-kpi-unit">{unit}</span> : null}</div>
+        <div className="v3-num v3-kpi-value"><CountText text={value} delay={order * 90} duration={600} />{unit ? <span className="v3-kpi-unit">{unit}</span> : null}</div>
       )}
       <div className="v3-kpi-sub">{loading ? ' ' : sub}</div>
     </Glass>

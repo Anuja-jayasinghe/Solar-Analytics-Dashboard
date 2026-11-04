@@ -5,12 +5,13 @@ All notable changes to the Solar Analytics Dashboard project.
 ## [Unreleased]
 
 ### Added
-- **The Overview fills in instead of popping in.** After a refresh or a visit, the headline figures, the live kW and
-  the Today kWh count up, and the gauge arc sweeps from 0. CEB vs Inverter bars grow from the baseline, and the
-  money-gap bars follow. The generation line, the day curve and the statistics chart draw left to right, with their dots
+- **The Overview fills in instead of popping in, one part after another.** After a refresh or a visit, the motion
+  follows the eye down the page, about half a second apart. First the headline figures count up. Then the live row:
+  the gauge sweeps from 0, and the Today circle fills while its kWh and the live kW count up (hidden until their turn,
+  never shown as a 0). Then the CEB vs Inverter bars grow, their labels fade in, and the money-gap bars follow. The generation line, the day curve and the statistics chart draw left to right, with their dots
   and peak markers after. Sections further down fade and rise once as they scroll into view, and their charts draw
-  then. Live refreshes glide from the old value to the new one instead of replaying from zero. Everything settles within
-  about a second, the real value is in the page from the first render, and with reduced motion nothing moves. Plain CSS
+  then. Live refreshes glide from the old value to the new one instead of replaying from zero. The first screen settles within
+  about 2.5 s, the real value is in the page from the first render, and with reduced motion nothing moves. Plain CSS
   and two small hooks (`src/v3/ui/useMotion.js`), no animation library.
 - **"Generation through the day" is a live power curve, as SolisCloud draws it.** Every power reading in kW (about one a
   minute from SolisCloud; the caption states the real interval) instead of kWh on the hour, with the day's peak marked on the line ("Peak so far 26.3 kW · 11:35" for today). It
