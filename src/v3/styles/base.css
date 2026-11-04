@@ -194,8 +194,10 @@ html, body { margin: 0; padding: 0; }
 .v3-gauge-tile { justify-content: center; gap: 24px; }
 .v3-today { align-items: center; }
 /* the daily goal as a little power grid (GridTown.jsx, gridTown.js), with a little depth: fronts, darker sides, lit tops */
-[data-theme='dark'] .v3-town { --town-front:rgba(255,255,255,.08); --town-side:rgba(0,0,0,.28); --town-top:rgba(255,255,255,.2); --town-line:rgba(255,255,255,.2); --town-ground:rgba(255,255,255,.035); --town-panel:#1B3A66; --town-panel-line:#3A6BB0 }
-[data-theme='light'] .v3-town { --town-front:rgba(255,255,255,.88); --town-side:rgba(20,30,60,.14); --town-top:rgba(255,255,255,1); --town-line:rgba(20,30,60,.22); --town-ground:rgba(20,30,60,.045); --town-panel:#2D5C99; --town-panel-line:#1B3A66 }
+[data-theme='dark'] .v3-town { --town-front:rgba(255,255,255,.08); --town-side:rgba(0,0,0,.28); --town-top:rgba(255,255,255,.2); --town-line:rgba(255,255,255,.2); --town-ground:rgba(255,255,255,.035); --town-panel:#1B3A66; --town-panel-line:#3A6BB0;
+  --board-face:#0B1020; --board-side:#070A14; --board-top:#1A2238; --board-off:rgba(255,255,255,.07); --board-on:#FFB347 }
+[data-theme='light'] .v3-town { --town-front:rgba(255,255,255,.88); --town-side:rgba(20,30,60,.14); --town-top:rgba(255,255,255,1); --town-line:rgba(20,30,60,.22); --town-ground:rgba(20,30,60,.045); --town-panel:#2D5C99; --town-panel-line:#1B3A66;
+  --board-face:#FFFFFF; --board-side:#DCE1EA; --board-top:#F2F4F8; --board-off:rgba(20,30,60,.07); --board-on:var(--gen-fill) }
 .v3-town-wrap { flex: 1 1 300px; min-width: 0; max-width: 470px; margin-top: 16px; } /* clear of the freshness label above the billboard */
 .v3-town { width: 100%; height: auto; display: block; overflow: visible; }
 .v3-town-ground { fill: var(--town-ground); }
@@ -228,12 +230,13 @@ html, body { margin: 0; padding: 0; }
 .v3-today-text { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
 .v3-today-pct > span:first-child { color: var(--gen); }
 /* the LED billboard on the tallest tower: today's kWh in dots, the first thing the eye finds */
-.v3-board-face { fill: #0B1020; stroke: var(--town-line); stroke-width: 1; }
-.v3-board-side { fill: #070A14; }
-.v3-board-top { fill: #1A2238; }
+.v3-board-face { fill: var(--board-face); stroke: var(--town-line); stroke-width: 1; }
+.v3-board-side { fill: var(--board-side); }
+.v3-board-top { fill: var(--board-top); }
+[data-theme='light'] .v3-board-side, [data-theme='light'] .v3-board-top { stroke: var(--town-line); stroke-width: 1; } /* a white board needs its edges drawn */
 .v3-board-leg { stroke: var(--ink2); stroke-width: 2; }
-.v3-board-dot { fill: rgba(255, 255, 255, .07); transition: fill .15s; }
-.v3-board-dot[data-on] { fill: #FFB347; }
+.v3-board-dot { fill: var(--board-off); transition: fill .15s; }
+.v3-board-dot[data-on] { fill: var(--board-on); }
 .v3-fresh-wrap { position: absolute; top: 16px; right: 18px; opacity: .45; }
 .v3-fresh { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; color: var(--ink2); }
 

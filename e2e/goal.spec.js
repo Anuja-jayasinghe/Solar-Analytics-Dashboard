@@ -19,3 +19,22 @@ test('the daily goal town lights one building per 10% of today\'s target', async
   await expect(tile.locator('.v3-town')).toHaveAttribute('aria-label', pct >= 100 ? /the whole town is powered/ : new RegExp(`${Math.min(10, Math.floor(pct / 10))} of 10 buildings powered`));
   await ctx.close();
 });
+
+test('the kWh billboard follows the theme: dark board in dark mode, light board in light mode', async ({ browser }) => {
+  const ctx = await browser.newContext({ reducedMotion: 'reduce' });
+  const page = await ctx.newPage();
+  // how bright the board face is, 0 (black) to 255 (white)
+  const faceLightness = () => page.locator('.v3-board-face').evaluate((el) => {
+    const [r, g, b] = getComputedStyle(el).fill.match(/\d+/g).map(Number);
+    return (r + g + b) / 3;
+  });
+  for (const [theme, isLight] of [['dark', false], ['light', true]]) {
+    await page.addInitScript((t) => localStorage.setItem('solar.v3.theme', t), theme);
+    await page.goto('/');
+    await expect(page.locator('.v3-board-face')).toBeVisible();
+    const l = await faceLightness();
+    if (isLight) expect(l, 'light mode board face').toBeGreaterThan(200);
+    else expect(l, 'dark mode board face').toBeLessThan(60);
+  }
+  await ctx.close();
+});
