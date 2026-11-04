@@ -1,5 +1,7 @@
 import { Glass } from '../ui/Glass.jsx';
 import { Info } from '../ui/Info.jsx';
+import { CountUp } from '../ui/Motion.jsx';
+import { useCountUp } from '../ui/useMotion.js';
 import { DASH, fmtNum, gaugeFraction, liveState, liveStatusInfo, readingNote } from './format.js';
 
 // A 240 degree arc, drawn with pathLength=100 so the dash is simply the percentage.
@@ -12,6 +14,8 @@ const ARC = 'M 30.72 140 A 80 80 0 1 1 169.28 140';
 export function LiveGauge({ live, error = null, maxKw, loading }) {
   const kw = live?.currentPowerKw ?? null;
   const frac = gaugeFraction(kw, maxKw ?? null);
+  // The arc sweeps up from 0 when the first reading lands, then glides to each new one.
+  const arc = useCountUp(frac === null ? null : frac * 100, { duration: 900 });
   // Before the first reading arrives the bulb says so, instead of claiming the status is unknown.
   const state = loading && !live ? { key: 'loading', label: 'Checking…', tone: 'neutral' } : liveState(live, error);
   const note = readingNote(live);
@@ -33,12 +37,12 @@ export function LiveGauge({ live, error = null, maxKw, loading }) {
       <div className="v3-gauge" role="meter" aria-label="Live power" {...meter}>
         <svg viewBox="0 0 200 160" aria-hidden="true">
           <path d={ARC} pathLength="100" fill="none" style={{ stroke: 'var(--track)' }} strokeWidth="13" strokeLinecap="round" />
-          {frac !== null && frac > 0 && (
-            <path d={ARC} pathLength="100" fill="none" stroke="url(#gaugeGrad)" strokeWidth="13" strokeLinecap="round" strokeDasharray={`${Math.max(0.5, frac * 100).toFixed(1)} 100`} />
+          {frac !== null && frac > 0 && arc > 0 && (
+            <path d={ARC} pathLength="100" fill="none" stroke="url(#gaugeGrad)" strokeWidth="13" strokeLinecap="round" strokeDasharray={`${Math.max(0.5, arc).toFixed(1)} 100`} />
           )}
         </svg>
         <div className="v3-gauge-read">
-          {loading && !live ? <div className="v3-skeleton" style={{ height: 34, width: 70, margin: '0 auto' }} aria-busy="true" aria-label="Loading" /> : <div className="v3-num v3-gauge-kw">{fmtNum(kw, 1)}</div>}
+          {loading && !live ? <div className="v3-skeleton" style={{ height: 34, width: 70, margin: '0 auto' }} aria-busy="true" aria-label="Loading" /> : <div className="v3-num v3-gauge-kw"><CountUp value={kw} dp={1} duration={900} /></div>}
           <div className="v3-kpi-sub">{note ? 'kW then' : 'kW now'}</div>
         </div>
         <span className="v3-gauge-min" aria-hidden="true">0</span>

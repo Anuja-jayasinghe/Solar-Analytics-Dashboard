@@ -113,18 +113,18 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
             <ThresholdPlot show={showMark} max={yMax} value={line} step={grouped ? 50 : 1} unit={unit} height="var(--plot-h)" onChange={onLine}>
               {axisTicks(yMax).map((t) => <div key={t.pct} className="v3-gridline" style={{ bottom: `${t.pct}%` }} />)}
               {style !== 'bars' && (
-                <svg className="v3-plot-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <svg key={`${style}:${points[0]?.key ?? ''}:${n}`} className="v3-plot-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                   <path d={linePath(linePts)} fill="none" style={{ stroke: 'var(--gen)' }} strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
                 </svg>
               )}
               <div className="v3-cols" style={{ gap: dense ? 1 : undefined }} data-dense={n > 16 || undefined}>
-                {points.map((p) => {
+                {points.map((p, i) => {
                   const hi = p.kwh !== null && p.kwh > markAt;
                   const partial = p.present > 0 && p.present < p.total; // a month with some days missing: drawn hatched/hollow, never as a full month
                   const pct = p.kwh === null ? 0 : (p.kwh / yMax) * 100;
                   return (
                     <Tip key={p.key} text={pointTip(p, n <= MAX_LABELLED_COLUMNS, grouped)}>
-                      <div className="v3-col" style={dense ? { padding: '0 1%' } : undefined}>
+                      <div className="v3-col" style={{ ...(dense ? { padding: '0 1%' } : null), '--i': i, '--t': n > 1 ? i / (n - 1) : 0 }}>
                         {style === 'bars' ? (
                           p.kwh === null ? <div className="v3-bar single" style={{ height: 3, background: 'var(--nodata)' }} /> : <div className="v3-bar single" style={{ height: `${pct}%`, background: partial ? 'repeating-linear-gradient(135deg, var(--gen) 0 5px, var(--gen-a30) 5px 9px)' : hi ? 'var(--gen)' : 'var(--gen-a34)', border: partial ? '1px solid var(--gen)' : undefined }}><span className="v3-val">{n <= MAX_LABELLED_COLUMNS ? chartNum(p.kwh, { dense: n > 12 }) : ''}</span></div>
                         ) : (

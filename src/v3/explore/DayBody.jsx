@@ -137,7 +137,7 @@ export function DayBody({ showHead, bounds, todayKey = null, live = null, today 
       {noData && <Note>{isToday ? 'No readings yet today, so nothing is drawn (not a zero).' : 'No readings were recorded for this day, so nothing is drawn (not a zero).'}</Note>}
       {enabled && res.loading && !hasData && <div className="v3-skeleton" style={{ height: 200 }} aria-busy="true" aria-label="Loading" />}
 
-      {curve && <PowerChart curve={curve} isToday={isToday} />}
+      {curve && <PowerChart key={date} curve={curve} isToday={isToday} />}
     </>
   );
 }

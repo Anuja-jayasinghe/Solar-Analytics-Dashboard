@@ -27,20 +27,20 @@ function Columns({ rows, yMax, threshold, style }) {
   return (
     <>
       {style !== 'bars' && (
-        <svg className="v3-plot-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <svg key={`${style}:${rows[0]?.id ?? ''}:${n}`} className="v3-plot-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <path d={linePath(invPts)} fill="none" style={{ stroke: 'var(--gen)' }} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
           <path d={linePath(cebPts)} fill="none" style={{ stroke: 'var(--ceb)' }} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         </svg>
       )}
       <div className="v3-cols" data-dense={n > 16 || undefined}>
-        {rows.map((r) => {
+        {rows.map((r, i) => {
           const hi = r.inverterKwh !== null && r.inverterKwh > threshold;
           const invPct = r.inverterKwh === null ? 0 : (r.inverterKwh / yMax) * 100;
           const cebPct = r.cebKwh === null ? 0 : (r.cebKwh / yMax) * 100;
           const striped = r.status === 'provisional' || isPartial(r);
           return (
             <Tip key={r.id} text={columnTip(r)}>
-              <div className="v3-col">
+              <div className="v3-col" style={{ '--i': i, '--t': n > 1 ? i / (n - 1) : 0 }}>
                 {style === 'bars' ? (
                   <>
                     {r.inverterKwh !== null && (

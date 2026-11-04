@@ -39,12 +39,12 @@ export function GapStrip({ rows, summary }) {
           <div className="v3-gap-plot">
             <div className="v3-gap-zero" />
             <div className="v3-cols">
-              {rows.map((r) => {
+              {rows.map((r, i) => {
                 const h = r.gapLkr === null ? 0 : Math.max(3, (Math.abs(r.gapLkr) / maxAbs) * 46);
                 return (
                   <Tip key={r.id} text={gapTip(r)}>
-                    <div className="v3-col v3-gapcol">
-                      {r.gapLkr !== null && <div className="v3-gapbar" style={r.gapLkr >= 0 ? { bottom: '50%', height: `${h}%`, background: 'var(--good)' } : { top: '50%', height: `${h}%`, background: 'var(--warn)' }} />}
+                    <div className="v3-col v3-gapcol" style={{ '--i': i }}>
+                      {r.gapLkr !== null && <div className="v3-gapbar" data-dir={r.gapLkr >= 0 ? 'up' : 'down'} style={r.gapLkr >= 0 ? { bottom: '50%', height: `${h}%`, background: 'var(--good)' } : { top: '50%', height: `${h}%`, background: 'var(--warn)' }} />}
                       {r.gapLkr === null && r.status !== 'provisional' && <span className="v3-gapdash">–</span>}
                     </div>
                   </Tip>

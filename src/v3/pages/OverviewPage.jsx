@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useResource } from '../data/context.js';
 import { pageTodayKey } from '../data/today.js';
 import { Note } from '../ui/Note.jsx';
+import { useRevealChildren } from '../ui/useMotion.js';
 import { TotalsRow } from '../overview/TotalsRow.jsx';
 import { LiveRow } from '../overview/LiveRow.jsx';
 import { displayLive, errorLabel } from '../overview/format.js';
@@ -32,6 +33,9 @@ function useNow(intervalMs = 10_000) {
  */
 export default function OverviewPage() {
   const now = useNow();
+  // Sections further down fade in as they scroll into view; charts draw when their section is shown (Motion.jsx).
+  const pageRef = useRef(null);
+  useRevealChildren(pageRef);
   const live = useResource('live', {}, { pollMs: 60_000 });
   const totals = useResource('totals');
   const settings = useResource('settings');
@@ -51,7 +55,7 @@ export default function OverviewPage() {
   const s = settings.data?.settings ?? null;
 
   return (
-    <>
+    <div className="v3-page" ref={pageRef}>
       {failed.length > 0 && (
         <Note tone="bad">
           Some figures could not be loaded ({[...new Set(failed.map((r) => errorLabel(r.error.code)))].join(', ')}). They are shown as a dash, never as zero.
@@ -66,6 +70,6 @@ export default function OverviewPage() {
       <LiveRow live={shown} liveError={live.error} peak={curvePeak} targetKwh={s?.dailyTargetKwh ?? null} maxKw={s?.acRatedKw ?? null} now={now} loading={live.loading} />
       <CebCompare bills={bills.data} openPeriod={totals.data?.openPeriod} live={shown} lastStoredDay={totals.data?.generation?.lastDay} todayKey={todayKey} loading={bills.loading || totals.loading} error={bills.error} />
       <ExploreSection totals={totals.data} todayKey={todayKey} live={shown} today={today} />
-    </>
+    </div>
   );
 }

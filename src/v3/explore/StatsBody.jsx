@@ -2,6 +2,7 @@ import { Tip } from '../ui/Tip.jsx';
 import { Info } from '../ui/Info.jsx';
 import { Note } from '../ui/Note.jsx';
 import { Segmented } from '../ui/Segmented.jsx';
+import { CountUp } from '../ui/Motion.jsx';
 import { areaPath, linePath } from '../charts/scale.js';
 import { DASH, fmtNum } from '../overview/format.js';
 import { FULL_DAY_MAX_DOWN_MIN } from '../../../shared/domain/uptime.js';
@@ -46,10 +47,10 @@ export function StatsBody({ showHead, stats, loading, error, rangeText, period, 
 
       {error && <Note tone="bad">Could not load the statistics ({error.code ?? 'error'}).</Note>}
       <div className="v3-statgrid">
-        {items.map((s) => (
+        {items.map((s, i) => (
           <div key={s.label} className="v3-chip v3-stat" style={{ borderLeft: `3px solid ${s.color}` }}>
             <div className="v3-stat-label"><i style={{ background: s.color }} /><span className="v3-long">{s.label}</span><span className="v3-short">{s.short}</span>{s.info && <Info label={`About ${s.label.toLowerCase()}`} {...s.info} />}</div>
-            {loading && !stats ? <div className="v3-skeleton" style={{ height: 24, width: 90 }} aria-busy="true" aria-label="Loading" /> : <div className="v3-num v3-stat-value">{fmtNum(s.value, 1)}<span>kWh</span></div>}
+            {loading && !stats ? <div className="v3-skeleton" style={{ height: 24, width: 90 }} aria-busy="true" aria-label="Loading" /> : <div className="v3-num v3-stat-value"><CountUp value={s.value} dp={1} delay={i * 80} /><span>kWh</span></div>}
             <div className="v3-stat-sub">{s.sub || ' '}</div>
           </div>
         ))}
