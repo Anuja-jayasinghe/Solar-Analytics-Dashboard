@@ -5,6 +5,18 @@ All notable changes to the Solar Analytics Dashboard project.
 ## [Unreleased]
 
 ### Added
+- **The daily goal is a little power grid.** Instead of a filling circle, the Today tile draws your home, with solar
+  panels on the roof and an inverter on the wall, feeding a town. The power goes over two pylons and a substation,
+  then along the street, with a little depth: lit fronts, shaded sides, bright tops. The town has ten buildings, each
+  worth exactly 10% of today's target, lit floor by floor, so eight lit buildings read as 80% at a glance.
+  Pulses of light run from your roof to the building being powered now. At the target the street lamps come on; past
+  it, windows turn gold and stars appear. Today's kWh is on a dot-matrix LED billboard on top of the tallest tower, so
+  it is the first thing you see. The text beside the town leads with the percentage of the target, then the target and
+  what is left to go (the building count is left to the picture, and both are told to screen readers). Today's peak
+  is no longer repeated here; it is marked on the live power gauge. Stale
+  or asleep: the pulses stop (and stale greys out as before). Without a target, the kWh only. On phones the town
+  gets the full width, and live power under it shrinks to a slim strip instead of a second big gauge: the kW now, a
+  thin bar of the share of the maximum with today's peak marked on it, and the peak time.
 - **CI checks more than "it renders".** New Playwright tests on desktop and phone: the motion ends on the real
   figures, charts draw when scrolled to, the date pickers jump by month and year, the Mark above line stays in its
   chart, nothing scrolls sideways at 320 px, and light mode is light. Also an axe accessibility scan of each page in

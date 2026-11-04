@@ -53,6 +53,16 @@ describe('rising sun gauge', () => {
     expect(html).toContain("22.2 kilowatts; today&#x27;s peak 31.7 kw at 11:28");
     expect(html).not.toContain('data-resting');
   });
+  it('also carries the slim phone strip: kW, share of the maximum, the peak on a bar', () => {
+    const html = renderToString(h(LiveGauge, { live, maxKw: 40 }));
+    const strip = html.slice(html.indexOf('class="v3-live-compact"'));
+    expect(strip).toMatch(/22\.2/);
+    expect(strip).toContain('kW now');
+    expect(strip).toMatch(/55% of 40 kW(<!-- -->)? · Peak 31.7 kW at 11:28/);
+    expect(strip).toContain('class="v3-live-bar-peak" style="left:79.25%"'); // 31.7 of 40 kW
+    const night = renderToString(h(LiveGauge, { live: { status: 'offline', currentPowerKw: 0 }, maxKw: 40 }));
+    expect(night.slice(night.indexOf('class="v3-live-compact"'))).toContain('data-resting="true"');
+  });
   it('prefers the day chart\'s peak, so the tile and the chart agree', () => {
     const html = renderToString(h(LiveGauge, { live, maxKw: 40, peak: { kw: 32.4, at: '11:40' } }));
     expect(html).toContain('Peak 32.4 kW at 11:40');
