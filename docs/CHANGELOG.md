@@ -127,6 +127,13 @@ All notable changes to the Solar Analytics Dashboard project.
   (pdfjs 6 removed `destroy()` from the document; the old call threw after reading the text and failed every upload).
   `tests/pdfText.test.js` now reads a real PDF built in the test, so a pdfjs upgrade that breaks extraction fails CI.
 
+### Tooling
+- **Releases in one command, and the live version on screen.** `pnpm release minor` (or `patch`, `major`, or an exact
+  version) turns `[Unreleased]` into a dated version, bumps `package.json` and `shared/version.js`, and opens a release
+  PR. Merging it tags the version and publishes the GitHub Release with these notes (`.github/workflows/release.yml`).
+  The footer shows the version and commit (`v3.1.0 · 7371efb`), linked to the release notes, and `/healthz` reports
+  `version`. See `docs/RELEASING.md`.
+
 ## [3.0.0] - 2026-10-04
 
 The new dashboard becomes the default. Full notes and the production-readiness analysis:

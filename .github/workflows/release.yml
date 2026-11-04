@@ -1,0 +1,54 @@
+name: release
+
+# Tags and publishes a GitHub Release when a release PR (made by `pnpm release`, scripts/release.mjs) is merged:
+# shared/version.js changed on main and there is no tag for that version yet. The notes are the version's section of
+# docs/CHANGELOG.md. A push that does not change the version does nothing.
+
+on:
+  push:
+    branches: [main]
+    paths: [shared/version.js]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      - name: Read the version and its notes
+        id: v
+        run: |
+          node --input-type=module -e "
+            import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
+            import { releaseNotes } from './scripts/release-lib.mjs';
+            const { APP_VERSION } = await import('./shared/version.js');
+            const pkg = JSON.parse(readFileSync('package.json', 'utf8')).version;
+            if (pkg !== APP_VERSION) { console.error('package.json (' + pkg + ') and shared/version.js (' + APP_VERSION + ') disagree'); process.exit(1); }
+            writeFileSync('release-notes.md', releaseNotes(readFileSync('docs/CHANGELOG.md', 'utf8'), APP_VERSION));
+            appendFileSync(process.env.GITHUB_OUTPUT, 'version=' + APP_VERSION + '\n');
+          "
+
+      - name: Tag and publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "v$VERSION is already tagged: nothing to do"
+            exit 0
+          fi
+          gh release create "v$VERSION" --target "$GITHUB_SHA" --title "v$VERSION" --notes-file release-notes.md

@@ -93,6 +93,7 @@ pnpm dev        # dev server
 pnpm test       # vitest
 pnpm test:e2e   # Playwright: smoke, behaviour, accessibility (once: pnpm exec playwright install chromium)
 node scripts/check-bundle-size.mjs   # after build: the gzipped size budget
+pnpm release minor --dry-run         # preview a release; without --dry-run it opens the release PR (docs/RELEASING.md)
 pnpm lint       # eslint — 0 errors expected
 pnpm build      # production build
 pnpm audit --prod --audit-level high   # the CI security gate
@@ -146,6 +147,7 @@ Reference — how it works now:
 - `docs/SECURITY.md` — who can do what, the RLS / storage policy matrix, new-endpoint checklist
 - `docs/MIGRATIONS.md` — how schema changes are made, and the ledger of what has been applied
 - `docs/RUNBOOK.md` — operating procedures and incident response
+- `docs/RELEASING.md` — versioning (SemVer), `pnpm release`, and the Release workflow that tags and publishes
 - `docs/logic-registry/` — specs for the non-obvious domain rules (LR-001 alignment, LR-002 uptime, LR-003 ranges, LR-004 earnings difference)
 - `docs/design/v3/` — the signed-off v3 UI design (boards, tokens, decisions); the frontend build follows it
 

@@ -1,5 +1,12 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { execSync } from 'node:child_process'
+
+// The commit this build comes from, for the footer next to the version: Vercel provides it; locally, git; else 'local'.
+function buildRevision() {
+  if (process.env.VERCEL_GIT_COMMIT_SHA) return process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 7);
+  try { return execSync('git rev-parse --short=7 HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch { return 'local'; }
+}
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -7,6 +14,7 @@ export default defineConfig(({ mode }) => {
 
   return {
   plugins: [react()],
+  define: { 'import.meta.env.VITE_APP_REVISION': JSON.stringify(buildRevision()) },
   // Production bundles carry no debug chatter: log/debug/info calls are removed. console.warn and
   // console.error are kept on purpose so real problems stay visible.
   esbuild: mode === 'production' ? { pure: ['console.log', 'console.debug', 'console.info'], legalComments: 'none' } : {},
