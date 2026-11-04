@@ -12,7 +12,8 @@ All notable changes to the Solar Analytics Dashboard project.
   Pulses of light run from your roof to the building being powered now. At the target the street lamps come on; past
   it, windows turn gold and stars appear. Today's kWh is on a dot-matrix LED billboard on top of the tallest tower, so
   it is the first thing you see. The text beside the town leads with the percentage of the target, then the target and
-  what is left to go (the building count is left to the picture, and both are told to screen readers). Stale
+  what is left to go (the building count is left to the picture, and both are told to screen readers). Today's peak
+  is no longer repeated here; it is marked on the live power gauge. Stale
   or asleep: the pulses stop (and stale greys out as before). Without a target, the kWh only. On phones the two live
   tiles stack, so the town gets the full width.
 - **CI checks more than "it renders".** New Playwright tests on desktop and phone: the motion ends on the real

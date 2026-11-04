@@ -25,10 +25,9 @@ function FreshnessRing({ live, now }) {
  * Today: the daily goal as a little power grid (GridTown): your home's rooftop panels feeding a street of ten buildings,
  * each worth 10% of the target, lit as today's energy comes in. The percentage leads the text, then the kWh and what is
  * left to go. Without a target there is no percentage, only the kWh (and the town stays unlit).
- * `peak` is the day chart's peak ({ kw, at }) from today's readings; it is preferred so the tile and the chart always
- * agree, and the live reading's own peak is the fallback.
+ * Today's peak is not repeated here: it is marked on the live power gauge beside this tile.
  */
-export function TodayTile({ live, peak = null, targetKwh, now, loading }) {
+export function TodayTile({ live, targetKwh, now, loading }) {
   const today = live?.todayKwh ?? null;
   const turn = useMotionMode() === 'full' ? STAGE_MS : 0; // live: animates on every visit, waits its turn only in the full sequence
   const prog = targetProgress(today, targetKwh ?? null);
@@ -39,9 +38,6 @@ export function TodayTile({ live, peak = null, targetKwh, now, loading }) {
   const kwhShown = useCount(today, { duration: 1100, delay: turn }).shown;
   const shownShare = typeof shown === 'number' ? shown / 100 : 0;
   const powered = prog ? townState(share).powered : 0;
-  const peakKw = peak?.kw ?? live?.peakTodayKw ?? null;
-  const peakAt = peak ? peak.at : live?.peakTodayAt ?? null;
-  const hasPeak = peakKw != null;
   // Not current (SolisCloud down): the tile greys out and says so, so an old figure is never read as live.
   const stale = !!live?.stale;
   const asOf = stale ? clockAt(live.dataTimestamp) : null;
@@ -76,9 +72,6 @@ export function TodayTile({ live, peak = null, targetKwh, now, loading }) {
         ) : (
           <div className="v3-kpi-sub">{targetKwh == null ? 'Set a daily target in Settings' : ' '}</div>
         )}
-        <div className="v3-kpi-sub" style={{ marginTop: 4 }}>
-          Peak <b style={{ color: 'var(--ink)' }}>{hasPeak ? `${fmtNum(peakKw, 1)} kW` : DASH}</b>{hasPeak && peakAt ? ` at ${peakAt}` : ''}
-        </div>
       </div>
     </Glass>
   );
