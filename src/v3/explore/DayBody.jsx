@@ -29,6 +29,8 @@ function PowerChart({ curve, isToday }) {
     setHover(nearestPoint(curve.pts, min));
   };
   const peakX = xOfMinute(curve.peak.min);
+  // The curve draws left to right up to its last reading (now, for today); the peak appears as the line gets there.
+  const drawEnd = Math.min(100, xOfMinute(curve.last.min) + 1);
   const edge = (x) => (x < 12 ? 'start' : x > 88 ? 'end' : 'mid'); // keep labels inside the plot near its edges
 
   return (
@@ -45,13 +47,13 @@ function PowerChart({ curve, isToday }) {
           onPointerLeave={(e) => { if (e.pointerType !== 'touch') setHover(null); }}
         >
           {axisTicks(yMax).map((t) => <div key={t.pct} className="v3-gridline" style={{ bottom: `${t.pct}%` }} />)}
-          <svg className="v3-plot-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <svg className="v3-plot-svg" style={{ '--wipe-end': `${drawEnd}%` }} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
             <path d={area} fill="url(#areaFill)" />
             <path d={line} fill="none" style={{ stroke: 'var(--gen)' }} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
           </svg>
 
-          <span className="v3-peakmark" style={{ left: `${peakX}%`, bottom: `${100 - y(curve.peak.kw)}%` }} aria-hidden="true" />
-          <span className="v3-peaklabel" data-edge={edge(peakX)} style={{ left: `${peakX}%`, bottom: `calc(${100 - y(curve.peak.kw)}% + 12px)` }} aria-hidden="true">
+          <span className="v3-peakmark" style={{ '--at': Math.min(1, peakX / drawEnd), left: `${peakX}%`, bottom: `${100 - y(curve.peak.kw)}%` }} aria-hidden="true" />
+          <span className="v3-peaklabel" data-edge={edge(peakX)} style={{ '--at': Math.min(1, peakX / drawEnd), left: `${peakX}%`, bottom: `calc(${100 - y(curve.peak.kw)}% + 12px)` }} aria-hidden="true">
             {isToday ? 'Peak so far' : 'Peak'} <b>{fmtNum(curve.peak.kw, 1)} kW</b> · {curve.peak.at}
           </span>
 

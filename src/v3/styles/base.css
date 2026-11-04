@@ -622,12 +622,14 @@ select.v3-field { padding-right: 8px; }
 [data-draw] .v3-gapbar { animation: v3-grow .45s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--reveal-delay, 0ms) + var(--after, .8s) + min(var(--i, 0), 30) * 18ms); }
 [data-draw] .v3-gapbar[data-dir='up'] { transform-origin: 50% 100%; }
 [data-draw] .v3-gapbar[data-dir='down'] { transform-origin: 50% 0; }
-[data-draw] .v3-plot-svg, .v3-spread[data-draw] svg { animation: v3-wipe .8s cubic-bezier(.4, 0, .2, 1) both; animation-delay: var(--reveal-delay, 0ms); }
-[data-draw] .v3-col > .v3-dot { animation: v3-dotin .3s ease-out both; animation-delay: calc(var(--reveal-delay, 0ms) + var(--t, 0) * .7s); }
-[data-draw] .v3-col > .v3-val-pt { animation: v3-fadein .3s ease-out both; animation-delay: calc(var(--reveal-delay, 0ms) + .85s); }
-[data-draw] .v3-power > .v3-peakmark, [data-draw] .v3-power > .v3-peaklabel { animation: v3-fadein .35s ease-out both; animation-delay: calc(var(--reveal-delay, 0ms) + .8s); }
-[data-draw] .v3-sdot { animation: v3-sdotin .35s cubic-bezier(.2, .8, .2, 1.4) both; animation-delay: calc(var(--reveal-delay, 0ms) + .8s); }
-[data-draw] .v3-sval { animation: v3-fadein .3s ease-out both; animation-delay: calc(var(--reveal-delay, 0ms) + .9s); }
+.v3-chartgrid, .v3-spread { --draw: 1.6s; --lead: .25s; } /* a line draws at a steady pen speed, after its section has faded in */
+[data-draw] .v3-plot-svg, .v3-spread[data-draw] svg { animation: v3-wipe var(--draw) linear backwards; animation-delay: calc(var(--reveal-delay, 0ms) + var(--lead)); }
+[data-draw] .v3-col > .v3-dot { animation: v3-dotin .3s ease-out both; animation-delay: calc(var(--reveal-delay, 0ms) + var(--lead, 0s) + var(--t, 0) * var(--draw, 1.6s)); }
+[data-draw] .v3-col > .v3-val-pt { animation: v3-fadein .3s ease-out both; animation-delay: calc(var(--reveal-delay, 0ms) + var(--lead, 0s) + var(--t, 0) * var(--draw, 1.6s) + .1s); }
+[data-draw] .v3-power > .v3-peakmark, [data-draw] .v3-power > .v3-peaklabel { animation: v3-fadein .35s ease-out both; animation-delay: calc(var(--reveal-delay, 0ms) + var(--lead, 0s) + var(--at, 1) * var(--draw, 1.6s)); }
+[data-draw] .v3-power > .v3-nowmark { animation: v3-scalein .3s ease-out both, v3-breathe 2.6s ease-in-out infinite; animation-delay: calc(var(--reveal-delay, 0ms) + var(--lead, 0s) + var(--draw, 1.6s)), 0s; }
+[data-draw] .v3-sdot { animation: v3-sdotin .35s cubic-bezier(.2, .8, .2, 1.4) both; animation-delay: calc(var(--reveal-delay, 0ms) + var(--lead, 0s) + var(--at, 1) * var(--draw, 1.6s)); }
+[data-draw] .v3-sval { animation: v3-fadein .3s ease-out both; animation-delay: calc(var(--reveal-delay, 0ms) + var(--lead, 0s) + var(--at, 1) * var(--draw, 1.6s) + .1s); }
 [data-draw='pending'] * { animation-play-state: paused !important; } /* held at the start until the chart is on screen */
 [data-reveal] .v3-liquid { animation-duration: 1s; animation-delay: var(--reveal-delay, 0ms); } /* the Today circle fills in its section's turn */
 span.v3-countwait { visibility: hidden; } /* a count waiting for its turn: nothing, rather than a 0 that reads as real */
@@ -636,7 +638,8 @@ span.v3-countwait { visibility: hidden; } /* a count waiting for its turn: nothi
 @media print { .v3-page > [data-reveal] { opacity: 1 !important; transform: none !important; } } /* print everything, scrolled to or not */
 @keyframes v3-grow { from { transform: scaleY(0); } }
 @keyframes v3-fadein { from { opacity: 0; } }
-@keyframes v3-wipe { from { clip-path: inset(-20px 100% -20px 0); } to { clip-path: inset(-20px 0 -20px 0); } }
+@keyframes v3-wipe { from { clip-path: inset(-20px 100% -20px 0); } to { clip-path: inset(-20px calc(100% - var(--wipe-end, 100%)) -20px 0); } } /* not kept after: new readings show */
+@keyframes v3-scalein { from { transform: scale(0); } }
 @keyframes v3-dotin { from { opacity: 0; transform: translate(-50%, 50%) scale(.3); } }
 @keyframes v3-sdotin { from { opacity: 0; transform: scale(.3); } }
 
@@ -644,6 +647,6 @@ span.v3-countwait { visibility: hidden; } /* a count waiting for its turn: nothi
   .v3-page > [data-reveal] { opacity: 1 !important; transform: none !important; transition: none !important; }
   [data-draw] .v3-bar, [data-draw] .v3-bar .v3-val, [data-draw] .v3-gapbar, [data-draw] .v3-plot-svg, .v3-spread[data-draw] svg,
   [data-draw] .v3-col > .v3-dot, [data-draw] .v3-col > .v3-val-pt, [data-draw] .v3-power > .v3-peakmark, [data-draw] .v3-power > .v3-peaklabel,
-  [data-draw] .v3-sdot, [data-draw] .v3-sval { animation: none !important; }
+  [data-draw] .v3-sdot, [data-draw] .v3-sval, [data-draw] .v3-power > .v3-nowmark { animation: none !important; }
   .v3-liquid { transition: none; }
 }

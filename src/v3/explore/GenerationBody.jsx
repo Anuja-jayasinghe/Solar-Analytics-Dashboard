@@ -32,6 +32,11 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
   const above = aboveCount(points, line);
   const unit = grouped ? 'kWh/month' : 'kWh/day';
   const linePts = points.map((p, i) => (p.kwh === null ? null : [xPct(i, n), yPct(p.kwh, yMax)]));
+  // The line draws left to right up to the last day with data (not across empty days still to come); each point
+  // appears when the line reaches it (--t = its share of the draw).
+  const lastIdx = points.reduce((m, p, i) => (p.kwh !== null ? i : m), -1);
+  const drawEnd = lastIdx < 0 ? 100 : Math.min(100, xPct(lastIdx, n) + 50 / Math.max(n, 1));
+  const at = (i) => Math.min(1, xPct(i, n) / drawEnd);
   const dense = n > 30;
   const isYear = kind === 'year';
   const sum = isYear ? yearSummary(points, range) : null;
@@ -115,7 +120,7 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
             <ThresholdPlot show={showMark} max={yMax} value={line} step={grouped ? 50 : 1} unit={unit} height="var(--plot-h)" onChange={onLine}>
               {axisTicks(yMax).map((t) => <div key={t.pct} className="v3-gridline" style={{ bottom: `${t.pct}%` }} />)}
               {style !== 'bars' && (
-                <svg key={`${style}:${points[0]?.key ?? ''}:${n}`} className="v3-plot-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <svg key={`${style}:${points[0]?.key ?? ''}:${n}`} className="v3-plot-svg" style={{ '--wipe-end': `${drawEnd}%` }} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                   <path d={linePath(linePts)} fill="none" style={{ stroke: 'var(--gen)' }} strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
                 </svg>
               )}
@@ -126,7 +131,7 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
                   const pct = p.kwh === null ? 0 : (p.kwh / yMax) * 100;
                   return (
                     <Tip key={p.key} text={pointTip(p, n <= MAX_LABELLED_COLUMNS, grouped)}>
-                      <div className="v3-col" style={{ ...(dense ? { padding: '0 1%' } : null), '--i': i, '--t': n > 1 ? i / (n - 1) : 0 }}>
+                      <div className="v3-col" style={{ ...(dense ? { padding: '0 1%' } : null), '--i': i, '--t': at(i) }}>
                         {style === 'bars' ? (
                           p.kwh === null ? <div className="v3-bar single" style={{ height: 3, background: 'var(--nodata)' }} /> : <div className="v3-bar single" style={{ height: `${pct}%`, background: partial ? 'repeating-linear-gradient(135deg, var(--gen) 0 5px, var(--gen-a30) 5px 9px)' : hi ? 'var(--gen)' : 'var(--gen-a34)', border: partial ? '1px solid var(--gen)' : undefined }}><span className="v3-val">{n <= MAX_LABELLED_COLUMNS ? chartNum(p.kwh, { dense: n > 12 }) : ''}</span></div>
                         ) : (

@@ -25,10 +25,14 @@ function Columns({ rows, yMax, threshold, style }) {
   const num = (v) => (labels ? chartNum(v, { dense }) : '');
   const invPts = rows.map((r, i) => (r.inverterKwh === null ? null : [xPct(i, n), yPct(r.inverterKwh, yMax)]));
   const cebPts = rows.map((r, i) => (r.cebKwh === null ? null : [xPct(i, n), yPct(r.cebKwh, yMax)]));
+  // Lines draw left to right up to the last period with a figure; each point appears as the line reaches it.
+  const lastIdx = rows.reduce((m, r, i) => (r.inverterKwh !== null || r.cebKwh !== null ? i : m), -1);
+  const drawEnd = lastIdx < 0 ? 100 : Math.min(100, xPct(lastIdx, n) + 50 / Math.max(n, 1));
+  const at = (i) => Math.min(1, xPct(i, n) / drawEnd);
   return (
     <>
       {style !== 'bars' && (
-        <svg key={`${style}:${rows[0]?.id ?? ''}:${n}`} className="v3-plot-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <svg key={`${style}:${rows[0]?.id ?? ''}:${n}`} className="v3-plot-svg" style={{ '--wipe-end': `${drawEnd}%` }} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <path d={linePath(invPts)} fill="none" style={{ stroke: 'var(--gen)' }} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
           <path d={linePath(cebPts)} fill="none" style={{ stroke: 'var(--ceb)' }} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         </svg>
@@ -41,7 +45,7 @@ function Columns({ rows, yMax, threshold, style }) {
           const striped = r.status === 'provisional' || isPartial(r);
           return (
             <Tip key={r.id} text={columnTip(r)}>
-              <div className="v3-col" style={{ '--i': i, '--t': n > 1 ? i / (n - 1) : 0 }}>
+              <div className="v3-col" style={{ '--i': i, '--t': at(i) }}>
                 {style === 'bars' ? (
                   <>
                     {r.inverterKwh !== null && (
