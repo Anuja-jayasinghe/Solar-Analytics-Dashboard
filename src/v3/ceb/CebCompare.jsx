@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Glass } from '../ui/Glass.jsx';
 import { Tip } from '../ui/Tip.jsx';
 import { Segmented } from '../ui/Segmented.jsx';
+import { useIsPhone } from '../ui/useIsPhone.js';
 import { Note } from '../ui/Note.jsx';
 import { ThresholdPlot } from '../charts/ThresholdPlot.jsx';
 import { MarkToggle } from '../charts/MarkToggle.jsx';
@@ -88,7 +89,10 @@ export function CebCompare({ bills, openPeriod, live, lastStoredDay, todayKey, l
   const rows = useMemo(() => buildCebRows(bills?.bills, open, todayKey), [bills, open, todayKey]);
 
   const [style, setStyle] = useState('bars');
-  const [count, setCount] = useState(8);
+  const phone = useIsPhone();
+  const [picked, setCount] = useState(null);
+  // A year of bills by default; 8 on a phone, where 12 pairs of bars and their figures run into each other.
+  const count = picked ?? (phone ? 8 : 12);
   const [endIdx, setEndIdx] = useState(null); // null = follow the newest period
   const [thr, setThr] = useState(null); // null = the median of what we have
   const { showMark } = usePrefs();

@@ -64,6 +64,8 @@ All notable changes to the Solar Analytics Dashboard project.
   circle shows a dash, not "No target", when a target is set but today's figure is unknown.
 
 ### Changed
+- **CEB vs Inverter opens on 12 bill periods** (a year) instead of 8. Phones stay on 8, where 12 pairs of bars and their
+  figures run into each other; 12 and All are a tap away.
 - **The live tiles stay live.** The Today and live power tiles re-read the moment you return to the tab, focus the
   window or the network comes back, instead of showing the old figure until the next minute. They pause while the tab
   is hidden (no SolisCloud calls for a page nobody is looking at). A failed re-read keeps the last reading on screen,
