@@ -35,6 +35,7 @@ import {
   SUPABASE_SERVICE_KEY
 } from './_lib/supabaseServer.js';
 import { handlePreflightAndMethod } from './_lib/httpSecurity.js';
+import { APP_VERSION } from '../shared/version.js';
 
 // A readiness probe that hangs is worse than one that fails: the caller waits
 // out its own timeout and learns nothing. Supabase gets a hard ceiling.
@@ -109,6 +110,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       status: 'ok',
       probe: 'live',
+      version: APP_VERSION,
       revision: REVISION,
       uptime_s: Math.round(process.uptime()),
       timestamp: new Date().toISOString()
@@ -135,6 +137,7 @@ export default async function handler(req, res) {
   return res.status(ready ? 200 : 503).json({
     status: ready ? 'ok' : 'unavailable',
     probe: 'ready',
+    version: APP_VERSION,
     revision: REVISION,
     checks: {
       config: configProblem ? { ok: false, error: configProblem.error } : { ok: true },
