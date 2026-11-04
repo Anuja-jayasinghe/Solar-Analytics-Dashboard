@@ -192,12 +192,37 @@ html, body { margin: 0; padding: 0; }
 .v3-liverow { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr)); gap: 20px; }
 .v3-live-tile { padding: 22px 26px; position: relative; display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
 .v3-gauge-tile { justify-content: center; gap: 24px; }
-.v3-filler { position: relative; width: 176px; height: 176px; border-radius: 50%; overflow: hidden; flex: 0 0 auto; border: 1.5px solid var(--glass-line); background: var(--well); box-shadow: inset 0 0 30px rgba(0, 0, 0, .25); }
-.v3-liquid { position: absolute; left: 0; width: 100%; height: 100%; animation: v3-fillup 1.8s cubic-bezier(.2, .8, .2, 1) both; background: linear-gradient(180deg, var(--gen-hi) 0%, var(--gen) 45%, var(--gen-lo) 100%); }
-.v3-wave { position: absolute; left: 0; top: -13px; width: 200%; height: 14px; animation: v3-drift 6s linear infinite; }
-.v3-wave.two { top: -9px; animation-duration: 9.5s; animation-direction: reverse; opacity: .55; }
-.v3-filler-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 38px; color: var(--ink); }
-.v3-filler-none { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--ink2); }
+.v3-today { align-items: center; }
+/* the daily goal as a little power grid (GridTown.jsx, gridTown.js), with a little depth: fronts, darker sides, lit tops */
+.v3-town-wrap { flex: 1 1 300px; min-width: 0; max-width: 470px; }
+.v3-town { width: 100%; height: auto; display: block; overflow: visible; }
+.v3-town-ground { fill: var(--town-ground); }
+.v3-town-kerb { stroke: var(--town-line); stroke-width: 1.2; }
+.v3-town-lane { stroke: var(--town-line); stroke-width: 1; stroke-dasharray: 8 7; opacity: .6; }
+.v3-town-front { fill: var(--town-front); stroke: var(--town-line); stroke-width: 1; }
+.v3-town-side { fill: var(--town-side); stroke: var(--town-line); stroke-width: 1; }
+.v3-town-top, .v3-town-roof { fill: var(--town-top); stroke: var(--town-line); stroke-width: 1; }
+.v3-town-line { stroke: var(--town-line); stroke-width: 1.1; fill: none; }
+.v3-town-panel { fill: var(--town-panel); stroke: var(--town-panel-line); stroke-width: .8; }
+.v3-town-glint { fill: var(--gen-hi); opacity: 0; animation: v3-glint 3.6s ease-in-out infinite; animation-delay: calc(var(--i, 0) * -.45s); }
+.v3-town-win { fill: var(--track); transition: fill .25s; }
+.v3-town-win[data-on] { fill: var(--gen); }
+.v3-town-win[data-gold] { fill: var(--thr); }
+.v3-town-inverter { fill: var(--town-front); stroke: var(--ink2); stroke-width: 1; }
+.v3-town-led { fill: var(--track); }
+.v3-town-led[data-on] { fill: var(--good); }
+.v3-town-wire { fill: none; stroke: var(--town-line); stroke-width: 1.5; }
+.v3-town-wire[data-on] { stroke: color-mix(in oklab, var(--gen) 60%, transparent); }
+.v3-town-pylon { fill: none; stroke: var(--ink2); stroke-width: 1.2; }
+.v3-town-pylon.back { opacity: .3; }
+.v3-town-bus { stroke: var(--track); stroke-width: 3; stroke-linecap: round; }
+.v3-town-bus[data-on] { stroke: var(--gen); }
+.v3-town-lamp { fill: var(--track); transition: fill .4s; }
+.v3-town-lamp[data-on] { fill: var(--thr); }
+.v3-town-star { fill: var(--thr); opacity: 0; transition: opacity .5s; }
+.v3-town-star[data-on] { opacity: .9; }
+.v3-town-pulse { fill: var(--gen-hi); }
+@keyframes v3-glint { 40%, 60% { opacity: .85; } }
 .v3-today-text { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
 .v3-fresh-wrap { position: absolute; top: 16px; right: 18px; opacity: .45; }
 .v3-fresh { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; color: var(--ink2); }
@@ -219,16 +244,15 @@ html, body { margin: 0; padding: 0; }
 
 /* A reading that is not current: colour drains out of the tile so it cannot pass for live. */
 .v3-stalechip { position: absolute; top: 14px; right: 16px; display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; color: var(--warn); background: var(--warn-a20); border: 1px solid var(--warn-a20); }
-.v3-live-tile[data-stale] .v3-liquid, .v3-live-tile[data-stale] .v3-gauge svg { filter: grayscale(1); opacity: .45; transition: filter .3s, opacity .3s; }
-.v3-live-tile[data-stale] .v3-wave { animation-play-state: paused; }
+.v3-live-tile[data-stale] .v3-town, .v3-live-tile[data-stale] .v3-gauge svg { filter: grayscale(1); opacity: .45; transition: filter .3s, opacity .3s; }
+.v3-live-tile[data-stale] .v3-town-glint { animation-play-state: paused; }
 .v3-live-tile[data-stale] .v3-num, .v3-live-tile[data-stale] .v3-today-text b { color: var(--ink2) !important; }
-.v3-live-tile[data-stale] .v3-filler-pct { color: var(--ink) !important; opacity: .75; }
 
-@keyframes v3-drift { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-@keyframes v3-fillup { from { transform: translateY(105%); } to { transform: translateY(0); } }
 @keyframes v3-breathe { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
-  .v3-liquid, .v3-wave, .v3-status[data-tone='good'] .v3-bulb { animation: none; }
+  .v3-town-glint, .v3-status[data-tone='good'] .v3-bulb { animation: none; }
+  .v3-town-pulse { display: none; }
+  .v3-town-win, .v3-town-lamp, .v3-town-star { transition: none; }
 }
 
 @media (max-width: 700px) {
@@ -240,10 +264,9 @@ html, body { margin: 0; padding: 0; }
   .v3-kpi-value { font-size: 15px; line-height: 1.2; white-space: nowrap; }
   .v3-kpi-unit { font-size: 10px; margin-left: 3px; }
   .v3-kpi-sub { font-size: 9.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .v3-liverow { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .v3-liverow { grid-template-columns: minmax(0, 1fr); gap: 8px; } /* the town needs the width: the two live tiles stack */
   .v3-live-tile { flex-direction: column; justify-content: flex-start; gap: 6px; padding: 12px; }
-  .v3-filler { width: 92px; height: 92px; margin-top: 4px; }
-  .v3-filler-pct { font-size: 21px; }
+  .v3-town-wrap { flex: 0 0 auto; width: 100%; max-width: none; margin-top: 10px; }
   .v3-today-text { align-items: center; text-align: center; gap: 2px; }
   .v3-today .v3-kpi-value { font-size: 18px; }
   .v3-today .v3-kpi-sub { white-space: normal; font-size: 10.5px; }
@@ -649,9 +672,7 @@ select.v3-field { padding-right: 8px; }
 [data-draw] .v3-sdot { animation: v3-sdotin .35s cubic-bezier(.2, .8, .2, 1.4) both; animation-delay: calc(var(--reveal-delay, 0ms) + var(--lead, 0s) + var(--at, 1) * var(--draw, 1.6s)); }
 [data-draw] .v3-sval { animation: v3-fadein .3s ease-out both; animation-delay: calc(var(--reveal-delay, 0ms) + var(--lead, 0s) + var(--at, 1) * var(--draw, 1.6s) + .1s); }
 [data-draw='pending'] * { animation-play-state: paused !important; } /* held at the start until the chart is on screen */
-[data-reveal] .v3-liquid { animation-duration: 1s; animation-delay: var(--reveal-delay, 0ms); } /* the Today circle fills in its section's turn */
 span.v3-countwait { visibility: hidden; } /* a count waiting for its turn: nothing, rather than a 0 that reads as real */
-.v3-liquid { transition: top .6s cubic-bezier(.2, .8, .2, 1); } /* the Today fill glides to each new reading */
 
 @media print { .v3-page .v3-glass { opacity: 1 !important; transform: none !important; } } /* print everything, scrolled to or not */
 @keyframes v3-grow { from { transform: scaleY(0); } }
@@ -666,5 +687,4 @@ span.v3-countwait { visibility: hidden; } /* a count waiting for its turn: nothi
   [data-draw] .v3-bar, [data-draw] .v3-bar .v3-val, [data-draw] .v3-gapbar, [data-draw] .v3-plot-svg, .v3-spread[data-draw] svg,
   [data-draw] .v3-col > .v3-dot, [data-draw] .v3-col > .v3-val-pt, [data-draw] .v3-power > .v3-peakmark, [data-draw] .v3-power > .v3-peaklabel,
   [data-draw] .v3-sdot, [data-draw] .v3-sval, [data-draw] .v3-power > .v3-nowmark { animation: none !important; }
-  .v3-liquid { transition: none; }
 }
