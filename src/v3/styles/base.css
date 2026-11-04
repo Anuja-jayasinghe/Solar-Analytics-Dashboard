@@ -302,10 +302,10 @@ html, body { margin: 0; padding: 0; }
   .v3-fresh span:first-child { display: none; }
   .v3-status { top: 8px; right: 10px; font-size: 10px; gap: 5px; }
   .v3-bulb { width: 8px; height: 8px; }
-  .v3-gauge { width: 100%; max-width: 170px; height: auto; aspect-ratio: 340 / 196; margin-top: 14px; }
-  .v3-gauge-kw { font-size: 18px; }
-  .v3-sun-unit { font-size: 9.5px; margin-top: 0; }
-  .v3-sun-label { font-size: 15px; }
+  .v3-gauge { width: 100%; max-width: 280px; height: auto; aspect-ratio: 340 / 196; margin-top: 14px; } /* the live tiles stack on phones: the sun gets the width */
+  .v3-gauge-kw { font-size: 26px; }
+  .v3-sun-unit { font-size: 11px; margin-top: 0; }
+  .v3-sun-label { font-size: 13px; }
   .v3-gauge-share { font-size: 10.5px; text-align: center; align-items: center; max-width: none; white-space: normal; min-width: 0; gap: 2px; }
 }
 
