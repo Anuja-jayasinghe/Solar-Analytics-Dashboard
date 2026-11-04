@@ -83,6 +83,9 @@ All notable changes to the Solar Analytics Dashboard project.
   now offers Line (the default) and Bars; CEB vs Inverter offers Bars and Lines.
 
 ### Fixed
+- **The Mark above line no longer climbs forever.** Dragging it to the top (or holding it there) kept raising the
+  value, because the chart grew to fit the line and the top moved up with it. The scale now comes from the data alone,
+  and the line stays inside the chart, whether dragged, moved with the keys or typed.
 - **The page no longer re-reads everything once a minute.** Each time the sign-in session refreshed its token
   (about once a minute) the dashboard rebuilt its data source and re-read every figure on the page, and the admin and
   Settings screens rebuilt theirs. Only the live figures re-read now, on their own schedule.

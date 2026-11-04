@@ -92,11 +92,13 @@ export function CebCompare({ bills, openPeriod, live, lastStoredDay, todayKey, l
   const [endIdx, setEndIdx] = useState(null); // null = follow the newest period
   const [thr, setThr] = useState(null); // null = the median of what we have
   const { showMark } = usePrefs();
-  const threshold = thr ?? defaultThreshold(rows);
-  const markAt = showMark ? threshold : -Infinity; // hidden: every inverter bar at full strength
-
   const win = windowOf(rows, count, endIdx ?? rows.length - 1);
-  const yMax = niceMax(Math.max(maxOf(win.rows.flatMap((r) => [r.inverterKwh, r.cebKwh]), 1) * 1.06, showMark ? threshold * 1.04 : 0));
+  // The scale comes from the data alone and the line stays inside it. (It used to stretch to fit the line, so dragging
+  // the line to the top raised the top, and it climbed for as long as the button was held.)
+  const yMax = niceMax(Math.max(maxOf(win.rows.flatMap((r) => [r.inverterKwh, r.cebKwh]), 1) * 1.06, 1));
+  const threshold = Math.min(thr ?? defaultThreshold(rows), yMax);
+  const setLine = (v) => setThr(Math.min(Math.max(0, Math.round(v)), yMax));
+  const markAt = showMark ? threshold : -Infinity; // hidden: every inverter bar at full strength
   const above = aboveSummary(win.rows, threshold);
   const gap = gapSummary(win.rows, bills?.bills ?? []);
   const first = win.rows[0];
@@ -138,7 +140,7 @@ export function CebCompare({ bills, openPeriod, live, lastStoredDay, todayKey, l
             <div className="v3-markrow v3-markgroup">
               {showMark && <><span className="v3-pill" data-tone="gen">{above.known ? `Inverter above: ${above.above} of ${above.known} periods` : 'no data in view'}</span>
               <label className="v3-field-label"><span className="v3-sr">Mark above</span>
-                <input className="v3-field" type="number" min="0" step="50" value={threshold} aria-label="Threshold in kWh" onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v)) setThr(Math.max(0, Math.round(v))); }} style={{ width: 90 }} />
+                <input className="v3-field" type="number" min="0" step="50" value={threshold} aria-label="Threshold in kWh" onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v)) setLine(v); }} style={{ width: 90 }} />
                 <span>kWh</span>
               </label></>}
               <MarkToggle />
@@ -148,7 +150,7 @@ export function CebCompare({ bills, openPeriod, live, lastStoredDay, todayKey, l
           <div className="v3-chartgrid" ref={drawRef}>
             <div className="v3-yaxis" aria-hidden="true">{axisTicks(yMax, (v) => fmtNum(v)).map((t) => <span key={t.pct}>{t.label}</span>)}</div>
             <div className="v3-plotwrap">
-              <ThresholdPlot show={showMark} max={yMax} value={threshold} step={10} unit="kWh" height="var(--plot-h, 250px)" onChange={(v) => setThr(v)}>
+              <ThresholdPlot show={showMark} max={yMax} value={threshold} step={10} unit="kWh" height="var(--plot-h, 250px)" onChange={setLine}>
                 {axisTicks(yMax).map((t) => <div key={t.pct} className="v3-gridline" style={{ bottom: `${t.pct}%` }} />)}
                 <Columns rows={win.rows} yMax={yMax} threshold={markAt} style={style} />
               </ThresholdPlot>

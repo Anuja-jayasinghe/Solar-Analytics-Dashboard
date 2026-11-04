@@ -26,10 +26,14 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
   const drawRef = useDrawRef(); // draws when scrolled into view (useMotion.js)
   const { showMark } = usePrefs();
   const known = points.filter((p) => p.kwh !== null);
-  const yMax = niceMax(Math.max(maxOf(points.map((p) => p.kwh), 1) * 1.1, showMark ? line * 1.04 : 0));
-  const markAt = showMark ? line : -Infinity;
+  // The scale comes from the data alone and the line stays inside it (it used to stretch to fit the line, so dragging
+  // the line to the top raised the top, and it kept climbing while the button was held).
+  const yMax = niceMax(Math.max(maxOf(points.map((p) => p.kwh), 1) * 1.1, 1));
+  const lineV = Math.min(line, yMax);
+  const setLine = (v) => onLine(Math.min(Math.max(0, Math.round(v)), yMax));
+  const markAt = showMark ? lineV : -Infinity;
   const n = points.length;
-  const above = aboveCount(points, line);
+  const above = aboveCount(points, lineV);
   const unit = grouped ? 'kWh/month' : 'kWh/day';
   const linePts = points.map((p, i) => (p.kwh === null ? null : [xPct(i, n), yPct(p.kwh, yMax)]));
   // The line draws left to right up to the last day with data (not across empty days still to come); each point
@@ -102,7 +106,7 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
         <div className="v3-markgroup">
           {showMark && <><span className="v3-pill" data-tone="gen">{above.known ? `${above.above} of ${above.known} ${grouped ? 'months' : 'days'} above` : 'no data in range'}</span>
           <label className="v3-field-label"><span className="v3-sr">Mark above</span>
-            <input className="v3-field" type="number" min="0" step="1" value={line} aria-label={`Threshold in ${unit}`} onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v)) onLine(Math.max(0, Math.round(v))); }} style={{ width: 90 }} />
+            <input className="v3-field" type="number" min="0" step="1" value={lineV} aria-label={`Threshold in ${unit}`} onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v)) setLine(v); }} style={{ width: 90 }} />
             <span>{unit}</span>
           </label></>}
           <MarkToggle />
@@ -117,7 +121,7 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
         <div className="v3-chartgrid" ref={drawRef}>
           <div className="v3-yaxis" aria-hidden="true">{axisTicks(yMax, (v) => fmtNum(v)).map((t) => <span key={t.pct}>{t.label}</span>)}</div>
           <div className="v3-plotwrap">
-            <ThresholdPlot show={showMark} max={yMax} value={line} step={grouped ? 50 : 1} unit={unit} height="var(--plot-h)" onChange={onLine}>
+            <ThresholdPlot show={showMark} max={yMax} value={lineV} step={grouped ? 50 : 1} unit={unit} height="var(--plot-h)" onChange={setLine}>
               {axisTicks(yMax).map((t) => <div key={t.pct} className="v3-gridline" style={{ bottom: `${t.pct}%` }} />)}
               {style !== 'bars' && (
                 <svg key={`${style}:${points[0]?.key ?? ''}:${n}`} className="v3-plot-svg" style={{ '--wipe-end': `${drawEnd}%` }} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
