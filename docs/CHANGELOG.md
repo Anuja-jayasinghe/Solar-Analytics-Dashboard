@@ -4,6 +4,10 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+### Fixed
+- **The kWh billboard follows the theme.** In light mode the board over the town was still a black panel. It is now a
+  white board, like the buildings around it, with deep orange dots; dark mode is unchanged.
+
 ## [3.1.0] - 2026-11-04
 
 ### Added
