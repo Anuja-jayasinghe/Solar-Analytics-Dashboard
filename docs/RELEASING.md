@@ -3,7 +3,7 @@
 Versions follow [SemVer](https://semver.org): **minor** for new features (3.0.0 → 3.1.0), **patch** for fixes only
 (3.1.0 → 3.1.1), **major** for a change that breaks how the dashboard is used or deployed. The version lives in
 `package.json` and `shared/version.js` (a test keeps them in step). It shows in the footer, linked to its release notes,
-as `v3.1.0 · 7371efb` (version · commit), and `/healthz` reports it as `version` next to `revision`.
+as `v3.1.0`, and `/healthz` reports it as `version` next to `revision` (the commit).
 
 ## How to release
 

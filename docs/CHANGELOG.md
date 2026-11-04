@@ -131,8 +131,8 @@ All notable changes to the Solar Analytics Dashboard project.
 - **Releases in one command, and the live version on screen.** `pnpm release minor` (or `patch`, `major`, or an exact
   version) turns `[Unreleased]` into a dated version, bumps `package.json` and `shared/version.js`, and opens a release
   PR. Merging it tags the version and publishes the GitHub Release with these notes (`.github/workflows/release.yml`).
-  The footer shows the version and commit (`v3.1.0 · 7371efb`), linked to the release notes, and `/healthz` reports
-  `version`. See `docs/RELEASING.md`.
+  The footer shows the version (`v3.1.0`), linked to its release notes, and `/healthz` reports `version` next to
+  the commit. See `docs/RELEASING.md`.
 
 ## [3.0.0] - 2026-10-04
 
