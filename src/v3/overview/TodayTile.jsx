@@ -59,18 +59,22 @@ export function TodayTile({ live, peak = null, targetKwh, now, loading }) {
       </div>
       <div className="v3-today-text">
         <div className="v3-kpi-label">Today</div>
+        {/* 1: how much was generated today (the headline), 2: how far that is toward the target, 3: the target */}
         {loading && !live ? (
           <div className="v3-skeleton" style={{ height: 30, width: 120 }} aria-busy="true" aria-label="Loading" />
-        ) : prog ? (
-          <div className="v3-num v3-kpi-value"><span className={waiting ? 'v3-countwait' : undefined}>{fmtNum(shown, 0)}%</span><span className="v3-kpi-unit">{`of ${fmtNum(targetKwh)} kWh`}</span></div>
         ) : (
           <div className="v3-num v3-kpi-value"><CountUp value={today} dp={1} duration={750} delay={turn} /><span className="v3-kpi-unit">kWh</span></div>
         )}
-        <div className="v3-kpi-sub">
-          {prog
-            ? `${fmtNum(today, 1)} kWh · ${prog.reached ? `${fmtNum(today - targetKwh, 1)} over target` : `${fmtNum(prog.toGoKwh, 1)} to go`}`
-            : (targetKwh == null ? 'Set a daily target in Settings' : ' ')}
-        </div>
+        {prog ? (
+          <>
+            <div className="v3-today-pct"><span className={`v3-num${waiting ? ' v3-countwait' : ''}`}>{fmtNum(shown, 0)}%</span> of today&apos;s target</div>
+            <div className="v3-kpi-sub">
+              {`${fmtNum(targetKwh)} kWh target · ${prog.reached ? `${fmtNum(today - targetKwh, 1)} over` : `${fmtNum(prog.toGoKwh, 1)} to go`}`}
+            </div>
+          </>
+        ) : (
+          <div className="v3-kpi-sub">{targetKwh == null ? 'Set a daily target in Settings' : ' '}</div>
+        )}
         <div className="v3-kpi-sub" style={{ marginTop: 4 }}>
           Peak <b style={{ color: 'var(--ink)' }}>{hasPeak ? `${fmtNum(peakKw, 1)} kW` : DASH}</b>{hasPeak && peakAt ? ` at ${peakAt}` : ''}
         </div>

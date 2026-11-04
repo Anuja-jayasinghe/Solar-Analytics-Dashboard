@@ -51,11 +51,14 @@ describe('town state', () => {
 
 describe('daily goal tile', () => {
   const live = { status: 'online', todayKwh: 113.4, currentPowerKw: 22.2, dataTimestamp: 1000, stale: false };
-  it('leads with the percentage, then kWh and to go, and says how many buildings are powered', () => {
+  it('leads with today\'s kWh, then the percentage of the target, then the target and what is left', () => {
     const html = renderToString(h(TodayTile, { live, targetKwh: 140, now: 1000 }));
-    expect(html).toContain('81%');
-    expect(html).toContain('of 140 kWh');
-    expect(html).toContain('113.4 kWh · 26.6 to go');
+    const text = html.slice(html.indexOf('v3-today-text')); // the words beside the town, in reading order
+    const kwhAt = text.indexOf('113.4'), pctAt = text.search(/81(<!-- -->)?%/), targetAt = text.indexOf('140 kWh target · 26.6 to go');
+    expect(text).toMatch(/v3-kpi-value">(<!-- -->)?113\.4/); // today's kWh is the headline
+    expect(pctAt).toBeGreaterThan(kwhAt); // then the percentage
+    expect(targetAt).toBeGreaterThan(pctAt); // then the target details
+    expect(html).toContain('of today&#x27;s target');
     expect(html).not.toContain('>8 of 10 buildings powered<'); // the town shows it; no line of text for it
     expect(html).toContain('aria-label="81% of today&#x27;s target: 8 of 10 buildings powered"'); // still told to screen readers
     expect(html).toContain('class="v3-town-pulse"'); // energy flowing while live
@@ -63,7 +66,7 @@ describe('daily goal tile', () => {
   it('over the target: the whole town, and how much over', () => {
     const html = renderToString(h(TodayTile, { live: { ...live, todayKwh: 154 }, targetKwh: 140, now: 1000 }));
     expect(html).toContain('the whole town is powered'); // in the town's label
-    expect(html).toContain('14.0 over target');
+    expect(html).toContain('140 kWh target · 14.0 over');
   });
   it('stale or asleep: no energy flowing; no target: kWh only and a hint', () => {
     const stale = renderToString(h(TodayTile, { live: { ...live, stale: true }, targetKwh: 140, now: 1000 }));

@@ -8,7 +8,8 @@ test('the daily goal town lights one building per 10% of today\'s target', async
   const page = await ctx.newPage();
   await page.goto('/');
   const tile = page.getByRole('region', { name: 'Today and live' }).locator('.v3-today');
-  const pctText = await tile.locator('.v3-kpi-value').textContent();
+  await expect(tile.locator('.v3-kpi-value')).toContainText(/\d+(\.\d)?kWh/); // today's kWh is the headline
+  const pctText = await tile.locator('.v3-today-pct').textContent();
   const pct = Number(pctText.match(/(\d+)%/)[1]);
   const fullyLit = await tile.locator('.v3-town').evaluate((svg) => {
     const groups = [...svg.querySelectorAll('g')].filter((g) => g.querySelector('.v3-town-win'));

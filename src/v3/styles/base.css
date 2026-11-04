@@ -226,6 +226,8 @@ html, body { margin: 0; padding: 0; }
 .v3-town-pulse { fill: var(--gen-hi); }
 @keyframes v3-glint { 40%, 60% { opacity: .85; } }
 .v3-today-text { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.v3-today-pct { font-size: 14px; font-weight: 600; color: var(--ink2); }
+.v3-today-pct .v3-num { font-size: 20px; color: var(--gen); margin-right: 2px; }
 .v3-fresh-wrap { position: absolute; top: 16px; right: 18px; opacity: .45; }
 .v3-fresh { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; color: var(--ink2); }
 
@@ -272,6 +274,8 @@ html, body { margin: 0; padding: 0; }
   .v3-today-text { align-items: center; text-align: center; gap: 2px; }
   .v3-today .v3-kpi-value { font-size: 18px; }
   .v3-today .v3-kpi-sub { white-space: normal; font-size: 10.5px; }
+  .v3-today-pct { font-size: 12px; }
+  .v3-today-pct .v3-num { font-size: 16px; }
   .v3-fresh-wrap { top: 8px; right: 10px; }
   .v3-stalechip { position: static; align-self: center; height: 20px; padding: 0 8px; font-size: 10px; }
   .v3-fresh span:first-child { display: none; }
