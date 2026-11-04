@@ -24,6 +24,12 @@ function useLocalProfile() {
 function ClerkAccess({ children }) {
   const { isLoaded, isSignedIn, user } = useUser();
   const { getToken } = useAuth();
+  // One stable function for the whole session. Clerk hands out a new `user` (and getToken) whenever it refreshes the
+  // session token, about once a minute; a new function here used to rebuild every data source and re-read every
+  // resource on the page each time. The ref always calls Clerk's current getToken.
+  const getTokenRef = useRef(getToken);
+  getTokenRef.current = getToken;
+  const stableGetToken = useCallback(() => getTokenRef.current(), []);
   const clerk = useClerk();
   const [localProfile, saveLocal] = useLocalProfile();
   const [gaveUp, setGaveUp] = useState(false);
@@ -77,10 +83,10 @@ function ClerkAccess({ children }) {
       hadLiveAccessHere,
       profile,
       saveProfile,
-      getToken: () => getToken(),
+      getToken: stableGetToken,
       signOut: () => clerk.signOut({ redirectUrl: '/' })
     }),
-    [level, user, getToken, clerk, profile, saveProfile, isLoaded, isSignedIn, hadLiveAccessHere]
+    [level, user, stableGetToken, clerk, profile, saveProfile, isLoaded, isSignedIn, hadLiveAccessHere]
   );
   return <AccessContext.Provider value={value}>{children}</AccessContext.Provider>;
 }
