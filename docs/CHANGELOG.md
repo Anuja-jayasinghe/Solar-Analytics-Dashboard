@@ -5,6 +5,14 @@ All notable changes to the Solar Analytics Dashboard project.
 ## [Unreleased]
 
 ### Added
+- **The daily goal is a little power grid.** Instead of a filling circle, the Today tile draws your home, with solar
+  panels on the roof and an inverter on the wall, feeding a town. The power goes over two pylons and a substation,
+  then along the street, with a little depth: lit fronts, shaded sides, bright tops. The town has ten buildings, each
+  worth exactly 10% of today's target, lit floor by floor, so "8 of 10 buildings powered" reads as 80% at a glance.
+  Pulses of light run from your roof to the building being powered now. At the target the street lamps come on; past
+  it, windows turn gold and stars appear. The percentage leads the text, then the kWh and what is left to go. Stale
+  or asleep: the pulses stop (and stale greys out as before). Without a target, the kWh only. On phones the two live
+  tiles stack, so the town gets the full width.
 - **CI checks more than "it renders".** New Playwright tests on desktop and phone: the motion ends on the real
   figures, charts draw when scrolled to, the date pickers jump by month and year, the Mark above line stays in its
   chart, nothing scrolls sideways at 320 px, and light mode is light. Also an axe accessibility scan of each page in
@@ -72,14 +80,6 @@ All notable changes to the Solar Analytics Dashboard project.
   circle shows a dash, not "No target", when a target is set but today's figure is unknown.
 
 ### Changed
-- **The daily goal is a little power grid.** Instead of a filling circle, the Today tile draws your home, with solar
-  panels on the roof and an inverter on the wall, feeding a town. The power goes over two pylons and a substation,
-  then along the street, with a little depth: lit fronts, shaded sides, bright tops. The town has ten buildings, each
-  worth exactly 10% of today's target, lit floor by floor, so "8 of 10 buildings powered" reads as 80% at a glance.
-  Pulses of light run from your roof to the building being powered now. At the target the street lamps come on; past
-  it, windows turn gold and stars appear. The percentage leads the text, then the kWh and what is left to go. Stale
-  or asleep: the pulses stop (and stale greys out as before). Without a target, the kWh only. On phones the two live
-  tiles stack, so the town gets the full width.
 - **CEB vs Inverter opens on 12 bill periods** (a year) instead of 8. Phones stay on 8, where 12 pairs of bars and their
   figures run into each other; 12 and All are a tap away.
 - **The live tiles stay live.** The Today and live power tiles re-read the moment you return to the tab, focus the
