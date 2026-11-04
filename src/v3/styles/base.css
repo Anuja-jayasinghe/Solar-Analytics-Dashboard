@@ -194,6 +194,8 @@ html, body { margin: 0; padding: 0; }
 .v3-gauge-tile { justify-content: center; gap: 24px; }
 .v3-today { align-items: center; }
 /* the daily goal as a little power grid (GridTown.jsx, gridTown.js), with a little depth: fronts, darker sides, lit tops */
+[data-theme='dark'] .v3-town { --town-front:rgba(255,255,255,.08); --town-side:rgba(0,0,0,.28); --town-top:rgba(255,255,255,.2); --town-line:rgba(255,255,255,.2); --town-ground:rgba(255,255,255,.035); --town-panel:#1B3A66; --town-panel-line:#3A6BB0 }
+[data-theme='light'] .v3-town { --town-front:rgba(255,255,255,.88); --town-side:rgba(20,30,60,.14); --town-top:rgba(255,255,255,1); --town-line:rgba(20,30,60,.22); --town-ground:rgba(20,30,60,.045); --town-panel:#2D5C99; --town-panel-line:#1B3A66 }
 .v3-town-wrap { flex: 1 1 300px; min-width: 0; max-width: 470px; }
 .v3-town { width: 100%; height: auto; display: block; overflow: visible; }
 .v3-town-ground { fill: var(--town-ground); }
