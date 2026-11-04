@@ -8,9 +8,10 @@ All notable changes to the Solar Analytics Dashboard project.
 - **The daily goal is a little power grid.** Instead of a filling circle, the Today tile draws your home, with solar
   panels on the roof and an inverter on the wall, feeding a town. The power goes over two pylons and a substation,
   then along the street, with a little depth: lit fronts, shaded sides, bright tops. The town has ten buildings, each
-  worth exactly 10% of today's target, lit floor by floor, so "8 of 10 buildings powered" reads as 80% at a glance.
+  worth exactly 10% of today's target, lit floor by floor, so eight lit buildings read as 80% at a glance.
   Pulses of light run from your roof to the building being powered now. At the target the street lamps come on; past
-  it, windows turn gold and stars appear. The percentage leads the text, then the kWh and what is left to go. Stale
+  it, windows turn gold and stars appear. The percentage leads the text, then the kWh and what is left to go (the
+  building count is left to the picture, and told to screen readers). Stale
   or asleep: the pulses stop (and stale greys out as before). Without a target, the kWh only. On phones the two live
   tiles stack, so the town gets the full width.
 - **CI checks more than "it renders".** New Playwright tests on desktop and phone: the motion ends on the real

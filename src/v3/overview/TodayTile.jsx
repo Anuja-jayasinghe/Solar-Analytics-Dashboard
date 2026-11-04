@@ -71,7 +71,6 @@ export function TodayTile({ live, peak = null, targetKwh, now, loading }) {
             ? `${fmtNum(today, 1)} kWh · ${prog.reached ? `${fmtNum(today - targetKwh, 1)} over target` : `${fmtNum(prog.toGoKwh, 1)} to go`}`
             : (targetKwh == null ? 'Set a daily target in Settings' : ' ')}
         </div>
-        {prog && <div className="v3-kpi-sub">{prog.reached ? 'The whole town is powered' : `${powered} of 10 buildings powered`}</div>}
         <div className="v3-kpi-sub" style={{ marginTop: 4 }}>
           Peak <b style={{ color: 'var(--ink)' }}>{hasPeak ? `${fmtNum(peakKw, 1)} kW` : DASH}</b>{hasPeak && peakAt ? ` at ${peakAt}` : ''}
         </div>

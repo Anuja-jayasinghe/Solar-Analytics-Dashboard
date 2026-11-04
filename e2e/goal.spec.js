@@ -15,6 +15,6 @@ test('the daily goal town lights one building per 10% of today\'s target', async
     return groups.filter((g) => [...g.querySelectorAll('.v3-town-win')].every((w) => w.hasAttribute('data-on'))).length;
   });
   expect(fullyLit).toBe(Math.min(10, Math.floor(pct / 10)));
-  await expect(tile).toContainText(pct >= 100 ? 'The whole town is powered' : `${Math.min(10, Math.floor(pct / 10))} of 10 buildings powered`);
+  await expect(tile.locator('.v3-town')).toHaveAttribute('aria-label', pct >= 100 ? /the whole town is powered/ : new RegExp(`${Math.min(10, Math.floor(pct / 10))} of 10 buildings powered`));
   await ctx.close();
 });

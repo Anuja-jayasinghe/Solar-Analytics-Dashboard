@@ -56,13 +56,13 @@ describe('daily goal tile', () => {
     expect(html).toContain('81%');
     expect(html).toContain('of 140 kWh');
     expect(html).toContain('113.4 kWh · 26.6 to go');
-    expect(html).toContain('8 of 10 buildings powered');
-    expect(html).toContain('aria-label="81% of today&#x27;s target: 8 of 10 buildings powered"');
+    expect(html).not.toContain('>8 of 10 buildings powered<'); // the town shows it; no line of text for it
+    expect(html).toContain('aria-label="81% of today&#x27;s target: 8 of 10 buildings powered"'); // still told to screen readers
     expect(html).toContain('class="v3-town-pulse"'); // energy flowing while live
   });
   it('over the target: the whole town, and how much over', () => {
     const html = renderToString(h(TodayTile, { live: { ...live, todayKwh: 154 }, targetKwh: 140, now: 1000 }));
-    expect(html).toContain('The whole town is powered');
+    expect(html).toContain('the whole town is powered'); // in the town's label
     expect(html).toContain('14.0 over target');
   });
   it('stale or asleep: no energy flowing; no target: kWh only and a hint', () => {
