@@ -98,7 +98,8 @@ export const BUS_START = SUBSTATION.x + 30;
 export const BUS_END = B0 + BUILDINGS_N * BSTEP - (BSTEP - BW) / 2;
 export const BUS = { y: BUS_Y };
 export const LAMPS = [0, 1, 2, 3, 4].map((k) => r1(B0 + 16 + k * 2 * BSTEP));
-// Deterministic star positions above the town (no randomness: the server and the browser draw the same picture).
+// Deterministic star positions above the town (no randomness: the server and the browser draw the same picture);
+// those behind the billboard are left out where it is drawn (GridTown).
 export const STARS = [[290, 16], [318, 34], [347, 10], [372, 28], [401, 14], [428, 38], [455, 20], [482, 8], [506, 30], [533, 16], [561, 36], [585, 12], [612, 26], [304, 46], [389, 46], [470, 44], [548, 48], [623, 44]];
 
 /** Where the street cable is energised to: the building being powered now. */
@@ -133,4 +134,61 @@ export function pulseRoute(share) {
   const inv = HOME.inverter;
   const pts = [HOME.panels[5].glint, [inv.x + inv.w / 2, inv.y], HOME.lineOut, a.left, a.right, b.left, b.right, s, [s[0], BUS_Y], [Math.max(BUS_START + 4, frontierX(share)), BUS_Y]];
   return `M${pts.map((p) => `${r1(p[0])} ${r1(p[1])}`).join(' L')}`;
+}
+
+// --- the billboard: today's kWh on a dot-matrix LED sign on top of the tallest tower --------------------------
+// A 5 x 7 dot font (digits, '.', '-' and the unit's letters): each row is 5 dots, 1 = lit.
+const DOT_FONT = {
+  0: ['01110', '10001', '10011', '10101', '11001', '10001', '01110'],
+  1: ['00100', '01100', '00100', '00100', '00100', '00100', '01110'],
+  2: ['01110', '10001', '00001', '00010', '00100', '01000', '11111'],
+  3: ['11111', '00010', '00100', '00010', '00001', '10001', '01110'],
+  4: ['00010', '00110', '01010', '10010', '11111', '00010', '00010'],
+  5: ['11111', '10000', '11110', '00001', '00001', '10001', '01110'],
+  6: ['00110', '01000', '10000', '11110', '10001', '10001', '01110'],
+  7: ['11111', '00001', '00010', '00100', '01000', '01000', '01000'],
+  8: ['01110', '10001', '10001', '01110', '10001', '10001', '01110'],
+  9: ['01110', '10001', '10001', '01111', '00001', '00010', '01100'],
+  '-': ['00000', '00000', '00000', '11111', '00000', '00000', '00000'],
+  '.': ['00', '00', '00', '00', '00', '11', '11'],
+  k: ['10000', '10000', '10010', '10100', '11000', '10100', '10010'],
+  W: ['10001', '10001', '10001', '10101', '10101', '10101', '01010'],
+  h: ['10000', '10000', '10110', '11001', '10001', '10001', '10001']
+};
+
+/**
+ * Dots for a text in the dot font, from (x, y) with dot spacing `pitch`: every cell of every glyph, lit or not (the
+ * unlit ones show faintly, like a real LED panel). Characters the font lacks are skipped. Returns the dots and width.
+ */
+export function dotText(text, x, y, pitch) {
+  const dots = [];
+  let cx = x;
+  for (const ch of String(text)) {
+    const g = DOT_FONT[ch];
+    if (!g) continue;
+    g.forEach((row, r) => [...row].forEach((bit, c) => dots.push({ x: r1(cx + c * pitch), y: r1(y + r * pitch), on: bit === '1' })));
+    cx += (g[0].length + 1) * pitch;
+  }
+  return { dots, width: r1(cx - x - pitch) };
+}
+
+const TOWER = BUILDINGS[7]; // the tallest
+export const BILLBOARD = (() => {
+  const w = 190, h = 46;
+  const cx = TOWER.x + TOWER.w / 2 + DX / 2;
+  const legTop = G - TOWER.h + DY / 2;
+  const y = Math.max(1, legTop - 11 - h);
+  return { x: r1(cx - w / 2), y: r1(y), w, h, legs: [[r1(cx - 30), r1(y + h), r1(cx - 30), r1(legTop)], [r1(cx + 30), r1(y + h), r1(cx + 30), r1(legTop)]] };
+})();
+
+/** The billboard's dots for a reading ('98.2', '113.4', or '-' when unknown): the number large, 'kWh' small, centred. */
+export function billboardDots(reading) {
+  const big = 4, small = 2.4;
+  const num = /^[\d.]+$/.test(String(reading)) ? String(reading) : '--.-';
+  const nW = dotText(num, 0, 0, big).width;
+  const uW = dotText('kWh', 0, 0, small).width;
+  const gap = 8;
+  const x0 = BILLBOARD.x + (BILLBOARD.w - (nW + gap + uW)) / 2;
+  const top = BILLBOARD.y + (BILLBOARD.h - 6 * big) / 2;
+  return [...dotText(num, x0, top, big).dots.map((d) => ({ ...d, r: 1.5 })), ...dotText('kWh', x0 + nW + gap, top + 6 * big - 6 * small, small).dots.map((d) => ({ ...d, r: 0.95 }))];
 }

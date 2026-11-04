@@ -1,5 +1,4 @@
 import { Glass } from '../ui/Glass.jsx';
-import { CountUp } from '../ui/Motion.jsx';
 import { STAGE_MS, useCount } from '../ui/useMotion.js';
 import { useMotionMode } from '../ui/motionMode.js';
 import { DASH, clockAt, fmtNum, freshness, targetProgress } from './format.js';
@@ -36,6 +35,8 @@ export function TodayTile({ live, peak = null, targetKwh, now, loading }) {
   const share = prog ? today / targetKwh : null;
   // The town lights up as the percentage counts up, and glides with each refresh.
   const { shown, waiting } = useCount(prog ? share * 100 : null, { duration: 1300, delay: turn });
+  // today's kWh, counting up on the billboard over the town
+  const kwhShown = useCount(today, { duration: 1100, delay: turn }).shown;
   const shownShare = typeof shown === 'number' ? shown / 100 : 0;
   const powered = prog ? townState(share).powered : 0;
   const peakKw = peak?.kw ?? live?.peakTodayKw ?? null;
@@ -45,9 +46,10 @@ export function TodayTile({ live, peak = null, targetKwh, now, loading }) {
   const stale = !!live?.stale;
   const asOf = stale ? clockAt(live.dataTimestamp) : null;
   const flowing = !stale && today > 0 && live?.status !== 'offline';
+  const kwhText = today === null ? null : `${fmtNum(today, 1)} kWh today`;
   const label = prog
-    ? `${prog.pct}% of today's target: ${prog.reached ? 'the whole town is powered' : `${powered} of 10 buildings powered`}`
-    : "Today's generation";
+    ? `${kwhText}, ${prog.pct}% of today's target: ${prog.reached ? 'the whole town is powered' : `${powered} of 10 buildings powered`}`
+    : kwhText ?? "Today's generation";
 
   return (
     <Glass className="v3-live-tile v3-today" aria-label="Today" data-stale={stale || undefined}>
@@ -55,19 +57,18 @@ export function TodayTile({ live, peak = null, targetKwh, now, loading }) {
         ? <span className="v3-stalechip">{asOf ? `Not live · as of ${asOf}` : 'Not live'}</span>
         : <div className="v3-fresh-wrap"><FreshnessRing live={live} now={now} /></div>}
       <div className="v3-town-wrap">
-        <GridTown share={prog ? shownShare : 0} flowing={flowing} label={label} />
+        <GridTown share={prog ? shownShare : 0} flowing={flowing} label={label}
+          reading={typeof kwhShown === 'number' ? kwhShown.toFixed(1) : null} />
       </div>
       <div className="v3-today-text">
         <div className="v3-kpi-label">Today</div>
-        {/* 1: how much was generated today (the headline), 2: how far that is toward the target, 3: the target */}
+        {/* today's kWh is on the billboard over the town; here: how far that is toward the target, then the target */}
+        <span className="v3-sr">{kwhText ?? "Today's generation unknown"}</span>
         {loading && !live ? (
           <div className="v3-skeleton" style={{ height: 30, width: 120 }} aria-busy="true" aria-label="Loading" />
-        ) : (
-          <div className="v3-num v3-kpi-value"><CountUp value={today} dp={1} duration={750} delay={turn} /><span className="v3-kpi-unit">kWh</span></div>
-        )}
-        {prog ? (
+        ) : prog ? (
           <>
-            <div className="v3-today-pct"><span className={`v3-num${waiting ? ' v3-countwait' : ''}`}>{fmtNum(shown, 0)}%</span> of today&apos;s target</div>
+            <div className="v3-num v3-kpi-value v3-today-pct"><span className={waiting ? 'v3-countwait' : undefined}>{`${fmtNum(shown, 0)}%`}</span><span className="v3-kpi-unit">of today&apos;s target</span></div>
             <div className="v3-kpi-sub">
               {`${fmtNum(targetKwh)} kWh target · ${prog.reached ? `${fmtNum(today - targetKwh, 1)} over` : `${fmtNum(prog.toGoKwh, 1)} to go`}`}
             </div>

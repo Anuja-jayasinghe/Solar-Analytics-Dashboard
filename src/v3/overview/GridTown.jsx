@@ -1,4 +1,7 @@
-import { BUILDINGS, BUS, BUS_END, BUS_START, G, HOME, LAMPS, PYLONS, STARS, SUBSTATION, TRUNK_PATH, VIEW_H, VIEW_W, frontierX, pulseRoute, townState } from './gridTown.js';
+import { BILLBOARD, BUILDINGS, BUS, BUS_END, BUS_START, DX, DY, G, HOME, LAMPS, PYLONS, STARS, SUBSTATION, TRUNK_PATH, VIEW_H, VIEW_W, billboardDots, frontierX, pulseRoute, townState } from './gridTown.js';
+
+const B = BILLBOARD;
+const behindBoard = ([x, y]) => x > B.x - 6 && x < B.x + B.w + DX + 6 && y < B.y + B.h + 6;
 
 const PULSES = 6;
 const PULSE_S = 3.6; // seconds for a pulse to travel from your roof to the frontier
@@ -7,15 +10,16 @@ const PULSE_S = 3.6; // seconds for a pulse to travel from your roof to the fron
  * The daily goal as a little power grid (gridTown.js): your house's rooftop panels feed pylons, a substation and a
  * street of ten buildings, each worth 10% of today's target, lit floor by floor. `share` is today's kWh / target
  * (may pass 1). `flowing` runs the energy pulses (off when the reading is stale or there is nothing to send).
+ * `reading` is today's kWh as text ('98.2'), shown on a dot-matrix LED billboard on top of the tallest tower.
  */
-export function GridTown({ share, flowing = true, label }) {
+export function GridTown({ share, flowing = true, label, reading = null }) {
   const s = typeof share === 'number' && Number.isFinite(share) ? Math.max(0, share) : 0;
   const st = townState(s);
   const route = pulseRoute(s);
   const edge = frontierX(s);
   return (
     <svg className="v3-town" viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} role="img" aria-label={label}>
-      {STARS.map(([x, y], i) => <circle key={i} className="v3-town-star" cx={x} cy={y} r="1.4" data-on={i < st.stars || undefined} />)}
+      {STARS.map(([x, y], i) => (behindBoard([x, y]) ? null : <circle key={i} className="v3-town-star" cx={x} cy={y} r="1.4" data-on={i < st.stars || undefined} />))}
 
       {/* the street, with a little depth */}
       <path className="v3-town-ground" d={`M0 ${G} H${VIEW_W} L${VIEW_W} ${G + 26} H0 Z`} />
@@ -75,6 +79,15 @@ export function GridTown({ share, flowing = true, label }) {
           <circle className="v3-town-lamp" data-on={st.lampsOn || undefined} cx={x} cy={G + 9} r="2.6" />
         </g>
       ))}
+
+      {/* today's kWh on an LED billboard on the tallest tower: the figure you see first */}
+      <g className="v3-board" data-reading={reading ?? undefined}>
+        {B.legs.map(([x1, y1, , y2], i) => <path key={i} className="v3-board-leg" d={`M${x1} ${y1} V${y2}`} />)}
+        <path className="v3-board-side" d={`M${B.x + B.w} ${B.y} l${DX} ${DY} v${B.h} l${-DX} ${-DY} Z`} />
+        <path className="v3-board-top" d={`M${B.x} ${B.y} l${DX} ${DY} h${B.w} l${-DX} ${-DY} Z`} />
+        <rect className="v3-board-face" x={B.x} y={B.y} width={B.w} height={B.h} rx="3" />
+        {billboardDots(reading).map((d, i) => <circle key={i} className="v3-board-dot" data-on={d.on || undefined} cx={d.x} cy={d.y} r={d.r} />)}
+      </g>
 
       {/* energy leaving your roof for the town */}
       {flowing && s > 0 && Array.from({ length: PULSES }, (_, i) => (

@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import { createElement as h } from 'react';
 import { renderToString } from 'react-dom/server';
-import { BUILDINGS, BUILDINGS_N, BUS_END, BUS_START, box, frontierX, pulseRoute, townState } from '../src/v3/overview/gridTown.js';
+import { BILLBOARD, BUILDINGS, BUILDINGS_N, BUS_END, BUS_START, billboardDots, box, dotText, frontierX, pulseRoute, townState } from '../src/v3/overview/gridTown.js';
 import { TodayTile } from '../src/v3/overview/TodayTile.jsx';
 
 describe('town geometry', () => {
@@ -18,6 +18,19 @@ describe('town geometry', () => {
     expect(BUILDINGS).toHaveLength(BUILDINGS_N);
     expect(BUILDINGS.every((b, i) => i === 0 || b.x > BUILDINGS[i - 1].x)).toBe(true);
     expect(BUILDINGS.every((b) => b.windows.length >= 6)).toBe(true);
+  });
+});
+
+describe('billboard', () => {
+  it('spells a reading in 5 x 7 dots, the unit smaller, all inside the board', () => {
+    const one = dotText('1', 0, 0, 2);
+    expect(one.dots).toHaveLength(35);
+    expect(one.dots.filter((d) => d.on)).toHaveLength(10); // 1+2+1+1+1+1+3
+    const dots = billboardDots('113.4');
+    expect(dots.every((d) => d.x >= BILLBOARD.x && d.x <= BILLBOARD.x + BILLBOARD.w && d.y >= BILLBOARD.y && d.y <= BILLBOARD.y + BILLBOARD.h)).toBe(true);
+    expect(dots.some((d) => d.r < 1)).toBe(true); // 'kWh' in smaller dots
+    const dash = billboardDots(null).filter((d) => d.on && d.r > 1);
+    expect(dash.length).toBeGreaterThan(0); // unknown shows '--.-', not a number
   });
 });
 
@@ -51,16 +64,18 @@ describe('town state', () => {
 
 describe('daily goal tile', () => {
   const live = { status: 'online', todayKwh: 113.4, currentPowerKw: 22.2, dataTimestamp: 1000, stale: false };
-  it('leads with today\'s kWh, then the percentage of the target, then the target and what is left', () => {
+  it('today\'s kWh is on the billboard over the town; the text leads with the percentage, then the target', () => {
     const html = renderToString(h(TodayTile, { live, targetKwh: 140, now: 1000 }));
+    expect(html).toContain('class="v3-board" data-reading="113.4"'); // the LED billboard on the tallest tower
+    expect((html.match(/class="v3-board-dot" data-on="true"/g) ?? []).length).toBeGreaterThan(40); // lit dots spell it
     const text = html.slice(html.indexOf('v3-today-text')); // the words beside the town, in reading order
-    const kwhAt = text.indexOf('113.4'), pctAt = text.search(/81(<!-- -->)?%/), targetAt = text.indexOf('140 kWh target · 26.6 to go');
-    expect(text).toMatch(/v3-kpi-value">(<!-- -->)?113\.4/); // today's kWh is the headline
-    expect(pctAt).toBeGreaterThan(kwhAt); // then the percentage
-    expect(targetAt).toBeGreaterThan(pctAt); // then the target details
+    expect(text).toContain('113.4 kWh today'); // still read out to screen readers
+    const pctAt = text.search(/81(<!-- -->)?%/), targetAt = text.indexOf('140 kWh target · 26.6 to go');
+    expect(text).toMatch(/v3-kpi-value v3-today-pct"><span>81%/); // the percentage is the headline of the text
+    expect(targetAt).toBeGreaterThan(pctAt);
     expect(html).toContain('of today&#x27;s target');
     expect(html).not.toContain('>8 of 10 buildings powered<'); // the town shows it; no line of text for it
-    expect(html).toContain('aria-label="81% of today&#x27;s target: 8 of 10 buildings powered"'); // still told to screen readers
+    expect(html).toContain('aria-label="113.4 kWh today, 81% of today&#x27;s target: 8 of 10 buildings powered"');
     expect(html).toContain('class="v3-town-pulse"'); // energy flowing while live
   });
   it('over the target: the whole town, and how much over', () => {
@@ -75,6 +90,9 @@ describe('daily goal tile', () => {
     expect(night).not.toContain('v3-town-pulse');
     const none = renderToString(h(TodayTile, { live, targetKwh: null, now: 1000 }));
     expect(none).toContain('Set a daily target in Settings');
+    expect(none).toContain('data-reading="113.4"'); // the billboard still shows today's kWh
+    const unknown = renderToString(h(TodayTile, { live: { ...live, todayKwh: null }, targetKwh: 140, now: 1000 }));
+    expect(unknown).not.toContain('data-reading'); // nothing to show: dashes on the board, never 0.0
     expect(none).not.toContain('buildings powered');
     expect(none).not.toContain('data-on="true" x'); // no window lit without a target
   });
