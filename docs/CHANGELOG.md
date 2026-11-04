@@ -72,6 +72,12 @@ All notable changes to the Solar Analytics Dashboard project.
   circle shows a dash, not "No target", when a target is set but today's figure is unknown.
 
 ### Changed
+- **The live power gauge is a rising sun.** 40 rays fan over the horizon from 0 kW on the left to the inverter's maximum
+  on the right, one ray per 2.5% of it. Lit rays are the live output, and the last five are the red zone near the
+  maximum. The kW reading sits in the sun, on a scale labelled on round steps (0, 10, 20, 30, 40 kW). Today's peak is
+  marked on the scale like a cruise-control set point: a red line across it and a small arrow pointing at it, which
+  sweeps into place after the rays light up. Its value and time are shown beside the gauge. At night, or when the
+  power is unknown, the sun is grey with no ray lit, and never shows a false 0. Stale readings grey out as before.
 - **CEB vs Inverter opens on 12 bill periods** (a year) instead of 8. Phones stay on 8, where 12 pairs of bars and their
   figures run into each other; 12 and All are a tap away.
 - **The live tiles stay live.** The Today and live power tiles re-read the moment you return to the tab, focus the

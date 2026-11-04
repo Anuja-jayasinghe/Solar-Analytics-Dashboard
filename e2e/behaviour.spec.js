@@ -130,3 +130,17 @@ test('light mode is light: the date picker is not a dark panel', async ({ page }
   });
   expect(luminance).toBeGreaterThan(0.85);
 });
+
+test('the rising sun lights one ray per 2.5% of the maximum and marks today\'s peak', async ({ browser }) => {
+  const ctx = await browser.newContext({ reducedMotion: 'reduce' });
+  const page = await ctx.newPage();
+  await page.goto('/');
+  const meter = page.getByRole('meter', { name: 'Live power' });
+  await expect(meter).toHaveAttribute('aria-valuenow', /\d/);
+  const now = Number(await meter.getAttribute('aria-valuenow'));
+  const max = Number(await meter.getAttribute('aria-valuemax'));
+  await expect(meter.locator('.v3-sun-ray[data-lit]')).toHaveCount(Math.ceil((now / max) * 40));
+  await expect(meter.locator('.v3-sun-peak')).toBeVisible();
+  await expect(page.locator('.v3-gauge-peak')).toContainText(/^Peak \d+(\.\d)? kW/);
+  await ctx.close();
+});
