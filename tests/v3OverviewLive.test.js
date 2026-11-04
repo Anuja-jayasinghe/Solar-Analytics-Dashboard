@@ -235,18 +235,15 @@ describe('rendered tiles', () => {
     expect(html).not.toMatch(/>0</);
   });
 
-  it('today tile: percentage, peak, and a percent-free state when there is no target', () => {
+  it('today tile: percentage, no peak (the live gauge carries it), and a percent-free state when there is no target', () => {
     const live = { status: 'online', todayKwh: 98.2, peakTodayKw: 26.3, peakTodayAt: '11:55', fetchedAt: 1000 };
     const withTarget = renderToString(h(TodayTile, { live, targetKwh: 150, now: 1000 }));
     expect(withTarget).toContain('65%');
     expect(withTarget).toContain('98.2');
-    expect(withTarget).toContain('26.3 kW');
-    expect(withTarget).toContain('11:55');
+    expect(withTarget).not.toContain('Peak'); // shown on the live power gauge, not repeated here
     const noTarget = renderToString(h(TodayTile, { live, targetKwh: null, now: 1000 }));
     expect(noTarget).not.toContain('65%');
     expect(noTarget).toContain('Set a daily target in Settings');
-    const noPeak = renderToString(h(TodayTile, { live: { ...live, peakTodayKw: undefined, peakTodayAt: undefined }, targetKwh: 150, now: 1000 }));
-    expect(noPeak).toMatch(/Peak\s*(<!-- -->)?\s*<b[^>]*>—<\/b>/);
   });
 
   it('live row when SolisCloud fails: the saved reading is labelled with its time, never shown as current', () => {
@@ -274,16 +271,6 @@ describe('rendered tiles', () => {
     expect(gauge).toContain('SolisCloud not responding');
     expect(gauge).toContain('No reading saved today yet');
     expect(gauge).toMatch(new RegExp(`v3-gauge-kw">${DASH}<`)); // the reading is a dash, never 0 kW
-  });
-
-  it("the Today tile shows the day chart's peak, so the two agree, and falls back to the live peak", () => {
-    const live = { status: 'online', todayKwh: 95.6, peakTodayKw: null, peakTodayAt: null, fetchedAt: 1000 };
-    const fromChart = renderToString(h(TodayTile, { live, peak: { kw: 35.5, at: '11:51' }, targetKwh: 140, now: 1000 }));
-    expect(fromChart).toMatch(/35\.5 kW<\/b>(<!-- -->)? at (<!-- -->)?11:51/);
-    const fallback = renderToString(h(TodayTile, { live: { ...live, peakTodayKw: 26.3, peakTodayAt: '11:55' }, targetKwh: 140, now: 1000 }));
-    expect(fallback).toContain('26.3 kW');
-    const none = renderToString(h(TodayTile, { live, targetKwh: 140, now: 1000 }));
-    expect(none).toMatch(/Peak\s*(<!-- -->)?\s*<b[^>]*>—<\/b>/);
   });
 
   it('live gauge: shows kW and share, or a dash when power is unknown', () => {

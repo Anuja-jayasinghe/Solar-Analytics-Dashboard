@@ -1,8 +1,9 @@
 import { Glass } from '../ui/Glass.jsx';
-import { CountUp } from '../ui/Motion.jsx';
-import { STAGE_MS } from '../ui/useMotion.js';
+import { STAGE_MS, useCount } from '../ui/useMotion.js';
 import { useMotionMode } from '../ui/motionMode.js';
 import { DASH, clockAt, fmtNum, freshness, targetProgress } from './format.js';
+import { GridTown } from './GridTown.jsx';
+import { townState } from './gridTown.js';
 
 /** The data-freshness ring: full when fresh, draining as the reading ages. Deliberately faint. */
 function FreshnessRing({ live, now }) {
@@ -21,56 +22,56 @@ function FreshnessRing({ live, now }) {
 }
 
 /**
- * Today: a circle that fills toward the daily target (the "game"), today's kWh, the peak so far, and the
- * freshness ring. Without a target there is no percentage to show, only the kWh.
+ * Today: the daily goal as a little power grid (GridTown): your home's rooftop panels feeding a street of ten buildings,
+ * each worth 10% of the target, lit as today's energy comes in. The percentage leads the text, then the kWh and what is
+ * left to go. Without a target there is no percentage, only the kWh (and the town stays unlit).
+ * Today's peak is not repeated here: it is marked on the live power gauge beside this tile.
  */
-/**
- * `peak` is the day chart's peak ({ kw, at }) from today's readings; it is preferred so the tile and the chart always
- * agree, and the live reading's own peak is the fallback.
- */
-export function TodayTile({ live, peak = null, targetKwh, now, loading }) {
+export function TodayTile({ live, targetKwh, now, loading }) {
   const today = live?.todayKwh ?? null;
   const turn = useMotionMode() === 'full' ? STAGE_MS : 0; // live: animates on every visit, waits its turn only in the full sequence
   const prog = targetProgress(today, targetKwh ?? null);
-  const peakKw = peak?.kw ?? live?.peakTodayKw ?? null;
-  const peakAt = peak ? peak.at : live?.peakTodayAt ?? null;
-  const hasPeak = peakKw != null;
-  const label = prog ? `${prog.pct}% of today's target` : "Today's generation";
+  const share = prog ? today / targetKwh : null;
+  // The town lights up as the percentage counts up, and glides with each refresh.
+  const { shown, waiting } = useCount(prog ? share * 100 : null, { duration: 1300, delay: turn });
+  // today's kWh, counting up on the billboard over the town
+  const kwhShown = useCount(today, { duration: 1100, delay: turn }).shown;
+  const shownShare = typeof shown === 'number' ? shown / 100 : 0;
+  const powered = prog ? townState(share).powered : 0;
   // Not current (SolisCloud down): the tile greys out and says so, so an old figure is never read as live.
   const stale = !!live?.stale;
   const asOf = stale ? clockAt(live.dataTimestamp) : null;
+  const flowing = !stale && today > 0 && live?.status !== 'offline';
+  const kwhText = today === null ? null : `${fmtNum(today, 1)} kWh today`;
+  const label = prog
+    ? `${kwhText}, ${prog.pct}% of today's target: ${prog.reached ? 'the whole town is powered' : `${powered} of 10 buildings powered`}`
+    : kwhText ?? "Today's generation";
 
   return (
     <Glass className="v3-live-tile v3-today" aria-label="Today" data-stale={stale || undefined}>
       {stale
         ? <span className="v3-stalechip">{asOf ? `Not live · as of ${asOf}` : 'Not live'}</span>
         : <div className="v3-fresh-wrap"><FreshnessRing live={live} now={now} /></div>}
-      <div className="v3-filler" role="img" aria-label={label}>
-        {prog ? (
-          <>
-            <div className="v3-liquid" style={{ top: `${100 - prog.level}%` }}>
-              <svg className="v3-wave" viewBox="0 0 200 14" preserveAspectRatio="none" aria-hidden="true"><path d="M0 7 Q 12.5 0 25 7 T 50 7 T 75 7 T 100 7 T 125 7 T 150 7 T 175 7 T 200 7 V 14 H 0 Z" style={{ fill: 'var(--gen-hi)' }} /></svg>
-              <svg className="v3-wave two" viewBox="0 0 200 14" preserveAspectRatio="none" aria-hidden="true"><path d="M0 7 Q 12.5 14 25 7 T 50 7 T 75 7 T 100 7 T 125 7 T 150 7 T 175 7 T 200 7 V 14 H 0 Z" style={{ fill: 'var(--gen)' }} /></svg>
-            </div>
-            <span className="v3-num v3-filler-pct"><CountUp value={prog.pct} duration={1000} delay={turn} suffix="%" /></span>
-          </>
-        ) : (
-          <span className="v3-filler-none">{loading ? '' : targetKwh == null ? 'No target' : DASH}</span>
-        )}
+      <div className="v3-town-wrap">
+        <GridTown share={prog ? shownShare : 0} flowing={flowing} label={label}
+          reading={typeof kwhShown === 'number' ? kwhShown.toFixed(1) : null} />
       </div>
       <div className="v3-today-text">
         <div className="v3-kpi-label">Today</div>
+        {/* today's kWh is on the billboard over the town; here: how far that is toward the target, then the target */}
+        <span className="v3-sr">{kwhText ?? "Today's generation unknown"}</span>
         {loading && !live ? (
           <div className="v3-skeleton" style={{ height: 30, width: 120 }} aria-busy="true" aria-label="Loading" />
+        ) : prog ? (
+          <>
+            <div className="v3-num v3-kpi-value v3-today-pct"><span className={waiting ? 'v3-countwait' : undefined}>{`${fmtNum(shown, 0)}%`}</span><span className="v3-kpi-unit">of today&apos;s target</span></div>
+            <div className="v3-kpi-sub">
+              {`${fmtNum(targetKwh)} kWh target · ${prog.reached ? `${fmtNum(today - targetKwh, 1)} over` : `${fmtNum(prog.toGoKwh, 1)} to go`}`}
+            </div>
+          </>
         ) : (
-          <div className="v3-num v3-kpi-value"><CountUp value={today} dp={1} duration={750} delay={turn} /><span className="v3-kpi-unit">kWh</span></div>
+          <div className="v3-kpi-sub">{targetKwh == null ? 'Set a daily target in Settings' : ' '}</div>
         )}
-        <div className="v3-kpi-sub">
-          {prog ? (prog.reached ? `target of ${fmtNum(targetKwh)} kWh reached` : `of ${fmtNum(targetKwh)} kWh target · ${fmtNum(prog.toGoKwh, 1)} to go`) : (targetKwh == null ? 'Set a daily target in Settings' : ' ')}
-        </div>
-        <div className="v3-kpi-sub" style={{ marginTop: 4 }}>
-          Peak <b style={{ color: 'var(--ink)' }}>{hasPeak ? `${fmtNum(peakKw, 1)} kW` : DASH}</b>{hasPeak && peakAt ? ` at ${peakAt}` : ''}
-        </div>
       </div>
     </Glass>
   );
