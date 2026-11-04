@@ -103,6 +103,8 @@ export function liveState(live, error = null) {
       : { key: 'unknown', label: 'Unknown', tone: 'neutral' };
   }
   const s = inverterState(live);
+  if (live.staleReason === 'unreachable') return { key: 'unreachable', label: 'Reconnecting…', tone: 'warn', inverter: s };
+  if (live.staleReason === 'old') return { key: 'old', label: 'No new reading', tone: 'warn', inverter: s };
   if (live.stale && live.upstream === 'unavailable') return { key: 'upstream', label: SOLIS_DOWN, tone: 'warn', inverter: s };
   return live.stale ? { ...s, label: `${s.label} · last known`, tone: 'warn' } : s;
 }
@@ -127,6 +129,12 @@ export function liveStatusInfo(live, error, state) {
     const inv = state.inverter ? ` The inverter last reported: ${state.inverter.label}.` : '';
     return { title, text: `The inverter may be fine. Showing the ${readingNote(live)}, not a live value.${inv} It retries every minute.` };
   }
+  if (state.key === 'unreachable') {
+    return { title: 'Lost the connection', text: `Showing the ${readingNote(live)}, not a live value. It retries every few seconds and updates as soon as it gets through.` };
+  }
+  if (state.key === 'old') {
+    return { title: `No reading since ${clockAt(live.dataTimestamp) ?? 'earlier'}`, text: `SolisCloud answers, but the inverter has sent nothing new for over ${OLD_READING_MIN} minutes. Its logger may have lost its internet connection.` };
+  }
   if (state.key === 'fault') return { title: `Inverter fault${live?.faultCode != null ? `, state code ${live.faultCode}` : ''}`, text: 'The alarm log is on the Pro page.' };
   if (live?.abnormalOffline) return { title: 'Offline in daylight', text: 'The inverter or its logger is not reporting.' };
   if (live?.stale) return { title: 'Not refreshed', text: `Showing the ${readingNote(live)}. It retries every minute.` };
@@ -140,9 +148,31 @@ export function errorLabel(code) {
 }
 
 export const FRESH_WINDOW_MIN = 15;
+/** The inverter reports every few minutes, so a reading up to this old is as fresh as it gets. */
+export const REPORT_GAP_MIN = 5;
+/** In daylight, a reading older than this is not live, even when SolisCloud answers (the logger may be offline). */
+export const OLD_READING_MIN = 15;
 
 /**
- * How old the data is. `fraction` is 1 when fresh and drains to 0 over FRESH_WINDOW_MIN minutes.
+ * The live reading as the tiles should show it. Marks it not live (stale, with a reason) when:
+ *   'unreachable' - the last re-read failed (our connection), so this is the previous result
+ *   'old'         - SolisCloud answered, but the inverter's own reading is over OLD_READING_MIN old while it says it is
+ *                   online (at night it reports "offline", which is normal, so an evening reading is not flagged)
+ * A reading the server already marked stale (SolisCloud down) keeps its own reason. Null stays null.
+ */
+export function displayLive(live, error, nowMs) {
+  if (!live) return null;
+  if (error) return { ...live, stale: true, staleReason: 'unreachable' };
+  if (live.stale) return live;
+  const ts = live.dataTimestamp;
+  const reporting = live.status === 'online' || live.status === 'alarm';
+  if (reporting && isNum(ts) && isNum(nowMs) && nowMs - ts > OLD_READING_MIN * 60000) return { ...live, stale: true, staleReason: 'old' };
+  return live;
+}
+
+/**
+ * How old the data is. `fraction` (the ring) stays full for the inverter's normal reporting gap (REPORT_GAP_MIN), then
+ * drains to 0 at FRESH_WINDOW_MIN, so "3 min ago" never looks like a problem.
  * Uses the inverter's own timestamp when present, else when the server fetched it; unknown -> null.
  */
 export function freshness({ dataTimestamp, fetchedAt }, nowMs) {
@@ -150,7 +180,8 @@ export function freshness({ dataTimestamp, fetchedAt }, nowMs) {
   if (base === null || !isNum(nowMs)) return null;
   const ageMin = Math.max(0, (nowMs - base) / 60000);
   const label = ageMin < 1 ? 'just now' : ageMin < 60 ? `${Math.round(ageMin)} min ago` : ageMin < 1440 ? `${Math.round(ageMin / 60)} h ago` : `${Math.round(ageMin / 1440)} d ago`;
-  return { ageMin, fraction: Math.max(0, Math.min(1, 1 - ageMin / FRESH_WINDOW_MIN)), label };
+  const fraction = ageMin <= REPORT_GAP_MIN ? 1 : 1 - (ageMin - REPORT_GAP_MIN) / (FRESH_WINDOW_MIN - REPORT_GAP_MIN);
+  return { ageMin, fraction: Math.max(0, Math.min(1, fraction)), label };
 }
 
 /**

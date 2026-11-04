@@ -133,7 +133,7 @@ export function DayBody({ showHead, bounds, todayKey = null, live = null, today 
         {isToday && curve && <span className="v3-pill" data-tone="good"><span className="v3-livedot" aria-hidden="true" />Live · {curve.last.at}</span>}
       </div>
 
-      {res.error && <Note tone="bad">Could not load this day ({res.error.code ?? 'error'}). Nothing is drawn rather than a made-up zero.</Note>}
+      {res.error && !hasData && <Note tone="bad">Could not load this day ({res.error.code ?? 'error'}). Nothing is drawn rather than a made-up zero.</Note>}
       {noData && <Note>{isToday ? 'No readings yet today, so nothing is drawn (not a zero).' : 'No readings were recorded for this day, so nothing is drawn (not a zero).'}</Note>}
       {enabled && res.loading && !hasData && <div className="v3-skeleton" style={{ height: 200 }} aria-busy="true" aria-label="Loading" />}
 

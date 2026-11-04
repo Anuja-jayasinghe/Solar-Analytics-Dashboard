@@ -51,6 +51,13 @@ All notable changes to the Solar Analytics Dashboard project.
   circle shows a dash, not "No target", when a target is set but today's figure is unknown.
 
 ### Changed
+- **The live tiles stay live.** The Today and live power tiles re-read the moment you return to the tab, focus the
+  window or the network comes back, instead of showing the old figure until the next minute. They pause while the tab
+  is hidden (no SolisCloud calls for a page nobody is looking at). A failed re-read keeps the last reading on screen,
+  greyed as "Reconnecting…" with "Not live · as of 10:28", instead of dashes, and retries after 15 s (then 30 s, up to
+  a minute). In daylight a reading more than 15 minutes old shows as "No new reading" even when SolisCloud answers (the
+  logger may be offline). "x min ago" ticks every 10 s, and the freshness ring stays full for the inverter's normal
+  five-minute reporting gap.
 - **Inverter generation: Week and Month are calendar periods.** Week is Monday to Sunday, labelled "Week 44 · 2026"
   (ISO week numbers; hover for the dates), with weekday labels on the chart. Month is the calendar month, labelled
   "November 2026", always drawing all its days. Days not reached yet stay empty, never zero. The arrows step a whole
