@@ -5,6 +5,10 @@ All notable changes to the Solar Analytics Dashboard project.
 ## [Unreleased]
 
 ### Added
+- **CI checks more than "it renders".** New Playwright tests on desktop and phone: the motion ends on the real
+  figures, charts draw when scrolled to, the date pickers jump by month and year, the Mark above line stays in its
+  chart, nothing scrolls sideways at 320 px, and light mode is light. Also an axe accessibility scan of each page in
+  both themes, and a gzipped bundle-size budget (`bundle-budget.json`). The e2e job is now required to merge.
 - **Date marks on the statistics chart**, so a dip or a peak can be placed in time. The last 30 days are marked every
   5th day, the last 365 days on the 1st of each month (January shows the year), and lifetime at each new year (months
   when there is less than a year of records). Each mark has a faint line up through the chart. Narrow phones label
@@ -93,6 +97,9 @@ All notable changes to the Solar Analytics Dashboard project.
   now offers Line (the default) and Bars; CEB vs Inverter offers Bars and Lines.
 
 ### Fixed
+- **Light mode text on orange is readable.** Selected options, the calendar's chosen day and primary buttons used
+  white on bright orange (3.1:1). Light mode now fills them with a deeper orange (4.7:1), and the footer is no longer
+  faded (5.3:1). Dark mode is unchanged. Found by the new accessibility scan.
 - **The background colour flows across the cards.** Behind the glass cards the page glows each faded in one straight
   step, so the CEB vs Inverter card was near-black at the top and turned blue partway down, with a visible edge. The
   glows are now larger, overlap, and fade gradually, over a faint warm-to-cool wash, so the colour blends smoothly.
