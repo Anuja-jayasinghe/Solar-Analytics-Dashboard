@@ -8,7 +8,7 @@ import { createElement as h } from 'react';
 import { renderToString } from 'react-dom/server';
 import {
   DASH, fmtNum, shortDate, longDate, monthsBetween, lkrCompact, energyCompact, targetProgress, gaugeFraction,
-  liveState, freshness, openPeriodView, FRESH_WINDOW_MIN, clockAt, readingNote, liveStatusInfo, errorLabel
+  liveState, freshness, openPeriodView, FRESH_WINDOW_MIN, REPORT_GAP_MIN, OLD_READING_MIN, displayLive, clockAt, readingNote, liveStatusInfo, errorLabel
 } from '../src/v3/overview/format.js';
 import { TotalsRow } from '../src/v3/overview/TotalsRow.jsx';
 import { CebCompare } from '../src/v3/ceb/CebCompare.jsx';
@@ -127,7 +127,9 @@ describe('live status', () => {
   it('freshness drains over the window and prefers the inverter timestamp', () => {
     const now = 10_000_000;
     expect(freshness({ dataTimestamp: now - 2 * 60000 }, now)).toMatchObject({ label: '2 min ago' });
-    expect(freshness({ dataTimestamp: now - 2 * 60000 }, now).fraction).toBeCloseTo(1 - 2 / FRESH_WINDOW_MIN, 6);
+    expect(freshness({ dataTimestamp: now - 2 * 60000 }, now).fraction).toBe(1); // within the normal reporting gap: full
+    expect(freshness({ dataTimestamp: now - REPORT_GAP_MIN * 60000 }, now).fraction).toBe(1);
+    expect(freshness({ dataTimestamp: now - 10 * 60000 }, now).fraction).toBeCloseTo(1 - (10 - REPORT_GAP_MIN) / (FRESH_WINDOW_MIN - REPORT_GAP_MIN), 6);
     expect(freshness({ dataTimestamp: now - 30 * 60000 }, now).fraction).toBe(0);
     expect(freshness({ fetchedAt: now - 10_000 }, now).label).toBe('just now');
     expect(freshness({ dataTimestamp: now - 3 * 3600000 }, now).label).toBe('3 h ago');
@@ -296,5 +298,44 @@ describe('rendered tiles', () => {
     expect(unknown).not.toContain('aria-valuenow');
     const zero = renderToString(h(LiveGauge, { live: { status: 'online', currentPowerKw: 0 }, maxKw: 40 }));
     expect(zero).toContain('aria-valuenow="0"');
+  });
+});
+
+describe('not live: an old reading or a lost connection', () => {
+  const now = Date.parse('2026-11-04T05:00:00Z'); // 10:30 in Colombo
+  const reading = (minAgo, extra = {}) => ({ status: 'online', currentPowerKw: 15.9, todayKwh: 16.3, dataTimestamp: now - minAgo * 60000, stale: false, upstream: 'ok', source: 'soliscloud', ...extra });
+
+  it('a current reading passes through untouched', () => {
+    const r = reading(3);
+    expect(displayLive(r, null, now)).toBe(r);
+    expect(displayLive(null, null, now)).toBeNull();
+  });
+  it('over 15 min old while online is not live, even though SolisCloud answered', () => {
+    const shown = displayLive(reading(OLD_READING_MIN + 1), null, now);
+    expect(shown).toMatchObject({ stale: true, staleReason: 'old' });
+    const state = liveState(shown);
+    expect(state).toMatchObject({ key: 'old', label: 'No new reading', tone: 'warn' });
+    expect(liveStatusInfo(shown, null, state).title).toBe('No reading since 10:14');
+    expect(displayLive(reading(OLD_READING_MIN - 1), null, now).stale).toBe(false);
+  });
+  it('at night the inverter reports offline, so an evening reading is not flagged', () => {
+    expect(displayLive(reading(600, { status: 'offline' }), null, now).stale).toBe(false);
+  });
+  it('a failed re-read keeps the last reading, marked not live, never blank', () => {
+    const shown = displayLive(reading(2), { code: 'network' }, now);
+    expect(shown).toMatchObject({ stale: true, staleReason: 'unreachable', currentPowerKw: 15.9 });
+    const state = liveState(shown, { code: 'network' });
+    expect(state).toMatchObject({ key: 'unreachable', label: 'Reconnecting…' });
+    expect(liveStatusInfo(shown, null, state).text).toContain('last reading at 10:28');
+    const gauge = renderToString(h(LiveGauge, { live: shown, error: { code: 'network' }, maxKw: 40 }));
+    expect(gauge).toContain('Reconnecting…');
+    expect(gauge).toContain('data-stale="true"');
+    expect(gauge).toContain('15.9');
+    expect(renderToString(h(TodayTile, { live: shown, targetKwh: 140, now }))).toContain('Not live · as of 10:28');
+  });
+  it('the server\'s own stale reason (SolisCloud down) wins over the age check', () => {
+    const down = reading(40, { stale: true, upstream: 'unavailable', source: 'saved' });
+    expect(displayLive(down, null, now)).toBe(down);
+    expect(liveState(down).key).toBe('upstream');
   });
 });

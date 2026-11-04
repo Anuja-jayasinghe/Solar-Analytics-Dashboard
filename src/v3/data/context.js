@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { cacheKey } from './client.js';
+import { createPoller } from './poller.js';
 
 export const DataContext = createContext(null);
 
@@ -28,8 +29,12 @@ export function useDataSource() {
 
 /**
  * Read one resource. `data` stays null until a real response arrives: a failed or pending read is
- * never rendered as zero. `refresh()` forces a re-read; `pollMs` re-reads on an interval; `enabled: false`
- * waits (for a query that depends on another resource) and reports not-loading with no data.
+ * never rendered as zero. `refresh()` forces a re-read; `enabled: false` waits (for a query that depends on another
+ * resource) and reports not-loading with no data.
+ *
+ * `pollMs` makes it live (see poller.js): re-read on an interval while the tab is visible, at once when the person
+ * comes back to the tab or the network returns, and sooner after a failure. A failed re-read of a live resource keeps
+ * the last real result on screen with `error` set, so the view can mark it "not live" instead of going blank.
  */
 export function useResource(name, query, { pollMs = 0, enabled = true } = {}) {
   const { ready, mode, epoch, request, peek } = useDataSource();
@@ -58,12 +63,38 @@ export function useResource(name, query, { pollMs = 0, enabled = true } = {}) {
     let alive = true;
     const cached = peek(name, queryRef.current);
     setState((s) => ({ data: cached ?? (s.error ? null : s.data), error: null, loading: cached === undefined }));
-    load(false).then((next) => alive && setState(next));
-    let timer = null;
-    if (pollMs > 0) timer = setInterval(() => load(true).then((next) => alive && setState(next)), pollMs);
+
+    const hidden = () => typeof document !== 'undefined' && document.visibilityState === 'hidden';
+    const poller = createPoller({
+      pollMs,
+      isHidden: hidden,
+      run: async (force) => {
+        const next = await load(force);
+        if (alive) {
+          // live: a failed re-read keeps the last real result (marked by `error`); otherwise it replaces it
+          setState((s) => (next.error && pollMs > 0 && s.data !== null ? { data: s.data, error: next.error, loading: false } : next));
+        }
+        return !next.error;
+      }
+    });
+    poller.start();
+
+    let unlisten = () => {};
+    if (pollMs > 0 && typeof window !== 'undefined') {
+      const back = () => poller.onReturn();
+      document.addEventListener('visibilitychange', back);
+      window.addEventListener('focus', back);
+      window.addEventListener('online', back);
+      unlisten = () => {
+        document.removeEventListener('visibilitychange', back);
+        window.removeEventListener('focus', back);
+        window.removeEventListener('online', back);
+      };
+    }
     return () => {
       alive = false;
-      if (timer) clearInterval(timer);
+      poller.stop();
+      unlisten();
     };
     // `key` and `epoch` stand for the query and the data mode/user
   }, [ready, enabled, name, key, epoch, pollMs, load, peek]);
