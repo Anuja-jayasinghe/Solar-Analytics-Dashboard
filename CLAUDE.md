@@ -91,15 +91,19 @@ JSON — which is what made a 500 here take several deploy cycles to diagnose.
 ```bash
 pnpm dev        # dev server
 pnpm test       # vitest
-pnpm test:e2e   # Playwright smoke suite (once: pnpm exec playwright install chromium)
+pnpm test:e2e   # Playwright: smoke, behaviour, accessibility (once: pnpm exec playwright install chromium)
+node scripts/check-bundle-size.mjs   # after build: the gzipped size budget
 pnpm lint       # eslint — 0 errors expected
 pnpm build      # production build
 pnpm audit --prod --audit-level high   # the CI security gate
 ```
 
-CI runs lint, test, build and the prod audit. All four must pass — none is `--if-present`
-any more, because two of them silently passed for months. A separate `e2e` job runs the Playwright
-smoke suite (`e2e/smoke.spec.js`) against the production build as a signed-out visitor.
+CI runs lint, test, build, the bundle-size budget (`bundle-budget.json`, gzipped KB; raise it only with a reason)
+and the prod audit. All must pass — none is `--if-present` any more, because two of them silently passed for months.
+A separate `e2e` job (required to merge) runs Playwright against the production build as a signed-out visitor, on
+desktop and phone: `smoke.spec.js` (pages, gates, redirects, no real data), `behaviour.spec.js` (motion ends on the
+real figures, charts draw on scroll, date pickers, Mark above cap, no sideways scroll at 320 px, light mode) and
+`a11y.spec.js` (axe, both themes; serious/critical WCAG A/AA fail).
 
 ## Operational workflows (Actions tab)
 

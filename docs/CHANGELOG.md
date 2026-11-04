@@ -5,6 +5,27 @@ All notable changes to the Solar Analytics Dashboard project.
 ## [Unreleased]
 
 ### Added
+- **CI checks more than "it renders".** New Playwright tests on desktop and phone: the motion ends on the real
+  figures, charts draw when scrolled to, the date pickers jump by month and year, the Mark above line stays in its
+  chart, nothing scrolls sideways at 320 px, and light mode is light. Also an axe accessibility scan of each page in
+  both themes, and a gzipped bundle-size budget (`bundle-budget.json`). The e2e job is now required to merge.
+- **Date marks on the statistics chart**, so a dip or a peak can be placed in time. The last 30 days are marked every
+  5th day, the last 365 days on the 1st of each month (January shows the year), and lifetime at each new year (months
+  when there is less than a year of records). Each mark has a faint line up through the chart. Narrow phones label
+  every other month.
+- **Full sequence on a visit, a quick fade on a refresh.** The full sequence below plays on the first visit, or after
+  30 minutes or more away from the Overview. A refresh or a return within that time fades the page in together in
+  0.3 s, with the headline figures already in place. Only the live parts still animate: the Today circle and kWh, the
+  live power gauge, and the day's power curve. (The time away is kept in this browser; without it, the full sequence.)
+- **The Overview fills in instead of popping in, one part after another.** After a refresh or a visit, the motion
+  follows the eye down the page, about half a second apart. First the headline figures count up. Then the live row:
+  the gauge sweeps from 0, and the Today circle fills while its kWh and the live kW count up (hidden until their turn,
+  never shown as a 0). Then the CEB vs Inverter bars grow, their labels fade in, and the money-gap bars follow. The generation line, the day curve and the statistics chart draw left to right at a steady pen
+  speed (1.6 s), only as far as the data goes (up to "now" on today's curve), and each dot, the peak and the best and
+  lowest markers appear as the line reaches them. Sections further down fade and rise once as they scroll into view. Each chart draws only once
+  about 40% of it is on screen, and is held empty until then, so it is never already drawn when you reach it. Live refreshes glide from the old value to the new one instead of replaying from zero. The first screen settles within
+  about 2.5 s, the real value is in the page from the first render, and with reduced motion nothing moves. Plain CSS
+  and two small hooks (`src/v3/ui/useMotion.js`), no animation library.
 - **"Generation through the day" is a live power curve, as SolisCloud draws it.** Every power reading in kW (about one a
   minute from SolisCloud; the caption states the real interval) instead of kWh on the hour, with the day's peak marked on the line ("Peak so far 26.3 kW · 11:35" for today). It
   opens on **today**, which comes from SolisCloud, refreshes every two minutes, and adds the live reading as a "now" dot.
@@ -51,6 +72,8 @@ All notable changes to the Solar Analytics Dashboard project.
   circle shows a dash, not "No target", when a target is set but today's figure is unknown.
 
 ### Changed
+- **CEB vs Inverter opens on 12 bill periods** (a year) instead of 8. Phones stay on 8, where 12 pairs of bars and their
+  figures run into each other; 12 and All are a tap away.
 - **The live tiles stay live.** The Today and live power tiles re-read the moment you return to the tab, focus the
   window or the network comes back, instead of showing the old figure until the next minute. They pause while the tab
   is hidden (no SolisCloud calls for a page nobody is looking at). A failed re-read keeps the last reading on screen,
@@ -74,6 +97,17 @@ All notable changes to the Solar Analytics Dashboard project.
   now offers Line (the default) and Bars; CEB vs Inverter offers Bars and Lines.
 
 ### Fixed
+- **Light mode text on orange is readable.** Selected options, the calendar's chosen day and primary buttons used
+  white on bright orange (3.1:1). Light mode now fills them with a deeper orange (4.7:1), and the footer is no longer
+  faded (5.3:1). Dark mode is unchanged. Found by the new accessibility scan.
+- **The background colour flows across the cards.** Behind the glass cards the page glows each faded in one straight
+  step, so the CEB vs Inverter card was near-black at the top and turned blue partway down, with a visible edge. The
+  glows are now larger, overlap, and fade gradually, over a faint warm-to-cool wash, so the colour blends smoothly.
+  The upper cards also stay see-through after the quick fade-in: the fade used to stay applied to the row wrapping them,
+  which made their glass render flat dark next to the blue chart card. It now fades the cards themselves and ends cleanly.
+- **The Mark above line no longer climbs forever.** Dragging it to the top (or holding it there) kept raising the
+  value, because the chart grew to fit the line and the top moved up with it. The scale now comes from the data alone,
+  and the line stays inside the chart, whether dragged, moved with the keys or typed.
 - **The page no longer re-reads everything once a minute.** Each time the sign-in session refreshed its token
   (about once a minute) the dashboard rebuilt its data source and re-read every figure on the page, and the admin and
   Settings screens rebuilt theirs. Only the live figures re-read now, on their own schedule.

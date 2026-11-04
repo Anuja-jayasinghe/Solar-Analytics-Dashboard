@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   customRange, isGrouped, weekStart, isoWeek, periodOf, periodRange, canStepPeriod, stepPeriod, periodLabel, dayPoints, buildPoints, defaultLine, aboveCount, spreadGeometry,
-  dayLabel, dayLabelYear, GROUP_OVER_DAYS, MAX_CUSTOM_DAYS, dataYears, yearRange, yearPoints, yearSummary, clampYear
+  dayLabel, dayLabelYear, GROUP_OVER_DAYS, MAX_CUSTOM_DAYS, dataYears, yearRange, yearPoints, yearSummary, clampYear, spreadTicks
 } from '../src/v3/explore/series.js';
 import { hourlyFromTelemetry, colomboClock } from '../src/v3/explore/hourly.js';
 import { createElement as h } from 'react';
@@ -349,5 +349,31 @@ describe('statistics card', () => {
   it('says so when no day in the range was full', () => {
     const html = renderToString(h(StatsBody, { showHead: true, stats: { ...base, lowestFull: { day: null, fullDays: 0, stoppedDays: 3, unknownDays: 0 } }, loading: false, rangeText: '' }));
     expect(html).toContain('no full day in this range');
+  });
+});
+
+describe('statistics chart date marks', () => {
+  const days = (from, n) => Array.from({ length: n }, (_, i) => { const d = new Date(Date.parse(`${from}T00:00:00Z`) + i * 86400000); return { date: d.toISOString().slice(0, 10), kwh: 100 }; });
+  it('last 30 days: every 5th day, placed where the line has that day', () => {
+    const s = days('2036-08-16', 30); // 16 Aug .. 14 Sep
+    const t = spreadTicks(s, '30');
+    expect(t.map((x) => x.label)).toEqual(['20 Aug', '25 Aug', '30 Aug', '5 Sep', '10 Sep']);
+    expect(t[0].x).toBeCloseTo((4 / 29) * 100, 6); // same x as spreadGeometry gives that day
+  });
+  it('last 365 days: the 1st of each month, with the year on January', () => {
+    const t = spreadTicks(days('2035-09-16', 365), '365');
+    expect(t.map((x) => x.label)).toEqual(['Oct', 'Nov', 'Dec', '2036', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']);
+    // on a narrow phone only every other month keeps its label, always including January (the year)
+    expect(t.filter((x) => !x.minor).map((x) => x.label)).toEqual(['Nov', '2036', 'Mar', 'May', 'Jul', 'Sep']);
+  });
+  it('lifetime: each 1 January; under a year of records, months instead', () => {
+    expect(spreadTicks(days('2024-08-02', 830), 'life').map((x) => x.label)).toEqual(['2025', '2026']);
+    expect(spreadTicks(days('2036-03-10', 120), 'life').map((x) => x.label)).toEqual(['Apr', 'May', 'Jun', 'Jul']); // 10 Mar to 7 Jul
+  });
+  it('labels at the very ends stay inside the chart; nothing to mark without two days', () => {
+    const t = spreadTicks(days('2036-08-05', 30), '30'); // starts on a 5th
+    expect(t[0]).toMatchObject({ x: 0, edge: 'start' });
+    expect(spreadTicks([{ date: '2036-09-10', kwh: 1 }], '30')).toEqual([]);
+    expect(spreadTicks(null, '30')).toEqual([]);
   });
 });

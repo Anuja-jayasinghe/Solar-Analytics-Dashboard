@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
+import { useDrawRef } from '../ui/useMotion.js';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Glass } from '../ui/Glass.jsx';
 import { Tip } from '../ui/Tip.jsx';
 import { Segmented } from '../ui/Segmented.jsx';
+import { useIsPhone } from '../ui/useIsPhone.js';
 import { Note } from '../ui/Note.jsx';
 import { ThresholdPlot } from '../charts/ThresholdPlot.jsx';
 import { MarkToggle } from '../charts/MarkToggle.jsx';
@@ -24,23 +26,27 @@ function Columns({ rows, yMax, threshold, style }) {
   const num = (v) => (labels ? chartNum(v, { dense }) : '');
   const invPts = rows.map((r, i) => (r.inverterKwh === null ? null : [xPct(i, n), yPct(r.inverterKwh, yMax)]));
   const cebPts = rows.map((r, i) => (r.cebKwh === null ? null : [xPct(i, n), yPct(r.cebKwh, yMax)]));
+  // Lines draw left to right up to the last period with a figure; each point appears as the line reaches it.
+  const lastIdx = rows.reduce((m, r, i) => (r.inverterKwh !== null || r.cebKwh !== null ? i : m), -1);
+  const drawEnd = lastIdx < 0 ? 100 : Math.min(100, xPct(lastIdx, n) + 50 / Math.max(n, 1));
+  const at = (i) => Math.min(1, xPct(i, n) / drawEnd);
   return (
     <>
       {style !== 'bars' && (
-        <svg className="v3-plot-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <svg key={`${style}:${rows[0]?.id ?? ''}:${n}`} className="v3-plot-svg" style={{ '--wipe-end': `${drawEnd}%` }} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <path d={linePath(invPts)} fill="none" style={{ stroke: 'var(--gen)' }} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
           <path d={linePath(cebPts)} fill="none" style={{ stroke: 'var(--ceb)' }} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         </svg>
       )}
       <div className="v3-cols" data-dense={n > 16 || undefined}>
-        {rows.map((r) => {
+        {rows.map((r, i) => {
           const hi = r.inverterKwh !== null && r.inverterKwh > threshold;
           const invPct = r.inverterKwh === null ? 0 : (r.inverterKwh / yMax) * 100;
           const cebPct = r.cebKwh === null ? 0 : (r.cebKwh / yMax) * 100;
           const striped = r.status === 'provisional' || isPartial(r);
           return (
             <Tip key={r.id} text={columnTip(r)}>
-              <div className="v3-col">
+              <div className="v3-col" style={{ '--i': i, '--t': at(i) }}>
                 {style === 'bars' ? (
                   <>
                     {r.inverterKwh !== null && (
@@ -74,6 +80,7 @@ function Columns({ rows, yMax, threshold, style }) {
  * a draggable "Mark above" line, and the money gap (LR-004) aligned underneath.
  */
 export function CebCompare({ bills, openPeriod, live, lastStoredDay, todayKey, loading, error }) {
+  const drawRef = useDrawRef(); // draws when scrolled into view (useMotion.js)
   const open = useMemo(() => {
     const view = openPeriodView(openPeriod);
     const soFar = openPeriodSoFar(view, live, lastStoredDay, todayKey);
@@ -82,15 +89,20 @@ export function CebCompare({ bills, openPeriod, live, lastStoredDay, todayKey, l
   const rows = useMemo(() => buildCebRows(bills?.bills, open, todayKey), [bills, open, todayKey]);
 
   const [style, setStyle] = useState('bars');
-  const [count, setCount] = useState(8);
+  const phone = useIsPhone();
+  const [picked, setCount] = useState(null);
+  // A year of bills by default; 8 on a phone, where 12 pairs of bars and their figures run into each other.
+  const count = picked ?? (phone ? 8 : 12);
   const [endIdx, setEndIdx] = useState(null); // null = follow the newest period
   const [thr, setThr] = useState(null); // null = the median of what we have
   const { showMark } = usePrefs();
-  const threshold = thr ?? defaultThreshold(rows);
-  const markAt = showMark ? threshold : -Infinity; // hidden: every inverter bar at full strength
-
   const win = windowOf(rows, count, endIdx ?? rows.length - 1);
-  const yMax = niceMax(Math.max(maxOf(win.rows.flatMap((r) => [r.inverterKwh, r.cebKwh]), 1) * 1.06, showMark ? threshold * 1.04 : 0));
+  // The scale comes from the data alone and the line stays inside it. (It used to stretch to fit the line, so dragging
+  // the line to the top raised the top, and it climbed for as long as the button was held.)
+  const yMax = niceMax(Math.max(maxOf(win.rows.flatMap((r) => [r.inverterKwh, r.cebKwh]), 1) * 1.06, 1));
+  const threshold = Math.min(thr ?? defaultThreshold(rows), yMax);
+  const setLine = (v) => setThr(Math.min(Math.max(0, Math.round(v)), yMax));
+  const markAt = showMark ? threshold : -Infinity; // hidden: every inverter bar at full strength
   const above = aboveSummary(win.rows, threshold);
   const gap = gapSummary(win.rows, bills?.bills ?? []);
   const first = win.rows[0];
@@ -132,17 +144,17 @@ export function CebCompare({ bills, openPeriod, live, lastStoredDay, todayKey, l
             <div className="v3-markrow v3-markgroup">
               {showMark && <><span className="v3-pill" data-tone="gen">{above.known ? `Inverter above: ${above.above} of ${above.known} periods` : 'no data in view'}</span>
               <label className="v3-field-label"><span className="v3-sr">Mark above</span>
-                <input className="v3-field" type="number" min="0" step="50" value={threshold} aria-label="Threshold in kWh" onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v)) setThr(Math.max(0, Math.round(v))); }} style={{ width: 90 }} />
+                <input className="v3-field" type="number" min="0" step="50" value={threshold} aria-label="Threshold in kWh" onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v)) setLine(v); }} style={{ width: 90 }} />
                 <span>kWh</span>
               </label></>}
               <MarkToggle />
             </div>
           </div>
 
-          <div className="v3-chartgrid">
+          <div className="v3-chartgrid" ref={drawRef}>
             <div className="v3-yaxis" aria-hidden="true">{axisTicks(yMax, (v) => fmtNum(v)).map((t) => <span key={t.pct}>{t.label}</span>)}</div>
             <div className="v3-plotwrap">
-              <ThresholdPlot show={showMark} max={yMax} value={threshold} step={10} unit="kWh" height="var(--plot-h, 250px)" onChange={(v) => setThr(v)}>
+              <ThresholdPlot show={showMark} max={yMax} value={threshold} step={10} unit="kWh" height="var(--plot-h, 250px)" onChange={setLine}>
                 {axisTicks(yMax).map((t) => <div key={t.pct} className="v3-gridline" style={{ bottom: `${t.pct}%` }} />)}
                 <Columns rows={win.rows} yMax={yMax} threshold={markAt} style={style} />
               </ThresholdPlot>

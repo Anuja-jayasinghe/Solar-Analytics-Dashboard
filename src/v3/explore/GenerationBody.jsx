@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useDrawRef } from '../ui/useMotion.js';
 import { Tip } from '../ui/Tip.jsx';
 import { Segmented } from '../ui/Segmented.jsx';
 import { Note } from '../ui/Note.jsx';
@@ -22,14 +23,24 @@ function pointTip(p, labelled, grouped) {
 
 /** "Inverter generation": a range of days (or months), a line by default, with the draggable "Mark above" line. */
 export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, bounds, years = [], year = null, onYear, stepLabel = '', billPeriod = null, onPick, canBack, canForward, onStep, onCustom, points, grouped, line, onLine, loading, error }) {
+  const drawRef = useDrawRef(); // draws when scrolled into view (useMotion.js)
   const { showMark } = usePrefs();
   const known = points.filter((p) => p.kwh !== null);
-  const yMax = niceMax(Math.max(maxOf(points.map((p) => p.kwh), 1) * 1.1, showMark ? line * 1.04 : 0));
-  const markAt = showMark ? line : -Infinity;
+  // The scale comes from the data alone and the line stays inside it (it used to stretch to fit the line, so dragging
+  // the line to the top raised the top, and it kept climbing while the button was held).
+  const yMax = niceMax(Math.max(maxOf(points.map((p) => p.kwh), 1) * 1.1, 1));
+  const lineV = Math.min(line, yMax);
+  const setLine = (v) => onLine(Math.min(Math.max(0, Math.round(v)), yMax));
+  const markAt = showMark ? lineV : -Infinity;
   const n = points.length;
-  const above = aboveCount(points, line);
+  const above = aboveCount(points, lineV);
   const unit = grouped ? 'kWh/month' : 'kWh/day';
   const linePts = points.map((p, i) => (p.kwh === null ? null : [xPct(i, n), yPct(p.kwh, yMax)]));
+  // The line draws left to right up to the last day with data (not across empty days still to come); each point
+  // appears when the line reaches it (--t = its share of the draw).
+  const lastIdx = points.reduce((m, p, i) => (p.kwh !== null ? i : m), -1);
+  const drawEnd = lastIdx < 0 ? 100 : Math.min(100, xPct(lastIdx, n) + 50 / Math.max(n, 1));
+  const at = (i) => Math.min(1, xPct(i, n) / drawEnd);
   const dense = n > 30;
   const isYear = kind === 'year';
   const sum = isYear ? yearSummary(points, range) : null;
@@ -95,7 +106,7 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
         <div className="v3-markgroup">
           {showMark && <><span className="v3-pill" data-tone="gen">{above.known ? `${above.above} of ${above.known} ${grouped ? 'months' : 'days'} above` : 'no data in range'}</span>
           <label className="v3-field-label"><span className="v3-sr">Mark above</span>
-            <input className="v3-field" type="number" min="0" step="1" value={line} aria-label={`Threshold in ${unit}`} onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v)) onLine(Math.max(0, Math.round(v))); }} style={{ width: 90 }} />
+            <input className="v3-field" type="number" min="0" step="1" value={lineV} aria-label={`Threshold in ${unit}`} onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v)) setLine(v); }} style={{ width: 90 }} />
             <span>{unit}</span>
           </label></>}
           <MarkToggle />
@@ -107,24 +118,24 @@ export function GenerationBody({ showHead, kind, onKind, style, onStyle, range, 
       {!error && !loading && n > 0 && known.length === 0 && <Note>No generation was recorded in this range.</Note>}
 
       {n > 0 && known.length > 0 && (
-        <div className="v3-chartgrid">
+        <div className="v3-chartgrid" ref={drawRef}>
           <div className="v3-yaxis" aria-hidden="true">{axisTicks(yMax, (v) => fmtNum(v)).map((t) => <span key={t.pct}>{t.label}</span>)}</div>
           <div className="v3-plotwrap">
-            <ThresholdPlot show={showMark} max={yMax} value={line} step={grouped ? 50 : 1} unit={unit} height="var(--plot-h)" onChange={onLine}>
+            <ThresholdPlot show={showMark} max={yMax} value={lineV} step={grouped ? 50 : 1} unit={unit} height="var(--plot-h)" onChange={setLine}>
               {axisTicks(yMax).map((t) => <div key={t.pct} className="v3-gridline" style={{ bottom: `${t.pct}%` }} />)}
               {style !== 'bars' && (
-                <svg className="v3-plot-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <svg key={`${style}:${points[0]?.key ?? ''}:${n}`} className="v3-plot-svg" style={{ '--wipe-end': `${drawEnd}%` }} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                   <path d={linePath(linePts)} fill="none" style={{ stroke: 'var(--gen)' }} strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
                 </svg>
               )}
               <div className="v3-cols" style={{ gap: dense ? 1 : undefined }} data-dense={n > 16 || undefined}>
-                {points.map((p) => {
+                {points.map((p, i) => {
                   const hi = p.kwh !== null && p.kwh > markAt;
                   const partial = p.present > 0 && p.present < p.total; // a month with some days missing: drawn hatched/hollow, never as a full month
                   const pct = p.kwh === null ? 0 : (p.kwh / yMax) * 100;
                   return (
                     <Tip key={p.key} text={pointTip(p, n <= MAX_LABELLED_COLUMNS, grouped)}>
-                      <div className="v3-col" style={dense ? { padding: '0 1%' } : undefined}>
+                      <div className="v3-col" style={{ ...(dense ? { padding: '0 1%' } : null), '--i': i, '--t': at(i) }}>
                         {style === 'bars' ? (
                           p.kwh === null ? <div className="v3-bar single" style={{ height: 3, background: 'var(--nodata)' }} /> : <div className="v3-bar single" style={{ height: `${pct}%`, background: partial ? 'repeating-linear-gradient(135deg, var(--gen) 0 5px, var(--gen-a30) 5px 9px)' : hi ? 'var(--gen)' : 'var(--gen-a34)', border: partial ? '1px solid var(--gen)' : undefined }}><span className="v3-val">{n <= MAX_LABELLED_COLUMNS ? chartNum(p.kwh, { dense: n > 12 }) : ''}</span></div>
                         ) : (

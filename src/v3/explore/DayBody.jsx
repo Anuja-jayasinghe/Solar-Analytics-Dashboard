@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useDrawRef } from '../ui/useMotion.js';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { addDays } from '../../../shared/domain/time.js';
 import { usePrefetch, useResource } from '../data/context.js';
@@ -14,6 +15,7 @@ const HOUR_TICKS = Array.from({ length: LAST_HOUR - FIRST_HOUR + 2 }, (_, i) => 
 
 /** The power curve: every reading in kW, the peak marked, a "now" dot for today, and a hover line with time and kW. */
 function PowerChart({ curve, isToday }) {
+  const drawRef = useDrawRef(); // draws when scrolled into view (useMotion.js)
   const [hover, setHover] = useState(null);
   const yMax = niceMax(Math.max(maxOf(curve.pts.map((p) => p.kw), 1) * 1.15, 1));
   const y = (kw) => 100 - (kw / yMax) * 100;
@@ -27,10 +29,12 @@ function PowerChart({ curve, isToday }) {
     setHover(nearestPoint(curve.pts, min));
   };
   const peakX = xOfMinute(curve.peak.min);
+  // The curve draws left to right up to its last reading (now, for today); the peak appears as the line gets there.
+  const drawEnd = Math.min(100, xOfMinute(curve.last.min) + 1);
   const edge = (x) => (x < 12 ? 'start' : x > 88 ? 'end' : 'mid'); // keep labels inside the plot near its edges
 
   return (
-    <div className="v3-chartgrid">
+    <div className="v3-chartgrid" ref={drawRef} data-keep="live">
       <div className="v3-yaxis" aria-hidden="true">{axisTicks(yMax, (v) => fmtNum(v, v < 10 && v % 1 ? 1 : 0)).map((t) => <span key={t.pct}>{t.label}</span>)}</div>
       <div className="v3-plotwrap">
         <div
@@ -43,13 +47,13 @@ function PowerChart({ curve, isToday }) {
           onPointerLeave={(e) => { if (e.pointerType !== 'touch') setHover(null); }}
         >
           {axisTicks(yMax).map((t) => <div key={t.pct} className="v3-gridline" style={{ bottom: `${t.pct}%` }} />)}
-          <svg className="v3-plot-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <svg className="v3-plot-svg" style={{ '--wipe-end': `${drawEnd}%` }} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
             <path d={area} fill="url(#areaFill)" />
             <path d={line} fill="none" style={{ stroke: 'var(--gen)' }} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
           </svg>
 
-          <span className="v3-peakmark" style={{ left: `${peakX}%`, bottom: `${100 - y(curve.peak.kw)}%` }} aria-hidden="true" />
-          <span className="v3-peaklabel" data-edge={edge(peakX)} style={{ left: `${peakX}%`, bottom: `calc(${100 - y(curve.peak.kw)}% + 12px)` }} aria-hidden="true">
+          <span className="v3-peakmark" style={{ '--at': Math.min(1, peakX / drawEnd), left: `${peakX}%`, bottom: `${100 - y(curve.peak.kw)}%` }} aria-hidden="true" />
+          <span className="v3-peaklabel" data-edge={edge(peakX)} style={{ '--at': Math.min(1, peakX / drawEnd), left: `${peakX}%`, bottom: `calc(${100 - y(curve.peak.kw)}% + 12px)` }} aria-hidden="true">
             {isToday ? 'Peak so far' : 'Peak'} <b>{fmtNum(curve.peak.kw, 1)} kW</b> · {curve.peak.at}
           </span>
 
@@ -137,7 +141,7 @@ export function DayBody({ showHead, bounds, todayKey = null, live = null, today 
       {noData && <Note>{isToday ? 'No readings yet today, so nothing is drawn (not a zero).' : 'No readings were recorded for this day, so nothing is drawn (not a zero).'}</Note>}
       {enabled && res.loading && !hasData && <div className="v3-skeleton" style={{ height: 200 }} aria-busy="true" aria-label="Loading" />}
 
-      {curve && <PowerChart curve={curve} isToday={isToday} />}
+      {curve && <PowerChart key={date} curve={curve} isToday={isToday} />}
     </>
   );
 }

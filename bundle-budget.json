@@ -1,0 +1,8 @@
+{
+  "_note": "Gzipped KB, checked by scripts/check-bundle-size.mjs in CI. Set 2026-11-04 at about 10% over the sizes then (entry 56.1, all JS 167.8, CSS 9.9). Raise only with a reason in the PR.",
+  "gzipKb": {
+    "entryJs": 62,
+    "totalJs": 185,
+    "totalCss": 11
+  }
+}

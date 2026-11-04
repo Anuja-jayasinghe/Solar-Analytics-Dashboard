@@ -48,6 +48,11 @@ jobs:
       - name: Build
         run: pnpm run build
 
+      # Gzipped size budget for the shipped bundle (bundle-budget.json). Page load was the weakest Lighthouse score;
+      # this makes growth a visible decision instead of a slow creep.
+      - name: Bundle size budget
+        run: node scripts/check-bundle-size.mjs
+
       # 61 advisories — two of them critical — accumulated unnoticed because nothing ever
       # looked. Fails only on production-reachable problems: the dev toolchain (vite, rollup,
       # eslint, babel) carries a long tail of advisories that never reach a user, and gating
@@ -55,9 +60,12 @@ jobs:
       - name: Audit production dependencies
         run: pnpm audit --prod --audit-level high
 
-  # Playwright smoke suite against the production build (e2e/smoke.spec.js): the v3 app as a
-  # signed-out visitor on demo data, with fake Supabase credentials and no Clerk key. Checks that
-  # the pages render, the gates hold, old addresses redirect, and no real data is requested.
+  # Playwright against the production build, as a signed-out visitor on demo data (fake Supabase
+  # credentials, no Clerk key), on desktop Chrome and a phone:
+  #   smoke.spec.js      pages render, gates hold, old addresses redirect, no real data is requested
+  #   behaviour.spec.js  motion ends on the real figures, charts draw on scroll, date pickers, the
+  #                      Mark above cap, no sideways scroll at 320 px, light mode is light
+  #   a11y.spec.js       axe scan of each page in both themes (serious/critical WCAG A/AA fail)
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15

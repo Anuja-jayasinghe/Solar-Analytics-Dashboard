@@ -1,4 +1,7 @@
 import { Glass } from '../ui/Glass.jsx';
+import { CountUp } from '../ui/Motion.jsx';
+import { STAGE_MS } from '../ui/useMotion.js';
+import { useMotionMode } from '../ui/motionMode.js';
 import { DASH, clockAt, fmtNum, freshness, targetProgress } from './format.js';
 
 /** The data-freshness ring: full when fresh, draining as the reading ages. Deliberately faint. */
@@ -27,6 +30,7 @@ function FreshnessRing({ live, now }) {
  */
 export function TodayTile({ live, peak = null, targetKwh, now, loading }) {
   const today = live?.todayKwh ?? null;
+  const turn = useMotionMode() === 'full' ? STAGE_MS : 0; // live: animates on every visit, waits its turn only in the full sequence
   const prog = targetProgress(today, targetKwh ?? null);
   const peakKw = peak?.kw ?? live?.peakTodayKw ?? null;
   const peakAt = peak ? peak.at : live?.peakTodayAt ?? null;
@@ -48,7 +52,7 @@ export function TodayTile({ live, peak = null, targetKwh, now, loading }) {
               <svg className="v3-wave" viewBox="0 0 200 14" preserveAspectRatio="none" aria-hidden="true"><path d="M0 7 Q 12.5 0 25 7 T 50 7 T 75 7 T 100 7 T 125 7 T 150 7 T 175 7 T 200 7 V 14 H 0 Z" style={{ fill: 'var(--gen-hi)' }} /></svg>
               <svg className="v3-wave two" viewBox="0 0 200 14" preserveAspectRatio="none" aria-hidden="true"><path d="M0 7 Q 12.5 14 25 7 T 50 7 T 75 7 T 100 7 T 125 7 T 150 7 T 175 7 T 200 7 V 14 H 0 Z" style={{ fill: 'var(--gen)' }} /></svg>
             </div>
-            <span className="v3-num v3-filler-pct">{prog.pct}%</span>
+            <span className="v3-num v3-filler-pct"><CountUp value={prog.pct} duration={1000} delay={turn} suffix="%" /></span>
           </>
         ) : (
           <span className="v3-filler-none">{loading ? '' : targetKwh == null ? 'No target' : DASH}</span>
@@ -59,7 +63,7 @@ export function TodayTile({ live, peak = null, targetKwh, now, loading }) {
         {loading && !live ? (
           <div className="v3-skeleton" style={{ height: 30, width: 120 }} aria-busy="true" aria-label="Loading" />
         ) : (
-          <div className="v3-num v3-kpi-value">{fmtNum(today, 1)}<span className="v3-kpi-unit">kWh</span></div>
+          <div className="v3-num v3-kpi-value"><CountUp value={today} dp={1} duration={750} delay={turn} /><span className="v3-kpi-unit">kWh</span></div>
         )}
         <div className="v3-kpi-sub">
           {prog ? (prog.reached ? `target of ${fmtNum(targetKwh)} kWh reached` : `of ${fmtNum(targetKwh)} kWh target · ${fmtNum(prog.toGoKwh, 1)} to go`) : (targetKwh == null ? 'Set a daily target in Settings' : ' ')}

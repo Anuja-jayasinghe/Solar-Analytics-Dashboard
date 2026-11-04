@@ -1,17 +1,20 @@
 import { Glass } from '../ui/Glass.jsx';
 import { Info } from '../ui/Info.jsx';
+import { CountText } from '../ui/Motion.jsx';
+import { useMotionMode } from '../ui/motionMode.js';
 import { DASH, energyCompact, fmtNum, lifetimeGeneration, longDate, lkrCompact, monthsBetween, openPeriodSoFar, openPeriodView, shortDate } from './format.js';
 
 const MONTH_NAMES = { Jan: 'January', Feb: 'February', Mar: 'March', Apr: 'April', May: 'May', Jun: 'June', Jul: 'July', Aug: 'August', Sep: 'September', Oct: 'October', Nov: 'November', Dec: 'December' };
 
-function Tile({ label, short, value, unit, sub, info, loading }) {
+function Tile({ label, short, value, unit, sub, info, loading, order = 0 }) {
+  const full = useMotionMode() === 'full'; // a quick visit shows the headline figures straight away
   return (
     <Glass className="v3-kpi" aria-label={label}>
       <div className="v3-kpi-label"><span className="v3-long">{label}</span><span className="v3-short">{short ?? label}</span>{info && <Info label={`About ${label.toLowerCase()}`} {...info} />}</div>
       {loading ? (
         <div className="v3-skeleton" style={{ height: 30, width: '70%' }} aria-busy="true" aria-label="Loading" />
       ) : (
-        <div className="v3-num v3-kpi-value">{value}{unit ? <span className="v3-kpi-unit">{unit}</span> : null}</div>
+        <div className="v3-num v3-kpi-value"><CountText text={value} delay={order * 90} duration={600} animate={full} />{unit ? <span className="v3-kpi-unit">{unit}</span> : null}</div>
       )}
       <div className="v3-kpi-sub">{loading ? ' ' : sub}</div>
     </Glass>
@@ -71,6 +74,7 @@ export function TotalsRow({ totals, live, todayKey, loading }) {
         short="All-time gen"
         value={energy.value}
         unit={energy.unit}
+        order={1}
         sub={life.source === 'counter' ? `inverter lifetime counter${months ? ` · ${months} months of records` : ''}` : gen?.firstDay ? `since ${longDate(gen.firstDay)}${months ? ` · ${months} months` : ''}` : 'no data yet'}
         info={genInfo}
         loading={loading}
@@ -80,6 +84,7 @@ export function TotalsRow({ totals, live, todayKey, loading }) {
         short="All-time earned"
         value={money.value}
         unit={money.unit}
+        order={2}
         sub={earn?.billCount ? `from ${earn.billCount} CEB bills${months ? ` · ${monthsBetween(earn.firstBillDate, earn.lastBillDate) ?? months} months` : ''}` : 'no bills yet'}
         info={earnInfo}
         loading={loading}

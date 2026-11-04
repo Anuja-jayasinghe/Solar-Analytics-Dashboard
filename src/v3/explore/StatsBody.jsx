@@ -1,11 +1,12 @@
 import { Tip } from '../ui/Tip.jsx';
+import { useDrawRef } from '../ui/useMotion.js';
 import { Info } from '../ui/Info.jsx';
 import { Note } from '../ui/Note.jsx';
 import { Segmented } from '../ui/Segmented.jsx';
 import { areaPath, linePath } from '../charts/scale.js';
 import { DASH, fmtNum } from '../overview/format.js';
 import { FULL_DAY_MAX_DOWN_MIN } from '../../../shared/domain/uptime.js';
-import { dayLabelYear, spreadGeometry } from './series.js';
+import { dayLabelYear, spreadGeometry, spreadTicks } from './series.js';
 
 /**
  * Statistics for a chosen period (last 30 days, last 365 days, lifetime): average per day, best day, lowest full day
@@ -14,12 +15,14 @@ import { dayLabelYear, spreadGeometry } from './series.js';
  * days-above were removed on purpose (docs/design/v3/README.md).
  */
 export function StatsBody({ showHead, stats, loading, error, rangeText, period, onPeriod, periods = [] }) {
+  const drawRef = useDrawRef(); // draws when scrolled into view (useMotion.js)
   const avg = stats?.avgPerDayKwh ?? null;
   const best = stats?.best ?? null;
   const worst = stats?.worst ?? null; // the lowest recorded day: only sets the chart's scale
   const full = stats?.lowestFull ?? null;
   const low = full?.day ?? null;
   const geo = stats ? spreadGeometry(stats.series ?? [], best, worst, avg, low) : null;
+  const ticks = stats ? spreadTicks(stats.series ?? [], period) : [];
   const leftOut = full ? full.stoppedDays + full.unknownDays : 0;
   const leftText = full
     ? [full.stoppedDays ? `${full.stoppedDays} stopped for over ${FULL_DAY_MAX_DOWN_MIN} min` : null, full.unknownDays ? `${full.unknownDays} without an uptime record` : null].filter(Boolean).join(' and ')
@@ -56,18 +59,24 @@ export function StatsBody({ showHead, stats, loading, error, rangeText, period, 
       </div>
 
       {geo ? (
-        <div className="v3-spread" role="img" aria-label={`Daily generation over the range. Best day ${best ? fmtNum(best.kwh, 1) : DASH} kWh, lowest full day ${low ? fmtNum(low.kwh, 1) : DASH} kWh, average ${fmtNum(avg, 1)} kWh.`}>
+        <div className="v3-spread" ref={drawRef} role="img" aria-label={`Daily generation over the range. Best day ${best ? fmtNum(best.kwh, 1) : DASH} kWh, lowest full day ${low ? fmtNum(low.kwh, 1) : DASH} kWh, average ${fmtNum(avg, 1)} kWh.`}>
+          <div className="v3-spread-grid" aria-hidden="true">{ticks.map((t) => <i key={t.key} style={{ left: `${t.x}%` }} />)}</div>
           <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
             <path d={areaPath(geo.points)} fill="url(#areaFillCeb)" />
             <path d={linePath(geo.points)} fill="none" style={{ stroke: 'var(--ceb)' }} strokeWidth="1.8" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
             {geo.avgY !== null && <line x1="0" x2="100" y1={geo.avgY} y2={geo.avgY} style={{ stroke: 'var(--ink2)' }} strokeWidth="1.4" strokeDasharray="5 4" vectorEffect="non-scaling-stroke" />}
           </svg>
           <div className="v3-spread-dots">
-            <Tip className="v3-sdot-wrap" style={{ left: `${geo.best.x}%`, top: `${geo.best.y}%` }} text={best ? `Best day · ${dayLabelYear(best.date)}` : ''}><span className="v3-sdot" style={{ background: 'var(--good)', boxShadow: '0 0 0 4px var(--good-a20)' }} /><span className="v3-sval" style={{ color: 'var(--good)' }}>{best ? fmtNum(best.kwh, 1) : ''}</span></Tip>
-            {geo.low && <Tip className="v3-sdot-wrap" style={{ left: `${geo.low.x}%`, top: `${geo.low.y}%` }} text={`Lowest full day · ${dayLabelYear(low.date)}`}><span className="v3-sdot" style={{ background: 'var(--warn)', boxShadow: '0 0 0 4px var(--warn-a20)' }} /><span className="v3-sval below" style={{ color: 'var(--warn)' }}>{fmtNum(low.kwh, 1)}</span></Tip>}
+            <Tip className="v3-sdot-wrap" style={{ '--at': geo.best.x / 100, left: `${geo.best.x}%`, top: `${geo.best.y}%` }} text={best ? `Best day · ${dayLabelYear(best.date)}` : ''}><span className="v3-sdot" style={{ background: 'var(--good)', boxShadow: '0 0 0 4px var(--good-a20)' }} /><span className="v3-sval" style={{ color: 'var(--good)' }}>{best ? fmtNum(best.kwh, 1) : ''}</span></Tip>
+            {geo.low && <Tip className="v3-sdot-wrap" style={{ '--at': geo.low.x / 100, left: `${geo.low.x}%`, top: `${geo.low.y}%` }} text={`Lowest full day · ${dayLabelYear(low.date)}`}><span className="v3-sdot" style={{ background: 'var(--warn)', boxShadow: '0 0 0 4px var(--warn-a20)' }} /><span className="v3-sval below" style={{ color: 'var(--warn)' }}>{fmtNum(low.kwh, 1)}</span></Tip>}
           </div>
         </div>
       ) : !loading && !error ? <Note>No generation was recorded in this range.</Note> : null}
+      {geo && ticks.length > 0 && (
+        <div className="v3-spread-x" aria-hidden="true">
+          {ticks.map((t) => <span key={t.key} data-edge={t.edge} data-minor={t.minor || undefined} style={{ left: `${t.x}%` }}>{t.label}</span>)}
+        </div>
+      )}
     </>
   );
 }

@@ -1,4 +1,5 @@
 import { Tip } from '../ui/Tip.jsx';
+import { useDrawRef } from '../ui/useMotion.js';
 import { Info } from '../ui/Info.jsx';
 import { DASH, lkrCompact } from '../overview/format.js';
 import { gapLabel, gapTip } from './rows.js';
@@ -10,6 +11,7 @@ const signed = (v) => (v === null ? DASH : `${v < 0 ? '−' : '+'} ${lkrCompact(
  * Below the line = CEB paid less than the inverter generated. A dash = the period could not be compared.
  */
 export function GapStrip({ rows, summary }) {
+  const drawRef = useDrawRef(); // draws when scrolled into view (useMotion.js)
   let maxAbs = 1;
   for (const r of rows) if (r.gapLkr !== null) maxAbs = Math.max(maxAbs, Math.abs(r.gapLkr));
   const a = summary.all;
@@ -33,18 +35,18 @@ export function GapStrip({ rows, summary }) {
       </div>
 
       <div className="v3-gap-allphone">All-time {signed(a.differenceLkr)} over {a.periods} bills · each at its own rate · a dash = days missing</div>
-      <div className="v3-chartgrid">
+      <div className="v3-chartgrid" ref={drawRef}>
         <div className="v3-gap-axis" aria-hidden="true"><span style={{ color: "var(--good)" }}>paid more</span><span>0</span><span style={{ color: "var(--warn)" }}>paid less</span></div>
         <div className="v3-plotwrap">
           <div className="v3-gap-plot">
             <div className="v3-gap-zero" />
             <div className="v3-cols">
-              {rows.map((r) => {
+              {rows.map((r, i) => {
                 const h = r.gapLkr === null ? 0 : Math.max(3, (Math.abs(r.gapLkr) / maxAbs) * 46);
                 return (
                   <Tip key={r.id} text={gapTip(r)}>
-                    <div className="v3-col v3-gapcol">
-                      {r.gapLkr !== null && <div className="v3-gapbar" style={r.gapLkr >= 0 ? { bottom: '50%', height: `${h}%`, background: 'var(--good)' } : { top: '50%', height: `${h}%`, background: 'var(--warn)' }} />}
+                    <div className="v3-col v3-gapcol" style={{ '--i': i }}>
+                      {r.gapLkr !== null && <div className="v3-gapbar" data-dir={r.gapLkr >= 0 ? 'up' : 'down'} style={r.gapLkr >= 0 ? { bottom: '50%', height: `${h}%`, background: 'var(--good)' } : { top: '50%', height: `${h}%`, background: 'var(--warn)' }} />}
                       {r.gapLkr === null && r.status !== 'provisional' && <span className="v3-gapdash">–</span>}
                     </div>
                   </Tip>
