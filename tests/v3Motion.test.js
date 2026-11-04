@@ -39,7 +39,7 @@ describe('reveal styles', () => {
     expect(css).toMatch(/\[data-draw='pending'\] \* \{ animation-play-state: paused !important; \}/); // never seen half drawn
     const reduced = css.slice(css.lastIndexOf('@media (prefers-reduced-motion: reduce)'));
     for (const sel of ['.v3-bar', '.v3-gapbar', '.v3-plot-svg', '.v3-dot', '.v3-sdot']) expect(reduced).toContain(sel);
-    expect(reduced).toMatch(/\.v3-page > \[data-reveal\] \{ opacity: 1 !important/);
+    expect(reduced).toMatch(/\.v3-page \.v3-glass \{ opacity: 1 !important/);
   });
 });
 
@@ -55,7 +55,9 @@ describe('full sequence or quick fade', () => {
   });
   it('a quick visit fades the page in together and only the live charts still draw', () => {
     const css = readFileSync(new URL('../src/v3/styles/base.css', import.meta.url), 'utf8');
-    expect(css).toMatch(/\.v3-page\[data-motion='quick'\] > \* \{ animation: v3-fadein \.3s/);
+    expect(css).toMatch(/\.v3-page\[data-motion='quick'\] \.v3-glass \{ animation: v3-fadein \.3s ease-out backwards; \}/);
+    // never on a wrapper around glass: that turns the glass flat dark (Chrome backdrop root)
+    expect(css).not.toMatch(/\.v3-page\[data-motion='quick'\] > \* \{/);
     expect(css).toMatch(/\.v3-page\[data-motion='quick'\] \[data-draw\]:not\(\[data-keep\]\) \* \{ animation: none !important; \}/);
     const day = readFileSync(new URL('../src/v3/explore/DayBody.jsx', import.meta.url), 'utf8');
     expect(day).toContain('data-keep="live"');

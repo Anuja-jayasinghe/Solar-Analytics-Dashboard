@@ -90,6 +90,8 @@ All notable changes to the Solar Analytics Dashboard project.
 - **The background colour flows across the cards.** Behind the glass cards the page glows each faded in one straight
   step, so the CEB vs Inverter card was near-black at the top and turned blue partway down, with a visible edge. The
   glows are now larger, overlap, and fade gradually, over a faint warm-to-cool wash, so the colour blends smoothly.
+  The upper cards also stay see-through after the quick fade-in: the fade used to stay applied to the row wrapping them,
+  which made their glass render flat dark next to the blue chart card. It now fades the cards themselves and ends cleanly.
 - **The Mark above line no longer climbs forever.** Dragging it to the top (or holding it there) kept raising the
   value, because the chart grew to fit the line and the top moved up with it. The scale now comes from the data alone,
   and the line stays inside the chart, whether dragged, moved with the keys or typed.
