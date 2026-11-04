@@ -4,6 +4,8 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-11-04
+
 ### Added
 - **The daily goal is a little power grid.** Instead of a filling circle, the Today tile draws your home, with solar
   panels on the roof and an inverter on the wall, feeding a town. The power goes over two pylons and a substation,
