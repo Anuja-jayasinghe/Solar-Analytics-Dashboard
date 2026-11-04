@@ -7,6 +7,7 @@ import { createElement as h } from 'react';
 import { renderToString } from 'react-dom/server';
 import { numberIn, countAt } from '../src/v3/ui/useMotion.js';
 import { CountUp, CountText } from '../src/v3/ui/Motion.jsx';
+import { motionFor, AWAY_MS } from '../src/v3/ui/motionMode.js';
 
 describe('counting numbers', () => {
   it('finds the number in a formatted figure and keeps what is around it', () => {
@@ -39,5 +40,28 @@ describe('reveal styles', () => {
     const reduced = css.slice(css.lastIndexOf('@media (prefers-reduced-motion: reduce)'));
     for (const sel of ['.v3-bar', '.v3-gapbar', '.v3-plot-svg', '.v3-dot', '.v3-sdot']) expect(reduced).toContain(sel);
     expect(reduced).toMatch(/\.v3-page > \[data-reveal\] \{ opacity: 1 !important/);
+  });
+});
+
+describe('full sequence or quick fade', () => {
+  const now = Date.parse('2026-11-04T10:00:00Z');
+  it('full on a first visit or after 30 min or more away; quick on a refresh or return within that', () => {
+    expect(motionFor(now, 0)).toBe('full'); // never seen here
+    expect(motionFor(now, NaN)).toBe('full'); // storage unreadable
+    expect(motionFor(now, now - 5_000)).toBe('quick'); // a refresh
+    expect(motionFor(now, now - (AWAY_MS - 1))).toBe('quick');
+    expect(motionFor(now, now - AWAY_MS)).toBe('full');
+    expect(motionFor(now, now + 60_000)).toBe('full'); // a clock that moved backwards is not trusted
+  });
+  it('a quick visit fades the page in together and only the live charts still draw', () => {
+    const css = readFileSync(new URL('../src/v3/styles/base.css', import.meta.url), 'utf8');
+    expect(css).toMatch(/\.v3-page\[data-motion='quick'\] > \* \{ animation: v3-fadein \.3s/);
+    expect(css).toMatch(/\.v3-page\[data-motion='quick'\] \[data-draw\]:not\(\[data-keep\]\) \* \{ animation: none !important; \}/);
+    const day = readFileSync(new URL('../src/v3/explore/DayBody.jsx', import.meta.url), 'utf8');
+    expect(day).toContain('data-keep="live"');
+  });
+  it('a count can be switched off (quick visit): the final value at once', () => {
+    expect(renderToString(h(CountText, { text: 'LKR 3.07', animate: false }))).toBe('LKR 3.07');
+    expect(renderToString(h(CountUp, { value: 12, suffix: '%', animate: false }))).toBe('12%');
   });
 });

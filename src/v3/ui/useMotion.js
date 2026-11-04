@@ -9,6 +9,8 @@
 // With prefers-reduced-motion, values are shown at once and nothing moves.
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { readPref, writePref } from '../theme/storage.js';
+import { motionFor } from './motionMode.js';
 
 const useIso = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 export const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
@@ -50,7 +52,7 @@ export function useCountUp(target, opts) {
  * useCountUp plus `waiting`: true while a first count waits for its turn (`delay`). A number shown during that wait would
  * read as a real 0, so CountUp keeps it hidden until it starts.
  */
-export function useCount(target, { duration = 700, glide = 450, delay = 0 } = {}) {
+export function useCount(target, { duration = 700, glide = 450, delay = 0, off = false } = {}) {
   const [shown, setShown] = useState(target);
   const [waiting, setWaiting] = useState(false);
   const shownRef = useRef(null); // what is on screen now (null = no number shown yet)
@@ -63,7 +65,7 @@ export function useCount(target, { duration = 700, glide = 450, delay = 0 } = {}
     const from = first ? 0 : shownRef.current;
     // A tab opened in the background shows the real value: there is nothing to watch, and frames do not run there.
     const hidden = typeof document !== 'undefined' && document.visibilityState === 'hidden';
-    if (reducedMotion() || hidden || from === target) { shownRef.current = target; setShown(target); setWaiting(false); return undefined; }
+    if (off || reducedMotion() || hidden || from === target) { shownRef.current = target; setShown(target); setWaiting(false); return undefined; }
     const dur = first ? duration : glide;
     // Timed from now, not from the first frame: if frames are held back (a busy page), the count picks up where it
     // should be instead of sitting on its starting value.
@@ -107,19 +109,20 @@ function startNow(el) {
  * with a staged start (its charts draw in turn), one further down is "pending" (hidden) until about a tenth of it
  * scrolls into view. Once per mount.
  */
-export function useRevealChildren(ref) {
+export function useRevealChildren(ref, mode = 'full') {
   useIso(() => {
     const root = ref.current;
     if (!root) return undefined;
     const kids = [...root.children];
-    if (typeof IntersectionObserver !== 'function' || reducedMotion()) {
+    pageStart = performance.now();
+    // quick: everything is on show at once (the page fades in together; base.css), with no turns to wait for
+    if (mode === 'quick' || typeof IntersectionObserver !== 'function' || reducedMotion()) {
       for (const k of kids) k.dataset.reveal = 'in';
       return undefined;
     }
     const io = new IntersectionObserver((entries) => {
       for (const e of entries) if (e.isIntersecting) { e.target.dataset.reveal = 'in'; io.unobserve(e.target); }
     }, { threshold: 0.1 });
-    pageStart = performance.now();
     let stage = 0;
     for (const k of kids) {
       if (k.getBoundingClientRect().top < window.innerHeight) {
@@ -132,6 +135,28 @@ export function useRevealChildren(ref) {
     const done = setTimeout(() => { for (const k of kids) k.style.setProperty('--reveal-delay', '0ms'); }, LOAD_WINDOW_MS);
     return () => { io.disconnect(); clearTimeout(done); };
   }, []);
+}
+
+/**
+ * Full or quick for this visit (motionMode.js), decided once when the Overview opens, and the "last on screen" time kept
+ * up to date while it is shown (every minute, and when the tab is hidden or the page left).
+ */
+export function usePageMotion() {
+  const [mode] = useState(() => (typeof window === 'undefined' ? 'full' : motionFor(Date.now(), Number(readPref('overviewSeen', '0')))));
+  useEffect(() => {
+    const mark = () => writePref('overviewSeen', Date.now());
+    mark();
+    const t = setInterval(() => { if (document.visibilityState !== 'hidden') mark(); }, 60_000);
+    document.addEventListener('visibilitychange', mark);
+    window.addEventListener('pagehide', mark);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener('visibilitychange', mark);
+      window.removeEventListener('pagehide', mark);
+      mark();
+    };
+  }, []);
+  return mode;
 }
 
 /**

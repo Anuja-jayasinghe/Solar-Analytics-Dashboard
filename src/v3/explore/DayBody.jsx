@@ -34,7 +34,7 @@ function PowerChart({ curve, isToday }) {
   const edge = (x) => (x < 12 ? 'start' : x > 88 ? 'end' : 'mid'); // keep labels inside the plot near its edges
 
   return (
-    <div className="v3-chartgrid" ref={drawRef}>
+    <div className="v3-chartgrid" ref={drawRef} data-keep="live">
       <div className="v3-yaxis" aria-hidden="true">{axisTicks(yMax, (v) => fmtNum(v, v < 10 && v % 1 ? 1 : 0)).map((t) => <span key={t.pct}>{t.label}</span>)}</div>
       <div className="v3-plotwrap">
         <div

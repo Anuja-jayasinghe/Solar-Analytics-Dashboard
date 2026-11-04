@@ -5,6 +5,10 @@ All notable changes to the Solar Analytics Dashboard project.
 ## [Unreleased]
 
 ### Added
+- **Full sequence on a visit, a quick fade on a refresh.** The full sequence below plays on the first visit, or after
+  30 minutes or more away from the Overview. A refresh or a return within that time fades the page in together in
+  0.3 s, with the headline figures already in place. Only the live parts still animate: the Today circle and kWh, the
+  live power gauge, and the day's power curve. (The time away is kept in this browser; without it, the full sequence.)
 - **The Overview fills in instead of popping in, one part after another.** After a refresh or a visit, the motion
   follows the eye down the page, about half a second apart. First the headline figures count up. Then the live row:
   the gauge sweeps from 0, and the Today circle fills while its kWh and the live kW count up (hidden until their turn,
