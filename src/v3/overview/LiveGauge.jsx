@@ -48,7 +48,6 @@ export function LiveGauge({ live, error = null, maxKw, loading }) {
           {loading && !live ? <div className="v3-skeleton" style={{ height: 34, width: 70, margin: '0 auto' }} aria-busy="true" aria-label="Loading" /> : <div className="v3-num v3-gauge-kw"><CountUp value={kw} dp={1} duration={750} delay={turn} /></div>}
           <div className="v3-kpi-sub">{note ? 'kW then' : 'kW now'}</div>
         </div>
-        <span className="v3-gauge-min" aria-hidden="true">0</span>
         <span className="v3-gauge-max" aria-hidden="true">{maxKw ? `${fmtNum(maxKw)} kW` : DASH}</span>
       </div>
       <div className="v3-kpi-sub v3-gauge-share">

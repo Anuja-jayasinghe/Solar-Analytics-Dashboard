@@ -208,8 +208,7 @@ html, body { margin: 0; padding: 0; }
 .v3-gauge-read { position: absolute; left: 0; right: 0; top: 33%; text-align: center; }
 .v3-gauge-kw { font-size: 40px; line-height: 1; }
 .v3-gauge-read .v3-kpi-sub { font-size: 13px; margin-top: 4px; }
-.v3-gauge-min, .v3-gauge-max { position: absolute; bottom: 0; font-size: 11px; color: var(--ink2); }
-.v3-gauge-min { left: 22px; }
+.v3-gauge-max { position: absolute; bottom: 0; font-size: 11px; color: var(--ink2); }
 .v3-gauge-max { right: 18px; }
 .v3-gauge-share { font-size: 12.5px; max-width: 150px; line-height: 1.5; }
 
@@ -252,8 +251,7 @@ html, body { margin: 0; padding: 0; }
   .v3-gauge-kw { font-size: 22px; }
   .v3-gauge-read { top: 30%; }
   .v3-gauge-read .v3-kpi-sub { font-size: 10.5px; margin-top: 2px; }
-  .v3-gauge-min, .v3-gauge-max { font-size: 9px; }
-  .v3-gauge-min { left: 12px; }
+  .v3-gauge-max { font-size: 9px; }
   .v3-gauge-max { right: 8px; }
   .v3-gauge-share { font-size: 10.5px; text-align: center; max-width: none; white-space: normal; min-width: 0; }
 }
