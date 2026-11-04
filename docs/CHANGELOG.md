@@ -14,8 +14,9 @@ All notable changes to the Solar Analytics Dashboard project.
   it is the first thing you see. The text beside the town leads with the percentage of the target, then the target and
   what is left to go (the building count is left to the picture, and both are told to screen readers). Today's peak
   is no longer repeated here; it is marked on the live power gauge. Stale
-  or asleep: the pulses stop (and stale greys out as before). Without a target, the kWh only. On phones the two live
-  tiles stack, so the town gets the full width.
+  or asleep: the pulses stop (and stale greys out as before). Without a target, the kWh only. On phones the town
+  gets the full width, and live power under it shrinks to a slim strip instead of a second big gauge: the kW now, a
+  thin bar of the share of the maximum with today's peak marked on it, and the peak time.
 - **CI checks more than "it renders".** New Playwright tests on desktop and phone: the motion ends on the real
   figures, charts draw when scrolled to, the date pickers jump by month and year, the Mark above line stays in its
   chart, nothing scrolls sideways at 320 px, and light mode is light. Also an axe accessibility scan of each page in

@@ -267,6 +267,27 @@ html, body { margin: 0; padding: 0; }
 .v3-gauge-peak i { width: 12px; height: 4px; border-radius: 2px; background: var(--peak); flex: 0 0 auto; }
 .v3-live-tile[data-stale] .v3-sun-ray { animation-play-state: paused; }
 @keyframes v3-ray { 50% { opacity: .72; } }
+/* phones: the live tile becomes a slim strip (the daily goal's town above keeps the room) */
+.v3-live-compact { display: none; }
+.v3-live-bar { position: relative; height: 8px; border-radius: 4px; background: var(--track); }
+.v3-live-bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--gen); }
+.v3-live-bar > i[data-red] { background: var(--bad); }
+.v3-live-tile[data-stale] .v3-live-bar > i { background: var(--ink2); }
+.v3-live-compact[data-resting] .v3-live-bar > i { display: none; }
+/* today's peak on the bar: a red tick with a small arrow pointing down at it (the sun gauge's mark, small) */
+.v3-live-bar-peak { position: absolute; top: -3px; bottom: -3px; width: 3px; margin-left: -1.5px; border-radius: 2px; background: var(--peak); animation: v3-fadein .35s ease-out both; animation-delay: calc(var(--reveal-delay, 0ms) + .35s); }
+.v3-live-bar-peak::before { content: ''; position: absolute; left: 50%; top: -8px; transform: translateX(-50%); border: 4px solid transparent; border-top-color: var(--ink); border-bottom-width: 0; }
+@media (max-width: 700px) {
+  .v3-gauge-tile { padding: 10px 14px 12px; gap: 8px; align-items: stretch; }
+  .v3-gauge-tile .v3-gauge, .v3-gauge-tile .v3-gauge-share { display: none; }
+  .v3-gauge-tile .v3-status { position: static; align-self: flex-start; }
+  .v3-live-compact { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 14px; row-gap: 6px; align-items: center; }
+  .v3-live-compact-read { grid-row: span 2; display: flex; align-items: baseline; gap: 4px; }
+  .v3-live-compact-read .v3-num { font-size: 24px; line-height: 1; }
+  .v3-live-compact-unit { font-size: 11px; color: var(--ink2); }
+  .v3-live-compact-sub { font-size: 11px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+@media (prefers-reduced-motion: reduce) { .v3-live-bar-peak { animation: none; } }
 @media (prefers-reduced-motion: reduce) { .v3-sun-ray[data-lit], .v3-sun-peak { animation: none; } .v3-sun-ray, .v3-sun-disc { transition: none; } }
 
 /* A reading that is not current: colour drains out of the tile so it cannot pass for live. */
@@ -302,10 +323,6 @@ html, body { margin: 0; padding: 0; }
   .v3-fresh span:first-child { display: none; }
   .v3-status { top: 8px; right: 10px; font-size: 10px; gap: 5px; }
   .v3-bulb { width: 8px; height: 8px; }
-  .v3-gauge { width: 100%; max-width: 280px; height: auto; aspect-ratio: 340 / 196; margin-top: 14px; } /* the live tiles stack on phones: the sun gets the width */
-  .v3-gauge-kw { font-size: 26px; }
-  .v3-sun-unit { font-size: 11px; margin-top: 0; }
-  .v3-sun-label { font-size: 13px; }
   .v3-gauge-share { font-size: 10.5px; text-align: center; align-items: center; max-width: none; white-space: normal; min-width: 0; gap: 2px; }
 }
 

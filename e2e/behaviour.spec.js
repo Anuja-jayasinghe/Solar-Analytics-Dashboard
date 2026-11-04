@@ -131,7 +131,8 @@ test('light mode is light: the date picker is not a dark panel', async ({ page }
   expect(luminance).toBeGreaterThan(0.85);
 });
 
-test('the rising sun lights one ray per 2.5% of the maximum and marks today\'s peak', async ({ browser }) => {
+test('the rising sun lights one ray per 2.5% of the maximum and marks today\'s peak', async ({ browser }, testInfo) => {
+  desktopOnly(testInfo); // phones show the slim strip instead (below)
   const ctx = await browser.newContext({ reducedMotion: 'reduce' });
   const page = await ctx.newPage();
   await page.goto('/');
@@ -142,5 +143,20 @@ test('the rising sun lights one ray per 2.5% of the maximum and marks today\'s p
   await expect(meter.locator('.v3-sun-ray[data-lit]')).toHaveCount(Math.ceil((now / max) * 40));
   await expect(meter.locator('.v3-sun-peak')).toBeVisible();
   await expect(page.locator('.v3-gauge-peak')).toContainText(/^Peak \d+(\.\d)? kW/);
+  await ctx.close();
+});
+
+test('on a phone the live power is a slim strip under the town, not a second big tile', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' });
+  const page = await ctx.newPage();
+  await page.goto('/');
+  const tile = page.getByRole('region', { name: 'Live power' });
+  await expect(tile.locator('.v3-gauge')).toBeHidden(); // the sun is for wider screens
+  const strip = tile.getByRole('meter', { name: 'Live power' });
+  await expect(strip).toBeVisible();
+  await expect(strip).toContainText(/kW now/);
+  await expect(strip).toContainText(/\d+% of \d+ kW/);
+  await expect(strip.locator('.v3-live-bar-peak')).toBeVisible(); // today's peak, marked on the bar
+  expect((await tile.boundingBox()).height).toBeLessThan(110);
   await ctx.close();
 });

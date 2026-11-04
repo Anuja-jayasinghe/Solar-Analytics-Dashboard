@@ -90,6 +90,22 @@ export function LiveGauge({ live, error = null, maxKw, peak = null, loading }) {
         </div>
         {peakText && <div className="v3-gauge-peak"><i aria-hidden="true" />{peakText}</div>}
       </div>
+
+      {/* phones: a slim strip instead of the sun, so the live tile stays small under the daily goal's town */}
+      <div className="v3-live-compact" role="meter" aria-label="Live power" data-resting={resting || undefined} {...meter}>
+        <div className="v3-live-compact-read">
+          {loading && !live ? <div className="v3-skeleton" style={{ height: 22, width: 56 }} aria-busy="true" aria-label="Loading" /> : <span className="v3-num"><CountUp value={kw} dp={1} duration={750} delay={turn} /></span>}
+          <span className="v3-live-compact-unit">{note ? 'kW then' : 'kW now'}</span>
+        </div>
+        <div className="v3-live-bar" aria-hidden="true">
+          <i data-red={frac !== null && frac >= 0.875 ? true : undefined} style={{ width: `${typeof arc === 'number' ? Math.max(0, Math.min(100, arc)) : 0}%` }} />
+          {typeof pk === 'number' && <span className="v3-live-bar-peak" style={{ left: `${(pk / 180) * 100}%` }} />}
+        </div>
+        <div className="v3-live-compact-sub">
+          {note ? `${note[0].toUpperCase()}${note.slice(1)}` : pct === null ? (state.key === 'upstream' ? 'No reading saved today yet' : 'share unknown') : `${pct}% of ${fmtNum(maxKw)} kW`}
+          {peakText ? ` · ${peakText}` : ''}
+        </div>
+      </div>
     </Glass>
   );
 }
