@@ -1,4 +1,4 @@
-// api/ceb-bills/ingestions.js
+// api/_lib/cebBills/ingestions.js — served at /api/ceb-bills/ingestions by api/ceb-bills/[action].js
 //
 // Admin-authenticated reads of the CEB bill ingestion pipeline.
 //
@@ -13,10 +13,10 @@
 // the anon policies on those tables are dropped by
 // scripts/sql/2026-09-24_revoke_anon_bill_access.sql.
 
-import { verifyAdminToken } from '../_lib/verifyAdminToken.js'
-import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
-import { supabase, blockOnConfigProblem } from '../_lib/supabaseServer.js';
-import { withRequestLog } from '../_lib/log.js';
+import { verifyAdminToken } from '../verifyAdminToken.js'
+import { handlePreflightAndMethod } from '../httpSecurity.js';
+import { supabase, blockOnConfigProblem } from '../supabaseServer.js';
+import { withRequestLog } from '../log.js';
 
 // Ingestions whose extraction never completed. They have no extraction row, so the queue
 // lists them separately for a retry or a delete.

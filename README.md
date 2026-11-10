@@ -259,13 +259,13 @@ CI runs lint, test, build and the production audit. All four must pass.
 ## Project structure
 
 ```
-api/                      Vercel serverless functions (10 of 12 used)
+api/                      Vercel serverless functions (6 of 12 used)
 ├── _lib/                 Shared code — excluded from the function count
 │   ├── supabaseServer.js   One server client, with a key-role assertion
 │   ├── cebBillParser.js    Pure regex parser and validator
 │   ├── pdfText.js          pdfjs-dist text extraction
 │   └── httpSecurity.js     CORS allowlist and method gating
-├── ceb-bills/            upload · extract · records · ingestions · delete
+├── ceb-bills/[action].js one function: upload · extract · records · ingestions · signed-url · delete
 └── health.js             /healthz and /ready
 
 src/

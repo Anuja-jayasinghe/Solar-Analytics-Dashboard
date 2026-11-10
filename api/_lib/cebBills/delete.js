@@ -1,4 +1,4 @@
-// api/ceb-bills/delete.js
+// api/_lib/cebBills/delete.js — served at /api/ceb-bills/delete by api/ceb-bills/[action].js
 //
 // Permanently delete a bill, addressed either by its ingestion or by its finalised record:
 //
@@ -21,10 +21,10 @@
 // It deliberately does not rely on a database trigger to cascade the deletes: the trigger the
 // old `delete-record` depended on exists only in the live database, not in any migration.
 
-import { verifyAdminToken } from '../_lib/verifyAdminToken.js';
-import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
-import { supabase, blockOnConfigProblem } from '../_lib/supabaseServer.js';
-import { audit, actorOf, withRequestLog } from '../_lib/log.js';
+import { verifyAdminToken } from '../verifyAdminToken.js';
+import { handlePreflightAndMethod } from '../httpSecurity.js';
+import { supabase, blockOnConfigProblem } from '../supabaseServer.js';
+import { audit, actorOf, withRequestLog } from '../log.js';
 
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET_BILLS || 'ceb_bills';
 

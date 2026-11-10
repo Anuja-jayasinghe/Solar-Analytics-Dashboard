@@ -4,6 +4,13 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+### Changed
+- **The six bill endpoints are one serverless function.** `api/ceb-bills/[action].js` routes `/api/ceb-bills/upload`,
+  `extract`, `ingestions`, `signed-url`, `records` and `delete` to their handlers, which moved unchanged to
+  `api/_lib/cebBills/`. The URLs and behaviour are the same. The project now uses 6 of Vercel Hobby's 12 functions
+  (was 11), which leaves room for the email bill intake (#242) and observability (#241). A new test fails CI if the
+  count ever goes over 12.
+
 ## [3.1.1] - 2026-11-04
 
 ### Fixed

@@ -1,4 +1,4 @@
-// api/ceb-bills/signed-url.js
+// api/_lib/cebBills/signed-url.js — served at /api/ceb-bills/signed-url by api/ceb-bills/[action].js
 //
 // POST { filePath } -> { signedUrl, expiresIn }
 //
@@ -13,10 +13,10 @@
 // The path must belong to a known ingestion. Signing whatever path the caller names would turn
 // this endpoint into a way to read any object in the bucket.
 
-import { verifyAdminToken } from '../_lib/verifyAdminToken.js';
-import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
-import { supabase, blockOnConfigProblem } from '../_lib/supabaseServer.js';
-import { withRequestLog } from '../_lib/log.js';
+import { verifyAdminToken } from '../verifyAdminToken.js';
+import { handlePreflightAndMethod } from '../httpSecurity.js';
+import { supabase, blockOnConfigProblem } from '../supabaseServer.js';
+import { withRequestLog } from '../log.js';
 
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET_BILLS || 'ceb_bills';
 const EXPIRES_IN_SECONDS = 300;

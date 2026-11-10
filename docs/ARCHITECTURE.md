@@ -116,8 +116,9 @@ Three separate credential scopes, and **keeping them separate is the security mo
 
 Vercel's Hobby plan caps the project at **12 serverless functions**. Files under `api/_lib/`
 and `api/_config/` are excluded from that count because of the leading underscore, which is why
-shared code lives there. The count is currently 10 — `/healthz` and `/ready` deliberately share
-one handler rather than taking two slots.
+shared code lives there. The count is currently 6: `/healthz` and `/ready` share one handler, the six bill endpoints share
+`api/ceb-bills/[action].js`, and every dashboard read goes through `api/data/[resource].js`.
+`tests/functionBudget.test.js` fails CI if the count goes over 12.
 
 ---
 
@@ -581,7 +582,7 @@ failures rarer.
 ## 9. Repository map
 
 ```
-api/                        Vercel serverless functions (10 of 12 used)
+api/                        Vercel serverless functions (6 of 12 used)
 ├── _lib/                   Shared — excluded from the function count
 │   ├── supabaseServer.js   The one server client + config assertion
 │   ├── solisAuth.js        HMAC-SHA1 signing (node:crypto). Server-only, deliberately
@@ -591,8 +592,11 @@ api/                        Vercel serverless functions (10 of 12 used)
 │   ├── cebRecordRules.js   ceb_data record validation
 │   ├── userMetadataRules.js  role / access allowlist for user admin
 │   ├── verifyAdminToken.js Clerk verification, fails closed
-│   └── httpSecurity.js     CORS allowlist, preflight, method gate
-├── ceb-bills/              upload · extract · records · ingestions · signed-url · delete
+│   ├── httpSecurity.js     CORS allowlist, preflight, method gate
+│   ├── cebBills/           the six bill handlers (upload, extract, records, ingestions, signed-url, delete)
+│   └── data/               the read API: handler, repo, live provider, rate limit
+├── ceb-bills/[action].js   One function routing /api/ceb-bills/<action> to _lib/cebBills
+├── data/[resource].js      The authenticated read API
 ├── admin/users/[userId].js User management
 ├── solis/explore.js        Debug proxy for SolisCloud
 ├── settings.js             system_settings writes
