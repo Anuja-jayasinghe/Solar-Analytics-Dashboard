@@ -266,7 +266,8 @@ missingBillAlert ⇔ today > expectedNextBill + 7 days ∧ no pending ingestion
   `saveExtraction`. The admin `upload` and `extract` endpoints use it (step 2). Tests: `tests/billIntake.test.js`.
 - `api/_lib/billGate.js`: `evaluateBillGate()` for rule 5 and `ratioBoundsFromEnv()` (step 3). Not called by
   anything yet. Tests: `tests/billGate.test.js`.
-- `scripts/sql/2026-11-10_bill_intake_source.sql`: the unique `(source_type, source_message_id)` index (step 6).
+- `scripts/sql/2026-11-10_bill_intake_source.sql`: the unique `(source_type, source_message_id)` index (step 6),
+  applied 2026-11-10.
   `billIntake.findByMessage()` looks an email up, and `store({ sourceMessageId })` records it.
 - `shared/domain/billSchedule.js` (`evaluateBillArrival`, tests `tests/billSchedule.test.js`) and
   `scripts/check_missing_bill.js`: rule 9 (step 7). The expected date is the latest bill plus the median of the last
