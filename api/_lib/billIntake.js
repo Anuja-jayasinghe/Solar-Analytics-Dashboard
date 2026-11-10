@@ -69,10 +69,26 @@ export function createBillIntake({ db, extractText, bucket = DEFAULT_BUCKET }) {
     },
 
     /**
+     * The ingestion already made from this email (LR-005 rule 4), or null. `messageId` is the Resend
+     * email_id; the unique index uq_ceb_bill_ingestions_source_message backs this up. Throws on failure.
+     */
+    async findByMessage(sourceType, messageId) {
+      const { data, error } = await db
+        .from('ceb_bill_ingestions')
+        .select('id, file_path, received_at, status')
+        .eq('source_type', sourceType)
+        .eq('source_message_id', messageId)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw new Error(`Message lookup failed: ${error.message}`);
+      return data ?? null;
+    },
+
+    /**
      * Write the PDF to Storage and create its ingestion row. If the row cannot be written the file is
      * removed again, so Storage never holds a bill no row points to. Throws on failure.
      */
-    async store({ buffer, filename, contentType = 'application/pdf', ownerId, createdBy, sourceType, fileSha256 }) {
+    async store({ buffer, filename, contentType = 'application/pdf', ownerId, createdBy, sourceType, sourceMessageId = null, fileSha256 }) {
       const filePath = buildStoragePath({ adminId: ownerId, filename });
 
       const { error: uploadError } = await db.storage
@@ -84,6 +100,7 @@ export function createBillIntake({ db, extractText, bucket = DEFAULT_BUCKET }) {
         .from('ceb_bill_ingestions')
         .insert({
           source_type: sourceType,
+          source_message_id: sourceMessageId,
           file_path: filePath,
           file_sha256: fileSha256 ?? createSha256(buffer),
           status: 'received',

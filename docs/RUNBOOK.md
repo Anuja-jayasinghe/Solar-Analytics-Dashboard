@@ -38,7 +38,7 @@ exports every table plus the schema as a downloadable artifact. It costs two min
 |---|---|---|---|
 | Fetch Live Inverter Data | every 5 min | SolisCloud → `inverter_data_live` | [No live data](#no-live-inverter-data) |
 | Generate Daily Inverter Summary | `30 1 * * *` | aggregates → `inverter_data_daily_summary` | [Summary failing](#daily-summary-failing) |
-| Data Freshness Check | daily | opens a `data-outage` issue if rows stop arriving | It *is* the alarm — read the issue |
+| Data Freshness Check | daily | opens a `data-outage` issue if rows stop arriving, and a `missing-bill` issue if the monthly bill is 7 days overdue | It *is* the alarm — read the issue |
 | Keepalive | `17 3 */10 * *` + push to `main` | heartbeat commit, re-enables schedules | [Workflows disabled](#workflows-silently-disabled) |
 | Collect Inverter Telemetry | `45 18 * * *` (00:15 Colombo) | last 7 completed days of Solis `inverterDay` + `collector/day` + `alarmList` → telemetry, alarms, uptime tables | [Telemetry collector](#telemetry-collector-failing) |
 | Backfill Inverter Telemetry | manual (**dry run default**) | same collector over any range, `--concurrency 4` | [Backfilling telemetry](#backfilling-telemetry) |
@@ -216,6 +216,16 @@ No Solis calls, about a minute. Take a snapshot first if you want a before-image
 skipped. After the first successful run set `TELEMETRY_REQUIRED=true` in
 `.github/workflows/data-freshness-check.yml` (issue #165), otherwise a collector that silently
 stops stays invisible.
+
+### The monthly bill is overdue (`missing-bill` issue)
+
+`scripts/check_missing_bill.js` (job `bill` in `data-freshness-check.yml`, LR-005 rule 9) expects the next bill one
+usual interval after the latest (the median of the last 6 gaps) and alerts 7 days after that, unless an upload is
+waiting in the review queue. The issue closes itself once the bill is in. To clear it:
+
+1. Find the bill in Gmail (from `eBill@edl.lk`). If it never came, EDL is late: wait, or ask EDL.
+2. Upload it on the Admin page and approve it. Once email intake is live, also check that Gmail forwarding is not
+   paused (Settings → Forwarding) and that the filter still matches (sender and subject).
 
 ### Workflows silently disabled
 

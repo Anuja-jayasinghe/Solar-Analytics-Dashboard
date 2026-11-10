@@ -18,6 +18,12 @@ All notable changes to the Solar Analytics Dashboard project.
 - **The auto-record gate for emailed bills** (`api/_lib/billGate.js`, LR-005 rule 5). It holds seven checks: extraction,
   account, new month, order, meter continuity, a 25–35 day period, and CEB units against the inverter. Each passes,
   fails or is unknown, and unknown never passes. It is not wired to anything yet.
+- **A missing-bill alert.** The daily Data Freshness Check now has a second job that opens a `missing-bill` issue
+  (which emails you) when no bill has arrived 7 days after it was due. The due date is the latest bill plus the usual
+  gap between bills, and nothing fires while an uploaded bill waits for review. It is separate from the inverter
+  outage alert (LR-005 rule 9).
+- **A migration for emailed bills** (`scripts/sql/2026-11-10_bill_intake_source.sql`, not applied yet): a unique
+  index so the same email can never create two uploads.
 
 ## [3.1.1] - 2026-11-04
 
