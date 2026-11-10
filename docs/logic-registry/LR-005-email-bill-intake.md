@@ -1,6 +1,7 @@
 # LR-005: CEB Bill Intake by Email
 
-Status: **Proposed, not implemented.** Add it to the registry index (`README.md`) when it ships.
+Status: **In progress (#242).** Steps 1–3 of the checklist are built; nothing receives email yet. Add it to the
+registry index (`README.md`) when it ships.
 Owner: CEB bill pipeline
 Primary files (planned):
 - `api/ceb-bills/[action].js`: the six bill endpoints merged into one function, plus the new `inbound` action
@@ -47,6 +48,7 @@ Configuration (Vercel env, server-only, **never** `VITE_`):
 | `SOLAR_CEB_ACCOUNT` | The solar bill's account number. Not committed to the repository |
 | `BILL_ALERT_TO` | Where the "needs you" email goes |
 | `BILL_INTAKE_MODE` | `shadow` (default), `auto` or `off` (rule 8) |
+| `BILL_RATIO_MIN`, `BILL_RATIO_MAX` | The bounds for check 5.6, `0 < min < max`. Unset or invalid: check 5.6 is unknown, so nothing is recorded automatically |
 
 ## Canonical rules
 
@@ -100,6 +102,11 @@ Configuration (Vercel env, server-only, **never** `VITE_`):
       - The bounds are set from the bills on record before `auto` mode is switched on (open question 4).
    7. The bill is not older than the latest bill on record. A backfilled, corrected or reissued bill always goes to
       review.
+
+   In `api/_lib/billGate.js` the checks are named `extraction` (5.1), `account` (5.2), `new_month` (5.3, the
+   billing-month part), `order` (5.3's date part together with 5.7, since "after the latest bill" covers both),
+   `continuity` (5.4), `period` (5.5) and `units` (5.6). Each is `ok`, failed, or `unknown`, and unknown counts as
+   failed. The bill date is `billing_period_end`, as in the admin approve.
 
 6. **Recording works exactly like the admin approve.** The same `sanitizeRecord()` runs, and the same
    `approve_ceb_extraction()` RPC writes `ceb_data`, the extraction and the ingestion in one transaction. The record
@@ -246,9 +253,14 @@ missingBillAlert ⇔ today > expectedNextBill + 7 days ∧ no pending ingestion
 3. **Does Resend's received-email API return the original headers** (`Authentication-Results`, ARC) needed for the
    DKIM check in rule 2? If not, use ARC from the forwarded message, or settle for sender domain plus the private
    address.
-4. **The `RATIO_MIN` / `RATIO_MAX` bounds** for check 6, set from the bills on record (LR-004's per-bill data has
+4. **The `BILL_RATIO_MIN` / `BILL_RATIO_MAX` bounds** for check 5.6, set from the bills on record (LR-004's per-bill data has
    the ratios).
 5. **Which domain** to use for receiving and sending.
 
 ## Current implementation files
-None yet. See "Primary files (planned)" above.
+- `api/ceb-bills/[action].js`: one function for the six bill endpoints (step 1, #247). The `inbound` action is not
+  added yet.
+- `api/_lib/billIntake.js`: `findDuplicate`, `read` (in memory, writes nothing), `store`, `download`, `loadTariff`,
+  `saveExtraction`. The admin `upload` and `extract` endpoints use it (step 2). Tests: `tests/billIntake.test.js`.
+- `api/_lib/billGate.js`: `evaluateBillGate()` for rule 5 and `ratioBoundsFromEnv()` (step 3). Not called by
+  anything yet. Tests: `tests/billGate.test.js`.

@@ -1,12 +1,14 @@
 // api/_lib/cebBills/upload.js — served at /api/ceb-bills/upload by api/ceb-bills/[action].js
 
 import { verifyAdminToken } from '../verifyAdminToken.js'
-import { buildStoragePath, createSha256, looksLikePdf, parseMultipartForm, MAX_UPLOAD_BYTES } from '../cebBillUploadUtils.js'
+import { parseMultipartForm, MAX_UPLOAD_BYTES } from '../cebBillUploadUtils.js'
 import { handlePreflightAndMethod } from '../httpSecurity.js';
 import { supabase, blockOnConfigProblem } from '../supabaseServer.js';
 import { audit, actorOf, withRequestLog } from '../log.js';
+import { createBillIntake, pdfProblem } from '../billIntake.js';
+import { extractPdfText } from '../pdfText.js';
 
-const BUCKET = process.env.SUPABASE_STORAGE_BUCKET_BILLS || 'ceb_bills'
+const intake = createBillIntake({ db: supabase, extractText: extractPdfText })
 const MAX_BYTES = MAX_UPLOAD_BYTES
 // PDF only: the extractor reads the PDF text layer and cannot parse images, so accepting them
 // would only create ingestions that are guaranteed to fail extraction.
@@ -50,32 +52,22 @@ async function handler(req, res) {
       return
     }
 
-    if (!file.buffer || file.buffer.length === 0) {
+    // The declared type is client-supplied; check the bytes too.
+    const problem = pdfProblem(file.buffer)
+    if (problem === 'empty') {
       res.status(400).json({ error: 'Uploaded file is empty' })
       return
     }
-
-    // The declared type is client-supplied; check the bytes too.
-    if (!looksLikePdf(file.buffer)) {
+    if (problem === 'not_pdf') {
       res.status(400).json({ error: 'Uploaded file is not a valid PDF' })
       return
     }
 
-    const fileSha256 = createSha256(file.buffer)
+    const fileSha256 = intake.sha256(file.buffer)
     const sourceType = fields.source_type || 'manual_upload'
     const identity = getAdminIdentity(adminUser)
 
-    const { data: duplicateRow, error: duplicateError } = await supabase
-      .from('ceb_bill_ingestions')
-      .select('id, file_path, received_at, status')
-      .eq('file_sha256', fileSha256)
-      .order('received_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (duplicateError) {
-      throw new Error(`Duplicate check failed: ${duplicateError.message}`)
-    }
+    const duplicateRow = await intake.findDuplicate(fileSha256)
 
     if (duplicateRow) {
       res.status(409).json({
@@ -89,52 +81,29 @@ async function handler(req, res) {
       return
     }
 
-    const filePath = buildStoragePath({ adminId: identity.id, filename: file.filename })
-
-    const { error: uploadError } = await supabase.storage
-      .from(BUCKET)
-      .upload(filePath, file.buffer, {
-        contentType: file.contentType,
-        upsert: false,
-        cacheControl: '3600'
-      })
-
-    if (uploadError) {
-      throw new Error(`Storage upload failed: ${uploadError.message}`)
-    }
-
-    const payload = {
-      source_type: sourceType,
-      file_path: filePath,
-      file_sha256: fileSha256,
-      status: 'received',
-      created_by: identity.createdBy
-    }
-
-    const { data: insertedRow, error: insertError } = await supabase
-      .from('ceb_bill_ingestions')
-      .insert(payload)
-      .select('id, received_at, status')
-      .single()
-
-    if (insertError) {
-      await supabase.storage.from(BUCKET).remove([filePath])
-      throw new Error(`Failed to create ingestion row: ${insertError.message}`)
-    }
+    const stored = await intake.store({
+      buffer: file.buffer,
+      filename: file.filename,
+      contentType: file.contentType,
+      ownerId: identity.id,
+      createdBy: identity.createdBy,
+      sourceType,
+      fileSha256
+    })
 
     audit(req, {
       action: 'bill.upload',
       actor: actorOf(adminUser),
-      target: { ingestionId: insertedRow.id },
+      target: { ingestionId: stored.ingestionId },
       changes: { sourceType, sizeBytes: file.buffer.length, latencyMs: Date.now() - startedAt }
     })
 
     res.status(201).json({
-      ingestionId: insertedRow.id,
-      filePath,
+      ingestionId: stored.ingestionId,
+      filePath: stored.filePath,
       fileSha256,
-      status: insertedRow.status,
-      receivedAt: insertedRow.received_at
+      status: stored.status,
+      receivedAt: stored.receivedAt
     })
   } catch (error) {
     console.error('CEB bill upload failed', {
