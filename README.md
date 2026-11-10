@@ -305,10 +305,18 @@ disagree, the reference documents are current.
 
 ## Project status
 
-Version 2.1.0 is the last known-good state before a planned UI redesign.
+**v3.1.1** is live at [solaredge.anujajay.com](https://solaredge.anujajay.com). See the
+[changelog](docs/CHANGELOG.md) for what each release changed. Planned work is on the
+[roadmap](https://github.com/users/Anuja-jayasinghe/projects/7).
 
 | | |
 | --- | --- |
+| Bills reconciled | 25, from 2024-09-05 to 2026-09-03, no duplicates (verified at v2.1.0) |
+| Verification | Every field diffed against both source PDF and database |
+| Independent checksum | Summed `units_exported` equals the 19,799 kWh meter delta |
+| Data privacy | All real data is private since 2026-10-29: visitors see demo data, invited users read through the API |
+
+--- | --- |
 | Bills reconciled | 25, from 2024-09-05 to 2026-09-03, no duplicates |
 | Verification | Every field diffed against both source PDF and database |
 | Independent checksum | Summed `units_exported` equals the 19,799 kWh meter delta |

@@ -1,5 +1,9 @@
 # v3 Refactor: Plan and Progress Log
 
+> **History.** The refactor shipped in v3.0.0 and was completed on 2026-10-29. The phase issues are closed, and the
+> remaining items are tracked on the [roadmap](https://github.com/users/Anuja-jayasinghe/projects/7). This file is no
+> longer updated.
+
 **Branch:** `refactor/v3` · **Rollback point:** tag `v2.1.0`
 **Started:** 2026-10-03
 **Rule:** this file is the single source of truth for what v3 intends to do and what it has

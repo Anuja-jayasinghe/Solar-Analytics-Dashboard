@@ -89,11 +89,10 @@ body text ≥ 14px / labels ≥ 12px, contrast checked against the surface the t
 - **Before starting a long-running branch, `git fetch` and compare with `origin/main`.** The v3 branch was cut from a stale local
   `main` and duplicated a week of merged work (audit, security hardening, doc reorganisation) before the merge exposed it.
 
-- `docs/V3_REFACTOR_PLAN.md` is the source of truth for the v3 refactor: checklists, a progress
-  log, and the **deferred / bypassed register**.
-- Anything skipped, bypassed, partially done or knowingly worked around gets (a) a row in the
-  register and (b) a GitHub issue labelled `v3-deferred`, **at the moment it happens**.
-- Commits reference the phase (`chore(v3/P0): …`). Superseded docs move to `docs/archive/`.
+- Anything skipped, bypassed, partially done or knowingly worked around gets a GitHub issue on the roadmap
+  **at the moment it happens**, so nothing is dropped silently. (During the v3 refactor this was the deferred
+  register in `docs/V3_REFACTOR_PLAN.md`, now history.)
+- Superseded docs move to `docs/archive/`.
 
 ## 7a. Branching and merging
 
@@ -112,7 +111,7 @@ body text ≥ 14px / labels ≥ 12px, contrast checked against the surface the t
 - Exception: the keepalive heartbeat commits to `main`. The Actions bot cannot be exempted on a personal repository, so it
   pushes as the owner with the fine-grained PAT secret `KEEPALIVE_PAT` (Contents write, this repo only). If that secret is
   missing or expired the heartbeat fails and scheduled workflows risk being disabled after 60 days idle: renew it.
-- Every PR states what changed, what did not, and the checks run; anything skipped is a `v3-deferred` issue (section 7).
+- Every PR states what changed, what did not, and the checks run; anything skipped is an issue on the roadmap (section 7).
 
 ## 8. Operating
 

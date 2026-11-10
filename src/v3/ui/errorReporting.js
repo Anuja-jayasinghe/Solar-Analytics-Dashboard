@@ -6,7 +6,7 @@
 // Until 2026-10-29 errors went to the console and nowhere else: v3's AppErrorBoundary logged,
 // and nothing listened for errors outside a render at all.
 //
-// The reporter is Rollbar (decision D4 in docs/IMPROVEMENT_PLAN_2026-10-29.md), provisioned
+// The reporter is Rollbar (decision D4 in docs/archive/IMPROVEMENT_PLAN_2026-10-29.md; work tracked in issue #241), provisioned
 // through the Vercel Marketplace. Until it is provisioned and wired with setErrorReporter(),
 // reportError() only logs. Wiring it is one call in main.jsx: build the client from the
 // Marketplace-provided client token and pass `(error, context) => rollbar.error(error, context)`.

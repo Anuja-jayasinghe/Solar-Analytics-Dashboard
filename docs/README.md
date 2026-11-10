@@ -49,14 +49,16 @@ refactors, the finished Clerk migration, old plans and specs — kept for histor
 topic. Every file there carries a banner saying so. Nothing in the archive describes the current
 system reliably.
 
-## v3 refactor (in progress)
+## v3 refactor (completed)
 
-The ground-up refactor tracked in [`V3_REFACTOR_PLAN.md`](./V3_REFACTOR_PLAN.md) (decisions, phase
-checklists, progress log, and the deferred / bypassed register).
+The ground-up refactor ran from 2026-10-03 to 2026-10-29 and shipped as v3.0.0. [`V3_REFACTOR_PLAN.md`](./V3_REFACTOR_PLAN.md)
+is its record: decisions, phase checklists, progress log and the deferred / bypassed register. Planned work now lives on the
+[roadmap](https://github.com/users/Anuja-jayasinghe/projects/7).
 
 | Document | Contents |
 |---|---|
-| [`V3_REFACTOR_PLAN.md`](./V3_REFACTOR_PLAN.md) | Decisions, checklists, progress log, deferred register |
+| [`V3_REFACTOR_PLAN.md`](./V3_REFACTOR_PLAN.md) | Decisions, checklists, progress log, deferred register (history) |
+| [`archive/IMPROVEMENT_PLAN_2026-10-29.md`](./archive/IMPROVEMENT_PLAN_2026-10-29.md) | The 2026-10-29 security, load-time and observability plan (history; decision D4 chose Rollbar) |
 | [`WORKING_RULES.md`](./WORKING_RULES.md) | The rulebook: data honesty, dates, security, DB changes, quality gates, tracking |
 | [`adr/`](./adr/README.md) | Architecture decision records (uptime source, shared modules, private reads, demo, null ≠ 0) |
 | [`SOLIS_API_FIELD_CATALOG.md`](./SOLIS_API_FIELD_CATALOG.md) | Every SolisCloud endpoint and field, from live probes: what we use, what we skip |
