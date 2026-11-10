@@ -1,6 +1,6 @@
 # LR-005: CEB Bill Intake by Email
 
-Status: **In progress (#242).** Steps 1–3 of the checklist are built; nothing receives email yet. Add it to the
+Status: **In progress (#242).** Steps 1–3, 6 and 7 of the checklist are built; nothing receives email yet. Add it to the
 registry index (`README.md`) when it ships.
 Owner: CEB bill pipeline
 Primary files (planned):
@@ -80,7 +80,7 @@ Configuration (Vercel env, server-only, **never** `VITE_`):
    A download link in place of an attachment is not supported in this version.
 
 4. **Repeats do nothing.** The upload step already removes duplicates by SHA-256, and the ingestion also stores
-   Resend's `email_id`. A retried webhook or a re-forwarded email answers 200 and changes nothing.
+   Resend's `email_id` (`source_type = 'email_forward'`, `source_message_id`, unique together). A retried webhook or a re-forwarded email answers 200 and changes nothing.
 
 5. **The auto-record gate.** A bill is recorded without a person only when **every** check passes. Any failure sends
    the bill to the review queue with the failing checks listed.
@@ -150,7 +150,7 @@ Resend inbound ─ webhook email.received (metadata) ─▶ POST /api/ceb-bills/
   1. verify signature, recipient, sender domain            (rule 2)  ─ fail → log, 200
   2. mode off → 200
   3. GET the email and attachment from Resend              (rule 3)
-  4. billIntake.upload(pdf, { source: 'email', emailId })  (SHA-256 dedupe, Storage, ingestion; rule 4)
+  4. findByMessage(email_id) + findDuplicate(sha256)        (rule 4; store() comes after the account check)
   5. billIntake.extract(ingestionId)                       (pdfText + parseCebBillText + validateExtraction)
   6. account ≠ SOLAR_CEB_ACCOUNT → delete stored PDF + ingestion, 200   (rule 1)
   7. billGate(extraction, latestBill, inverterWindow)      (rule 5, pure)
@@ -214,8 +214,9 @@ missingBillAlert ⇔ today > expectedNextBill + 7 days ∧ no pending ingestion
 4. `api/_lib/notify.js`: one Resend send, plain text plus simple HTML, and a link to the review queue.
 5. The `inbound` action, rules 1 to 4 and 6 to 8. Tests drive it with recorded webhook payloads and fixture PDFs
    (the two existing bill formats, a home bill, a PDF with no account match).
-6. A migration: `ceb_bill_ingestions.source` (`upload` | `email`) and `source_ref` (the Resend `email_id`), unique
-   per source. Record it in `docs/MIGRATIONS.md`.
+6. A migration: a unique index on `ceb_bill_ingestions (source_type, source_message_id)`. The columns already exist
+   from the 2026-04-23 design: `source_type` is `manual_upload` or `email_forward`, `source_message_id` the Resend
+   `email_id`. Record it in `docs/MIGRATIONS.md`.
 7. The missing-bill check in the freshness workflow (rule 9).
 8. Docs: `docs/API.md` (the `inbound` action), `docs/SECURITY.md` (the non-Clerk endpoint), `docs/RUNBOOK.md`
    (setting up Gmail, Resend and DNS; switching modes; replaying a held email), and the CHANGELOG.
@@ -265,3 +266,9 @@ missingBillAlert ⇔ today > expectedNextBill + 7 days ∧ no pending ingestion
   `saveExtraction`. The admin `upload` and `extract` endpoints use it (step 2). Tests: `tests/billIntake.test.js`.
 - `api/_lib/billGate.js`: `evaluateBillGate()` for rule 5 and `ratioBoundsFromEnv()` (step 3). Not called by
   anything yet. Tests: `tests/billGate.test.js`.
+- `scripts/sql/2026-11-10_bill_intake_source.sql`: the unique `(source_type, source_message_id)` index (step 6).
+  `billIntake.findByMessage()` looks an email up, and `store({ sourceMessageId })` records it.
+- `shared/domain/billSchedule.js` (`evaluateBillArrival`, tests `tests/billSchedule.test.js`) and
+  `scripts/check_missing_bill.js`: rule 9 (step 7). The expected date is the latest bill plus the median of the last
+  6 gaps; the alert fires 7 days later unless an upload waits for review. It runs as the `bill` job of
+  `data-freshness-check.yml` and opens its own `missing-bill` issue, separate from the inverter outage issue.

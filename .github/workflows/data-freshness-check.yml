@@ -161,3 +161,81 @@ jobs:
           else
             echo "No open outage issue — nothing to close."
           fi
+
+  # =============================================================
+  # The monthly CEB (EDL) bill (LR-005 rule 9, issue #242).
+  # A separate job with its own issue label, so a late bill is never reported as an inverter outage
+  # and the inverter job above is untouched. Once bills arrive by email, a broken Gmail filter or a
+  # changed sender address stops them silently; this turns that into an email.
+  # =============================================================
+  bill:
+    name: Check the monthly bill arrived
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 9
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: 📚 Install Dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: 🧾 Check the bill arrived
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          set -o pipefail
+          node scripts/check_missing_bill.js 2>&1 | tee bill-report.txt
+
+      - name: 🚨 Open or update missing-bill issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          gh label create missing-bill \
+            --description "The monthly CEB bill is overdue" \
+            --color D93F0B 2>/dev/null || true
+
+          REPORT=$(cat bill-report.txt 2>/dev/null || echo "(no report produced — the check itself failed to run)")
+          BODY=$(printf 'Automated alert from `Data Freshness Check` (LR-005 rule 9).\n\nThe monthly CEB (EDL) bill has not reached the dashboard.\n\n```\n%s\n```\n\n**Run:** %s\n\n_This issue is reused for repeat alerts and closes itself once a bill arrives._\n' "$REPORT" "$RUN_URL")
+
+          EXISTING=$(gh issue list --repo "$REPO" --label missing-bill --state open \
+                       --limit 1 --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$REPO" --body "$BODY"
+          else
+            gh issue create --repo "$REPO" --title "🧾 The monthly CEB bill is overdue" --label missing-bill --body "$BODY"
+          fi
+
+      - name: ✅ Close missing-bill issue if a bill arrived
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          EXISTING=$(gh issue list --repo "$REPO" --label missing-bill --state open \
+                       --limit 1 --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            gh issue close "$EXISTING" --repo "$REPO" \
+              --comment "✅ The bill is no longer overdue as of $(date -u +"%Y-%m-%d %H:%M UTC"). Closing automatically."
+          else
+            echo "No open missing-bill issue — nothing to close."
+          fi

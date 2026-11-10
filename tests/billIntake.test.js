@@ -68,6 +68,20 @@ describe('findDuplicate', () => {
   });
 });
 
+describe('findByMessage', () => {
+  it('finds the ingestion made from an email by its source and message id', async () => {
+    const hit = { id: 'in7', file_path: 'p.pdf', received_at: 't', status: 'pending_review' };
+    const { db, log } = fakeDb({ ceb_bill_ingestions: { select: { data: hit, error: null } } });
+    expect(await createBillIntake({ db }).findByMessage('email_forward', 'em_1')).toEqual(hit);
+    expect(log.filter((c) => c.m === 'eq').map((c) => c.args)).toEqual([['source_type', 'email_forward'], ['source_message_id', 'em_1']]);
+  });
+
+  it('throws when the lookup fails, rather than processing the email again', async () => {
+    const { db } = fakeDb({ ceb_bill_ingestions: { select: { data: null, error: { message: 'down' } } } });
+    await expect(createBillIntake({ db }).findByMessage('email_forward', 'em_1')).rejects.toThrow('Message lookup failed: down');
+  });
+});
+
 describe('store', () => {
   const input = { buffer: PDF, filename: 'bill.pdf', ownerId: 'user_1', createdBy: 'a@example.test', sourceType: 'manual_upload', fileSha256: 'h1' };
 
@@ -76,7 +90,7 @@ describe('store', () => {
     const out = await createBillIntake({ db, bucket: 'b' }).store(input);
     expect(storageLog[0]).toMatchObject({ m: 'upload', bucket: 'b', opts: { upsert: false } });
     expect(storageLog[0].path).toMatch(/^ceb\/\d{4}\/\d{2}\/user_1\/.+_bill\.pdf$/);
-    expect(log.find((c) => c.m === 'insert').args[0]).toMatchObject({ source_type: 'manual_upload', file_sha256: 'h1', status: 'received', created_by: 'a@example.test' });
+    expect(log.find((c) => c.m === 'insert').args[0]).toMatchObject({ source_type: 'manual_upload', source_message_id: null, file_sha256: 'h1', status: 'received', created_by: 'a@example.test' });
     expect(out).toEqual({ ingestionId: 'in9', filePath: storageLog[0].path, status: 'received', receivedAt: 't9' });
   });
 
@@ -85,6 +99,12 @@ describe('store', () => {
     await expect(createBillIntake({ db, bucket: 'b' }).store(input)).rejects.toThrow('Failed to create ingestion row: constraint');
     expect(storageLog.map((c) => c.m)).toEqual(['upload', 'remove']);
     expect(storageLog[1].paths).toEqual([storageLog[0].path]);
+  });
+
+  it('stores the email id for an emailed bill', async () => {
+    const { db, log } = fakeDb({ ceb_bill_ingestions: { insert: { data: { id: 'in9', received_at: 't9', status: 'received' }, error: null } } });
+    await createBillIntake({ db }).store({ ...input, sourceType: 'email_forward', sourceMessageId: 'em_1' });
+    expect(log.find((c) => c.m === 'insert').args[0]).toMatchObject({ source_type: 'email_forward', source_message_id: 'em_1' });
   });
 
   it('writes no row when the upload fails', async () => {
