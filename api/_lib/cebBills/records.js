@@ -1,4 +1,4 @@
-// api/ceb-bills/records.js
+// api/_lib/cebBills/records.js — served at /api/ceb-bills/records by api/ceb-bills/[action].js
 //
 // Admin-authenticated writes to `ceb_data` — the canonical billing table the whole analytics
 // layer reads.
@@ -24,11 +24,11 @@
 //                                       (public.approve_ceb_extraction, see
 //                                       scripts/sql/2026-09-24_approve_ceb_extraction.sql)
 
-import { verifyAdminToken } from '../_lib/verifyAdminToken.js';
-import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
-import { supabase, blockOnConfigProblem } from '../_lib/supabaseServer.js';
-import { sanitizeRecord } from '../_lib/cebRecordRules.js';
-import { audit, actorOf, withRequestLog } from '../_lib/log.js';
+import { verifyAdminToken } from '../verifyAdminToken.js';
+import { handlePreflightAndMethod } from '../httpSecurity.js';
+import { supabase, blockOnConfigProblem } from '../supabaseServer.js';
+import { sanitizeRecord } from '../cebRecordRules.js';
+import { audit, actorOf, withRequestLog } from '../log.js';
 
 // PostgREST answers PGRST202 when the RPC it was asked to call is not installed.
 const isMissingFunction = (error) =>

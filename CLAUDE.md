@@ -128,7 +128,8 @@ real figures, charts draw on scroll, date pickers, Mark above cap, no sideways s
 - Plain JavaScript, ESM. No TypeScript, no tsconfig — don't add a `typecheck` script unless
   you actually introduce TS.
 - Serverless functions live in `api/`. Vercel Hobby caps this at **12 functions**; anything
-  under `api/_lib/` or `api/_config/` doesn't count. Currently 11/12 (`api/data/[resource].js` serves every v3 dashboard read).
+  under `api/_lib/` or `api/_config/` doesn't count. Currently 6/12: `api/data/[resource].js` serves every v3 dashboard read and `api/ceb-bills/[action].js` serves the six bill
+  endpoints (handlers in `api/_lib/cebBills/`). `tests/functionBudget.test.js` fails CI above 12.
 - Health probes `/healthz` and `/ready` share ONE function via rewrites in `vercel.json` —
   two handlers would have put the count at the cap exactly.
 - Dates: serialise with local components, never `.toISOString()` on a local-midnight `Date` —

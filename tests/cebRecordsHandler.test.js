@@ -17,7 +17,7 @@ vi.mock('../api/_lib/supabaseServer.js', () => ({
   blockOnConfigProblem: () => false
 }));
 
-const { default: handler } = await import('../api/ceb-bills/records.js');
+const { default: handler } = await import('../api/_lib/cebBills/records.js');
 
 const admin = { id: 'user_admin', emailAddresses: [{ emailAddress: 'admin@example.test' }] };
 

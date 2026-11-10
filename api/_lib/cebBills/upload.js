@@ -1,8 +1,10 @@
-import { verifyAdminToken } from '../_lib/verifyAdminToken.js'
-import { buildStoragePath, createSha256, looksLikePdf, parseMultipartForm, MAX_UPLOAD_BYTES } from '../_lib/cebBillUploadUtils.js'
-import { handlePreflightAndMethod } from '../_lib/httpSecurity.js';
-import { supabase, blockOnConfigProblem } from '../_lib/supabaseServer.js';
-import { audit, actorOf, withRequestLog } from '../_lib/log.js';
+// api/_lib/cebBills/upload.js — served at /api/ceb-bills/upload by api/ceb-bills/[action].js
+
+import { verifyAdminToken } from '../verifyAdminToken.js'
+import { buildStoragePath, createSha256, looksLikePdf, parseMultipartForm, MAX_UPLOAD_BYTES } from '../cebBillUploadUtils.js'
+import { handlePreflightAndMethod } from '../httpSecurity.js';
+import { supabase, blockOnConfigProblem } from '../supabaseServer.js';
+import { audit, actorOf, withRequestLog } from '../log.js';
 
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET_BILLS || 'ceb_bills'
 const MAX_BYTES = MAX_UPLOAD_BYTES

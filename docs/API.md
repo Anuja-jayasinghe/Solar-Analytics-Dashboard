@@ -393,4 +393,6 @@ for first, and guessing wrong cost a production outage once already.
 
 `api/_lib/` and `api/_config/` are **not** routes. The leading underscore excludes them from
 Vercel's function count, which is why shared code lives there — the Hobby plan caps this
-project at 12 functions and it currently uses 10.
+project at 12 functions and it currently uses 6. The six `/api/ceb-bills/*` URLs are one function,
+`api/ceb-bills/[action].js`, which loads the matching handler from `api/_lib/cebBills/`; any other
+action answers `404 { "error": "Unknown bill endpoint" }`.

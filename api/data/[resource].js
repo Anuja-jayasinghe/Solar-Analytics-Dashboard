@@ -1,9 +1,8 @@
 // api/data/[resource].js
 //
 // The v3 authenticated READ API. One function serves every dashboard read, which keeps the
-// project inside Vercel Hobby's 12-function cap (this is function #11; merging the two CEB
-// delete endpoints frees another slot). The logic lives in api/_lib/data/* and shared/domain/*,
-// both of which are tested without a network.
+// project inside Vercel Hobby's 12-function cap (tests/functionBudget.test.js). The logic lives
+// in api/_lib/data/* and shared/domain/*, both of which are tested without a network.
 //
 //   GET /api/data/range?from&to&rate=effective|fixed&compare=prev,yoy   Explore (inverter only)
 //   GET /api/data/comparison?year=YYYY                                   CEB vs inverter (LR-001)
