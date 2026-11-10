@@ -105,6 +105,10 @@ body text ≥ 14px / labels ≥ 12px, contrast checked against the surface the t
 - The integration branch is merged into `main` by PR when a coherent, working set is ready (never half a feature), after
   merging `origin/main` into it first so the PR is conflict-free. Merge commits, so the history of each slice stays visible.
 - Delete a sub-branch when its PR merges. Never push straight to `main` or an integration branch.
+- Once an integration branch is merged into `main`, delete it too. The ruleset blocks deletion, so pause
+  `protect-integration-branches` (Settings → Rules, or `gh api -X PUT repos/:owner/:repo/rulesets/<id> -f enforcement=disabled`),
+  delete the branch, and set it back to `active` straight away. Check first that the branch is fully merged
+  (`git merge-base --is-ancestor origin/integration/<name> origin/main`).
 - Enforced by GitHub rulesets: `protect-main` (PR, `build` + `secrets` green, branch up to date, threads resolved, no
   force-push or delete; the repository admin role may bypass for emergencies, not as a habit) and
   `protect-integration-branches` (`integration/*`, same without the up-to-date rule).
