@@ -10,6 +10,14 @@ All notable changes to the Solar Analytics Dashboard project.
   `api/_lib/cebBills/`. The URLs and behaviour are the same. The project now uses 6 of Vercel Hobby's 12 functions
   (was 11), which leaves room for the email bill intake (#242) and observability (#241). A new test fails CI if the
   count ever goes over 12.
+- **Bill upload and reading are shared steps** (`api/_lib/billIntake.js`). The admin upload and extract endpoints use
+  them and behave exactly as before. The email intake (#242) will use the same steps in a different order: it reads the
+  PDF in memory first, so a home bill can be discarded before anything is stored.
+
+### Added
+- **The auto-record gate for emailed bills** (`api/_lib/billGate.js`, LR-005 rule 5). It holds seven checks: extraction,
+  account, new month, order, meter continuity, a 25–35 day period, and CEB units against the inverter. Each passes,
+  fails or is unknown, and unknown never passes. It is not wired to anything yet.
 
 ## [3.1.1] - 2026-11-04
 
