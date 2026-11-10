@@ -16,4 +16,5 @@ Moved here on 2026-09-24 from the top level of `docs/` (`git log --follow` still
 | [`clerk-migration-2025-12/`](./clerk-migration-2025-12/) | The Supabase-to-Clerk migration plan, checklists and user-management notes. Complete: auth is Clerk only |
 | [`plans-and-specs/`](./plans-and-specs/) | Implementation plans, specs and reports — CEB automation, SolisCloud explorer, daily summaries, the July 2026 admin UI work. Some were built, some changed, some never built. **`CEB_BILL_AUTOMATION_IMPLEMENTATION_PLAN.md` describes a Google Document AI pipeline that does not exist** |
 | [`manual-test-plans-2025-11/`](./manual-test-plans-2025-11/) | A manual test plan for the November 2025 caching work |
+| [`IMPROVEMENT_PLAN_2026-10-29.md`](./IMPROVEMENT_PLAN_2026-10-29.md) | The 2026-10-29 security, load-time and observability plan. Done on top of v3; Rollbar and the uptime monitor moved to issue #241 |
 | *(this folder)* | The November 2025 baseline documents: the original README, the data-fetching audit, the implementation tracker and the first project write-up |

@@ -142,7 +142,6 @@ Reference — how it works now:
 
 - `docs/ARCHITECTURE.md` — system design, both pipelines, data model, security. **Start here.**
 - `docs/WORKING_RULES.md` — the rulebook (data honesty, dates, security, DB changes, gates, tracking)
-- `docs/V3_REFACTOR_PLAN.md` — the v3 refactor: decisions, checklists, progress log, deferred register
 - `docs/API.md` — every endpoint, auth model, error shapes
 - `docs/SECURITY.md` — who can do what, the RLS / storage policy matrix, new-endpoint checklist
 - `docs/MIGRATIONS.md` — how schema changes are made, and the ledger of what has been applied
@@ -157,6 +156,7 @@ History — why it is the way it is:
 - `docs/RECOVERY_STATUS_2026-09.md` — the five-month data outage and its three stacked causes
 - `docs/DATA_PIPELINE_SAFEGUARDS.md` — what now prevents a silent recurrence
 - `docs/REPO_AUDIT_2026-09-24.md` — dead code, stale docs, security and validation: findings and remediation
+- `docs/V3_REFACTOR_PLAN.md` — the v3 refactor (2026-10-03 to 2026-10-29): decisions, checklists, progress log, deferred register
 - `docs/archive/` — superseded material, kept for history. **Nothing in it is current**
 
 The history documents are a **record**, not a description of the present. Where they disagree
@@ -174,9 +174,8 @@ tables followed on 2026-10-29 (`2026-10-04_v3_revoke_anon_read_at_v1_removal.sql
 
 ## v3 foundations are live (2026-10-04)
 
-The non-UI half of the v3 refactor is merged and running; **v1 (`/dashboard`) is unchanged and still the
-UI**. The new UI waits for a design phase (issue #159). Plan, decisions and the deferred register:
-`docs/V3_REFACTOR_PLAN.md`; rulebook: `docs/WORKING_RULES.md`; decisions: `docs/adr/`.
+The non-UI foundations of v3, still current. History of how they were built: `docs/V3_REFACTOR_PLAN.md`;
+rulebook: `docs/WORKING_RULES.md`; decisions: `docs/adr/`.
 
 - **Uptime log**: private tables `inverter_telemetry`, `collector_heartbeats`, `inverter_alarms`,
   `inverter_day_uptime`, `inverter_status_segments`, `collector_runs`, filled by the nightly collector
@@ -193,42 +192,15 @@ UI**. The new UI waits for a design phase (issue #159). Plan, decisions and the 
   on 2026-10-29). **Daily peak power comes from telemetry**, raise-only: GitHub runs the 5-minute live job only a
   few times a day, so its sampled peak was far too low (`shared/domain/dailySummaryMerge.js`, nightly `--fill-peaks`).
 
-## State as of v2.1.0 (2026-09-13)
+## Current state (v3.1.1, 2026-11-10)
 
-The parser now handles both bill formats and the data trail is verified end to end — 25 bills,
-2024-09-05 to 2026-09-03, no duplicates, meter deltas and tariff maths internally consistent.
-
-Next up is a **UI redesign**. `v2.1.0` is tagged as the last known-good state before it.
-
-Deliberately deferred, because that surface is about to be rewritten:
-
-- LCP 5.7s, almost entirely render delay — TTFB is a healthy ~900ms (Lighthouse Performance 70)
-  as measured at v2.1.0. **Not re-measured since the 2026-09-24 cleanup**, which cut react-vendor
-  from 776 KB to 263 KB (Chakra and emotion were the bulk of it) — worth a fresh Lighthouse run.
-
-Lighthouse otherwise (at v2.1.0): Accessibility 100, Best Practices 100, SEO 100.
-
-## Open as of 2026-09-24
-
-The repository audit (`docs/REPO_AUDIT_2026-09-24.md`) is remediated in code. What still needs
-a person with database access:
-
-- **Three SQL migrations are written but not applied** — see `docs/MIGRATIONS.md` for the order.
-  Apply `2026-09-24_revoke_anon_bill_access.sql` only *after* the code with `/signed-url` and
-  `?view=queue` is deployed. **Until then, whether anon can read bill PDFs is unverified** — run
-  the policy query in `docs/SECURITY.md`.
-- `ceb_data` is publicly readable including `account_number` and `file_path`.
-  `2026-09-24_ceb_data_public_columns.sql` limits `anon` to four columns (not applied — deploy the
-  code with `GET /api/ceb-bills/records` first).
-- The live-only trigger `trg_cascade_delete_ceb_data` is redundant; `2026-09-24_drop_cascade_trigger.sql` drops it (not applied — read its header first).
-- The redesign should end with one `ErrorBoundary` and one `SkeletonLoader` (there are two of each).
-- `@clerk/clerk-react` is deprecated by the vendor in favour of `@clerk/react`.
-
-The `ceb_bills` bucket reconciles exactly — 25 ingestions, 25 extractions, 25 `ceb_data`
-rows, 25 storage objects, no unreferenced files and no ingestion pointing at a missing one.
-The 19 duplicate PDFs left over from pipeline development were pruned on 2026-09-13 with
-`scripts/prune-orphaned-bill-files.mjs`, after each was proven byte-identical by SHA-256 to
-a bill still held.
+- v3 is the only app and is live at https://solaredge.anujajay.com. `/healthz` reports the version and revision.
+- **Planned work lives on the [Solar Analytics Roadmap](https://github.com/users/Anuja-jayasinghe/projects/7)**
+  (Horizon Now/Next/Later, Status, Priority, Size, Area; see `docs/WORKING_RULES.md` §7). Every piece of planned work is
+  an issue on that project. `docs/V3_REFACTOR_PLAN.md` is now history.
+- Every migration written on 2026-09-24 is applied (`docs/MIGRATIONS.md` ledger); `anon` reads nothing.
+- Lighthouse has not been re-measured since v2.1.0 (Performance 70, LCP 5.7 s). Field vitals now come from Vercel
+  Speed Insights.
 
 ## Corrected notes (2026-09-13)
 
