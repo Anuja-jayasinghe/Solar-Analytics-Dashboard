@@ -292,6 +292,7 @@ tests/                    Vitest suites — parser, alignment, API validation, s
 | [Migrations](docs/MIGRATIONS.md) | How schema changes are made, and which have been applied |
 | [Local development](docs/guides/LOCAL_DEVELOPMENT.md) | Running the app, the API and Clerk sign-in locally |
 | [Logic Registry](docs/logic-registry) | Specifications for the non-obvious domain rules |
+| [Roadmap](https://github.com/users/Anuja-jayasinghe/projects/7) | What is planned: Now, Next and Later. Tracked as a GitHub Project over the repo's issues |
 
 The repository also keeps a deliberate historical record — the
 [project audit](docs/PROJECT_AUDIT_2026-09.md), the

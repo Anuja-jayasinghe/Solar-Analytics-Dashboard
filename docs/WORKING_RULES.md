@@ -76,6 +76,16 @@ body text ≥ 14px / labels ≥ 12px, contrast checked against the surface the t
 
 ## 7. Tracking work
 
+- **The roadmap is the [Solar Analytics Roadmap](https://github.com/users/Anuja-jayasinghe/projects/7)
+  GitHub Project.** Every piece of planned work is a GitHub issue on that project. The fields are:
+  - **Horizon**: Now (being worked on, or next to start), Next (after that), Later (wanted, not yet planned).
+    There are no dates until a deadline exists.
+  - **Status**: Backlog → Ready (clear enough to pick up) → In progress → In review (PR open) → Done.
+  - **Priority**: P0 (broken or losing data), P1 (important), P2 (nice to have).
+  - **Size**: S (under a day), M (a few days), L (needs splitting into smaller issues or PRs).
+  - **Area**: UI, Data pipeline, Bills, Ops, Docs.
+- A PR names the issue it closes (`Closes #N`), so merging it moves the card to Done.
+
 - **Before starting a long-running branch, `git fetch` and compare with `origin/main`.** The v3 branch was cut from a stale local
   `main` and duplicated a week of merged work (audit, security hardening, doc reorganisation) before the merge exposed it.
 
