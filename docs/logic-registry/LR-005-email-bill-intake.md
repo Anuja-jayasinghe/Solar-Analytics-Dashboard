@@ -30,8 +30,8 @@ stored (rule 1).
 ## Data sources and actors
 | Actor | Role |
 |---|---|
-| CEB | Sends three bills a month to the owner's Gmail: one solar export bill, two home-consumption bills |
-| Gmail filter | Forwards **only the solar bill** to the intake address (the main gate, rule 1) |
+| CEB, as **EDL** (Electricity Distribution Lanka) | Emails the bills from `EDL e-Bill <eBill@edl.lk>`: one solar export bill and the home-consumption bills, each with its PDF attached. The subject names the account: `EDL e-Bill for the month of November-2026 - <account number>`, and the PDF's filename starts with it |
+| Gmail filter | Forwards **only the solar bill** to the intake address (the main gate, rule 1): `from:eBill@edl.lk subject:<SOLAR_CEB_ACCOUNT> has:attachment`. The account number lives only in the owner's Gmail filter and in Vercel, never in this repository |
 | Resend (inbound) | Receives the forwarded email at a private address and POSTs an `email.received` webhook. The webhook carries metadata only; the PDF is fetched with a second API call |
 | `POST /api/ceb-bills/inbound` | Verifies, fetches the PDF, runs the pipeline and the gate |
 | Resend (outbound) | Sends the "needs you" email |
@@ -44,7 +44,7 @@ Configuration (Vercel env, server-only, **never** `VITE_`):
 | `RESEND_API_KEY` | Fetching inbound attachments and sending the alert email |
 | `RESEND_WEBHOOK_SECRET` | Verifies the webhook signature |
 | `BILL_INTAKE_ADDRESS` | The private intake address, with a random part (e.g. `bills-<random>@in.<domain>`) |
-| `BILL_SENDER_DOMAINS` | CEB's sending domain(s); comma-separated |
+| `BILL_SENDER_DOMAINS` | The bill sender's domain(s), comma-separated: `edl.lk` |
 | `SOLAR_CEB_ACCOUNT` | The solar bill's account number. Not committed to the repository |
 | `BILL_ALERT_TO` | Where the "needs you" email goes |
 | `BILL_INTAKE_MODE` | `shadow` (default), `auto` or `off` (rule 8) |
@@ -145,7 +145,7 @@ Configuration (Vercel env, server-only, **never** `VITE_`):
 ## How it works technically
 
 ```
-Gmail filter (CEB sender AND the solar bill's mark) → auto-forward → bills-<random>@in.<domain>
+Gmail filter (from eBill@edl.lk AND subject has the solar account) → auto-forward → bills-<random>@in.<domain>
 Resend inbound ─ webhook email.received (metadata) ─▶ POST /api/ceb-bills/inbound
   1. verify signature, recipient, sender domain            (rule 2)  ─ fail → log, 200
   2. mode off → 200
@@ -223,7 +223,7 @@ missingBillAlert ⇔ today > expectedNextBill + 7 days ∧ no pending ingestion
 
 ## Edge cases
 - **Gmail pauses forwarding** (it can, if the forwarding address bounces): the missing-bill alert catches it.
-- **CEB changes its sender domain:** rule 2 ignores the email, and rule 9 catches the missing bill. The fix is to
+- **EDL changes its sender address or domain** (it already moved from CEB to EDL once): rule 2 ignores the email, and rule 9 catches the missing bill. The fix is to
   update `BILL_SENDER_DOMAINS`.
 - **Password-protected or scanned PDF:** extraction finds nothing, so it goes to review with "could not read the PDF".
 - **A redesigned bill format:** fields come back `null`, so `validateExtraction` sends it to review. It is never
@@ -247,9 +247,10 @@ missingBillAlert ⇔ today > expectedNextBill + 7 days ∧ no pending ingestion
 - The function count stays at or under 12. No secret is prefixed `VITE_`.
 
 ## Open questions (before implementation)
-1. **What marks the solar email apart?** Is it the subject, or the account number in the email text? This sets the
-   Gmail filter. If the account number appears only inside the PDF, the filter needs another signal.
-2. **CEB's sending address and domain**, for `BILL_SENDER_DOMAINS` and the filter.
+1. ~~What marks the solar email apart?~~ **Answered 2026-11-10:** the subject ends with the account number
+   (`EDL e-Bill for the month of <Month>-<YYYY> - <account number>`), so the filter matches the solar account exactly.
+2. ~~The sending address and domain?~~ **Answered 2026-11-10:** `eBill@edl.lk` (EDL, Electricity Distribution Lanka),
+   so `BILL_SENDER_DOMAINS=edl.lk`.
 3. **Does Resend's received-email API return the original headers** (`Authentication-Results`, ARC) needed for the
    DKIM check in rule 2? If not, use ARC from the forwarded message, or settle for sender domain plus the private
    address.
