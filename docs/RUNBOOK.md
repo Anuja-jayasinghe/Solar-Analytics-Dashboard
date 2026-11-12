@@ -332,6 +332,57 @@ down while looking plausible. This has corrupted the dataset twice.
 
 Duplicates are caught by SHA-256 before storage, so re-uploading is safe.
 
+### Email bill intake
+
+The owner's Gmail forwards the solar bill to a private Resend address. Resend calls `POST /api/ceb-bills/inbound`,
+which reads the PDF and records it or puts it in the review queue (spec: LR-005). It emails `BILL_ALERT_TO` only
+when a person is needed.
+
+**Domain** (done 2026-11-12, #242): `mail.solaredge.anujajay.com` is verified in Resend for sending and receiving.
+Its five records are in the Cloudflare zone `anujajay.com`, DNS only, each with the comment
+`Resend mail.solaredge (LR-005, #242)`. Check them with `resend domains get <id>`: every record should read
+`verified`.
+
+**Setting it up**, in this order:
+
+1. In Vercel (Production), set these variables. None of them may be prefixed `VITE_`.
+   - `RESEND_API_KEY`: a Resend key that can read received email and send.
+   - `BILL_INTAKE_ADDRESS`: `bills-<random>@mail.solaredge.anujajay.com`. Make the random part long, because
+     the address is the first gate.
+   - `BILL_SENDER_DOMAINS`: `edl.lk`.
+   - `SOLAR_CEB_ACCOUNT`: the solar bill's account number.
+   - `BILL_ALERT_TO`: the address that receives the alerts.
+   - `BILL_INTAKE_MODE`: `off` for now.
+   - Optional: `BILL_ALERT_FROM`, which defaults to `Solar Analytics <bills@mail.solaredge.anujajay.com>`, and
+     `BILL_RATIO_MIN` / `BILL_RATIO_MAX`. Without the ratio bounds the units check is unknown, so nothing is
+     recorded automatically.
+2. Create the webhook:
+   `resend webhooks create --endpoint https://solaredge.anujajay.com/api/ceb-bills/inbound --events email.received`.
+   Put its signing secret (`whsec_…`) in Vercel as `RESEND_WEBHOOK_SECRET`, then redeploy so the function sees
+   the new variables.
+3. In Gmail, go to Settings → Forwarding and add the intake address. Gmail sends a confirmation code to it. In
+   mode `off` the webhook does nothing, so read the code in the Resend dashboard (Emails → Receiving).
+4. In Gmail, create a filter: `from:eBill@edl.lk subject:<the solar account> has:attachment`, set to forward to
+   the intake address.
+5. Set `BILL_INTAKE_MODE=shadow` and redeploy. Every bill then still goes to the review queue, and each one
+   produces one "would have recorded / would need review" email.
+6. After two bills where the "would have" email matched what you did, set the ratio bounds and switch to `auto`.
+
+**Modes:** `off` answers 200 and does nothing; this is the kill switch. `shadow` is the default when the variable is
+unset or mistyped. `auto` records a bill only when every check passes.
+
+**Reading the log:** filter the Vercel function log on `[INTAKE]`. There is one line per email, showing the
+outcome (`recorded`, `review`, `shadow`, `needs_attention`, `ignored`, `discarded`, `duplicate`), the reason and
+the failed check ids. A `401` in Resend's webhook log means `RESEND_WEBHOOK_SECRET` does not match the webhook's
+signing secret. A `500` means a variable is missing (the log line names it) or something failed. Resend retries
+both for about a day.
+
+**Replaying a held email:** once the cause is fixed, use Resend's dashboard to resend the failed webhook delivery.
+- A webhook that was answered `500` before the PDF was stored runs again from the start.
+- A webhook whose email was already taken in answers `duplicate`.
+- An email that was answered `200` (ignored, for example) is not retried. Forward it again from Gmail, or upload
+  the PDF on the Admin page.
+
 ### Applying a database migration
 
 Take a DB Snapshot, read the migration's header for **ordering** (some must follow a code deploy),
@@ -418,6 +469,7 @@ standard way to half-break the system.
 | `SUPABASE_SERVICE_KEY` | ✅ | ✅ | ✅ |
 | `CLERK_SECRET_KEY` | ✅ | — | ✅ |
 | `SOLIS_API_ID` / `SOLIS_API_SECRET` | ✅ | ✅ | ✅ |
+| `RESEND_API_KEY` / `RESEND_WEBHOOK_SECRET` | ✅ | — | — |
 | `VITE_*` | ✅ | — | ✅ |
 
 ```bash

@@ -5,6 +5,14 @@ All notable changes to the Solar Analytics Dashboard project.
 ## [Unreleased]
 
 ### Added
+- **Bills can arrive by email** (#242, LR-005). `POST /api/ceb-bills/inbound` takes Resend's `email.received` webhook
+  for the solar bill the owner's Gmail forwards. The webhook must carry a valid signature, the email must come from
+  `edl.lk`, and the bill must name the solar account; any other bill is discarded before anything is stored. The
+  intake reads the one PDF, runs the auto-record gate, and either records the bill or puts it in the review queue with
+  the reasons. It emails the owner only when a person is needed: a review, a tariff change, no PDF, an unreadable
+  PDF, or a failure. Mode `shadow` (the default) keeps every bill in the queue and says what auto mode would have
+  done; `off` turns the intake off. It is still the same single bill function (6 of 12). The receiving and sending
+  domain `mail.solaredge.anujajay.com` is verified in Resend. Setup is in `docs/RUNBOOK.md` ("Email bill intake").
 - **Every merge to main is released automatically**, so the version on screen always matches what is deployed. The
   PR title picks the version (`feat:` minor, `fix:`/`refactor:`/dependency updates patch, `docs:`/`test:`/`ci:` none),
   the changelog's [Unreleased] becomes the release notes, and a changelog line is written from the title for a released

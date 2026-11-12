@@ -263,6 +263,26 @@ failed request can be repeated. This endpoint replaces the former `delete-record
 the same job in the opposite order and relied on a database trigger that is not in any
 migration.
 
+### `POST /api/ceb-bills/inbound`
+
+The Resend `email.received` webhook of the email bill intake
+([LR-005](./logic-registry/LR-005-email-bill-intake.md)). **Not Clerk-authenticated**: Resend calls it, and its
+credential is the Svix signature (`svix-id`, `svix-timestamp`, `svix-signature`), verified over the raw body with
+`RESEND_WEBHOOK_SECRET` and refused when the timestamp is more than 5 minutes off. The body is Resend's
+metadata-only event; the handler fetches the email (`GET /emails/receiving/{id}`, for the From header and the DKIM
+result) and its one PDF (`GET /emails/receiving/{id}/attachments`) itself.
+
+| Status | Body | Meaning |
+|---|---|---|
+| `200` | `{ outcome }` | A deliberate outcome: `recorded`, `review`, `shadow`, `needs_attention`, `ignored`, `discarded`, `duplicate` or `off` |
+| `400` | `{ error }` | The signed body is not JSON |
+| `401` | `{ error }` | The signature does not verify. Resend shows the failure and retries |
+| `500` | `{ error }` | A setting is missing, or an unexpected failure. Resend retries for about a day |
+
+The response never carries details. Each email writes one `[INTAKE]` log line with the Resend email id, the outcome,
+the failed check ids and at most the last 3 digits of an account number. Configuration (`BILL_INTAKE_MODE` and the
+rest) is in LR-005; setting it up is in [`RUNBOOK.md`](./RUNBOOK.md#email-bill-intake).
+
 ---
 
 ## Dashboard data (v3 read API)
@@ -393,6 +413,7 @@ for first, and guessing wrong cost a production outage once already.
 
 `api/_lib/` and `api/_config/` are **not** routes. The leading underscore excludes them from
 Vercel's function count, which is why shared code lives there — the Hobby plan caps this
-project at 12 functions and it currently uses 6. The six `/api/ceb-bills/*` URLs are one function,
+project at 12 functions and it currently uses 6. The seven `/api/ceb-bills/*` URLs (six admin endpoints and the
+email webhook) are one function,
 `api/ceb-bills/[action].js`, which loads the matching handler from `api/_lib/cebBills/`; any other
 action answers `404 { "error": "Unknown bill endpoint" }`.

@@ -11,6 +11,7 @@ policy matrix and the checklist.
 | Any visitor | `VITE_SUPABASE_ANON_KEY` — **public**, compiled into the browser bundle | Only what RLS grants the `anon` role |
 | Admin | Clerk session; `publicMetadata.role === 'admin'`, checked server-side on every request by `api/_lib/verifyAdminToken.js` | The admin API endpoints |
 | Server code | `SUPABASE_SERVICE_KEY` (service role, bypasses RLS) | Everything, only ever from `api/` and the scheduled jobs |
+| Resend (inbound email webhook) | Svix signature over the raw body, checked with `RESEND_WEBHOOK_SECRET` | `POST /api/ceb-bills/inbound` only. It can hand in a bill, never read one: the response is an outcome word, and a bill is kept only when it comes from `BILL_SENDER_DOMAINS` and names `SOLAR_CEB_ACCOUNT` (LR-005) |
 
 The consequence that shapes everything else: **anything the anon key can read is public.** The
 key is not a secret, so a table or bucket is either public by design or closed to `anon`.
@@ -141,7 +142,9 @@ kept for a limited time.
 
 ## Checklist for a new endpoint
 
-1. Authenticate first: `verifyAdminToken(req, res)`; stop if it returns `null`.
+1. Authenticate first: `verifyAdminToken(req, res)`; stop if it returns `null`. The one exception is
+   `POST /api/ceb-bills/inbound`, which a machine calls: it verifies the webhook signature instead, before it
+   reads anything else (`api/_lib/webhookSignature.js`).
 2. `handlePreflightAndMethod(req, res, [...])` with only the methods the handler implements.
 3. `blockOnConfigProblem(res)` before touching the database.
 4. Validate every input with an allowlist, not a blocklist: known values, types, lengths. Copy
@@ -152,7 +155,7 @@ kept for a limited time.
 7. Export the handler through `withRequestLog('<route>', handler)`, and emit an `audit()` line
    for anything it changes (`api/_lib/log.js`) — ids and field names, never personal data.
 8. Add a unit test for the validation and update [`API.md`](./API.md).
-9. Count the function: Vercel Hobby allows 12 and the project uses 11. Anything under
+9. Count the function: Vercel Hobby allows 12 and the project uses 6. Anything under
    `api/_lib/` or `api/_config/` does not count.
 
 ## Secrets
@@ -165,6 +168,8 @@ kept for a limited time.
   call it at start-up and exit non-zero on a mismatch.
 - Real CEB bills are never committed (`resources/` is gitignored). Test fixtures use a
   placeholder account number and redacted personal details.
+- The email intake's settings live only in Vercel: `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, the private
+  `BILL_INTAKE_ADDRESS`, `SOLAR_CEB_ACCOUNT` and `BILL_ALERT_TO`. None is in the repository, an issue or a log line.
 
 ## Reporting a vulnerability
 

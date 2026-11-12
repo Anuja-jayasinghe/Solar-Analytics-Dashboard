@@ -1,8 +1,10 @@
 // api/ceb-bills/[action].js
 //
-// ONE serverless function for the six CEB bill endpoints. Vercel Hobby allows 12 functions, and
+// ONE serverless function for the CEB bill endpoints. Vercel Hobby allows 12 functions, and
 // each file directly under api/ counts as one; this used to be six of them. The URLs did not
 // change: Vercel fills req.query.action from the path.
+//
+//   POST          /api/ceb-bills/inbound      Resend email.received webhook (LR-005); Svix-signed, no Clerk
 //
 //   POST          /api/ceb-bills/upload       store a bill PDF (SHA-256 dedupe)
 //   POST          /api/ceb-bills/extract      read the PDF, parse and validate the bill
@@ -21,7 +23,8 @@ const HANDLERS = Object.freeze({
   ingestions: () => import('../_lib/cebBills/ingestions.js'),
   'signed-url': () => import('../_lib/cebBills/signed-url.js'),
   records: () => import('../_lib/cebBills/records.js'),
-  delete: () => import('../_lib/cebBills/delete.js')
+  delete: () => import('../_lib/cebBills/delete.js'),
+  inbound: () => import('../_lib/cebBills/inbound.js')
 });
 
 export const CEB_BILL_ACTIONS = Object.freeze(Object.keys(HANDLERS));

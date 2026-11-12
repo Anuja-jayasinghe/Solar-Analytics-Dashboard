@@ -26,7 +26,7 @@ describe('serverless function budget', () => {
     expect(files.length, `functions: ${files.join(', ')}`).toBeLessThanOrEqual(HOBBY_FUNCTION_LIMIT);
   });
 
-  it('serves all six bill endpoints from one function', () => {
+  it('serves every bill endpoint, the email webhook included, from one function', () => {
     expect(functionFiles(API_DIR).filter((f) => f.startsWith('ceb-bills'))).toEqual(['ceb-bills/[action].js']);
   });
 });
