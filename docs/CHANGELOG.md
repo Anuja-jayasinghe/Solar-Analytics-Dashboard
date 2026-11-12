@@ -4,6 +4,13 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+### Added
+- **Every merge to main is released automatically**, so the version on screen always matches what is deployed. The
+  PR title picks the version (`feat:` minor, `fix:`/`refactor:`/dependency updates patch, `docs:`/`test:`/`ci:` none),
+  the changelog's [Unreleased] becomes the release notes, and a changelog line is written from the title for a released
+  PR that added none. A new PR check shows which release a PR will make and fails on a title it cannot read
+  (`docs/RELEASING.md`).
+
 ## [3.2.0] - 2026-11-12
 
 ### Changed

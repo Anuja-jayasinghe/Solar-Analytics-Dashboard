@@ -118,6 +118,8 @@ real figures, charts draw on scroll, date pickers, Mark above cap, no sideways s
 | Backfill Daily Summaries | manual; rebuilds gaps from the Solis month API. **Dry run by default** |
 | DB Snapshot | manual; read-only export of tables + schema as an artifact |
 | Keepalive | stops GitHub disabling the scheduled workflows for inactivity |
+| auto-release | after every push to main: releases what was merged (version from PR titles), then `release` tags it (`docs/RELEASING.md`) |
+| pr-check | on every PR: which release merging makes; fails on a non-Conventional-Commits title |
 
 **Take a DB Snapshot before running anything that writes.**
 
