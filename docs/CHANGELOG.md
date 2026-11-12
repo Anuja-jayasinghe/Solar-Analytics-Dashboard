@@ -4,6 +4,8 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-11-12
+
 ### Changed
 - **The money gap is monthly and readable at a glance** (#226). Under the CEB vs Inverter chart, each bill month gets
   one cell lined up with its column: `✓ even` when CEB paid for what the inverter made (within 1%), `▼ 4.0 K` (amber)
@@ -31,8 +33,9 @@ All notable changes to the Solar Analytics Dashboard project.
   (which emails you) when no bill has arrived 7 days after it was due. The due date is the latest bill plus the usual
   gap between bills, and nothing fires while an uploaded bill waits for review. It is separate from the inverter
   outage alert (LR-005 rule 9).
-- **A migration for emailed bills** (`scripts/sql/2026-11-10_bill_intake_source.sql`, not applied yet): a unique
+- **A migration for emailed bills** (`scripts/sql/2026-11-10_bill_intake_source.sql`, applied 2026-11-10): a unique
   index so the same email can never create two uploads.
+- **Dependency updates** (Dependabot #235, #236, #238): the weekly minor and patch group, `@eslint/js` and `globals`.
 
 ## [3.1.1] - 2026-11-04
 
