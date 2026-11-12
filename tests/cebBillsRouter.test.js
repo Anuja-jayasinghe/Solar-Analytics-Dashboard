@@ -1,6 +1,6 @@
 // tests/cebBillsRouter.test.js
 //
-// api/ceb-bills/[action].js serves the six bill endpoints from one function. These tests pin
+// api/ceb-bills/[action].js serves the bill endpoints (the six admin ones and the email webhook) from one function. These tests pin
 // that each URL still reaches its own handler, that anything else is a 404, and that a handler
 // is loaded only when its action is called (a queue read must not load the PDF parser).
 
@@ -25,6 +25,7 @@ vi.mock('../api/_lib/cebBills/ingestions.js', () => fakeModule('ingestions'));
 vi.mock('../api/_lib/cebBills/signed-url.js', () => fakeModule('signed-url'));
 vi.mock('../api/_lib/cebBills/records.js', () => fakeModule('records'));
 vi.mock('../api/_lib/cebBills/delete.js', () => fakeModule('delete'));
+vi.mock('../api/_lib/cebBills/inbound.js', () => fakeModule('inbound'));
 
 const { default: router, CEB_BILL_ACTIONS } = await import('../api/ceb-bills/[action].js');
 
@@ -40,8 +41,8 @@ function mockRes() {
 beforeEach(() => { calls.length = 0; });
 
 describe('ceb-bills router', () => {
-  it('serves exactly the six existing URLs', () => {
-    expect([...CEB_BILL_ACTIONS].sort()).toEqual(['delete', 'extract', 'ingestions', 'records', 'signed-url', 'upload']);
+  it('serves exactly the six admin URLs and the email webhook', () => {
+    expect([...CEB_BILL_ACTIONS].sort()).toEqual(['delete', 'extract', 'inbound', 'ingestions', 'records', 'signed-url', 'upload']);
   });
 
   it('loads only the handler that is called', async () => {
@@ -50,7 +51,7 @@ describe('ceb-bills router', () => {
     expect(loaded.has('extract')).toBe(false);
   });
 
-  it.each(['upload', 'extract', 'ingestions', 'signed-url', 'records', 'delete'])('sends /api/ceb-bills/%s to its own handler', async (action) => {
+  it.each(['upload', 'extract', 'ingestions', 'signed-url', 'records', 'delete', 'inbound'])('sends /api/ceb-bills/%s to its own handler', async (action) => {
     const res = mockRes();
     await router({ method: 'POST', query: { action } }, res);
     expect(calls).toEqual([action]);

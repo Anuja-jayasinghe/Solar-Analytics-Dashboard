@@ -1,15 +1,19 @@
 # LR-005: CEB Bill Intake by Email
 
-Status: **In progress (#242).** Steps 1–3, 6 and 7 of the checklist are built; nothing receives email yet. Add it to the
+Status: **In progress (#242).** Steps 1–7 of the checklist are built and the domain is verified. Nothing receives email
+until the Resend webhook and the Vercel settings are in place (`docs/RUNBOOK.md`, "Email bill intake"). Add it to the
 registry index (`README.md`) when it ships.
 Owner: CEB bill pipeline
-Primary files (planned):
+Primary files:
 - `api/ceb-bills/[action].js`: the six bill endpoints merged into one function, plus the new `inbound` action
 - `api/_lib/billIntake.js`: the upload → extract → gate → record steps, shared by the admin page and the webhook
 - `api/_lib/billGate.js`: the auto-record gate (pure, no I/O)
 - `api/_lib/notify.js`: the "needs you" email, sent through Resend
+- `api/_lib/billInbound.js`: what one webhook does (rules 1–4, 6–8); `api/_lib/cebBills/inbound.js` is its HTTP side
+- `api/_lib/webhookSignature.js` (the Svix signature) and `api/_lib/resendApi.js` (the Resend calls, over fetch)
 - `.github/workflows/data-freshness-check.yml`: gains the missing-bill check
-- `tests/billGate.test.js`, `tests/billIntake.test.js`
+- `tests/billGate.test.js`, `tests/billIntake.test.js`, `tests/billInbound.test.js`, `tests/inboundHandler.test.js`,
+  `tests/notify.test.js`, `tests/webhookSignature.test.js`
 
 Reuses, unchanged: `api/_lib/pdfText.js`, `api/_lib/cebBillParser.js` (`parseCebBillText`, `validateExtraction`),
 `api/_lib/cebRecordRules.js` (`sanitizeRecord`), the `approve_ceb_extraction()` RPC, LR-001 (the bill period window).
@@ -43,12 +47,14 @@ Configuration (Vercel env, server-only, **never** `VITE_`):
 |---|---|
 | `RESEND_API_KEY` | Fetching inbound attachments and sending the alert email |
 | `RESEND_WEBHOOK_SECRET` | Verifies the webhook signature |
-| `BILL_INTAKE_ADDRESS` | The private intake address, with a random part (e.g. `bills-<random>@in.<domain>`) |
+| `BILL_INTAKE_ADDRESS` | The private intake address, with a random part (`bills-<random>@mail.solaredge.anujajay.com`) |
 | `BILL_SENDER_DOMAINS` | The bill sender's domain(s), comma-separated: `edl.lk` |
 | `SOLAR_CEB_ACCOUNT` | The solar bill's account number. Not committed to the repository |
 | `BILL_ALERT_TO` | Where the "needs you" email goes |
 | `BILL_INTAKE_MODE` | `shadow` (default), `auto` or `off` (rule 8) |
 | `BILL_RATIO_MIN`, `BILL_RATIO_MAX` | The bounds for check 5.6, `0 < min < max`. Unset or invalid: check 5.6 is unknown, so nothing is recorded automatically |
+| `BILL_ALERT_FROM` | Optional. The alert's sender; defaults to `Solar Analytics <bills@mail.solaredge.anujajay.com>` |
+| `BILL_REVIEW_URL` | Optional. The link in the alert; defaults to `https://solaredge.anujajay.com/admin` |
 
 ## Canonical rules
 
@@ -71,6 +77,16 @@ Configuration (Vercel env, server-only, **never** `VITE_`):
    An ignored email is only logged and gets a 200 response (no retry). There is no email for it, so spam cannot
    flood the owner's inbox. There is one exception: an email that passes the signature and sender checks but
    **fails DKIM** is held for review (rule 7), because it may be a real bill.
+
+   A webhook whose **signature** does not verify is answered `401`, not 200. Resend then shows the failure and
+   retries, so a mistyped `RESEND_WEBHOOK_SECRET` is visible instead of silently dropping every bill. It never
+   produces an email.
+
+   The DKIM result is the received email's `authentication.dkim` (`pass`, `fail`, `gray`, `processing_failed` or
+   `unknown`), as Resend's receiving server judged it; `gray` includes a signature whose domain does not match the
+   From. Only `pass` counts. The From domain is read from the original `From` header, because a Gmail auto-forward
+   rewrites the envelope sender, and the recipient may be in `to`, `cc`, `bcc` or `received_for` (the envelope),
+   since the forward keeps the original `To`.
 
 3. **One PDF per email.** The email needs exactly one attachment that:
    - starts with `%PDF-`
@@ -145,7 +161,7 @@ Configuration (Vercel env, server-only, **never** `VITE_`):
 ## How it works technically
 
 ```
-Gmail filter (from eBill@edl.lk AND subject has the solar account) → auto-forward → bills-<random>@in.<domain>
+Gmail filter (from eBill@edl.lk AND subject has the solar account) → auto-forward → bills-<random>@mail.solaredge.anujajay.com
 Resend inbound ─ webhook email.received (metadata) ─▶ POST /api/ceb-bills/inbound
   1. verify signature, recipient, sender domain            (rule 2)  ─ fail → log, 200
   2. mode off → 200
@@ -168,8 +184,8 @@ check run before extraction, and the Storage write and ingestion row after the a
   change.
 - **Auth.** `inbound` is the only bill action that does not use Clerk. Its credential is the Resend signature. The
   other actions keep `verifyAdminToken`. Add it to the endpoint list in `docs/SECURITY.md`.
-- **Receiving domain.** Use a subdomain (e.g. `in.<domain>`) for Resend's MX records, so the main domain's mail is
-  untouched. Sending needs the domain verified with Resend (SPF and DKIM records).
+- **Receiving domain.** `mail.solaredge.anujajay.com`, verified in Resend for receiving and sending on 2026-11-12
+  (DKIM, SPF and the receiving MX record are in Cloudflare). A subdomain, so the main domain's mail is untouched.
 - **Gmail forwarding.** Gmail sends a confirmation code to the forwarding address once. It lands in Resend's dashboard
   (with mode `off`, or ignored by rule 2), where the owner reads it.
 - **Limits.** Vercel request bodies are capped at 4.5 MB. The webhook carries no attachment, so it is far below that.
@@ -252,20 +268,25 @@ missingBillAlert ⇔ today > expectedNextBill + 7 days ∧ no pending ingestion
    (`EDL e-Bill for the month of <Month>-<YYYY> - <account number>`), so the filter matches the solar account exactly.
 2. ~~The sending address and domain?~~ **Answered 2026-11-10:** `eBill@edl.lk` (EDL, Electricity Distribution Lanka),
    so `BILL_SENDER_DOMAINS=edl.lk`.
-3. **Does Resend's received-email API return the original headers** (`Authentication-Results`, ARC) needed for the
-   DKIM check in rule 2? If not, use ARC from the forwarded message, or settle for sender domain plus the private
-   address.
+3. ~~Does Resend's received-email API return what the DKIM check needs?~~ **Answered 2026-11-12:** yes,
+   `authentication: { spf, dkim, dmarc }` on `GET /emails/receiving/{id}` (rule 2).
 4. **The `BILL_RATIO_MIN` / `BILL_RATIO_MAX` bounds** for check 5.6, set from the bills on record (LR-004's per-bill data has
    the ratios).
-5. **Which domain** to use for receiving and sending.
+5. ~~Which domain to use for receiving and sending?~~ **Answered 2026-11-12:** `mail.solaredge.anujajay.com`.
 
 ## Current implementation files
-- `api/ceb-bills/[action].js`: one function for the six bill endpoints (step 1, #247). The `inbound` action is not
-  added yet.
+- `api/ceb-bills/[action].js`: one function for the six bill endpoints (step 1, #247) and the `inbound` action.
 - `api/_lib/billIntake.js`: `findDuplicate`, `read` (in memory, writes nothing), `store`, `download`, `loadTariff`,
   `saveExtraction`. The admin `upload` and `extract` endpoints use it (step 2). Tests: `tests/billIntake.test.js`.
-- `api/_lib/billGate.js`: `evaluateBillGate()` for rule 5 and `ratioBoundsFromEnv()` (step 3). Not called by
-  anything yet. Tests: `tests/billGate.test.js`.
+- `api/_lib/billGate.js`: `evaluateBillGate()` for rule 5 and `ratioBoundsFromEnv()` (step 3), called by the
+  intake. Tests: `tests/billGate.test.js`.
+- `api/_lib/notify.js`: `composeIntakeEmail()` (pure) and `createNotifier()` (step 4). Each send carries the
+  idempotency key `bill-intake/<email_id>/<kind>`, so a retried webhook never sends the same email twice. Tests:
+  `tests/notify.test.js`.
+- `api/_lib/billInbound.js`: `processInboundEmail()`, `loadGateFacts()`, `inboundConfigFromEnv()` (step 5), and
+  `api/_lib/cebBills/inbound.js`, the HTTP side: the raw body, the signature, the status codes. A bill that will not
+  be recorded is saved as `pending_review`, with the failed checks added to its `validation_errors`, so the queue shows
+  why it waits. Tests: `tests/billInbound.test.js` (the worked examples), `tests/inboundHandler.test.js`.
 - `scripts/sql/2026-11-10_bill_intake_source.sql`: the unique `(source_type, source_message_id)` index (step 6),
   applied 2026-11-10.
   `billIntake.findByMessage()` looks an email up, and `store({ sourceMessageId })` records it.
