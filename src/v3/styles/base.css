@@ -387,6 +387,9 @@ html, body { margin: 0; padding: 0; }
 .v3-xmain { font-size: 12px; font-weight: 600; }
 .v3-xtag { font-size: 10.5px; margin-top: 2px; color: var(--ink2); min-height: 13px; }
 .v3-xtag[data-tone='warn'] { color: var(--warn); }
+.v3-xsw { display: inline-block; width: 8px; height: 7px; margin-right: 3px; vertical-align: 0; background: var(--gen); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.v3-xsw[data-higher='ceb'] { background: var(--ceb); }
+.v3-legend i.v3-xsw { width: 9px; height: 8px; border-radius: 0; margin: 0 -4px 0 0; }
 .v3-thr-line { position: absolute; left: 0; right: 0; height: 0; border-top: 2px dashed var(--thr); pointer-events: none; z-index: 5; }
 .v3-thr-handle { position: absolute; right: 0; transform: translateY(50%); z-index: 6; background: var(--thr); color: var(--thr-ink); font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; box-shadow: 0 4px 14px rgba(0, 0, 0, .3); cursor: ns-resize; touch-action: none; user-select: none; white-space: nowrap; }
 
@@ -425,6 +428,7 @@ html, body { margin: 0; padding: 0; }
   .v3-legendrow { gap: 6px; }
   .v3-legend { gap: 8px; font-size: 10px; }
   .v3-legend span:nth-child(n+3) { display: none; }
+  .v3-legend span.v3-legend-diff { display: flex; }
   .v3-markrow { width: 100%; justify-content: space-between; gap: 6px; font-size: 11px; }
   .v3-markgroup { gap: 6px; min-height: 28px; justify-content: flex-end; }
   .v3-markgroup .v3-field { width: 64px !important; }

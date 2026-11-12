@@ -138,6 +138,7 @@ export function CebCompare({ bills, openPeriod, live, lastStoredDay, todayKey, l
             <div className="v3-legend">
               <span><i style={{ background: 'var(--gen)' }} />Inverter generated</span>
               <span><i style={{ background: 'var(--ceb)' }} />CEB paid for</span>
+              <span className="v3-legend-diff"><i className="v3-xsw" data-higher="gen" /><i className="v3-xsw" data-higher="ceb" />under each month: which was higher, by kWh</span>
               <span><i className="v3-hatch" />open period or missing days</span>
               <span><i className="v3-ghost" />bill not issued yet</span>
             </div>
@@ -164,7 +165,11 @@ export function CebCompare({ bills, openPeriod, live, lastStoredDay, todayKey, l
                   return (
                     <div key={r.id} className="v3-xlabel">
                       <div className="v3-xmain">{r.label}{win.rows.length <= 12 && (i === 0 || r.label === 'Jan') ? ` ${String(r.year).slice(2)}` : ''}</div>
-                      <div className="v3-xtag" data-tone={tag.tone}>{tag.text}</div>
+                      <div className="v3-xtag" data-tone={tag.tone} title={tag.title || undefined}>
+                        {tag.higher && <i className="v3-xsw" data-higher={tag.higher} aria-hidden="true" />}
+                        <span aria-hidden={tag.higher ? 'true' : undefined}>{tag.text}</span>
+                        {tag.higher && <span className="v3-sr">{tag.title}</span>}
+                      </div>
                     </div>
                   );
                 })}
