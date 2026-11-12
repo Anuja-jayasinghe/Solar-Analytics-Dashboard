@@ -139,13 +139,26 @@ describe('window, stepping and threshold', () => {
 });
 
 describe('variance tag', () => {
-  it('awaiting bill, partial days, signed percentage, or nothing', () => {
-    expect(varianceTag({ status: 'provisional' })).toEqual({ text: 'awaiting bill', tone: 'muted' });
-    expect(varianceTag({ status: 'finalized', daysPresent: 25, daysInPeriod: 30, variancePct: 3 })).toEqual({ text: '25/30 d', tone: 'warn' });
-    expect(varianceTag({ status: 'finalized', daysPresent: 30, daysInPeriod: 30, variancePct: -2.44 }).text).toBe('−2.4%');
-    expect(varianceTag({ status: 'finalized', daysPresent: 30, daysInPeriod: 30, variancePct: 3.06 }).text).toBe('+3.1%');
-    expect(varianceTag({ status: 'finalized', daysPresent: 30, daysInPeriod: 30, variancePct: 0 }).text).toBe('0.0%');
-    expect(varianceTag({ status: 'finalized', daysPresent: null, daysInPeriod: null, variancePct: null }).text).toBe('');
+  const full = (varianceKwh) => ({ status: 'finalized', daysPresent: 30, daysInPeriod: 30, varianceKwh });
+
+  it('shows which side was higher and by how many kWh, in words for the tooltip and the table', () => {
+    expect(varianceTag(full(-131.4))).toMatchObject({ text: '131', higher: 'gen', short: 'Inverter +131', title: 'Inverter generated 131 kWh more than CEB paid for' });
+    expect(varianceTag(full(2040))).toMatchObject({ text: '2,040', higher: 'ceb', short: 'CEB +2,040', title: 'CEB paid for 2,040 kWh more than the inverter generated' });
+    expect(varianceTag(full(0.3))).toMatchObject({ text: 'equal', higher: null });
+  });
+
+  it('awaiting bill, partial days, or nothing: never a kWh figure for a period that is not complete', () => {
+    expect(varianceTag({ status: 'provisional' })).toMatchObject({ text: 'awaiting bill', tone: 'muted', higher: null });
+    expect(varianceTag({ status: 'finalized', daysPresent: 25, daysInPeriod: 30, varianceKwh: 300 })).toMatchObject({ text: '25/30 d', tone: 'warn', higher: null });
+    expect(varianceTag({ status: 'finalized', daysPresent: null, daysInPeriod: null, varianceKwh: null }).text).toBe('');
+  });
+});
+
+describe('buildCebRows varianceKwh', () => {
+  it('carries the kWh difference only for complete periods (null is not zero)', () => {
+    const b = { billDate: '2036-09-03', periodStart: '2036-08-04', periodEnd: '2036-09-03', cebKwh: 4000, earningsLkr: 148000, inverterKwh: 4131, daysPresent: 31, daysInPeriod: 31, complete: true, varianceKwh: -131, variancePct: -3.2 };
+    expect(buildCebRows([b], null, '2036-09-10')[0].varianceKwh).toBe(-131);
+    expect(buildCebRows([{ ...b, complete: false, daysPresent: 29 }], null, '2036-09-10')[0].varianceKwh).toBeNull();
   });
 });
 

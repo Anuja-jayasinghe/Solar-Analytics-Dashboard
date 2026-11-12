@@ -5,6 +5,10 @@ All notable changes to the Solar Analytics Dashboard project.
 ## [Unreleased]
 
 ### Changed
+- **CEB vs Inverter shows the difference in kWh, and which side was higher.** Under each month, a small triangle in
+  the inverter's orange or CEB's blue marks the higher side, followed by the difference in kWh (e.g. ▲ 133), instead of
+  a signed percentage. The tooltip, the table ("Higher, by kWh") and screen readers say it in words: "Inverter
+  generated 133 kWh more than CEB paid for". As before, it is shown only for periods with every day recorded.
 - **The six bill endpoints are one serverless function.** `api/ceb-bills/[action].js` routes `/api/ceb-bills/upload`,
   `extract`, `ingestions`, `signed-url`, `records` and `delete` to their handlers, which moved unchanged to
   `api/_lib/cebBills/`. The URLs and behaviour are the same. The project now uses 6 of Vercel Hobby's 12 functions

@@ -7,7 +7,7 @@
 // a variance is shown only when every day of the period has inverter data; unknown is null, never 0.
 
 import { computeEarningsDifference } from '../../../shared/domain/earningsDifference.js';
-import { monthDay } from '../overview/format.js';
+import { fmtNum, monthDay } from '../overview/format.js';
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
@@ -25,7 +25,7 @@ export function generationMonth(billDate) {
  * @param {object|null} open  the provisional LR-001 display row ({ month, periodStart, inverter, daysPresent, daysInPeriod, includesToday }) with `year`
  * @param {string|null} todayKey
  * @returns {object[]} oldest first; each: id, label, year, status, periodStart, periodEnd, inverterKwh, cebKwh,
- *   daysPresent, daysInPeriod, complete, ratePerKwh, earningsLkr, variancePct, gapLkr, gapReason
+ *   daysPresent, daysInPeriod, complete, ratePerKwh, earningsLkr, variancePct, varianceKwh, gapLkr, gapReason
  */
 export function buildCebRows(bills, open, todayKey) {
   const rows = [...(bills ?? [])]
@@ -50,6 +50,7 @@ export function buildCebRows(bills, open, todayKey) {
         ratePerKwh: isNum(b.effectiveRatePerKwh) ? b.effectiveRatePerKwh : null,
         earningsLkr: isNum(b.earningsLkr) ? b.earningsLkr : null,
         variancePct: complete && isNum(b.variancePct) ? b.variancePct : null,
+        varianceKwh: complete && isNum(b.varianceKwh) ? b.varianceKwh : null,
         gapLkr: diff.includedPeriods === 1 ? diff.differenceLkr : null,
         gapReason: diff.excluded[0]?.reason ?? null
       };
@@ -72,6 +73,7 @@ export function buildCebRows(bills, open, todayKey) {
       ratePerKwh: null,
       earningsLkr: null,
       variancePct: null,
+      varianceKwh: null,
       gapLkr: null,
       gapReason: 'not_finalized'
     });
@@ -120,13 +122,26 @@ export function aboveSummary(rows, threshold) {
   return { above, known };
 }
 
-/** The variance tag under a column: '+3.1%' / '−2.4%', 'n/d' for partial periods, or 'awaiting bill'. */
+/**
+ * The tag under a column: which side was higher, and by how many kWh (CEB kWh − inverter kWh, LR-001 periods).
+ *   { text: '131', higher: 'gen' | 'ceb' | null, title: the same in words, short: 'Inverter +131' }
+ * 'awaiting bill' for the open period, '25/30 d' (warn) when days are missing, '' when there is nothing to compare.
+ * The kWh are shown only when every day of the period has data, like the percentage they replaced.
+ */
 export function varianceTag(row) {
-  if (row.status === 'provisional') return { text: 'awaiting bill', tone: 'muted' };
-  if (isPartial(row)) return { text: `${row.daysPresent}/${row.daysInPeriod} d`, tone: 'warn' };
-  if (row.variancePct === null) return { text: '', tone: 'muted' };
-  const v = row.variancePct;
-  return { text: `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(1)}%`, tone: 'muted' };
+  if (row.status === 'provisional') return { text: 'awaiting bill', tone: 'muted', higher: null, title: 'Bill not issued yet', short: 'awaiting bill' };
+  if (isPartial(row)) {
+    const text = `${row.daysPresent}/${row.daysInPeriod} d`;
+    return { text, tone: 'warn', higher: null, title: `Only ${row.daysPresent} of ${row.daysInPeriod} days recorded, so not compared`, short: text };
+  }
+  const v = row.varianceKwh ?? null;
+  if (v === null) return { text: '', tone: 'muted', higher: null, title: '', short: '' };
+  const kwh = Math.round(Math.abs(v));
+  if (kwh === 0) return { text: 'equal', tone: 'muted', higher: null, title: 'CEB paid for exactly what the inverter generated', short: 'equal' };
+  const n = fmtNum(kwh);
+  return v < 0
+    ? { text: n, tone: 'muted', higher: 'gen', title: `Inverter generated ${n} kWh more than CEB paid for`, short: `Inverter +${n}` }
+    : { text: n, tone: 'muted', higher: 'ceb', title: `CEB paid for ${n} kWh more than the inverter generated`, short: `CEB +${n}` };
 }
 
 /** Money-gap totals for the rows in view and for every bill (LR-004). Null when nothing is comparable. */
