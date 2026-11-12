@@ -1,6 +1,6 @@
 # LR-004: CEB vs Inverter Earnings Difference
 
-Status: Specified, implemented in `shared/domain/earningsDifference.js` (not yet shown in a UI)
+Status: Implemented in `shared/domain/earningsDifference.js`; shown per bill month under CEB vs Inverter (see "How it is shown")
 Owner: Dashboard data pipeline
 Primary files:
 - shared/domain/earningsDifference.js
@@ -72,6 +72,28 @@ Executable in `tests/earningsDifference.test.js`: worked example, each exclusion
 when nothing is eligible, the sign convention (CEB paid less = negative), no warning flag, the current unbilled
 period excluded, and the Settings tariff having no effect.
 
+## How it is shown (2026-11-12, issue #226)
+One row of cells under the **CEB vs Inverter** chart, one per bill month and lined up with its columns. Each answers
+one question at a glance: **did CEB pay for what the inverter made?**
+
+| Cell | When | Looks |
+|---|---|---|
+| `✓ even` | the month's kWh difference is within `GAP_MATCH_PCT` (1%) of the inverter | neutral |
+| `▼ 4.0 K` | CEB paid less than the generation was worth, in LKR | amber tint |
+| `▲ 1.2 K` | CEB paid more | green tint |
+| `–` | not comparable (missing days, no rate): never an amount, never 0 | blank |
+| (blank) | the open period, bill not issued yet | blank |
+
+- Above the row, one sentence for the months in view: "9 of 12 bills compared: 7 even · 2 paid less (LKR 9.6 K short)".
+- The tooltip and screen readers carry the period and the words: "CEB paid LKR 4.0 K less than the generation was
+  worth (9.1%)".
+- Within 1% counts as even because separate meters and meter-reading days make small differences normal.
+- The all-time total, the signed headline and the paid/worth chips were removed: they made the reader translate a minus
+  sign and compare several totals.
+- Code: `gapCell`, `gapCounts` and `gapSentence` in `src/v3/ceb/rows.js`, and `src/v3/ceb/GapStrip.jsx`. Tests:
+  `tests/v3CebRows.test.js`.
+
 ## Current implementation files
 - [shared/domain/earningsDifference.js](../../shared/domain/earningsDifference.js)
 - [tests/earningsDifference.test.js](../../tests/earningsDifference.test.js)
+- [src/v3/ceb/rows.js](../../src/v3/ceb/rows.js) (`gapCell`, `gapCounts`, `gapSentence`) and [src/v3/ceb/GapStrip.jsx](../../src/v3/ceb/GapStrip.jsx)

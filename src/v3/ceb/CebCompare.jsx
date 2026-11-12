@@ -11,7 +11,7 @@ import { MarkToggle } from '../charts/MarkToggle.jsx';
 import { usePrefs } from '../prefs/context.js';
 import { MAX_LABELLED_COLUMNS, axisTicks, chartNum, linePath, maxOf, niceMax, xPct, yPct } from '../charts/scale.js';
 import { fmtNum, openPeriodSoFar, openPeriodView } from '../overview/format.js';
-import { aboveSummary, buildCebRows, columnTip, defaultThreshold, gapSummary, isPartial, stepEnd, varianceTag, windowOf } from './rows.js';
+import { aboveSummary, buildCebRows, columnTip, defaultThreshold, isPartial, stepEnd, varianceTag, windowOf } from './rows.js';
 import { GapStrip } from './GapStrip.jsx';
 import { CebTable } from './CebTable.jsx';
 
@@ -104,7 +104,6 @@ export function CebCompare({ bills, openPeriod, live, lastStoredDay, todayKey, l
   const setLine = (v) => setThr(Math.min(Math.max(0, Math.round(v)), yMax));
   const markAt = showMark ? threshold : -Infinity; // hidden: every inverter bar at full strength
   const above = aboveSummary(win.rows, threshold);
-  const gap = gapSummary(win.rows, bills?.bills ?? []);
   const first = win.rows[0];
   const last = win.rows[win.rows.length - 1];
   const range = first ? `${first.label} ${first.year} to ${last.label} ${last.year}` : '';
@@ -177,7 +176,7 @@ export function CebCompare({ bills, openPeriod, live, lastStoredDay, todayKey, l
             </div>
           </div>
 
-          <GapStrip rows={win.rows} summary={gap} />
+          <GapStrip rows={win.rows} />
           <CebTable rows={win.rows} />
         </>
       )}

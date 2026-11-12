@@ -8,7 +8,7 @@ import {
   niceMax, axisTicks, maxOf, linePath, areaPath, yPct, xPct, valueFromPointer, clamp
 } from '../src/v3/charts/scale.js';
 import {
-  generationMonth, buildCebRows, isPartial, windowOf, stepEnd, defaultThreshold, aboveSummary, varianceTag, gapSummary
+  generationMonth, buildCebRows, isPartial, windowOf, stepEnd, defaultThreshold, aboveSummary, varianceTag, gapCell, gapCounts, gapSentence, GAP_MATCH_PCT
 } from '../src/v3/ceb/rows.js';
 
 describe('chart scale', () => {
@@ -162,29 +162,46 @@ describe('buildCebRows varianceKwh', () => {
   });
 });
 
-describe('money gap summary (LR-004)', () => {
-  const b = (id, ceb, inv, o = {}) => bill(id, { cebKwh: ceb, inverterKwh: inv, earningsLkr: ceb * 40, effectiveRatePerKwh: 40, ...o });
-  const all = [b('2036-07-03', 1000, 1100), b('2036-08-03', 1000, 1050), b('2036-09-03', 1000, 1000, { complete: false })];
-  const rows = buildCebRows(all, null, '2036-09-15');
+describe('monthly money gap (LR-004)', () => {
+  // 40 LKR/kWh; variancePct as the bills API reports it: (ceb − inverter) ÷ inverter × 100
+  const b = (id, ceb, inv, o = {}) => bill(id, { cebKwh: ceb, inverterKwh: inv, earningsLkr: ceb * 40, effectiveRatePerKwh: 40, variancePct: ((ceb - inv) / inv) * 100, ...o });
+  const all = [
+    b('2036-06-03', 1000, 1100), // paid less: 100 kWh × 40 = LKR 4.0 K, −9.1%
+    b('2036-07-03', 1000, 1005), // within 1%: even
+    b('2036-08-03', 1050, 1000), // paid more: LKR 2.0 K, +5%
+    b('2036-09-03', 1000, 1000, { complete: false, daysPresent: 25, daysInPeriod: 30 }) // not comparable
+  ];
+  const rows = buildCebRows(all, { month: 'Sep', year: 2036, periodStart: '2036-09-04', inverter: 300, daysPresent: 9, daysInPeriod: 9 }, '2036-09-12');
 
-  it('sums the gap over the periods in view and reports how many were comparable', () => {
-    const s = gapSummary(rows, all);
-    expect(s.windowLkr).toBeCloseTo(-(100 * 40 + 50 * 40), 6);
-    expect(s.windowCompared).toBe(2);
-    expect(s.windowTotal).toBe(3);
-    expect(s.all.periods).toBe(2);
-    expect(s.all.excluded).toBe(1);
-    expect(s.all.differenceLkr).toBeCloseTo(-6000, 6);
-    expect(s.all.paidLkr).toBe(80000);
+  it('says per month whether CEB paid for what was made, less or more, with the rupees', () => {
+    expect(gapCell(rows[0])).toMatchObject({ state: 'less', text: '4.0 K' });
+    expect(gapCell(rows[0]).title).toMatch(/\nCEB paid LKR 4\.0 K less than the generation was worth \(9\.1%\)$/);
+    expect(gapCell(rows[1])).toMatchObject({ state: 'matched', text: 'even' });
+    expect(gapCell(rows[2])).toMatchObject({ state: 'more', text: '2.0 K' });
   });
-  it('is null (not 0) when nothing in view is comparable', () => {
-    const s = gapSummary([rows[2]], all);
-    expect(s.windowLkr).toBeNull();
-    expect(s.windowCompared).toBe(0);
+
+  it('a difference within the match band is even, just outside it is not', () => {
+    expect(GAP_MATCH_PCT).toBe(1);
+    expect(gapCell({ ...rows[0], gapLkr: -400, variancePct: -1 }).state).toBe('matched');
+    expect(gapCell({ ...rows[0], gapLkr: -404, variancePct: -1.01 }).state).toBe('less');
+  });
+
+  it('never shows an amount for a month that cannot be compared or has no bill yet', () => {
+    expect(gapCell(rows[3])).toMatchObject({ state: 'none', text: '–' });
+    expect(gapCell(rows[3]).title).toContain('Not compared: only 25 of 30 days recorded');
+    expect(gapCell(rows[4])).toMatchObject({ state: 'open', text: '' });
+  });
+
+  it('counts the months and sums what was paid less and more, in one plain sentence', () => {
+    const c = gapCounts(rows);
+    expect(c).toMatchObject({ matched: 1, less: 1, more: 1, compared: 3 });
+    expect(c.lessLkr).toBeCloseTo(4000, 6);
+    expect(gapSentence(c, rows.length)).toBe('3 of 5 bills compared: 1 even · 1 paid less (LKR 4.0 K short) · 1 paid more (LKR 2.0 K extra)');
+    expect(gapSentence(gapCounts([rows[3]]), 1)).toBe('No bill in view can be compared yet');
   });
 });
 
-import { columnTip, gapTip, gapLabel } from '../src/v3/ceb/rows.js';
+import { columnTip, gapTip } from '../src/v3/ceb/rows.js';
 
 describe('column hints', () => {
   const [r] = buildCebRows([bill('2036-09-03')], null, null);
@@ -201,11 +218,6 @@ describe('column hints', () => {
     expect(gapTip(p)).toContain('Not compared: only 25 of 30 days recorded');
     const [o] = buildCebRows([], { month: 'Sep', year: 2036, periodStart: '2036-09-04', inverter: 1, daysPresent: 1, daysInPeriod: 1 }, '2036-09-15');
     expect(gapTip(o)).toBe('Sep 4 → today\nBill not issued yet');
-  });
-  it('labels a gap bar compactly and leaves unknown blank', () => {
-    expect(gapLabel(-5800)).toBe('−5.8 K');
-    expect(gapLabel(1500000)).toBe('+1.50 M');
-    expect(gapLabel(null)).toBe('');
   });
 });
 
