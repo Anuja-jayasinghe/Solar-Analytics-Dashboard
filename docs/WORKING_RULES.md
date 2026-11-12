@@ -96,7 +96,9 @@ body text ≥ 14px / labels ≥ 12px, contrast checked against the surface the t
 
 ## 7a. Branching and merging
 
-`main` is always deployable and only changes through a pull request with green CI (`build` and `secrets`).
+`main` is always deployable and only changes through a pull request with green CI (`build`, `e2e`, `secrets` and
+`release`, the PR-title check). The one exception besides the heartbeat is the automatic `Release vX.Y.Z` commit
+(`docs/RELEASING.md`).
 
 - **Small changes**: `type/short-slug` branched from a fresh `origin/main`, one PR, merged with a merge commit.
 - **PR titles follow Conventional Commits** (`feat:`, `fix(api):`, `docs:` …): every merge is released automatically and
@@ -111,7 +113,7 @@ body text ≥ 14px / labels ≥ 12px, contrast checked against the surface the t
   `protect-integration-branches` (Settings → Rules, or `gh api -X PUT repos/:owner/:repo/rulesets/<id> -f enforcement=disabled`),
   delete the branch, and set it back to `active` straight away. Check first that the branch is fully merged
   (`git merge-base --is-ancestor origin/integration/<name> origin/main`).
-- Enforced by GitHub rulesets: `protect-main` (PR, `build` + `secrets` green, branch up to date, threads resolved, no
+- Enforced by GitHub rulesets: `protect-main` (PR, `build` + `e2e` + `secrets` + `release` green, branch up to date, threads resolved, no
   force-push or delete; the repository admin role may bypass for emergencies, not as a habit) and
   `protect-integration-branches` (`integration/*`, same without the up-to-date rule).
 - Exception: the keepalive heartbeat commits to `main`. The Actions bot cannot be exempted on a personal repository, so it
