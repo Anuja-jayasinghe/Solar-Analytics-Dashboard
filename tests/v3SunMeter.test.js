@@ -38,7 +38,7 @@ describe('rising sun geometry', () => {
   it('the scale is labelled on round steps and always ends on the maximum', () => {
     expect(scaleLabels(40).map((l) => l.text)).toEqual(['0', '10', '20', '30', '40 kW']);
     expect(scaleLabels(45).map((l) => l.text)).toEqual(['0', '10', '20', '30', '40', '45 kW']);
-    expect(scaleLabels(41.76).map((l) => l.text)).toEqual(['0', '10', '20', '30', '41.8 kW']);
+    expect(scaleLabels(41.76).map((l) => l.text)).toEqual(['0', '10', '20', '30', '41.76 kW']); // the rating as entered, not rounded
     expect(scaleLabels(null)).toEqual([]);
   });
 });

@@ -132,7 +132,7 @@ describe('plant settings draft', () => {
     for (const f of PLANT_FIELDS) expect(isAllowedSetting(f.name)).toBe(true); // the UI can only ask for what the server allows
   });
   it('turns stored numbers into text drafts and an unset value into an empty box', () => {
-    expect(toDraft(stored)).toEqual({ dailyTargetKwh: '150', capacityKwp: '41.76', acRatedKw: '40', ratePerKwh: '' });
+    expect(toDraft(stored)).toEqual({ dailyTargetKwh: '150', capacityKwp: '41.76', acRatedKw: '40000', ratePerKwh: '' }); // the inverter rating is typed in watts
     expect(toDraft(null)).toEqual({ dailyTargetKwh: '', capacityKwp: '', acRatedKw: '', ratePerKwh: '' });
   });
   it('parses only non-negative numbers', () => {
@@ -154,6 +154,16 @@ describe('plant settings draft', () => {
       { key: 'ratePerKwh', name: 'rate_per_kwh', label: 'Reference tariff', value: 44 }
     ]);
     expect(changedFields(stored, { ...toDraft(stored), capacityKwp: 'junk' })).toEqual([]);
+  });
+  it('takes the inverter rating in watts, exactly, and stores kW', () => {
+    expect(changedFields(stored, { ...toDraft(stored), acRatedKw: '41760' })).toEqual([
+      { key: 'acRatedKw', name: 'solar_grid_capacity', label: 'Inverter rating', value: 41.76 }
+    ]);
+    expect(changedFields(stored, { ...toDraft(stored), acRatedKw: '40000' })).toEqual([]); // 40000 W is the stored 40 kW
+    expect(toDraft({ ...stored, acRatedKw: 41.76 }).acRatedKw).toBe('41760');
+    expect(changedFields({ ...stored, acRatedKw: 41.76 }, toDraft({ ...stored, acRatedKw: 41.76 }))).toEqual([]); // no float drift
+    expect(validateDraft(stored, { ...toDraft(stored), acRatedKw: '41.76' }).acRatedKw).toBe('That looks like kW. Enter watts: 41760 for 41.76 kW.');
+    expect(validateDraft(stored, { ...toDraft(stored), acRatedKw: '41760' })).toEqual({});
   });
 });
 

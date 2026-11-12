@@ -65,6 +65,20 @@ export function gaugeFraction(kw, maxKw) {
   return Math.max(0, Math.min(1, kw / maxKw));
 }
 
+/**
+ * Output as a whole percent of the inverter's rating, NOT capped: 42.1 kW of 41.76 kW is 101%. The gauge's arc stops at
+ * full (gaugeFraction), but the figure stays true. null when either is unknown.
+ */
+export function ratingPercent(kw, maxKw) {
+  if (!isNum(kw) || !isNum(maxKw) || maxKw <= 0) return null;
+  return Math.round((Math.max(0, kw) / maxKw) * 100);
+}
+
+/** A rating as entered, to at most two decimals and no trailing zeros: 41.76 -> '41.76', 40 -> '40'. */
+export function kwExact(v) {
+  return isNum(v) ? v.toLocaleString('en-US', { maximumFractionDigits: 2 }) : DASH;
+}
+
 /** A date key as month and day, the short form chart details use: '2036-06-04' -> 'Jun 4'. */
 export function monthDay(key) {
   return typeof key === 'string' && key.length >= 10 ? `${MON[Number(key.slice(5, 7)) - 1]} ${Number(key.slice(8, 10))}` : DASH;
