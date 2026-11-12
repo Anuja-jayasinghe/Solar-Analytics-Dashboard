@@ -1,0 +1,51 @@
+name: auto-release
+
+# Releases every merge to main, so the version never drifts from what is deployed (docs/RELEASING.md).
+# After each push to main, scripts/auto-release.mjs works out the bump from the PR titles merged since the last release
+# (feat -> minor; fix, perf, refactor, dependency updates -> patch; docs, tests, CI -> none, carried to the next
+# release), cuts the changelog, bumps package.json and shared/version.js, and pushes "Release vX.Y.Z" to main. That
+# push changes shared/version.js, so release.yml then tags vX.Y.Z and publishes the GitHub Release.
+#
+# main is protected (PR + green CI). The Actions bot cannot bypass the ruleset on a personal repository, so the push
+# uses the owner's fine-grained PAT (Contents: read and write, this repository only): RELEASE_PAT when set, otherwise
+# the KEEPALIVE_PAT the heartbeat already uses. A PAT push also triggers release.yml, which a GITHUB_TOKEN push would not.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: auto-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    # Its own release commit and the keepalive heartbeat change nothing that needs releasing.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (!startsWith(github.event.head_commit.message, 'Release v') && !contains(github.event.head_commit.message, 'keepalive heartbeat'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PAT || secrets.KEEPALIVE_PAT }}
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      - name: Release what was merged
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          node scripts/auto-release.mjs

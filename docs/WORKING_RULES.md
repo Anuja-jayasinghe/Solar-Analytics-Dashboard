@@ -99,6 +99,8 @@ body text ≥ 14px / labels ≥ 12px, contrast checked against the surface the t
 `main` is always deployable and only changes through a pull request with green CI (`build` and `secrets`).
 
 - **Small changes**: `type/short-slug` branched from a fresh `origin/main`, one PR, merged with a merge commit.
+- **PR titles follow Conventional Commits** (`feat:`, `fix(api):`, `docs:` …): every merge is released automatically and
+  the title picks the version (`docs/RELEASING.md`). Add the changelog entry in the same PR.
 - **Long efforts** (the v3 frontend, #160) use an **integration branch**: `integration/<name>`, cut from `origin/main`.
   Each feature is its own sub-branch `feat/<name>-<slice>` cut from the integration branch, merged back into it by PR
   (CI runs on every PR, whatever its base). Keep slices small enough to review in one sitting.
