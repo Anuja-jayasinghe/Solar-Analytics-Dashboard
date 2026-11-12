@@ -33,7 +33,9 @@ the secret `RELEASE_PAT`, or `KEEPALIVE_PAT` when that is not set. If the token 
 nothing is lost: renew the token and run *auto-release → Run workflow*.
 
 On every PR, the **pr-check** workflow says which release merging it will make, fails on a title it cannot read, and
-warns when a released change has no changelog entry. Write the entry under `## [Unreleased]` in the PR itself.
+warns when a released change has no changelog entry. It is a required check (`release`, ruleset `protect-main`), so a PR
+whose title the automation cannot read cannot be merged. Write the changelog entry under `## [Unreleased]` in the PR
+itself.
 
 Preview what would be released now: `node scripts/auto-release.mjs --dry-run`.
 
