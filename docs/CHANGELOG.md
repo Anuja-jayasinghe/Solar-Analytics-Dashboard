@@ -5,6 +5,11 @@ All notable changes to the Solar Analytics Dashboard project.
 ## [Unreleased]
 
 ### Changed
+- **The money gap is monthly and readable at a glance** (#226). Under the CEB vs Inverter chart, each bill month gets
+  one cell lined up with its column: `✓ even` when CEB paid for what the inverter made (within 1%), `▼ 4.0 K` (amber)
+  when it paid less, `▲ 1.2 K` (green) when it paid more, in LKR, and a dash when the month cannot be compared. One
+  sentence above sums up the months in view. The signed headline, the paid/worth chips, the all-time total and the
+  up/down bars are gone.
 - **CEB vs Inverter shows the difference in kWh, and which side was higher.** Under each month, a small triangle in
   the inverter's orange or CEB's blue marks the higher side, followed by the difference in kWh (e.g. ▲ 133), instead of
   a signed percentage. The tooltip, the table ("Higher, by kWh") and screen readers say it in words: "Inverter

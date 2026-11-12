@@ -144,29 +144,6 @@ export function varianceTag(row) {
     : { text: n, tone: 'muted', higher: 'ceb', title: `CEB paid for ${n} kWh more than the inverter generated`, short: `CEB +${n}` };
 }
 
-/** Money-gap totals for the rows in view and for every bill (LR-004). Null when nothing is comparable. */
-export function gapSummary(windowRows, allBills) {
-  let sum = 0;
-  let n = 0;
-  for (const r of windowRows) if (r.gapLkr !== null) { sum += r.gapLkr; n += 1; }
-  const all = computeEarningsDifference(allBills);
-  return {
-    windowLkr: n ? sum : null,
-    windowCompared: n,
-    windowTotal: windowRows.length,
-    all: {
-      differenceLkr: all.differenceLkr,
-      differencePct: all.differencePct,
-      valueLkr: all.inverterValueLkr,
-      paidLkr: all.earningsLkr,
-      periods: all.includedPeriods,
-      excluded: all.excluded.length,
-      from: all.from,
-      to: all.to
-    }
-  };
-}
-
 /** The real span of a period, bill date to bill date: 'Sep 4 → Oct 3', or 'Oct 4 → today' while it is open. */
 export function periodSpan(row) {
   if (!row.periodStart) return '';
@@ -199,9 +176,55 @@ export function gapTip(row) {
   return `${span}\nCEB paid ${lkrK(row.gapLkr).replace(/^[−+] /, '')} ${row.gapLkr < 0 ? 'less' : 'more'} than the generation was worth`;
 }
 
-/** Compact amount for under a money-gap bar: '−5.8 K'. */
-export function gapLabel(v) {
-  if (v === null) return '';
-  const a = Math.abs(v);
-  return `${v < 0 ? '−' : '+'}${a >= 1e6 ? `${(a / 1e6).toFixed(2)} M` : `${(a / 1e3).toFixed(1)} K`}`;
+/** Within this many percent of the inverter, a bill counts as "paid for what was made" (meter-reading noise). */
+export const GAP_MATCH_PCT = 1;
+
+const lkrShort = (v) => (v >= 1e6 ? `${(v / 1e6).toFixed(2)} M` : `${(v / 1e3).toFixed(1)} K`);
+
+/**
+ * One month of the money gap (LR-004), for the row under the chart:
+ *   state  'matched' (within GAP_MATCH_PCT), 'less' (CEB paid less than the generation was worth), 'more',
+ *          'none' (not comparable: missing days, no rate) or 'open' (bill not issued yet)
+ *   text   what the cell shows: 'even', or the LKR amount ('5.8 K'); '' when there is nothing to show
+ *   title  the same in words, for the tooltip and screen readers
+ */
+export function gapCell(row) {
+  const span = columnTip(row);
+  if (row.status === 'provisional') return { state: 'open', text: '', title: `${span}\nBill not issued yet` };
+  if (row.gapLkr === null || row.variancePct === null) return { state: 'none', text: '–', title: gapTip(row) };
+  const amount = lkrShort(Math.abs(row.gapLkr));
+  if (Math.abs(row.variancePct) <= GAP_MATCH_PCT) {
+    return { state: 'matched', text: 'even', title: `${span}\nCEB paid for what the inverter made (within ${GAP_MATCH_PCT}%, LKR ${amount} ${row.gapLkr < 0 ? 'less' : 'more'})` };
+  }
+  const less = row.gapLkr < 0;
+  return {
+    state: less ? 'less' : 'more',
+    text: amount,
+    title: `${span}\nCEB paid LKR ${amount} ${less ? 'less' : 'more'} than the generation was worth (${Math.abs(row.variancePct).toFixed(1)}%)`
+  };
+}
+
+/** How the months in view came out: counts per state and the LKR paid less / more (summed, positive numbers). */
+export function gapCounts(rows) {
+  const c = { matched: 0, less: 0, more: 0, compared: 0, lessLkr: 0, moreLkr: 0 };
+  for (const r of rows) {
+    const { state } = gapCell(r);
+    if (state === 'matched' || state === 'less' || state === 'more') {
+      c[state] += 1;
+      c.compared += 1;
+      if (state === 'less') c.lessLkr += Math.abs(r.gapLkr);
+      if (state === 'more') c.moreLkr += Math.abs(r.gapLkr);
+    }
+  }
+  return c;
+}
+
+/** The one-line summary above the row: '9 of 12 bills compared: 7 even · 2 paid less (LKR 9.6 K short)'. */
+export function gapSentence(c, total) {
+  if (c.compared === 0) return 'No bill in view can be compared yet';
+  const parts = [];
+  if (c.matched) parts.push(`${c.matched} even`);
+  if (c.less) parts.push(`${c.less} paid less (LKR ${lkrShort(c.lessLkr)} short)`);
+  if (c.more) parts.push(`${c.more} paid more (LKR ${lkrShort(c.moreLkr)} extra)`);
+  return `${c.compared} of ${total} bills compared: ${parts.join(' · ')}`;
 }

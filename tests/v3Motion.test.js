@@ -38,7 +38,7 @@ describe('reveal styles', () => {
     expect(css).toMatch(/\[data-draw\] \.v3-plot-svg, \.v3-spread\[data-draw\] svg \{ animation: v3-wipe/);
     expect(css).toMatch(/\[data-draw='pending'\] \* \{ animation-play-state: paused !important; \}/); // never seen half drawn
     const reduced = css.slice(css.lastIndexOf('@media (prefers-reduced-motion: reduce)'));
-    for (const sel of ['.v3-bar', '.v3-gapbar', '.v3-plot-svg', '.v3-dot', '.v3-sdot']) expect(reduced).toContain(sel);
+    for (const sel of ['.v3-bar', '.v3-plot-svg', '.v3-dot', '.v3-sdot']) expect(reduced).toContain(sel);
     expect(reduced).toMatch(/\.v3-page \.v3-glass \{ opacity: 1 !important/);
   });
 });

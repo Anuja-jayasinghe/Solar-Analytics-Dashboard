@@ -3,7 +3,7 @@ import { Bubble } from './Bubble.jsx';
 
 // What a chart column draws: bars, points and their value labels. The detail sits just above these, so it follows
 // each bar's height instead of floating at the top of the column.
-const DRAWN = '.v3-bar, .v3-val, .v3-dot, .v3-gapbar, .v3-gapdash, .v3-freqbar, .v3-stripcell, .v3-yoybars > i, .v3-sdot';
+const DRAWN = '.v3-bar, .v3-val, .v3-dot, .v3-gapcell, .v3-freqbar, .v3-stripcell, .v3-yoybars > i, .v3-sdot';
 
 /**
  * A chart detail on hover: what a bar, cell or point does not already show ("Jun 4 → Jul 4"). Always on: it appears at once under the mouse and goes when the mouse leaves. On touch a
