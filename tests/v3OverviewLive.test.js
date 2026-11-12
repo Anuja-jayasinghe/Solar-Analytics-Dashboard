@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest';
 import { createElement as h } from 'react';
 import { renderToString } from 'react-dom/server';
 import {
-  DASH, fmtNum, shortDate, longDate, monthsBetween, lkrCompact, energyCompact, targetProgress, gaugeFraction,
+  DASH, fmtNum, shortDate, longDate, monthsBetween, lkrCompact, energyCompact, targetProgress, gaugeFraction, ratingPercent, kwExact,
   liveState, freshness, openPeriodView, FRESH_WINDOW_MIN, REPORT_GAP_MIN, OLD_READING_MIN, displayLive, clockAt, readingNote, liveStatusInfo, errorLabel
 } from '../src/v3/overview/format.js';
 import { TotalsRow } from '../src/v3/overview/TotalsRow.jsx';
@@ -64,6 +64,14 @@ describe('target progress and gauge', () => {
   it('gauge fraction is clamped and unknown stays unknown', () => {
     expect(gaugeFraction(21.4, 40)).toBeCloseTo(0.535, 6);
     expect(gaugeFraction(55, 40)).toBe(1);
+    // The arc stops at full, but the percentage stays true above the rating, and the rating prints as entered.
+    expect(ratingPercent(42.1, 41.76)).toBe(101);
+    expect(ratingPercent(20.88, 41.76)).toBe(50);
+    expect(ratingPercent(null, 41.76)).toBeNull();
+    expect(ratingPercent(10, 0)).toBeNull();
+    expect(kwExact(41.76)).toBe('41.76');
+    expect(kwExact(40)).toBe('40');
+    expect(kwExact(null)).toBe(DASH);
     expect(gaugeFraction(0, 40)).toBe(0);
     expect(gaugeFraction(null, 40)).toBeNull();
     expect(gaugeFraction(10, null)).toBeNull();

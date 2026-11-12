@@ -3,7 +3,7 @@ import { Info } from '../ui/Info.jsx';
 import { CountUp } from '../ui/Motion.jsx';
 import { STAGE_MS, useCountUp } from '../ui/useMotion.js';
 import { useMotionMode } from '../ui/motionMode.js';
-import { fmtNum, gaugeFraction, liveState, liveStatusInfo, readingNote } from './format.js';
+import { fmtNum, gaugeFraction, kwExact, liveState, liveStatusInfo, ratingPercent, readingNote } from './format.js';
 import { SCALE_PATH, SCALE_R, SUN_PATH, VIEWBOX, rayLevels, rays, scaleLabels } from './sunMeter.js';
 
 const RAYS = rays();
@@ -37,13 +37,14 @@ export function LiveGauge({ live, error = null, maxKw, peak = null, loading }) {
       <span>{state.label}</span>
     </>
   );
-  const pct = frac === null ? null : Math.round(frac * 100);
+  // The arc stops at full, but the percentage is the real one, so output above the rating reads as 101%, not 100%.
+  const pct = ratingPercent(kw, maxKw ?? null);
   const levels = rayLevels(typeof arc === 'number' ? arc / 100 : null);
   const resting = kw === null || state.key === 'asleep' || state.key === 'offline' || state.key === 'loading';
   const labels = scaleLabels(maxKw ?? null).filter((l) => peakShare === null || Math.abs(l.share - peakShare) > 0.06 || l.share === 0 || l.share === 1);
   const peakText = peakKw > 0 ? `Peak ${fmtNum(peakKw, 1)} kW${peakAt ? ` at ${peakAt}` : ''}` : null;
   const meter = frac === null ? {} : {
-    'aria-valuemin': 0, 'aria-valuemax': maxKw, 'aria-valuenow': kw,
+    'aria-valuemin': 0, 'aria-valuemax': maxKw, 'aria-valuenow': Math.min(kw, maxKw),
     'aria-valuetext': `${fmtNum(kw, 1)} kilowatts${peakText ? `; today's ${peakText.toLowerCase()}` : ''}`
   };
 
@@ -102,7 +103,7 @@ export function LiveGauge({ live, error = null, maxKw, peak = null, loading }) {
           {typeof pk === 'number' && <span className="v3-live-bar-peak" style={{ left: `${(pk / 180) * 100}%` }} />}
         </div>
         <div className="v3-live-compact-sub">
-          {note ? `${note[0].toUpperCase()}${note.slice(1)}` : pct === null ? (state.key === 'upstream' ? 'No reading saved today yet' : 'share unknown') : `${pct}% of ${fmtNum(maxKw)} kW`}
+          {note ? `${note[0].toUpperCase()}${note.slice(1)}` : pct === null ? (state.key === 'upstream' ? 'No reading saved today yet' : 'share unknown') : `${pct}% of ${kwExact(maxKw)} kW`}
           {peakText ? ` · ${peakText}` : ''}
         </div>
       </div>

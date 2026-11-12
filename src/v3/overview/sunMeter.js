@@ -61,11 +61,13 @@ export function scaleLabels(maxKw) {
   values.push(maxKw);
   return values.map((v) => {
     const share = v / maxKw;
-    const text = `${Number.isInteger(v) ? v : fmt1(v)}${v === maxKw ? ' kW' : ''}`;
+    // The maximum is the rating as entered (41.76 kW); the steps before it are round.
+    const text = v === maxKw ? `${fmt2(v)} kW` : `${Number.isInteger(v) ? v : fmt1(v)}`;
     return { share, text, ...at(share, LABEL_R) };
   });
 }
 const fmt1 = (v) => (Math.round(v * 10) / 10).toString();
+const fmt2 = (v) => (Math.round(v * 100) / 100).toString();
 
 /** The half disc of the sun (an SVG path). */
 export const SUN_PATH = `M ${-SUN_R} 0 A ${SUN_R} ${SUN_R} 0 0 1 ${SUN_R} 0 Z`;

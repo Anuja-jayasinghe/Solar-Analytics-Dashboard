@@ -4,6 +4,13 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+### Fixed
+- **The inverter rating can be exact.** Settings took only whole kW, so 41.76 was refused ("the nearest valid values
+  are 41 and 42"). It is now entered in watts (41760) and stored as 41.76 kW. A rating typed in kW by habit gets a clear
+  hint instead of being saved as 0.04 kW.
+- **The live gauge shows the rating as entered** ("41.76 kW", not "41.8" or "42"), and its percentage is the real one:
+  output above the rating reads 101%, while the arc stops at full.
+
 ## [3.3.0] - 2026-11-12
 
 ### Added
