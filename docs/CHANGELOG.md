@@ -4,6 +4,8 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-11-12
+
 ### Changed
 - **The money gap is monthly and readable at a glance** (#226). Under the CEB vs Inverter chart, each bill month gets
   one cell lined up with its column: `✓ even` when CEB paid for what the inverter made (within 1%), `▼ 4.0 K` (amber)
