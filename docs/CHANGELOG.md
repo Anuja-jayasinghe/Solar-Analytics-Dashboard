@@ -4,6 +4,8 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-11-12
+
 ### Added
 - **Bills can arrive by email** (#242, LR-005). `POST /api/ceb-bills/inbound` takes Resend's `email.received` webhook
   for the solar bill the owner's Gmail forwards. The webhook must carry a valid signature, the email must come from
