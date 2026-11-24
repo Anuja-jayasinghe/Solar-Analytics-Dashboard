@@ -11,6 +11,7 @@ policy matrix and the checklist.
 | Any visitor | `VITE_SUPABASE_ANON_KEY` — **public**, compiled into the browser bundle | Only what RLS grants the `anon` role |
 | Admin | Clerk session; `publicMetadata.role === 'admin'`, checked server-side on every request by `api/_lib/verifyAdminToken.js` | The admin API endpoints |
 | Server code | `SUPABASE_SERVICE_KEY` (service role, bypasses RLS) | Everything, only ever from `api/` and the scheduled jobs |
+| Any page of this site (browser error reports, #241) | None: same-origin check, 8 KB cap, rate limit | `POST /api/ops/error` only. It can add or count an error group in `error_events`, never read anything; the database refuses a new group once 50 appeared in the past hour. Reports carry no user identity and are redacted before storage. The one write a signed-out browser can cause, deliberately |
 | Resend (inbound email webhook) | Svix signature over the raw body, checked with `RESEND_WEBHOOK_SECRET` | `POST /api/ceb-bills/inbound` only. It can hand in a bill, never read one: the response is an outcome word, and a bill is kept only when it comes from `BILL_SENDER_DOMAINS` and names `SOLAR_CEB_ACCOUNT` (LR-005) |
 
 The consequence that shapes everything else: **anything the anon key can read is public.** The

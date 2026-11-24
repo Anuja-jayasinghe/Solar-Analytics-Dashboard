@@ -43,7 +43,7 @@ function getAllowedOrigins() {
   return fromEnv.length > 0 ? fromEnv : DEFAULT_ALLOWED_ORIGINS;
 }
 
-function isOriginAllowed(origin) {
+export function isOriginAllowed(origin) {
   if (!origin) return false;
   const allowed = getAllowedOrigins();
   if (allowed.includes(origin)) return true;

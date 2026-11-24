@@ -285,6 +285,32 @@ rest) is in LR-005; setting it up is in [`RUNBOOK.md`](./RUNBOOK.md#email-bill-i
 
 ---
 
+## Operations (`/api/ops/*`)
+
+One function, `api/ops/[action].js`, for operational endpoints (#241). Any other action answers
+`404 { "error": "Unknown ops endpoint" }`.
+
+### `POST /api/ops/error`
+
+A browser error report, sent by `createBeaconReporter()` in `src/v3/ui/errorReporting.js` (production builds only).
+**Not authenticated**, because signed-out visitors have errors too; instead it accepts reports from this site only
+(an allowed `Origin`, or `Sec-Fetch-Site: same-origin`), at most 8 KB, 10 a minute per address per instance. Body:
+`{ message, stack?, source?, route?, release?, file?, line? }`; unknown fields are dropped, every field is cut to length
+and redacted (e-mail addresses, tokens, secret query values, 9+ digit numbers), and URLs are kept as paths. The report
+is grouped into `error_events` by `record_error_event()`, which also refuses a new group once 50 appeared in the past hour.
+
+| Status | Meaning |
+|---|---|
+| `204` | Received (stored, counted, or dropped by a limit) |
+| `400` | Not JSON, or no `message` |
+| `403` | Not from this site |
+| `413` | Over 8 KB |
+| `429` | Too many reports from this address; `Retry-After` says when to retry |
+
+Nothing can be read back through this endpoint.
+
+---
+
 ## Dashboard data (v3 read API)
 
 `GET /api/data/{resource}`, **one function** (`api/data/[resource].js`) serving every dashboard
@@ -413,7 +439,7 @@ for first, and guessing wrong cost a production outage once already.
 
 `api/_lib/` and `api/_config/` are **not** routes. The leading underscore excludes them from
 Vercel's function count, which is why shared code lives there — the Hobby plan caps this
-project at 12 functions and it currently uses 6. The seven `/api/ceb-bills/*` URLs (six admin endpoints and the
+project at 12 functions and it currently uses 7 (`api/ops/[action].js` is the 7th, #241). The seven `/api/ceb-bills/*` URLs (six admin endpoints and the
 email webhook) are one function,
 `api/ceb-bills/[action].js`, which loads the matching handler from `api/_lib/cebBills/`; any other
 action answers `404 { "error": "Unknown bill endpoint" }`.
