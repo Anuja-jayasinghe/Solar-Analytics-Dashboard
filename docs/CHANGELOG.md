@@ -4,6 +4,8 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+## [3.9.2] - 2026-11-24
+
 ### Fixed
 - **`/healthz` and `/ready` answer HEAD requests.** They accepted only GET, so UptimeRobot, which probes with HEAD by
   default, got 405 Method Not Allowed and reported the site as down while it was up (#241).
