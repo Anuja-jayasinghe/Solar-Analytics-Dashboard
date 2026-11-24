@@ -4,6 +4,8 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+## [3.9.4] - 2026-11-24
+
 ### Fixed
 - **Fewer Vercel deployments, so the daily limit is not hit.** Vercel Hobby allows 100 a day, and on 2026-11-24 they ran
   out: Dependabot rebases built 45 previews and every merge built production twice. Dependabot branches no longer get a
