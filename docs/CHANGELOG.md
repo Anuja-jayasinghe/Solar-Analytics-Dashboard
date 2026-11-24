@@ -4,6 +4,8 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+## [3.7.0] - 2026-11-24
+
 ### Added
 - **Error tracking, self-hosted** (#241, replaces decision D4's Rollbar). Browser errors in production are sent to the
   new `POST /api/ops/error` (sendBeacon, at most 10 per page and each message once) and grouped in the private
