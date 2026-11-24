@@ -589,7 +589,16 @@ Pasting the anon key here is the single most repeated mistake in this project's 
 
 ### Deploying
 
-`main` auto-deploys to production. CI must pass all four gates — lint, test, build, prod audit.
+`main` auto-deploys to production, but only its **Release** commits: `scripts/vercel-ignore-build.mjs` skips the
+merge commit that comes a minute before (Vercel Hobby allows 100 deployments a day, and every merge used to build
+twice). A merge that makes no release (`docs:`, `chore:`, `ci:`) deploys with the next release. To deploy one now, add
+`[deploy]` to a commit message, or Vercel → Deployments → Redeploy. Dependabot branches get no Vercel preview at all
+(`git.deploymentEnabled` in `vercel.json`); GitHub CI still builds and tests them.
+
+**"Resource is limited - try again in 24 hours" (`api-deployments-free-per-day`)** means the 100 a day are used up.
+Nothing deploys until the oldest of the day's deployments is 24 hours old; then redeploy the newest main commit.
+
+CI must pass all four gates — lint, test, build, prod audit.
 None is `--if-present`; two of them silently passed for months before that was fixed. The full
 checklist is [`guides/DEPLOYMENT_CHECKLIST.md`](./guides/DEPLOYMENT_CHECKLIST.md).
 

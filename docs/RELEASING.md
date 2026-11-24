@@ -8,7 +8,9 @@ as `v3.1.0`, and `/healthz` reports it as `version` next to `revision` (the comm
 ## Every merge is released automatically
 
 `main` deploys to production on every merge (Vercel), so every merge is also released, and the version on screen always
-matches what is running. After each push to `main`, the **auto-release** workflow (`.github/workflows/auto-release.yml`,
+matches what is running. Only the **Release** commit is built: the merge commit before it is skipped by
+`scripts/vercel-ignore-build.mjs`, to stay under Vercel Hobby's 100 deployments a day. A merge that releases nothing
+(`docs:`, `chore:`, `ci:`) therefore goes live with the next release; add `[deploy]` to a commit message to force a build. After each push to `main`, the **auto-release** workflow (`.github/workflows/auto-release.yml`,
 `scripts/auto-release.mjs`):
 
 1. collects every PR merged since the last release (the last commit that changed `shared/version.js`), so a run that
