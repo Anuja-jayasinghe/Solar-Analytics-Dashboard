@@ -4,6 +4,8 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+## [3.8.0] - 2026-11-24
+
 ### Added
 - **A watchdog that runs on time** (#241). Supabase pg_cron calls the new `POST /api/ops/watch` every 15 minutes
   (bearer `OPS_WATCH_SECRET`). It alerts by email, deduplicated, when live inverter data stops for an hour in daylight,
