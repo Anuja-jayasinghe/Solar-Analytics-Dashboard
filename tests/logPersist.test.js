@@ -40,3 +40,23 @@ describe('insertRow', () => {
     expect(insert).toHaveBeenCalledWith({ route: 'data/live', status: 200 });
   });
 });
+
+describe('insertRow after the migration lands', () => {
+  it('tries a missing table again after 10 minutes, so a warm instance picks it up', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      insert.mockResolvedValueOnce({ error: { code: '42P01', message: 'relation does not exist' } }).mockResolvedValue({ error: null });
+      await __test.insertRow('request_log', { n: 1 });
+      vi.advanceTimersByTime(9 * 60 * 1000);
+      await __test.insertRow('request_log', { n: 2 });
+      expect(insert).toHaveBeenCalledTimes(1);
+      vi.advanceTimersByTime(2 * 60 * 1000);
+      await __test.insertRow('request_log', { n: 3 });
+      expect(insert).toHaveBeenCalledTimes(2);
+      expect(insert).toHaveBeenLastCalledWith({ n: 3 });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

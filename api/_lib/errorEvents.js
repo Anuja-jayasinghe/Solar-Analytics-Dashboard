@@ -96,7 +96,9 @@ export function apiErrorEvent({ route, method, status, error, actor, release }) 
   };
 }
 
-let functionMissing = false;
+// Skipped for 10 minutes after it was found missing, then tried again (see MISSING_RETRY_MS in log.js).
+const MISSING_RETRY_MS = 10 * 60 * 1000;
+let functionMissing = null; // when it was found missing
 
 const isMissingFunction = (error) => error?.code === 'PGRST202' || error?.code === '42883' || error?.code === '42P01' || /could not find the function|does not exist/i.test(error?.message || '');
 
@@ -105,7 +107,7 @@ const isMissingFunction = (error) => error?.code === 'PGRST202' || error?.code =
  * refused (50 new groups in the past hour), or null when it could not be stored.
  */
 export async function recordErrorEvent(db, e) {
-  if (functionMissing) return null;
+  if (functionMissing !== null && Date.now() - functionMissing < MISSING_RETRY_MS) return null;
   try {
     const { data, error } = await db.rpc('record_error_event', {
       p_fingerprint: e.fingerprint,
@@ -119,8 +121,9 @@ export async function recordErrorEvent(db, e) {
     });
     if (!error) return typeof data === 'number' ? data : null;
     if (isMissingFunction(error)) {
-      functionMissing = true;
-      console.warn('[ERRORS] record_error_event() does not exist yet (migration 2026-11-24_observability_tables.sql): not storing errors');
+      const first = functionMissing === null;
+      functionMissing = Date.now();
+      if (first) console.warn('[ERRORS] record_error_event() does not exist yet (migration 2026-11-24_observability_tables.sql): not storing errors');
       return null;
     }
     console.warn('[ERRORS] could not store an error event:', error.message);
@@ -131,4 +134,4 @@ export async function recordErrorEvent(db, e) {
   }
 }
 
-export const __test = { reset: () => { functionMissing = false; } };
+export const __test = { reset: () => { functionMissing = null; } };
