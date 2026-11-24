@@ -56,6 +56,8 @@ export function createAdminApi({ getToken, fetchImpl = (...a) => globalThis.fetc
     updateRecord: (id, record) => call('PATCH', '/api/ceb-bills/records', { json: { id, record } }),
     /** Permanently delete one saved bill (and the upload and PDF behind it). */
     deleteRecord: (recordId) => call('DELETE', '/api/ceb-bills/delete', { json: { recordId } }),
+    /** Admin → Health: collector runs, open alerts and recent errors (#241). */
+    opsStatus: () => call('GET', '/api/ops/status'),
     listUsers: () => call('GET', '/api/admin/users'),
     /** Remove a person's account entirely. The server refuses to delete the caller. */
     deleteUser: (userId) => call('DELETE', `/api/admin/users/${encodeURIComponent(userId)}`),

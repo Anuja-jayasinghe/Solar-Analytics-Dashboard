@@ -183,7 +183,7 @@ describe('POST /api/ops/error', () => {
 
 describe('api/ops/[action].js', () => {
   it('routes known actions and 404s the rest', async () => {
-    expect(OPS_ACTIONS).toEqual(['error', 'watch']);
+    expect(OPS_ACTIONS).toEqual(['error', 'watch', 'status']);
     const res = mockRes();
     await opsRouter({ query: { action: 'nope' } }, res);
     expect(res.statusCode).toBe(404);

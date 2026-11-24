@@ -4,6 +4,12 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+### Added
+- **Admin → Health shows the pipeline and the alerts** (#241, #181). A new Monitoring card lists the open alerts, the
+  20 newest collector runs (a run that wrote nothing shows as "empty", not as good; a failed one shows its error) and
+  the most recent error groups, from the new admin-only `GET /api/ops/status`. Until the observability migration is
+  applied, each section says so instead of failing.
+
 ## [3.8.0] - 2026-11-24
 
 ### Added
