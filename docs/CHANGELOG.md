@@ -4,6 +4,10 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+### Fixed
+- **Ready for lucide-react 1.x.** The footer's GitHub icon is drawn inline instead of imported: lucide-react 1.0 removed
+  brand icons, so the Dependabot upgrade (#263) failed to build ("`Github` is not exported"). The icon looks the same.
+
 ## [3.9.2] - 2026-11-24
 
 ### Fixed
