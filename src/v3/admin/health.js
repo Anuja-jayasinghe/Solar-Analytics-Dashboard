@@ -63,3 +63,57 @@ export function freshnessItems({ totals, todayKey }) {
   }
   return items;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Monitoring (issue #241): rows for GET /api/ops/status
+// ---------------------------------------------------------------------------------------------
+
+/** An ISO instant as Colombo local "YYYY-MM-DD HH:MM", or a dash. */
+export function localStamp(iso) {
+  const ms = Date.parse(iso ?? '');
+  if (!Number.isFinite(ms)) return '—';
+  return new Date(ms + 330 * 60_000).toISOString().slice(0, 16).replace('T', ' ');
+}
+
+const RUN_TONE = { ok: 'good', empty: 'warn', failed: 'bad', running: 'neutral' };
+const NOT_SET_UP = 'Not set up yet: the observability migration has not been applied.';
+
+/** What a section says when it could not be read. null when it has rows. */
+export function sectionProblem(section) {
+  if (!section || section.rows) return null;
+  return section.problem === 'not_set_up' ? NOT_SET_UP : 'Could not be read right now.';
+}
+
+/** The newest collector runs. A run that wrote nothing is "empty", never "ok" (it did not succeed). */
+export function runItems(rows = []) {
+  return rows.map((r) => {
+    const wrote = [r.points_written ? `${r.points_written} points` : null, r.alarms_written ? `${r.alarms_written} alarms` : null, r.days_derived ? `${r.days_derived} days` : null].filter(Boolean).join(', ');
+    return {
+      key: String(r.id),
+      label: `${r.job} · ${localStamp(r.started_at)}`,
+      value: r.status,
+      tone: RUN_TONE[r.status] ?? 'neutral',
+      tip: r.status === 'failed' ? `Error: ${r.error || 'none recorded'}` : wrote ? `Wrote ${wrote}.` : 'Wrote nothing.'
+    };
+  });
+}
+
+export function alertItems(rows = []) {
+  return rows.map((a) => ({
+    key: a.key,
+    label: a.title,
+    value: `since ${localStamp(a.opened_at)}`,
+    tone: 'bad',
+    tip: `Checked ${a.occurrences} time${a.occurrences === 1 ? '' : 's'}; last email ${localStamp(a.last_sent_at)}.`
+  }));
+}
+
+export function errorItems(rows = []) {
+  return rows.map((e) => ({
+    key: e.fingerprint,
+    label: `${e.source === 'api' ? 'API' : 'Browser'}: ${e.message.length > 70 ? `${e.message.slice(0, 69)}…` : e.message}`,
+    value: `${e.occurrences}×`,
+    tone: 'warn',
+    tip: `${e.route || 'unknown page'} · release ${e.release || 'unknown'} · first ${localStamp(e.first_seen_at)}, last ${localStamp(e.last_seen_at)}`
+  }));
+}

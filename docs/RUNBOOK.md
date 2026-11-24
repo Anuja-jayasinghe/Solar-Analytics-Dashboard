@@ -72,7 +72,8 @@ thing that is down) and GitHub issues (the daily checks).
 | Bill intake | email webhook | `api/_lib/notify.js` (LR-005) | a bill needs a person | `[Solar bills] …` |
 | Real-user speed | Vercel Speed Insights / Analytics | Vercel | — | dashboard only; look now and then |
 
-Open alerts: `select key, title, opened_at, occurrences, last_sent_at from alert_state where status = 'open';`
+**Admin → Health → Monitoring** shows the open alerts, the 20 newest collector runs and the most recent error groups
+(`GET /api/ops/status`). In SQL, open alerts: `select key, title, opened_at, occurrences, last_sent_at from alert_state where status = 'open';`
 Every decision is also an `[ALERT]` line, and each watchdog run a `[WATCH]` line, in the Vercel function log.
 
 ### When an alert fires

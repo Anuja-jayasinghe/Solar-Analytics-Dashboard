@@ -5,6 +5,10 @@ All notable changes to the Solar Analytics Dashboard project.
 ## [Unreleased]
 
 ### Added
+- **Admin → Health shows the pipeline and the alerts** (#241, #181). A new Monitoring card lists the open alerts, the
+  20 newest collector runs (a run that wrote nothing shows as "empty", not as good; a failed one shows its error) and
+  the most recent error groups, from the new admin-only `GET /api/ops/status`. Until the observability migration is
+  applied, each section says so instead of failing.
 - **A watchdog that runs on time** (#241). Supabase pg_cron calls the new `POST /api/ops/watch` every 15 minutes
   (bearer `OPS_WATCH_SECRET`). It alerts by email, deduplicated, when live inverter data stops for an hour in daylight,
   when a collector job fails, when unexpected API 5xx reach 10 in an hour, and when a new error appears. pg_cron also

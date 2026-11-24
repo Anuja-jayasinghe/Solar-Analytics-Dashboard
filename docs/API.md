@@ -309,6 +309,13 @@ is grouped into `error_events` by `record_error_event()`, which also refuses a n
 
 Nothing can be read back through this endpoint.
 
+### `GET /api/ops/status`
+
+**Admin only** (`verifyAdminToken`). What Admin → Health → Monitoring shows: the 20 newest `collector_runs` (each
+`error` cut to 200 characters), the open alerts from `alert_state`, and the 10 most recently seen `error_events`. Each
+section is read on its own: `{ rows: [...] }`, or `{ rows: null, problem: 'not_set_up' }` when its table does not exist
+yet, or `problem: 'failed'`. `Cache-Control: private, no-store`.
+
 ### `POST /api/ops/watch`
 
 The watchdog, called every 15 minutes by Supabase pg_cron. **Authorization:** `Bearer <OPS_WATCH_SECRET>`, compared
