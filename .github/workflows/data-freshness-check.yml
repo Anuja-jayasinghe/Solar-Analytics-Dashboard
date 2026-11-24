@@ -71,8 +71,8 @@ jobs:
           TELEMETRY_REQUIRED: 'true'
           # The watchdog (POST /api/ops/watch from Supabase pg_cron, issue #241) must have completed a run in
           # the past 2 hours. Set to 'true' once the schedule migration is applied and the first runs succeed
-          # (docs/RUNBOOK.md, "Signals and alerts").
-          WATCHDOG_REQUIRED: 'false'
+          # (docs/RUNBOOK.md, "Signals and alerts"). Armed 2026-11-24 after the first runs succeeded.
+          WATCHDOG_REQUIRED: 'true'
         run: |
           set -o pipefail
           node scripts/check_data_freshness.js 2>&1 | tee freshness-report.txt
