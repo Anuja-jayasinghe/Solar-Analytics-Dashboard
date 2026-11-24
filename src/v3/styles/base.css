@@ -50,7 +50,7 @@ html, body { margin: 0; padding: 0; }
 .v3-chip { border-radius: 14px; background: var(--chip-bg); border: 1px solid var(--chip-line); }
 
 /* ---- layout ---- */
-.v3-layout { position: relative; z-index: 1; display: flex; align-items: stretch; min-height: 100vh; }
+.v3-layout { position: relative; z-index: 1; display: flex; align-items: stretch; min-height: 100vh; padding: 0 env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px); } /* notch in landscape (viewport-fit=cover) */
 .v3-main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 20px; padding: 24px 28px 40px; }
 .v3-header { position: relative; z-index: 50; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 4px 4px 0; }
 .v3-title { margin: 0; font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 26px; letter-spacing: -.02em; }
@@ -164,17 +164,17 @@ html, body { margin: 0; padding: 0; }
 @media (max-width: 700px) {
   .v3-layout { flex-direction: column; }
   .v3-rail, .v3-rail[data-collapsed='true'] { order: 2; width: auto; position: sticky; bottom: 0; z-index: 40; margin-top: auto; border-radius: 20px 20px 0 0; border-left: 1px solid var(--glass-line); border-bottom: 0; }
-  .v3-rail-in { height: auto; flex-direction: row; padding: 4px 8px 8px; position: static; }
+  .v3-rail-in { height: auto; flex-direction: row; padding: 4px 8px calc(8px + env(safe-area-inset-bottom, 0px)); position: static; }
   .v3-rail-group { flex-direction: row; gap: 0; flex: 1 1 auto; justify-content: space-around; }
   .v3-hide-phone, .v3-rail[data-collapsed='true'] .v3-hide-phone { display: none; }
   .v3-navitem, .v3-rail[data-collapsed='true'] .v3-navitem { flex-direction: column; height: 50px; gap: 3px; padding: 4px 2px; font-size: 10.5px; justify-content: center; width: auto; flex: 1 1 0; border-radius: 12px; }
   .v3-rail .v3-label, .v3-rail[data-collapsed='true'] .v3-label { display: inline; }
   .v3-rail .v3-label.v3-hide-phone, .v3-rail[data-collapsed='true'] .v3-label.v3-hide-phone { display: none; }
-  .v3-main { padding: 10px 10px 12px; gap: 8px; max-width: none; min-width: 0; }
+  .v3-main { padding: calc(10px + env(safe-area-inset-top, 0px)) 10px 12px; gap: 8px; max-width: none; min-width: 0; }
   .v3-layout { overflow-x: clip; }
   .v3-title { font-size: 18px; }
   .v3-header { padding: 0 2px; gap: 8px; }
-  .v3-menu { position: fixed; top: 56px; right: 10px; width: min(310px, calc(100% - 20px)); max-width: none; max-height: calc(100dvh - 112px); }
+  .v3-menu { position: fixed; top: calc(56px + env(safe-area-inset-top, 0px)); right: 10px; width: min(310px, calc(100% - 20px)); max-width: none; max-height: calc(100dvh - 112px - env(safe-area-inset-top, 0px)); }
   .v3-card { padding: 12px; gap: 8px; }
   .v3-glass { border-radius: 18px; }
 }

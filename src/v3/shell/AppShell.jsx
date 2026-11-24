@@ -20,7 +20,11 @@ export function AppShell() {
   // The page behind the app (overscroll, the strip under the phone tab bar) takes the theme's background too.
   useEffect(() => {
     const bg = rootRef.current ? getComputedStyle(rootRef.current).getPropertyValue('--bg').trim() : '';
-    if (bg) document.documentElement.style.background = bg;
+    if (bg) {
+      document.documentElement.style.background = bg;
+      // ...and so does the browser / home-screen status area (index.html seeds one tag per OS scheme; the app's theme wins).
+      document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', bg));
+    }
   }, [theme]);
   useEffect(() => {
     document.addEventListener('copy', blockCopy);

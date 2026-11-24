@@ -3,11 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <!-- iOS "Add to Home Screen": a 180x180 opaque PNG (iOS rounds the corners and paints transparent pixels black). Made by scripts/make-icons.mjs. -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- viewport-fit=cover lets the page run under the notch and home bar; the shell pads itself with env(safe-area-inset-*). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
     <meta name="description" content="Solar Analytics Dashboard - Monitor your solar energy generation in real-time" />
-    <meta name="theme-color" content="#ff7a00" />
+    <!-- Sunrise Night / Sunrise Day backgrounds; AppShell keeps both in step with the theme chosen in the app. -->
+    <meta name="theme-color" content="#0A0F1F" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#F5F2EC" media="(prefers-color-scheme: light)" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="SolarEdge" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
     <!--
