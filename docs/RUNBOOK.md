@@ -98,8 +98,10 @@ Every decision is also an `[ALERT]` line, and each watchdog run a `[WATCH]` line
 1. Apply `2026-11-24_observability_tables.sql`, then deploy the code (both after a DB Snapshot).
 2. Make a secret: `openssl rand -hex 32`. Put it in Vercel (Production) as `OPS_WATCH_SECRET` and in the Supabase
    Vault as `ops_watch_secret`. Redeploy so the function sees it.
-3. Create a fine-grained GitHub token: this repository only, permission **Actions: Read and write**, nothing else,
-   with an expiry date. Store it in the Supabase Vault as `github_dispatch_token`. Note the expiry date.
+3. Create a fine-grained GitHub token: this repository only, permission **Actions: Read and write**, nothing else.
+   Store it in the Supabase Vault as `github_dispatch_token`. The live token (`solar-pgcron-dispatch`, created
+   2026-11-24) has **no expiry**, the owner's choice: the narrow permission limits what a leak could do. If it is ever
+   revoked, the dispatcher's calls get 401 and the watchdog reports live data stopping within an hour of daylight.
 4. Apply `2026-11-24_observability_schedule.sql`.
 5. After 15 minutes, run its VERIFY queries. Then set `WATCHDOG_REQUIRED: 'true'` in
    `.github/workflows/data-freshness-check.yml`.

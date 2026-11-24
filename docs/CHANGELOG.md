@@ -4,6 +4,11 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+### Changed
+- **The watchdog is live** (#241). The schedule migration is applied: Supabase pg_cron calls the watchdog every 15
+  minutes and starts the live collector every 15 minutes in daylight. The daily Data Freshness Check now also fails
+  when the watchdog has not completed a run in 2 hours (`WATCHDOG_REQUIRED: 'true'`).
+
 ## [3.9.1] - 2026-11-24
 
 ### Fixed
