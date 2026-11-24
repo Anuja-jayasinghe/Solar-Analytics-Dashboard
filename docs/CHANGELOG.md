@@ -4,6 +4,15 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+### Added
+- **One alert path for every email to the owner** (#241). `api/_lib/alerts.js` sends the bill intake's emails and,
+  from now on, operational alerts. An alert is a key that is open or resolved (`alert_state` table): one email when it
+  opens, a reminder at most once a day while it stays open, and one when it resolves, so an outage checked every 15
+  minutes sends two emails, not dozens. At most 20 alerts are emailed a day, which protects Resend's free quota. Nothing
+  in it throws; every decision is an `[ALERT]` log line. Alerts go to `ALERT_TO`, or to `BILL_ALERT_TO` when that is unset.
+- **Migration `2026-11-24_observability_tables.sql`** (not applied yet): `alert_state`, `request_log`,
+  `admin_audit_log`, `error_events` and `record_error_event()`, all private to the service role.
+
 ## [3.4.1] - 2026-11-24
 
 ### Fixed
