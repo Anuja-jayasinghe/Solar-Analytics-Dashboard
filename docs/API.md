@@ -56,9 +56,10 @@ anything outside the declared list with `405`.
 ## Health probes
 
 Unauthenticated by design. Both are served by a single function (`api/health.js`) via rewrites
-in `vercel.json`, because Vercel Hobby caps the project at 12 functions.
+in `vercel.json`, because Vercel Hobby caps the project at 12 functions. Both answer HEAD as well as GET (no body; the status is the answer), because uptime monitors such as
+UptimeRobot probe with HEAD.
 
-### `GET /healthz` — liveness
+### `GET` | `HEAD /healthz` — liveness
 
 "Is the process running?" **No dependency checks, ever** — it must not fail because Supabase is
 down, or a health-check consumer would recycle healthy instances during someone else's outage.
@@ -75,7 +76,7 @@ down, or a health-check consumer would recycle healthy instances during someone 
 }
 ```
 
-### `GET /ready` — readiness
+### `GET` | `HEAD /ready` — readiness
 
 "Can this instance actually serve?" Checks configuration and reaches Postgres with a **3-second
 timeout**. `200` when ready, `503` when not.
