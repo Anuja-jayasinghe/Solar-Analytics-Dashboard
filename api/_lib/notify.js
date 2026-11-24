@@ -8,7 +8,10 @@
 // recorded cleanly, an ignored email, a discarded home bill and a duplicate send nothing; the caller
 // decides that (api/_lib/billInbound.js), this module only writes and sends.
 //
-// composeIntakeEmail() is pure, so every message is pinned by tests without a network.
+// composeIntakeEmail() is pure, so every message is pinned by tests without a network. Sending goes through
+// createMailer() in api/_lib/alerts.js, the one email path for every alert (issue #241).
+
+import { createMailer } from './alerts.js';
 
 export const INTAKE_EMAIL_KINDS = Object.freeze([
   'recorded_with_notes', // auto: recorded, but the extractor left a note (e.g. the tariff changed)
@@ -135,10 +138,10 @@ export function composeIntakeEmail({ kind, bill = null, checks = [], notes = [],
  * @returns {{ notify: (outcome: object, idempotencyKey: string) => Promise<{ id: string }> }}
  */
 export function createNotifier({ resend, from, to, reviewUrl }) {
+  const mailer = createMailer({ resend, from, to });
   return {
     async notify(outcome, idempotencyKey) {
-      const { subject, text, html } = composeIntakeEmail({ ...outcome, reviewUrl });
-      return resend.sendEmail({ from, to: [to], subject, text, html }, idempotencyKey);
+      return mailer.send(composeIntakeEmail({ ...outcome, reviewUrl }), idempotencyKey);
     }
   };
 }
