@@ -309,6 +309,18 @@ is grouped into `error_events` by `record_error_event()`, which also refuses a n
 
 Nothing can be read back through this endpoint.
 
+### `POST /api/ops/watch`
+
+The watchdog, called every 15 minutes by Supabase pg_cron. **Authorization:** `Bearer <OPS_WATCH_SECRET>`, compared
+in constant time. It runs four checks (`data:live-stale`, `collector:failed`, `api:5xx-rate`, `error:<group>`), and
+raises or resolves each through `api/_lib/alerts.js`. What they mean: [`RUNBOOK.md`](./RUNBOOK.md#signals-and-alerts).
+
+| Status | Body | Meaning |
+|---|---|---|
+| `200` | `{ checks: [{ key, action, sent?, reason?, detail? }] }` | Every check ran. `action` is `ok`, `raise`, `resolve`, `skip` (the live check at night) or `error` (that check could not run; the others still did) |
+| `401` | `{ error }` | Missing or wrong secret |
+| `503` | `{ error }` | `OPS_WATCH_SECRET` is not set |
+
 ---
 
 ## Dashboard data (v3 read API)

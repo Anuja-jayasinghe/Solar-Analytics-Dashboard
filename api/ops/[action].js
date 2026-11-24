@@ -4,12 +4,14 @@
 // this is the 7th. They share a function so the next one costs nothing.
 //
 //   POST /api/ops/error   a browser error report (public, same-origin, rate-limited; no personal data)
+//   POST /api/ops/watch   the watchdog, called by Supabase pg_cron every 15 minutes (bearer OPS_WATCH_SECRET)
 //
 // Each handler lives in api/_lib/ops/ with its own method checks, auth and [REQUEST] log line, and is
 // imported only when its action is called.
 
 const HANDLERS = Object.freeze({
-  error: () => import('../_lib/ops/clientError.js')
+  error: () => import('../_lib/ops/clientError.js'),
+  watch: () => import('../_lib/ops/watch.js')
 });
 
 export const OPS_ACTIONS = Object.freeze(Object.keys(HANDLERS));

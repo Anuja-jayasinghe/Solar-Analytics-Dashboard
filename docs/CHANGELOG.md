@@ -4,6 +4,15 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+### Added
+- **A watchdog that runs on time** (#241). Supabase pg_cron calls the new `POST /api/ops/watch` every 15 minutes
+  (bearer `OPS_WATCH_SECRET`). It alerts by email, deduplicated, when live inverter data stops for an hour in daylight,
+  when a collector job fails, when unexpected API 5xx reach 10 in an hour, and when a new error appears. pg_cron also
+  starts the live collector every 15 minutes in daylight through GitHub's `workflow_dispatch`, because GitHub's own
+  schedule runs it only 2 or 3 times in daylight, with gaps of up to 8.5 hours. It prunes the new log tables daily.
+  The daily Data Freshness Check can check that the watchdog itself is running (`WATCHDOG_REQUIRED`, off until set up).
+  Migration `2026-11-24_observability_schedule.sql` (not applied yet). RUNBOOK: "Signals and alerts".
+
 ## [3.7.0] - 2026-11-24
 
 ### Added

@@ -5,7 +5,7 @@
 // and a missed alarm repeats the five-month outage this check was created for.
 
 import { describe, it, expect } from 'vitest';
-import { evaluateCollectorRuns, evaluateUptimeFreshness } from '../shared/domain/freshness.js';
+import { evaluateCollectorRuns, evaluateUptimeFreshness, evaluateWatchdog } from '../shared/domain/freshness.js';
 
 const NOW = Date.parse('2026-10-04T06:00:00Z');
 const run = (status, iso) => ({ status, started_at: iso });
@@ -66,5 +66,19 @@ describe('evaluateUptimeFreshness', () => {
     const stale = evaluateUptimeFreshness({ latestDay: '2026-10-01', todayKey: '2026-10-04' });
     expect(stale.ok).toBe(false);
     expect(stale.ageDays).toBe(3);
+  });
+});
+
+describe('evaluateWatchdog (#241)', () => {
+  const NOW = Date.parse('2036-03-02T10:00:00Z');
+  it('is skipped until armed', () => {
+    expect(evaluateWatchdog({ latestIso: null, nowMs: NOW })).toMatchObject({ ok: true, skipped: true });
+  });
+  it('fails when the watchdog never ran or stopped more than 2 hours ago', () => {
+    expect(evaluateWatchdog({ latestIso: null, nowMs: NOW, required: true }).ok).toBe(false);
+    expect(evaluateWatchdog({ latestIso: '2036-03-02T09:00:00Z', nowMs: NOW, required: true })).toMatchObject({ ok: true, ageHours: 1 });
+    const stale = evaluateWatchdog({ latestIso: '2036-03-02T07:00:00Z', nowMs: NOW, required: true });
+    expect(stale.ok).toBe(false);
+    expect(stale.reason).toContain('3.0 hours ago');
   });
 });

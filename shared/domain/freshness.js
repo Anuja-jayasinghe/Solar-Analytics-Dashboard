@@ -68,3 +68,57 @@ export function evaluateUptimeFreshness({ latestDay, todayKey, maxAgeDays = 2, r
   }
   return { name, ok: true, latest: latestDay, ageDays, threshold: `${maxAgeDays} days` };
 }
+
+/**
+ * Is the live feed (`inverter_data_live`) stale right now? Issue #241's daytime check, run by the
+ * watchdog every 15 minutes. Only judged inside the day's operating window (sunrise + 30 min to
+ * sunset − 30 min, LR-002 R1): at night the inverter is off and no reading is expected. The clock
+ * starts at the later of the newest reading and the window's start, so the first check of the
+ * morning does not count the night.
+ *
+ * @param {object} a
+ * @param {string|null} a.latestIso      newest `data_timestamp`
+ * @param {number} a.nowMs
+ * @param {{startMs:number, endMs:number}|null} a.window   operatingWindow() of today
+ * @param {number} [a.maxAgeMinutes]
+ * @returns {{ name: string, state: 'ok'|'stale'|'night', ageMinutes: number|null, reason: string }}
+ */
+export function evaluateLiveFreshness({ latestIso, nowMs, window, maxAgeMinutes = 60 }) {
+  const name = 'inverter_data_live';
+  const latestMs = latestIso ? Date.parse(latestIso) : NaN;
+  const ageMinutes = Number.isFinite(latestMs) ? Math.round((nowMs - latestMs) / 60_000) : null;
+  if (!window || nowMs < window.startMs || nowMs > window.endMs) {
+    return { name, state: 'night', ageMinutes, reason: 'outside the operating window: no reading expected' };
+  }
+  const since = Math.max(Number.isFinite(latestMs) ? latestMs : -Infinity, window.startMs);
+  const silentMinutes = Math.round((nowMs - since) / 60_000);
+  if (silentMinutes > maxAgeMinutes) {
+    return {
+      name,
+      state: 'stale',
+      ageMinutes,
+      reason: ageMinutes == null
+        ? `no live reading at all, ${silentMinutes} minutes into daylight (limit ${maxAgeMinutes})`
+        : `newest live reading is ${ageMinutes} minutes old (limit ${maxAgeMinutes} in daylight)`
+    };
+  }
+  return { name, state: 'ok', ageMinutes, reason: ageMinutes == null ? 'daylight has just begun' : `newest live reading is ${ageMinutes} minutes old` };
+}
+
+/**
+ * Is the watchdog (POST /api/ops/watch, every 15 minutes from Supabase pg_cron) still running? Checked by
+ * the daily Data Freshness Check on GitHub, from the newest successful `ops/watch` row in request_log, so
+ * the thing that sends alerts cannot stop silently. Not armed until WATCHDOG_REQUIRED=true, after the
+ * schedule is set up (issue #241).
+ *
+ * @param {{ latestIso: string|null, nowMs: number, maxAgeHours?: number, required?: boolean }} a
+ */
+export function evaluateWatchdog({ latestIso, nowMs, maxAgeHours = 2, required = false }) {
+  const name = 'ops_watch';
+  if (!required) return { name, ok: true, skipped: true, reason: 'watchdog check not armed (WATCHDOG_REQUIRED is not true)' };
+  if (!latestIso) return { name, ok: false, reason: 'the watchdog has never completed a run (no ops/watch 200 in request_log)' };
+  const ageHours = (nowMs - Date.parse(latestIso)) / HOUR_MS;
+  return ageHours <= maxAgeHours
+    ? { name, ok: true, latest: latestIso, ageHours: Number(ageHours.toFixed(1)), reason: null }
+    : { name, ok: false, latest: latestIso, ageHours: Number(ageHours.toFixed(1)), reason: `the watchdog last completed ${ageHours.toFixed(1)} hours ago (limit ${maxAgeHours}): check cron.job_run_details in Supabase and OPS_WATCH_SECRET` };
+}

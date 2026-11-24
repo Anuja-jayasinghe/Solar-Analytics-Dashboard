@@ -20,7 +20,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { exitOnServiceKeyProblem } from '../api/_lib/serviceKeyGuard.js';
 import 'dotenv/config';
-import { evaluateCollectorRuns, evaluateUptimeFreshness } from '../shared/domain/freshness.js';
+import { evaluateCollectorRuns, evaluateUptimeFreshness, evaluateWatchdog } from '../shared/domain/freshness.js';
 import { localDateKey } from '../shared/domain/time.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -146,11 +146,23 @@ async function checkDayUptime() {
   return evaluateUptimeFreshness({ latestDay: data?.[0]?.day ?? null, todayKey: localDateKey(Date.now()), required: TELEMETRY_REQUIRED });
 }
 
+// The watchdog (POST /api/ops/watch from Supabase pg_cron, issue #241) sends the hourly alerts; this
+// daily check makes sure it has not stopped. Not armed until WATCHDOG_REQUIRED=true.
+const WATCHDOG_REQUIRED = process.env.WATCHDOG_REQUIRED === 'true';
+
+async function checkWatchdog() {
+  if (!WATCHDOG_REQUIRED) return evaluateWatchdog({ latestIso: null, nowMs: Date.now(), required: false });
+  const { data, error } = await supabase.from('request_log').select('at').eq('route', 'ops/watch').eq('status', 200)
+    .order('at', { ascending: false }).limit(1);
+  if (error) return { name: 'ops_watch', ok: false, reason: `query failed: ${error.message}` };
+  return evaluateWatchdog({ latestIso: data?.[0]?.at ?? null, nowMs: Date.now(), required: true });
+}
+
 // -------------------------------------------------------------
 // Main
 // -------------------------------------------------------------
 async function main() {
-  const results = [await checkDailySummary(), await checkLiveData(), await checkCollectorRuns(), await checkDayUptime()];
+  const results = [await checkDailySummary(), await checkLiveData(), await checkCollectorRuns(), await checkDayUptime(), await checkWatchdog()];
   const stale = results.filter(r => !r.ok);
 
   if (jsonOutput) {
