@@ -4,6 +4,12 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+### Fixed
+- **Fewer Vercel deployments, so the daily limit is not hit.** Vercel Hobby allows 100 a day, and on 2026-11-24 they ran
+  out: Dependabot rebases built 45 previews and every merge built production twice. Dependabot branches no longer get a
+  Vercel preview (GitHub CI still builds and tests them), and on `main` only the "Release" commit is built, not the merge
+  commit a minute before it (`scripts/vercel-ignore-build.mjs`). Add `[deploy]` to a commit message to force a build.
+
 ## [3.9.3] - 2026-11-24
 
 ### Fixed
