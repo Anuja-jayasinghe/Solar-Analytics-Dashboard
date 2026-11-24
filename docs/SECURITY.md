@@ -33,6 +33,7 @@ is not listed. **Nothing is readable with the anon key.** Every real read goes t
 | `ceb_bill_extractions` | – | Holds account numbers and meter readings parsed from bills |
 | v3 telemetry tables (`inverter_telemetry`, `collector_heartbeats`, `inverter_alarms`, `inverter_day_uptime`, `inverter_status_segments`, `collector_runs`) | – | Private from creation (2026-10-03) |
 | `admin_users`, `api_logs`, `report_logs` | – | Internal |
+| Observability tables (`alert_state`, `request_log`, `admin_audit_log`, `error_events`) and `record_error_event()` | – | Private from creation (2026-11-24, #241); service role only. Clerk ids, routes and counts, never e-mail addresses or bill contents |
 | Storage bucket `ceb_bills` | – | Every bill PDF carries the account holder's name, address, phone number and account number |
 
 Closed in steps: bills 2026-10-04, `ceb_data` narrowed to four columns 2026-10-29 (interim), then
