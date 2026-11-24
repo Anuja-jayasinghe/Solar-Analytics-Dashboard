@@ -4,6 +4,8 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+## [3.6.0] - 2026-11-24
+
 ### Added
 - **Request and audit logs outlast Vercel's short retention** (#241). Every `[REQUEST]` line is also a row in
   `request_log` (kept 30 days) and every `[AUDIT]` line a row in `admin_audit_log` (kept 2 years, decision D5).
