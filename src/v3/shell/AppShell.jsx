@@ -15,8 +15,9 @@ export function AppShell() {
   const rootRef = useRef(null);
   // A new page starts at the top, not wherever the last one was scrolled to.
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
-  // The browser tab and screen readers announce the page, not just the product.
-  useEffect(() => { document.title = `${titleFor(pathname)} · SolarEdge`; }, [pathname]);
+  // The browser tab and screen readers announce the page, not just the product. The Overview, where people add the
+  // app to a home screen, is plain "SolarEdge": iOS can offer the live title as the shortcut's name.
+  useEffect(() => { document.title = pathname === '/' ? 'SolarEdge' : `${titleFor(pathname)} · SolarEdge`; }, [pathname]);
   // The page behind the app (overscroll, the strip under the phone tab bar) takes the theme's background too.
   useEffect(() => {
     const bg = rootRef.current ? getComputedStyle(rootRef.current).getPropertyValue('--bg').trim() : '';
