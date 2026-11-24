@@ -4,6 +4,8 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+## [3.4.0] - 2026-11-24
+
 ### Added
 - **The app behaves like an app when added to the iPhone home screen.** It has its own icon (the orange bolt on
   the navy background, an opaque 180×180 `apple-touch-icon`, so iOS no longer makes a grey letter "O"), the name
