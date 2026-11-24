@@ -96,7 +96,9 @@ async function checkDatabase() {
 }
 
 export default async function handler(req, res) {
-  if (handlePreflightAndMethod(req, res, ['GET'])) return;
+  // HEAD as well as GET: uptime monitors (UptimeRobot's default) probe with HEAD, and a probe that answers
+  // 405 to HEAD looks like an outage. Node sends no body for HEAD; the status is the answer.
+  if (handlePreflightAndMethod(req, res, ['GET', 'HEAD'])) return;
 
   // Probes are polled continuously; a cached answer is a useless answer.
   res.setHeader('Cache-Control', 'no-store, max-age=0');

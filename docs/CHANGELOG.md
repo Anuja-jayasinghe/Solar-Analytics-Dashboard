@@ -4,6 +4,10 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+### Fixed
+- **`/healthz` and `/ready` answer HEAD requests.** They accepted only GET, so UptimeRobot, which probes with HEAD by
+  default, got 405 Method Not Allowed and reported the site as down while it was up (#241).
+
 ### Changed
 - **The watchdog is live** (#241). The schedule migration is applied: Supabase pg_cron calls the watchdog every 15
   minutes and starts the live collector every 15 minutes in daylight. The daily Data Freshness Check now also fails
