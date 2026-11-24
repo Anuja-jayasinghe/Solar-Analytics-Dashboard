@@ -459,6 +459,30 @@ The live tile reads `GET /api/data/live`. Filter the Vercel function log on `[RE
 live tiles are affected; every other figure reads the database. (The `solis-live-data` Edge
 Function that served v1 was deleted on 2026-10-29.)
 
+### Reading request and audit logs
+
+Vercel keeps the function log only briefly on Hobby. Each `[REQUEST]` line is also a row in `request_log`
+(30 days) and each `[AUDIT]` line a row in `admin_audit_log` (2 years), written after the response by
+`api/_lib/log.js`. Query them in the Supabase SQL editor (both are private to the service role):
+
+```sql
+-- 5xx in the last day, newest first
+select at, route, method, status, latency_ms, request_id from request_log
+ where status >= 500 and at > now() - interval '1 day' order by at desc;
+
+-- slowest routes this week
+select route, count(*), percentile_cont(0.95) within group (order by latency_ms) as p95_ms
+  from request_log where at > now() - interval '7 days' group by route order by p95_ms desc;
+
+-- who changed what, last 30 days
+select at, action, actor_id, target, changes from admin_audit_log
+ where at > now() - interval '30 days' order by at desc;
+```
+
+`request_id` is Vercel's `x-vercel-id`: paste it into the Vercel log search to find the full log of that
+request while Vercel still has it. If the tables are empty after a deploy, the function log shows
+`[LOG] request_log does not exist yet`: the migration `2026-11-24_observability_tables.sql` is not applied.
+
 ### Rotating credentials
 
 Each secret lives in **two or three** places, configured separately. Missing one is the

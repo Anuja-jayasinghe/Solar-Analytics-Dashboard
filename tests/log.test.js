@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { EventEmitter } from 'node:events';
-import { audit, actorOf, requestIdOf, withRequestLog } from '../api/_lib/log.js';
+import { audit, actorOf, requestIdOf, withRequestLog, setLogSink, waitUntilOf, isMissingTable } from '../api/_lib/log.js';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -96,5 +96,79 @@ describe('withRequestLog() with a derived route', () => {
     await handler({ method: 'GET', headers: {}, query: { resource: 'x'.repeat(500) } }, res2);
     res2.emit('finish');
     expect(JSON.parse(spy.mock.calls[1][1]).route.length).toBeLessThanOrEqual(60);
+  });
+});
+
+describe('durable copies (#241)', () => {
+  afterEach(() => setLogSink(null));
+
+  it('copies a [REQUEST] line to request_log and an [AUDIT] line to admin_audit_log', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const rows = [];
+    setLogSink((table, row) => { rows.push([table, row]); return Promise.resolve(); });
+
+    const res = Object.assign(new EventEmitter(), { statusCode: 200 });
+    const handler = withRequestLog('data/live', async (rq, rs) => {
+      rq.authUser = { id: 'user_3' };
+      rq.accessLevel = 'viewer';
+      rs.statusCode = 502;
+    });
+    await handler({ method: 'GET', headers: { 'x-vercel-id': 'bom1::q' } }, res);
+    res.emit('finish');
+    audit({ headers: {} }, { action: 'setting.update', actor: actorOf({ id: 'user_1' }), target: { setting: 'rate' }, changes: { from: 1, to: 2 } });
+
+    expect(rows[0]).toEqual(['request_log', expect.objectContaining({
+      request_id: 'bom1::q', route: 'data/live', method: 'GET', status: 502, actor: 'user_3', access_level: 'viewer'
+    })]);
+    expect(rows[0][1].latency_ms).toBeGreaterThanOrEqual(0);
+    expect(rows[1]).toEqual(['admin_audit_log', expect.objectContaining({
+      action: 'setting.update', actor_id: 'user_1', target: { setting: 'rate' }, changes: { from: 1, to: 2 }
+    })]);
+  });
+
+  it('hands the write to Vercel waitUntil when there is a request context', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const waitUntil = vi.fn();
+    const key = Symbol.for('@vercel/request-context');
+    globalThis[key] = { get: () => ({ waitUntil }) };
+    try {
+      expect(waitUntilOf()).toBe(waitUntil);
+      setLogSink(() => Promise.resolve());
+      audit({}, { action: 'x', actor: actorOf(null) });
+      expect(waitUntil).toHaveBeenCalledTimes(1);
+      expect(typeof waitUntil.mock.calls[0][0].then).toBe('function');
+    } finally {
+      delete globalThis[key];
+    }
+    expect(waitUntilOf()).toBeNull();
+  });
+
+  it('never fails the request: a throwing or rejecting sink is swallowed', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    setLogSink(() => { throw new Error('boom'); });
+    expect(() => audit({}, { action: 'x', actor: actorOf(null) })).not.toThrow();
+    expect(warn).toHaveBeenCalled();
+    setLogSink(() => Promise.reject(new Error('later')));
+    expect(() => audit({}, { action: 'x', actor: actorOf(null) })).not.toThrow();
+  });
+
+  it('does not write outside a Vercel deployment', () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const before = process.env.VERCEL;
+    delete process.env.VERCEL;
+    try {
+      // default sink: returns null (no write) when VERCEL is not "1"
+      expect(() => audit({}, { action: 'x', actor: actorOf(null) })).not.toThrow();
+    } finally {
+      if (before !== undefined) process.env.VERCEL = before;
+    }
+  });
+
+  it('recognises a missing table, so an unapplied migration warns once and stops trying', () => {
+    expect(isMissingTable({ code: '42P01' })).toBe(true);
+    expect(isMissingTable({ code: 'PGRST205', message: "Could not find the table 'public.request_log'" })).toBe(true);
+    expect(isMissingTable({ code: '23505', message: 'duplicate key' })).toBe(false);
+    expect(isMissingTable(null)).toBe(false);
   });
 });

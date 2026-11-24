@@ -15,8 +15,15 @@
 // Never e-mail addresses, account numbers, meter readings or other bill contents — for record
 // writes, log which fields changed, not their values.
 //
-// The platform log is the audit trail for now; Vercel keeps it for a limited time on Hobby. A
-// durable `admin_audit_log` table would be written from here, and only here.
+// DURABLE COPIES (issue #241)
+// Vercel's Hobby plan keeps the platform log only briefly. Every line is therefore also written to
+// Supabase, from here and only here: `[REQUEST]` → `request_log` (kept 30 days), `[AUDIT]` →
+// `admin_audit_log` (kept 2 years). The write happens AFTER the response, through Vercel's
+// `waitUntil`, so it adds no latency, and it can never fail a request: an error is one console
+// warning, and a missing table (migration not applied yet) is reported once and then skipped.
+// Only deployed functions write (VERCEL=1); local dev and tests do not.
+
+import { supabase } from './supabaseServer.js';
 
 /** Vercel's request id, for correlating a log line with the platform's request log. */
 export function requestIdOf(req) {
@@ -46,6 +53,14 @@ export function audit(req, { action, actor, target = null, changes = null }) {
     changes
   };
   console.log('[AUDIT]', JSON.stringify(entry));
+  persist('admin_audit_log', {
+    at: entry.at,
+    request_id: entry.requestId,
+    action: String(action).slice(0, 80),
+    actor_id: actor?.id ?? null,
+    target,
+    changes
+  }, waitUntilOf());
   return entry;
 }
 
@@ -65,10 +80,13 @@ export function audit(req, { action, actor, target = null, changes = null }) {
 export function withRequestLog(route, handler) {
   return async function loggedHandler(req, res) {
     const startedAt = Date.now();
+    // Captured now, inside the request: Vercel's request context is what keeps the function alive
+    // for the write after the response.
+    const waitUntil = waitUntilOf();
     // `finish` fires once the response has been handed off — for every outcome, including the
     // 401/403 that verifyAdminToken sends itself. Test doubles may not be emitters.
     res?.on?.('finish', () => {
-      console.log('[REQUEST]', JSON.stringify({
+      const line = {
         type: 'request',
         at: new Date().toISOString(),
         requestId: requestIdOf(req),
@@ -80,8 +98,87 @@ export function withRequestLog(route, handler) {
         // verifyAccess sets authUser (viewer or admin); verifyAdminToken also sets adminUser.
         actor: req?.authUser?.id || req?.adminUser?.id || null,
         accessLevel: req?.accessLevel || null
-      }));
+      };
+      console.log('[REQUEST]', JSON.stringify(line));
+      persist('request_log', {
+        at: line.at,
+        request_id: line.requestId,
+        route: line.route,
+        method: line.method,
+        status: line.status,
+        latency_ms: line.latencyMs,
+        actor: line.actor,
+        access_level: line.accessLevel
+      }, waitUntil);
     });
     return handler(req, res);
   };
 }
+
+// ---------------------------------------------------------------------------------------------
+// Durable copies
+// ---------------------------------------------------------------------------------------------
+
+const SYMBOL_FOR_REQ_CONTEXT = Symbol.for('@vercel/request-context');
+
+/**
+ * Vercel's `waitUntil` for the current request, or null outside Vercel. This is what
+ * `@vercel/functions` does internally; reading it directly saves a dependency with 15 transitive
+ * packages for one function.
+ */
+export function waitUntilOf() {
+  const fn = globalThis[SYMBOL_FOR_REQ_CONTEXT]?.get?.()?.waitUntil;
+  return typeof fn === 'function' ? fn : null;
+}
+
+const missingTables = new Set();
+
+/** Is this error "the table does not exist" (migration not applied yet)? */
+export function isMissingTable(error) {
+  const code = error?.code;
+  return code === '42P01' || code === 'PGRST205' || /does not exist|could not find the table/i.test(error?.message || '');
+}
+
+async function insertRow(table, row) {
+  if (missingTables.has(table)) return;
+  try {
+    const { error } = await supabase.from(table).insert(row);
+    if (!error) return;
+    if (isMissingTable(error)) {
+      missingTables.add(table);
+      console.warn(`[LOG] ${table} does not exist yet (migration 2026-11-24_observability_tables.sql): not persisting`);
+      return;
+    }
+    console.warn(`[LOG] could not persist to ${table}:`, error.message);
+  } catch (err) {
+    console.warn(`[LOG] could not persist to ${table}:`, err?.message);
+  }
+}
+
+const defaultSink = (table, row) => (process.env.VERCEL === '1' ? insertRow(table, row) : null);
+let sink = defaultSink;
+
+/** Tests replace where durable copies go; `null` restores the default. */
+export function setLogSink(fn) {
+  sink = typeof fn === 'function' ? fn : defaultSink;
+  missingTables.clear();
+}
+
+/** Write one durable row without delaying or failing anything. */
+function persist(table, row, waitUntil) {
+  let pending;
+  try {
+    pending = sink(table, row);
+  } catch (err) {
+    console.warn(`[LOG] could not persist to ${table}:`, err?.message);
+    return;
+  }
+  if (pending && typeof pending.then === 'function') {
+    const safe = Promise.resolve(pending).catch(() => {});
+    if (waitUntil) {
+      try { waitUntil(safe); } catch { /* not in a request context */ }
+    }
+  }
+}
+
+export const __test = { insertRow, missingTables };
