@@ -69,6 +69,10 @@ jobs:
           # collector_runs / inverter_day_uptime now fails the check instead of being skipped, so a
           # collector that silently stops (or is never wired up) cannot stay invisible.
           TELEMETRY_REQUIRED: 'true'
+          # The watchdog (POST /api/ops/watch from Supabase pg_cron, issue #241) must have completed a run in
+          # the past 2 hours. Set to 'true' once the schedule migration is applied and the first runs succeed
+          # (docs/RUNBOOK.md, "Signals and alerts").
+          WATCHDOG_REQUIRED: 'false'
         run: |
           set -o pipefail
           node scripts/check_data_freshness.js 2>&1 | tee freshness-report.txt

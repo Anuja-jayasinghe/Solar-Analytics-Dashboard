@@ -36,7 +36,7 @@ exports every table plus the schema as a downloadable artifact. It costs two min
 
 | Workflow | Trigger | What it does | If it fails |
 |---|---|---|---|
-| Fetch Live Inverter Data | every 5 min | SolisCloud → `inverter_data_live` | [No live data](#no-live-inverter-data) |
+| Fetch Live Inverter Data | every 5 min (GitHub runs it a few times a day) **and** dispatched every 15 min in daylight by Supabase pg_cron (#241) | SolisCloud → `inverter_data_live` | [No live data](#no-live-inverter-data) |
 | Generate Daily Inverter Summary | `30 1 * * *` | aggregates → `inverter_data_daily_summary` | [Summary failing](#daily-summary-failing) |
 | Data Freshness Check | daily | opens a `data-outage` issue if rows stop arriving, and a `missing-bill` issue if the monthly bill is 7 days overdue | It *is* the alarm — read the issue |
 | Keepalive | `17 3 */10 * *` + push to `main` | heartbeat commit, re-enables schedules | [Workflows disabled](#workflows-silently-disabled) |
@@ -45,6 +45,67 @@ exports every table plus the schema as a downloadable artifact. It costs two min
 | Backfill Daily Summaries | manual | rebuilds gaps from the Solis month API | [Backfill](#backfilling-a-gap) |
 | DB Snapshot | manual | read-only export of tables + schema | — |
 | ci | push / PR | lint · test · build · prod audit | All four are mandatory |
+
+Scheduled in Supabase, not GitHub (pg_cron, `scripts/sql/2026-11-24_observability_schedule.sql`): `ops-watch` (every
+15 min), `live-collector-dispatch` (every 15 min, 05:30–18:15 Colombo) and `observability-retention` (daily). See
+[Signals and alerts](#signals-and-alerts).
+
+---
+
+## Signals and alerts
+
+Every alert reaches the owner by **email**. The app's own alerts all go through one helper,
+`api/_lib/alerts.js`, from `alerts@mail.solaredge.anujajay.com` to `ALERT_TO` (or `BILL_ALERT_TO`), and each is
+deduplicated: one email when it opens, a reminder at most once a day while it stays open, one when it resolves, and
+never more than 20 a day. The two senders outside the app can't use it, by design: UptimeRobot (the app may be the
+thing that is down) and GitHub issues (the daily checks).
+
+| Signal | Where it lives | Checked by | Fires when | Arrives as |
+|---|---|---|---|---|
+| Site up and ready | `/ready` | UptimeRobot, every 5 min, from outside | `/ready` is not 200 (Vercel down, Supabase unreachable, config broken) | UptimeRobot email (down, then up) |
+| Live data in daylight | `inverter_data_live` | watchdog `data:live-stale`, every 15 min | no reading for `LIVE_STALE_MINUTES` (default 60) inside today's operating window | `[Solar Alert] Live inverter data has stopped` |
+| Collector failed | `collector_runs` | watchdog `collector:failed` | the newest run of any job in 48 h failed | `[Solar Alert] Collector job "…" failed` |
+| API errors | `request_log` | watchdog `api:5xx-rate` | 10+ unexpected 5xx in an hour (502/503 excluded) | `[Solar Alert] N API errors in the past hour` |
+| New error | `error_events` | watchdog `error:<group>` | a browser or API error group first seen in the past hour | `[Solar Alert] New browser error: …` (closes itself a day later, quietly) |
+| Daily data and bills | daily tables, bills | Data Freshness Check (GitHub, daily, often hours late) | rows stop, a bill is 7 days overdue | GitHub issue `data-outage` / `missing-bill` (GitHub emails it) |
+| Watchdog stopped | `request_log` (`ops/watch`, 200) | Data Freshness Check, once `WATCHDOG_REQUIRED: 'true'` | no successful watchdog run in 2 h | the `data-outage` issue, check `ops_watch` |
+| Bill intake | email webhook | `api/_lib/notify.js` (LR-005) | a bill needs a person | `[Solar bills] …` |
+| Real-user speed | Vercel Speed Insights / Analytics | Vercel | — | dashboard only; look now and then |
+
+Open alerts: `select key, title, opened_at, occurrences, last_sent_at from alert_state where status = 'open';`
+Every decision is also an `[ALERT]` line, and each watchdog run a `[WATCH]` line, in the Vercel function log.
+
+### When an alert fires
+
+- **Site not ready (UptimeRobot).** `curl -s https://solaredge.anujajay.com/ready | jq` names the failing dependency.
+  `supabase: unreachable`: is the Supabase project paused or down (status.supabase.com)? A config problem: see
+  [Config errors](./API.md#config-errors). Vercel itself: vercel-status.com; roll back with
+  [Deploying](#deploying) if a deploy caused it.
+- **Live inverter data has stopped.** Same triage as [No live inverter data](#no-live-inverter-data). First look at
+  whether the dispatcher is running: `select status_code, left(content::text, 200), created from net._http_response order by created desc limit 5;`
+  (a 401 from api.github.com means `github_dispatch_token` expired: make a new one and replace it in the Vault),
+  then `gh run list --workflow=fetch-live-inverter-data.yml --limit 5`.
+- **Collector job failed.** The email quotes the job's `error`. Re-run it from Admin → Health → Maintenance (dry run
+  first), see [Telemetry collector failing](#telemetry-collector-failing).
+- **API errors / new error.** [Reading errors](#reading-errors) and [Reading request and audit logs](#reading-request-and-audit-logs).
+  A new error right after a deploy is the usual cause: roll back, then fix.
+- **No alert emails at all.** The function log will show `[ALERT]` lines with `send_failed` or `state_failed`. Check
+  `RESEND_API_KEY`, `ALERT_TO`/`BILL_ALERT_TO` and the Resend dashboard (100 emails a day on the free plan).
+
+### Setting up the scheduler (once)
+
+1. Apply `2026-11-24_observability_tables.sql`, then deploy the code (both after a DB Snapshot).
+2. Make a secret: `openssl rand -hex 32`. Put it in Vercel (Production) as `OPS_WATCH_SECRET` and in the Supabase
+   Vault as `ops_watch_secret`. Redeploy so the function sees it.
+3. Create a fine-grained GitHub token: this repository only, permission **Actions: Read and write**, nothing else,
+   with an expiry date. Store it in the Supabase Vault as `github_dispatch_token`. Note the expiry date.
+4. Apply `2026-11-24_observability_schedule.sql`.
+5. After 15 minutes, run its VERIFY queries. Then set `WATCHDOG_REQUIRED: 'true'` in
+   `.github/workflows/data-freshness-check.yml`.
+6. UptimeRobot: an HTTP(s) monitor on `https://solaredge.anujajay.com/ready`, every 5 minutes, alerting the owner's
+   address. It counts a non-2xx answer as down.
+
+To pause everything: `select cron.unschedule(jobname) from cron.job;` (re-apply the schedule file to restore).
 
 ---
 

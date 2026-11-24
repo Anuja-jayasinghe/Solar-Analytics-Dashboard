@@ -110,7 +110,7 @@ real figures, charts draw on scroll, date pickers, Mark above cap, no sideways s
 
 | Workflow | Purpose |
 |---|---|
-| Fetch Live Inverter Data | scheduled every 5 min, Solis → `inverter_data_live`. **GitHub actually runs it ~5×/day** (Oct 2026); daily totals stay correct, peaks come from telemetry |
+| Fetch Live Inverter Data | scheduled every 5 min, Solis → `inverter_data_live`. **GitHub actually runs it ~5×/day** (Oct 2026); daily totals stay correct, peaks come from telemetry. Since #241, Supabase pg_cron also dispatches it every 15 min in daylight |
 | Generate Daily Inverter Summary | 2×/day, aggregates into `inverter_data_daily_summary` |
 | Data Freshness Check | daily; opens a `data-outage` issue if rows stop arriving |
 | Collect Inverter Telemetry | nightly 00:15 Colombo; last 7 days of Solis `inverterDay` + `collector/day` + `alarmList` → telemetry, alarms, uptime tables (v3, ADR-001) |
@@ -120,6 +120,10 @@ real figures, charts draw on scroll, date pickers, Mark above cap, no sideways s
 | Keepalive | stops GitHub disabling the scheduled workflows for inactivity |
 | auto-release | after every push to main: releases what was merged (version from PR titles), then `release` tags it (`docs/RELEASING.md`) |
 | pr-check | on every PR: which release merging makes; fails on a non-Conventional-Commits title |
+
+Scheduled in **Supabase pg_cron** instead (#241, `scripts/sql/2026-11-24_observability_schedule.sql`), because GitHub's
+cron runs hours late: `ops-watch` (every 15 min → `POST /api/ops/watch`, the alert checks), `live-collector-dispatch` and
+`observability-retention`. Signals and alerts: `docs/RUNBOOK.md`.
 
 **Take a DB Snapshot before running anything that writes.**
 
