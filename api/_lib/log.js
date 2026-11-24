@@ -158,7 +158,10 @@ export function waitUntilOf() {
   return typeof fn === 'function' ? fn : null;
 }
 
-const missingTables = new Set();
+// A missing table is skipped for a while, then tried again: a warm instance that saw "missing" before the
+// migration was applied must not keep skipping until Vercel happens to recycle it.
+export const MISSING_RETRY_MS = 10 * 60 * 1000;
+const missingTables = new Map(); // table -> when it was found missing
 
 /** Is this error "the table does not exist" (migration not applied yet)? */
 export function isMissingTable(error) {
@@ -167,13 +170,15 @@ export function isMissingTable(error) {
 }
 
 async function insertRow(table, row) {
-  if (missingTables.has(table)) return;
+  const missingSince = missingTables.get(table);
+  if (missingSince !== undefined && Date.now() - missingSince < MISSING_RETRY_MS) return;
+  missingTables.delete(table);
   try {
     const { error } = await supabase.from(table).insert(row);
     if (!error) return;
     if (isMissingTable(error)) {
-      missingTables.add(table);
-      console.warn(`[LOG] ${table} does not exist yet (migration 2026-11-24_observability_tables.sql): not persisting`);
+      if (missingSince === undefined) console.warn(`[LOG] ${table} does not exist yet (migration 2026-11-24_observability_tables.sql): not persisting`);
+      missingTables.set(table, Date.now());
       return;
     }
     console.warn(`[LOG] could not persist to ${table}:`, error.message);

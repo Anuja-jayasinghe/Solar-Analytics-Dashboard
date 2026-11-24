@@ -107,6 +107,20 @@ describe('recordErrorEvent', () => {
     __test.reset();
     expect(await recordErrorEvent({ rpc: async () => { throw new Error('net'); } }, event)).toBeNull();
   });
+
+  it('tries again 10 minutes after the function was missing', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const rpc = vi.fn().mockResolvedValueOnce({ data: null, error: { code: 'PGRST202', message: 'Could not find the function' } }).mockResolvedValue({ data: 1, error: null });
+      expect(await recordErrorEvent({ rpc }, event)).toBeNull();
+      vi.advanceTimersByTime(11 * 60 * 1000);
+      expect(await recordErrorEvent({ rpc }, event)).toBe(1);
+      expect(rpc).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 // ------------------------------------------------------------------------------------------------

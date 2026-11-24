@@ -4,6 +4,15 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+### Fixed
+- **A warm function picks up the new log tables without a redeploy.** When a log table or `record_error_event()` was
+  missing, an instance stopped trying until Vercel recycled it, so instances started before the migration kept
+  skipping writes after it. They now try again after 10 minutes (#241).
+
+### Changed
+- The observability tables migration (`2026-11-24_observability_tables.sql`) is applied to production: request and
+  audit logs and error groups are now stored (#241).
+
 ## [3.9.0] - 2026-11-24
 
 ### Added
