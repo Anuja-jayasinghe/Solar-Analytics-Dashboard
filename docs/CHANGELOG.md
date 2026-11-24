@@ -4,6 +4,11 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+### Fixed
+- **A home-screen shortcut is named "SolarEdge", not "Overview · SolarEdge".** iOS can take the shortcut's name from
+  the live page title, which the app sets per page. The Overview's title is now just "SolarEdge" (the other pages keep
+  "Page · SolarEdge"), and an `application-name` tag backs up `apple-mobile-web-app-title`.
+
 ## [3.4.0] - 2026-11-24
 
 ### Added
