@@ -4,6 +4,8 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-11-24
+
 ### Added
 - **One alert path for every email to the owner** (#241). `api/_lib/alerts.js` sends the bill intake's emails and,
   from now on, operational alerts. An alert is a key that is open or resolved (`alert_state` table): one email when it
