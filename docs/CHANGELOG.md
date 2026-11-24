@@ -4,6 +4,8 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+## [3.9.1] - 2026-11-24
+
 ### Fixed
 - **A warm function picks up the new log tables without a redeploy.** When a log table or `record_error_event()` was
   missing, an instance stopped trying until Vercel recycled it, so instances started before the migration kept
