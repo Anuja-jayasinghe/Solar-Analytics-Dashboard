@@ -137,8 +137,10 @@ Every privileged write emits one `[AUDIT]` JSON line through `api/_lib/log.js` �
 `setting.update` (old and new value) and `setting.seed` — with the actor's Clerk id and Vercel's
 request id. Every API request also emits one `[REQUEST]` line (route, status, latency, actor,
 access level). Per `WORKING_RULES.md` §3 neither carries e-mail addresses, account numbers or
-bill contents. Filter the Vercel function log on `[AUDIT]` or `[REQUEST]`; it is the only store,
-kept for a limited time.
+bill contents. Filter the Vercel function log on `[AUDIT]` or `[REQUEST]` for recent lines. Since
+2026-11-24 (#241) each line is also stored in Supabase, written only by `api/_lib/log.js` after the
+response: `admin_audit_log` (kept 2 years) and `request_log` (kept 30 days). Queries: `RUNBOOK.md`,
+"Reading request and audit logs".
 
 ## Checklist for a new endpoint
 
