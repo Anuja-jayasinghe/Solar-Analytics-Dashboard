@@ -23,7 +23,11 @@
 // warning, and a missing table (migration not applied yet) is reported once and then skipped.
 // Only deployed functions write (VERCEL=1); local dev and tests do not.
 
+// Unexpected API 5xx (and anything a handler throws) also become an error group in `error_events`
+// (api/_lib/errorEvents.js), the same table the browser reports go to.
+
 import { supabase } from './supabaseServer.js';
+import { apiErrorEvent, recordErrorEvent } from './errorEvents.js';
 
 /** Vercel's request id, for correlating a log line with the platform's request log. */
 export function requestIdOf(req) {
@@ -83,6 +87,7 @@ export function withRequestLog(route, handler) {
     // Captured now, inside the request: Vercel's request context is what keeps the function alive
     // for the write after the response.
     const waitUntil = waitUntilOf();
+    let thrown = null;
     // `finish` fires once the response has been handed off — for every outcome, including the
     // 401/403 that verifyAdminToken sends itself. Test doubles may not be emitters.
     res?.on?.('finish', () => {
@@ -100,6 +105,16 @@ export function withRequestLog(route, handler) {
         accessLevel: req?.accessLevel || null
       };
       console.log('[REQUEST]', JSON.stringify(line));
+      if (isUnexpectedStatus(line.status) || thrown) {
+        persist('error_events', apiErrorEvent({
+          route: line.route,
+          method: line.method,
+          status: line.status,
+          error: thrown,
+          actor: line.actor,
+          release: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || null
+        }), waitUntil);
+      }
       persist('request_log', {
         at: line.at,
         request_id: line.requestId,
@@ -111,13 +126,25 @@ export function withRequestLog(route, handler) {
         access_level: line.accessLevel
       }, waitUntil);
     });
-    return handler(req, res);
+    try {
+      return await handler(req, res);
+    } catch (err) {
+      thrown = err; // the platform answers 500; `finish` then records it with this message
+      throw err;
+    }
   };
 }
 
 // ---------------------------------------------------------------------------------------------
 // Durable copies
 // ---------------------------------------------------------------------------------------------
+
+/**
+ * A 5xx that means OUR code failed. 502 (SolisCloud failed upstream) and 503 (/ready: not ready) are
+ * deliberate answers about someone else's outage; they stay in request_log and the uptime monitor
+ * covers them.
+ */
+export const isUnexpectedStatus = (status) => Number.isInteger(status) && status >= 500 && status !== 502 && status !== 503;
 
 const SYMBOL_FOR_REQ_CONTEXT = Symbol.for('@vercel/request-context');
 
@@ -155,7 +182,10 @@ async function insertRow(table, row) {
   }
 }
 
-const defaultSink = (table, row) => (process.env.VERCEL === '1' ? insertRow(table, row) : null);
+const defaultSink = (table, row) => {
+  if (process.env.VERCEL !== '1') return null;
+  return table === 'error_events' ? recordErrorEvent(supabase, row) : insertRow(table, row);
+};
 let sink = defaultSink;
 
 /** Tests replace where durable copies go; `null` restores the default. */

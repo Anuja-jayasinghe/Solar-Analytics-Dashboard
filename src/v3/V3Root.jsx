@@ -15,10 +15,13 @@ import OverviewPage from './pages/OverviewPage.jsx';
 import { legacyRedirect } from './routes.js';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
-import { installGlobalErrorHandlers } from './ui/errorReporting.js';
+import { createBeaconReporter, installGlobalErrorHandlers, setErrorReporter } from './ui/errorReporting.js';
+import { APP_VERSION } from '../../shared/version.js';
 
 // Errors outside a render (event handlers, rejected promises) go to the same reporter as the
-// error boundary's. Installed when this module loads, before the app first renders.
+// error boundary's. Installed when this module loads, before the app first renders. Production builds
+// send them to /api/ops/error (#241); the dev server only logs them.
+if (import.meta.env.PROD) setErrorReporter(createBeaconReporter({ release: APP_VERSION }));
 installGlobalErrorHandlers();
 
 const AdminPage = lazy(() => import('./pages/AdminPage.jsx'));

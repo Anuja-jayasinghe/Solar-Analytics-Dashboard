@@ -6,11 +6,10 @@
 // Until 2026-10-29 errors went to the console and nowhere else: v3's AppErrorBoundary logged,
 // and nothing listened for errors outside a render at all.
 //
-// The reporter is Rollbar (decision D4 in docs/archive/IMPROVEMENT_PLAN_2026-10-29.md; work tracked in issue #241), provisioned
-// through the Vercel Marketplace. Until it is provisioned and wired with setErrorReporter(),
-// reportError() only logs. Wiring it is one call in main.jsx: build the client from the
-// Marketplace-provided client token and pass `(error, context) => rollbar.error(error, context)`.
-// Report the Clerk user id as the person, never the e-mail address.
+// The reporter is our own (issue #241, replacing decision D4's Rollbar): createBeaconReporter() posts each
+// error to /api/ops/error, which groups it in the private `error_events` table. No tracker SDK, no other
+// host in the CSP, and nothing that identifies the visitor: the report holds the message, the stack, the
+// page's path (no query string) and the release. The server redacts again before storing.
 
 let reporter = null;
 
@@ -74,4 +73,48 @@ export function installGlobalErrorHandlers() {
   window.addEventListener('unhandledrejection', (event) => {
     reportError(event.reason, { source: 'unhandledrejection' });
   });
+}
+
+// ---------------------------------------------------------------------------------------------
+// The beacon reporter
+// ---------------------------------------------------------------------------------------------
+
+export const ERROR_ENDPOINT = '/api/ops/error';
+
+/**
+ * Report errors to our own API. At most `maxPerPage` reports per page load, and each distinct
+ * message once, so a render loop cannot flood the endpoint (which rate-limits as well).
+ *
+ * @param {{ release?: string, endpoint?: string, maxPerPage?: number,
+ *           send?: (url: string, body: string) => unknown, path?: () => string }} [options]
+ */
+export function createBeaconReporter({
+  release = null,
+  endpoint = ERROR_ENDPOINT,
+  maxPerPage = 10,
+  send = defaultSend,
+  path = () => (typeof window !== 'undefined' ? window.location.pathname : null)
+} = {}) {
+  const seen = new Set();
+  return (error, context = {}) => {
+    const message = String(error?.message || error).slice(0, 500);
+    if (seen.size >= maxPerPage || seen.has(message)) return;
+    seen.add(message);
+    send(endpoint, JSON.stringify({
+      message,
+      stack: typeof error?.stack === 'string' ? error.stack.slice(0, 4000) : null,
+      source: context.source || 'unknown',
+      route: path(),
+      release,
+      file: typeof context.file === 'string' ? context.file : undefined,
+      line: Number.isInteger(context.line) ? context.line : undefined
+    }));
+  };
+}
+
+function defaultSend(url, body) {
+  const blob = new Blob([body], { type: 'application/json' });
+  if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function' && navigator.sendBeacon(url, blob)) return;
+  // No beacon (or it was refused): a fire-and-forget fetch that outlives the page.
+  fetch(url, { method: 'POST', body, headers: { 'Content-Type': 'application/json' }, keepalive: true, credentials: 'omit' }).catch(() => {});
 }

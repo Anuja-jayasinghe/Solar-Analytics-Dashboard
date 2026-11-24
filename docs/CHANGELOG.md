@@ -4,6 +4,15 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+### Added
+- **Error tracking, self-hosted** (#241, replaces decision D4's Rollbar). Browser errors in production are sent to the
+  new `POST /api/ops/error` (sendBeacon, at most 10 per page and each message once) and grouped in the private
+  `error_events` table, one row per distinct error with a count. Unexpected API 5xx (and anything a handler throws)
+  land in the same table from `withRequestLog`; deliberate 502/503 answers do not. Nothing identifies the visitor:
+  no user id, URLs as paths only, and e-mail addresses, tokens and long numbers are redacted before storage. The
+  endpoint accepts this site only, 8 KB, 10 a minute per address, and the database refuses a new group after 50 in
+  an hour. No tracker SDK and no CSP change. `api/ops/[action].js` is the 7th of 12 serverless functions.
+
 ## [3.6.0] - 2026-11-24
 
 ### Added

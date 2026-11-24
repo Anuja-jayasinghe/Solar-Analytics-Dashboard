@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { EventEmitter } from 'node:events';
-import { audit, actorOf, requestIdOf, withRequestLog, setLogSink, waitUntilOf, isMissingTable } from '../api/_lib/log.js';
+import { audit, actorOf, requestIdOf, withRequestLog, setLogSink, waitUntilOf, isMissingTable, isUnexpectedStatus } from '../api/_lib/log.js';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -170,5 +170,35 @@ describe('durable copies (#241)', () => {
     expect(isMissingTable({ code: 'PGRST205', message: "Could not find the table 'public.request_log'" })).toBe(true);
     expect(isMissingTable({ code: '23505', message: 'duplicate key' })).toBe(false);
     expect(isMissingTable(null)).toBe(false);
+  });
+});
+
+describe('API errors become error groups (#241)', () => {
+  afterEach(() => setLogSink(null));
+
+  it('records an unexpected 5xx, with the thrown error, and rethrows it', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const rows = [];
+    setLogSink((table, row) => { rows.push([table, row]); return Promise.resolve(); });
+    const res = Object.assign(new EventEmitter(), { statusCode: 200 });
+    const boom = new TypeError('Cannot read properties of undefined (reading x) for a@example.com');
+    const handler = withRequestLog('ceb-bills/records', async () => { throw boom; });
+    await expect(handler({ method: 'PUT', headers: {} }, res)).rejects.toBe(boom);
+    res.statusCode = 500;
+    res.emit('finish');
+    const [table, event] = rows.find(([t]) => t === 'error_events');
+    expect(table).toBe('error_events');
+    expect(event).toMatchObject({ source: 'api', route: 'ceb-bills/records', context: { status: 500, method: 'PUT' } });
+    expect(event.message).toContain('500 on PUT ceb-bills/records: TypeError: Cannot read properties');
+    expect(event.message).not.toContain('a@example.com');
+  });
+
+  it('leaves deliberate 502 and 503 answers to the request log', () => {
+    expect(isUnexpectedStatus(500)).toBe(true);
+    expect(isUnexpectedStatus(504)).toBe(true);
+    expect(isUnexpectedStatus(502)).toBe(false);
+    expect(isUnexpectedStatus(503)).toBe(false);
+    expect(isUnexpectedStatus(404)).toBe(false);
+    expect(isUnexpectedStatus(null)).toBe(false);
   });
 });

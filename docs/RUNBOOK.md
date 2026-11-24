@@ -483,6 +483,24 @@ select at, action, actor_id, target, changes from admin_audit_log
 request while Vercel still has it. If the tables are empty after a deploy, the function log shows
 `[LOG] request_log does not exist yet`: the migration `2026-11-24_observability_tables.sql` is not applied.
 
+### Reading errors
+
+Browser errors (production builds) and unexpected API 5xx are grouped in `error_events`: one row per distinct error,
+with `occurrences`, `first_seen_at`, `last_seen_at` and the `release` (app version for the browser, commit for the API).
+502 and 503 are not counted: they are deliberate answers about SolisCloud or the database being down, and stay in
+`request_log`.
+
+```sql
+-- what is failing now
+select source, message, route, occurrences, first_seen_at, last_seen_at, release
+  from error_events where last_seen_at > now() - interval '1 day' order by last_seen_at desc;
+```
+
+Browser stacks are minified: the function names and `index-<hash>.js:1:<column>` point into the production bundle of
+that release. To read one, build the same commit locally with `pnpm exec vite build --sourcemap` and look the column up
+in the `.map` file. If nothing is ever recorded, the function log shows `[ERRORS] record_error_event() does not exist yet`:
+the migration `2026-11-24_observability_tables.sql` is not applied.
+
 ### Rotating credentials
 
 Each secret lives in **two or three** places, configured separately. Missing one is the
