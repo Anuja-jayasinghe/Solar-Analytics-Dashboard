@@ -4,6 +4,15 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+### Added
+- **The app behaves like an app when added to the iPhone home screen.** It has its own icon (the orange bolt on
+  the navy background, an opaque 180×180 `apple-touch-icon`, so iOS no longer makes a grey letter "O"), the name
+  "SolarEdge" under it, and opens full screen without Safari's bars. Also a web manifest (`display: standalone`,
+  192, 512 and maskable icons), a 32 px favicon, and a `theme-color` for both themes that follows the theme chosen
+  in the app. The page now runs under the notch and home bar (`viewport-fit=cover`) and the header, the phone tab
+  bar and the account menu keep clear of them. `scripts/make-icons.mjs` regenerates the icons from
+  `public/favicon.svg`. To pick up the new icon, remove the old home-screen shortcut and add it again.
+
 ## [3.3.1] - 2026-11-12
 
 ### Fixed
