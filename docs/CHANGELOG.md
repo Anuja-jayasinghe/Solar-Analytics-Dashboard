@@ -4,6 +4,8 @@ All notable changes to the Solar Analytics Dashboard project.
 
 ## [Unreleased]
 
+## [3.8.0] - 2026-11-24
+
 ### Added
 - **Admin → Health shows the pipeline and the alerts** (#241, #181). A new Monitoring card lists the open alerts, the
   20 newest collector runs (a run that wrote nothing shows as "empty", not as good; a failed one shows its error) and
@@ -16,6 +18,10 @@ All notable changes to the Solar Analytics Dashboard project.
   schedule runs it only 2 or 3 times in daylight, with gaps of up to 8.5 hours. It prunes the new log tables daily.
   The daily Data Freshness Check can check that the watchdog itself is running (`WATCHDOG_REQUIRED`, off until set up).
   Migration `2026-11-24_observability_schedule.sql` (not applied yet). RUNBOOK: "Signals and alerts".
+
+## [3.7.0] - 2026-11-24
+
+### Added
 - **Error tracking, self-hosted** (#241, replaces decision D4's Rollbar). Browser errors in production are sent to the
   new `POST /api/ops/error` (sendBeacon, at most 10 per page and each message once) and grouped in the private
   `error_events` table, one row per distinct error with a count. Unexpected API 5xx (and anything a handler throws)
@@ -23,12 +29,20 @@ All notable changes to the Solar Analytics Dashboard project.
   no user id, URLs as paths only, and e-mail addresses, tokens and long numbers are redacted before storage. The
   endpoint accepts this site only, 8 KB, 10 a minute per address, and the database refuses a new group after 50 in
   an hour. No tracker SDK and no CSP change. `api/ops/[action].js` is the 7th of 12 serverless functions.
+
+## [3.6.0] - 2026-11-24
+
+### Added
 - **Request and audit logs outlast Vercel's short retention** (#241). Every `[REQUEST]` line is also a row in
   `request_log` (kept 30 days) and every `[AUDIT]` line a row in `admin_audit_log` (kept 2 years, decision D5).
   `api/_lib/log.js` writes them after the response through Vercel's `waitUntil`, so requests are not slowed and a
   failed write never fails a request. Until the migration `2026-11-24_observability_tables.sql` is applied, the
   function log says so once and nothing is written. No new dependency: `waitUntil` is read from Vercel's request
   context, as `@vercel/functions` does.
+
+## [3.5.0] - 2026-11-24
+
+### Added
 - **One alert path for every email to the owner** (#241). `api/_lib/alerts.js` sends the bill intake's emails and,
   from now on, operational alerts. An alert is a key that is open or resolved (`alert_state` table): one email when it
   opens, a reminder at most once a day while it stays open, and one when it resolves, so an outage checked every 15
