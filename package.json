@@ -19,7 +19,7 @@
     "@clerk/backend": "^3.27.0",
     "@clerk/clerk-react": "^5.61.9",
     "@supabase/supabase-js": "^2.119.0",
-    "@vercel/analytics": "^1.5.0",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.1.0",
     "lucide-react": "^0.545.0",
     "pdfjs-dist": "^6.5.438",
